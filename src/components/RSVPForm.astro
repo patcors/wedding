@@ -1,0 +1,183 @@
+---
+// RSVPForm.astro
+// Posts to a Google Apps Script Web App URL. Because GAS web apps don't return
+// CORS headers, we submit with `mode: "no-cors"` — we won't be able to read the
+// response, so we treat fetch resolution as success. The Apps Script side
+// appends a row to a Google Sheet (see README for the script).
+const endpoint = import.meta.env.PUBLIC_RSVP_ENDPOINT ?? "";
+---
+
+<form
+  id="rsvp-form"
+  class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-7"
+  data-endpoint={endpoint}
+  novalidate
+>
+  <div class="md:col-span-2">
+    <label for="name" class="label block mb-2">Your full name</label>
+    <input
+      id="name"
+      name="name"
+      type="text"
+      required
+      autocomplete="name"
+      class="w-full bg-transparent border-0 border-b border-ink/40 focus:border-terracotta focus:outline-none py-2 text-2xl font-display tracking-tight placeholder:text-ink/30"
+      placeholder="Amelia Jane Smith"
+    />
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="email" class="label block mb-2">Email</label>
+    <input
+      id="email"
+      name="email"
+      type="email"
+      required
+      autocomplete="email"
+      class="w-full bg-transparent border-0 border-b border-ink/40 focus:border-terracotta focus:outline-none py-2 text-xl font-serif placeholder:text-ink/30"
+      placeholder="you@example.com"
+    />
+  </div>
+
+  <fieldset class="md:col-span-2">
+    <legend class="label mb-3">Will you be there?</legend>
+    <div class="flex flex-col sm:flex-row gap-3">
+      <label class="flex-1 cursor-pointer">
+        <input type="radio" name="attending" value="yes" class="peer sr-only" required />
+        <div class="border border-ink/30 px-5 py-4 text-center font-display text-2xl peer-checked:bg-terracotta peer-checked:text-cream peer-checked:border-terracotta transition-colors">
+          Joyfully accepts
+        </div>
+      </label>
+      <label class="flex-1 cursor-pointer">
+        <input type="radio" name="attending" value="no" class="peer sr-only" />
+        <div class="border border-ink/30 px-5 py-4 text-center font-display text-2xl peer-checked:bg-ink peer-checked:text-cream peer-checked:border-ink transition-colors">
+          Regretfully declines
+        </div>
+      </label>
+    </div>
+  </fieldset>
+
+  <div>
+    <label for="guest_count" class="label block mb-2">Total in your party</label>
+    <input
+      id="guest_count"
+      name="guest_count"
+      type="number"
+      min="1"
+      max="6"
+      value="1"
+      class="w-full bg-transparent border-0 border-b border-ink/40 focus:border-terracotta focus:outline-none py-2 text-xl font-serif"
+    />
+  </div>
+
+  <div>
+    <label for="dietary" class="label block mb-2">Dietary needs</label>
+    <input
+      id="dietary"
+      name="dietary"
+      type="text"
+      class="w-full bg-transparent border-0 border-b border-ink/40 focus:border-terracotta focus:outline-none py-2 text-xl font-serif placeholder:text-ink/30"
+      placeholder="Vegetarian, gluten free, …"
+    />
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="song" class="label block mb-2">A song to fill the floor</label>
+    <input
+      id="song"
+      name="song"
+      type="text"
+      class="w-full bg-transparent border-0 border-b border-ink/40 focus:border-terracotta focus:outline-none py-2 text-xl font-serif placeholder:text-ink/30"
+      placeholder="Stevie Wonder — Signed, Sealed, Delivered"
+    />
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="message" class="label block mb-2">A note for us</label>
+    <textarea
+      id="message"
+      name="message"
+      rows="3"
+      class="w-full bg-transparent border border-ink/30 focus:border-terracotta focus:outline-none p-3 text-lg font-serif placeholder:text-ink/30"
+      placeholder="Optional — well wishes, questions, anything"></textarea>
+  </div>
+
+  <div class="md:col-span-2 flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-2">
+    <button
+      type="submit"
+      class="group relative inline-flex items-center gap-3 bg-ink text-cream px-8 py-4 font-mono text-xs tracking-[0.32em] uppercase hover:bg-terracotta transition-colors"
+    >
+      <span>Send RSVP</span>
+      <svg width="22" height="10" viewBox="0 0 22 10" fill="none" class="transition-transform group-hover:translate-x-1">
+        <path d="M0 5h20M16 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/>
+      </svg>
+    </button>
+    <p class="text-sm text-ink-soft italic font-serif">Kindly reply by <span class="not-italic font-mono uppercase tracking-widest text-xs text-terracotta-deep">15 Sep 2026</span></p>
+  </div>
+
+  <p id="rsvp-status" role="status" aria-live="polite" class="md:col-span-2 hidden font-display text-2xl text-olive"></p>
+</form>
+
+<script>
+  const form = document.getElementById("rsvp-form") as HTMLFormElement | null;
+  const status = document.getElementById("rsvp-status") as HTMLElement | null;
+  if (form && status) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const endpoint = form.dataset.endpoint;
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const submit = form.querySelector("button[type=submit]") as HTMLButtonElement | null;
+      if (submit) {
+        submit.disabled = true;
+        submit.style.opacity = "0.6";
+        submit.querySelector("span")!.textContent = "Sending…";
+      }
+
+      const formData = new FormData(form);
+      formData.append("submitted_at", new Date().toISOString());
+
+      if (!endpoint) {
+        status.textContent =
+          "RSVP endpoint not configured yet — set PUBLIC_RSVP_ENDPOINT in .env.";
+        status.classList.remove("hidden");
+        status.style.color = "var(--color-terracotta-deep)";
+        if (submit) {
+          submit.disabled = false;
+          submit.style.opacity = "1";
+          submit.querySelector("span")!.textContent = "Send RSVP";
+        }
+        return;
+      }
+
+      try {
+        await fetch(endpoint, {
+          method: "POST",
+          mode: "no-cors",
+          body: formData,
+        });
+        form.reset();
+        status.textContent = "Thank you — we can't wait to celebrate with you.";
+        status.classList.remove("hidden");
+        form.querySelectorAll("input, textarea, button").forEach((el) => {
+          (el as HTMLInputElement).disabled = true;
+        });
+      } catch (err) {
+        console.error(err);
+        status.textContent =
+          "Something went wrong sending your RSVP. Please email us instead.";
+        status.style.color = "var(--color-terracotta-deep)";
+        status.classList.remove("hidden");
+        if (submit) {
+          submit.disabled = false;
+          submit.style.opacity = "1";
+          submit.querySelector("span")!.textContent = "Send RSVP";
+        }
+      }
+    });
+  }
+</script>

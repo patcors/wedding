@@ -1,43 +1,88 @@
-# Astro Starter Kit: Minimal
+# Patrick & Amelia — Jasper's Berry
+
+A single-page Astro + Tailwind site for our wedding. Hosted on GitHub Pages,
+with an RSVP form that posts to a Google Apps Script Web App which appends each
+reply to a Google Sheet.
+
+## Local development
 
 ```sh
-pnpm create astro@latest -- --template minimal
+pnpm install
+cp .env.example .env       # paste your Apps Script URL in here
+pnpm dev                   # http://localhost:4321
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Edit the wedding details at the top of `src/pages/index.astro` (names, date,
+schedule, venue copy). The colour palette and type stack live in
+`src/styles/global.css` under `@theme`.
 
-## 🚀 Project Structure
+## RSVP backend — Google Apps Script
 
-Inside of your Astro project, you'll see the following folders and files:
+1. Create a Google Sheet. Name a tab `RSVPs`.
+2. **Extensions → Apps Script**, replace the contents with:
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+   ```js
+   const SHEET_NAME = 'RSVPs';
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+   function doPost(e) {
+     const lock = LockService.getScriptLock();
+     lock.waitLock(20000);
+     try {
+       const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+       const headers = [
+         'submitted_at', 'name', 'email', 'attending',
+         'guest_count', 'dietary', 'song', 'message',
+       ];
+       if (sheet.getLastRow() === 0) sheet.appendRow(headers);
+       const p = e.parameter || {};
+       sheet.appendRow(headers.map((h) => p[h] || ''));
+       return ContentService
+         .createTextOutput(JSON.stringify({ ok: true }))
+         .setMimeType(ContentService.MimeType.JSON);
+     } finally {
+       lock.releaseLock();
+     }
+   }
+   ```
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+3. **Deploy → New deployment → Web app**:
+   - Execute as: *Me*
+   - Who has access: *Anyone*
+4. Copy the deployment URL (looks like `https://script.google.com/macros/s/AKfycb.../exec`).
+5. Put it in `.env` as `PUBLIC_RSVP_ENDPOINT=…` and, for production, add it
+   under the repo's **Settings → Secrets and variables → Actions** with the
+   same name.
 
-Any static assets, like images, can be placed in the `public/` directory.
+The browser submits with `mode: "no-cors"`, so the script's response isn't read
+— the form treats fetch resolution as success and shows the thank-you message.
+Every redeploy of the Apps Script generates a **new URL** unless you choose
+"Manage deployments → edit → Version: New version" on the existing deployment.
 
-## 🧞 Commands
+## GitHub Pages deployment
 
-All commands are run from the root of the project, from a terminal:
+1. Push this repo to GitHub.
+2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. Add the `PUBLIC_RSVP_ENDPOINT` repo secret (above).
+4. Open `astro.config.mjs` and set `site` (and `base` if this is a project page
+   rather than a `<user>.github.io` root repo):
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+   ```js
+   site: 'https://<your-user>.github.io',
+   base: '/<repo-name>/',  // omit/comment out for root site
+   ```
 
-## 👀 Want to learn more?
+5. Push to `main`. The workflow at `.github/workflows/deploy.yml` builds with
+   `withastro/action` and publishes `dist/`.
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+### Custom domain
+
+Add a file `public/CNAME` containing your domain (one line). Then point the
+DNS at GitHub Pages per their docs.
+
+## Stack
+
+- **Astro 6** — static output, zero-JS by default
+- **Tailwind v4** — via `@tailwindcss/vite`, theme tokens declared in
+  `src/styles/global.css` (`@theme { … }`)
+- **Fonts** — Fraunces (display), Cormorant Garamond (body), DM Mono (accents)
+- One JS island for the RSVP form submit handler. Everything else ships as HTML.
