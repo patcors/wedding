@@ -1,334 +1,141 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import RSVPForm from "../components/RSVPForm.astro";
 
-// Edit these to update the site --------------------------------------------
-const wedding = {
-  brideFirst: "Amelia",
-  groomFirst: "Patrick",
-  dateLong: "Saturday, the seventeenth of October",
-  year: "2026",
-  dateShort: "17 · 10 · 2026",
-  dateRoman: "MMXXVI",
-  ceremonyTime: "3:30 in the afternoon",
-  venueName: "Jasper's Berry",
-  venueRegion: "Berry, New South Wales",
-  venueAddress: "Coolangatta Road, Berry NSW 2535",
-  venueUrl: "https://jaspersberry.com.au/",
-  rsvpBy: "15 September 2026",
-};
+const dateShort = "16 · 04 · 2026";
+const dateRoman = "MMXXVI";
 
-const schedule = [
-  { time: "3:00pm", label: "Arrival",    detail: "Pre-ceremony drinks under the camellias" },
-  { time: "3:30pm", label: "Ceremony",   detail: "On the western lawn, by the dam" },
-  { time: "4:15pm", label: "Canapés",    detail: "Local oysters, fizz, sundown" },
-  { time: "6:00pm", label: "Reception",  detail: "Long-table dinner in the barn" },
-  { time: "8:30pm", label: "Dancing",    detail: "Live band, then DJ, until late" },
-  { time: "11:30pm", label: "Carriages", detail: "Coaches return to Berry & Kiama" },
-];
+// Astro prepends BASE_URL so this works whether the site is served from
+// "/" or "/<repo>/" on GitHub Pages.
+const invitationHref = `${import.meta.env.BASE_URL}invitation/`;
 ---
 
-<Layout>
-  <!-- ─────────────── HEADER ─────────────── -->
-  <header class="px-6 md:px-10 pt-6 flex items-center justify-between font-mono text-[0.7rem] tracking-[0.32em] uppercase text-ink-soft">
-    <a href="#top" class="flex items-center gap-2">
-      <span class="font-display text-2xl tracking-tight not-italic" style="font-variation-settings:'SOFT' 80,'WONK' 1;">
-        {wedding.groomFirst[0]}<span class="text-terracotta">·</span>{wedding.brideFirst[0]}
-      </span>
-    </a>
-    <nav class="hidden md:flex gap-8">
-      <a href="#story" class="hover:text-terracotta-deep">Story</a>
-      <a href="#day" class="hover:text-terracotta-deep">The Day</a>
-      <a href="#venue" class="hover:text-terracotta-deep">Venue</a>
-      <a href="#stay" class="hover:text-terracotta-deep">Stay</a>
-      <a href="#rsvp" class="hover:text-terracotta-deep">RSVP</a>
-    </nav>
-    <span class="hidden sm:inline">{wedding.dateShort}</span>
-  </header>
-
-  <!-- ─────────────── HERO ─────────────── -->
-  <section id="top" class="relative px-6 md:px-10 pt-12 md:pt-20 pb-24 overflow-hidden">
-    <!-- Atomic sunburst — slowly rotates behind names -->
+<Layout
+  title="Patrick & Amelia · save the date"
+  description="Patrick and Amelia are getting married. Full details to follow."
+>
+  <main class="relative min-h-screen flex items-center justify-center px-6 overflow-hidden">
+    <!-- Atomic sunburst, slowly rotating -->
     <svg
       aria-hidden="true"
-      class="absolute -top-24 right-[-6rem] md:right-[-4rem] w-[28rem] md:w-[42rem] h-[28rem] md:h-[42rem] text-mustard opacity-80 spin-slow"
+      class="absolute inset-0 m-auto w-[120vmin] h-[120vmin] max-w-none text-mustard opacity-40 spin-slow"
       viewBox="-100 -100 200 200"
     >
       <g stroke="currentColor" stroke-width="0.6" fill="none">
-        {Array.from({ length: 36 }).map((_, i) => (
+        {Array.from({ length: 48 }).map((_, i) => (
           <line
             x1="0" y1="0"
-            x2={Math.cos((i * Math.PI) / 18) * 96}
-            y2={Math.sin((i * Math.PI) / 18) * 96}
-            opacity={i % 3 === 0 ? 0.9 : 0.35}
+            x2={Math.cos((i * Math.PI) / 24) * 96}
+            y2={Math.sin((i * Math.PI) / 24) * 96}
+            opacity={i % 4 === 0 ? 0.9 : 0.3}
           />
         ))}
-        <circle r="42" stroke-width="0.8" />
-        <circle r="58" stroke-width="0.4" stroke-dasharray="2 4" />
-        <circle r="78" stroke-width="0.4" />
+        <circle r="42" stroke-width="0.6" />
+        <circle r="64" stroke-width="0.3" stroke-dasharray="2 4" />
+        <circle r="86" stroke-width="0.3" />
       </g>
-      <circle r="22" fill="var(--color-terracotta)" />
-      <circle r="22" fill="none" stroke="var(--color-cream)" stroke-width="0.6" />
     </svg>
 
-    <!-- Boomerang accent, bottom left -->
-    <svg
-      aria-hidden="true"
-      class="absolute left-[-3rem] bottom-8 w-40 h-40 text-olive drift hidden md:block"
-      viewBox="0 0 100 100"
+    <article
+      id="card"
+      class="relative z-10 max-w-2xl text-center transition-opacity duration-700"
     >
-      <path d="M10 80 Q 30 10, 90 20 Q 50 30, 30 80 Z" fill="currentColor" opacity="0.85" />
-    </svg>
+      <p class="label">Save the date · {dateRoman}</p>
 
-    <div class="relative max-w-6xl mx-auto hero-rise">
-      <p class="label">An invitation · {wedding.dateRoman}</p>
-
-      <h1 class="mt-8 font-display text-[clamp(4rem,16vw,12rem)] leading-[0.85] tracking-[-0.03em]" style="font-variation-settings:'opsz' 144,'SOFT' 60,'WONK' 1;">
-        <span class="block">{wedding.groomFirst}</span>
-        <span class="block italic text-terracotta-deep -mt-2 md:-mt-6" style="font-variation-settings:'opsz' 144,'SOFT' 100,'WONK' 1;">
-          <span class="font-serif italic text-ink-soft text-[0.45em] align-middle pr-3 not-italic">&</span>{wedding.brideFirst}
+      <h1 class="mt-10 font-display leading-[0.85] tracking-[-0.02em]" style="font-variation-settings:'opsz' 144,'SOFT' 60,'WONK' 1;">
+        <span class="block text-[clamp(3rem,12vw,8rem)]">Patrick</span>
+        <span class="block font-serif italic text-ink-soft text-[clamp(1.5rem,5vw,3rem)] my-2">&amp;</span>
+        <span class="block text-[clamp(3rem,12vw,8rem)]">
+          <button
+            id="amelia"
+            type="button"
+            aria-label="Amelia"
+            class="font-display italic text-terracotta-deep tracking-[-0.02em] focus:outline-none focus-visible:outline-none cursor-default select-none"
+            style="font-variation-settings:'opsz' 144,'SOFT' 100,'WONK' 1; background: transparent; border: 0; padding: 0;"
+          >Amelia</button>
         </span>
       </h1>
 
-      <div class="mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-end gap-8">
-        <div>
-          <p class="label mb-2">The Date</p>
-          <p class="font-display text-3xl md:text-4xl leading-none">{wedding.dateLong}</p>
-          <p class="font-serif italic text-xl text-ink-soft">two thousand and twenty-six</p>
-        </div>
-        <div class="hidden md:flex justify-center">
-          <!-- Ornament: stylised berry sprig -->
-          <svg width="100" height="60" viewBox="0 0 100 60" aria-hidden="true">
-            <path d="M2 30 Q 50 -10, 98 30" stroke="var(--color-olive)" stroke-width="1.2" fill="none" />
-            <circle cx="28" cy="20" r="4" fill="var(--color-berry)" />
-            <circle cx="42" cy="13" r="4" fill="var(--color-berry)" />
-            <circle cx="58" cy="13" r="4" fill="var(--color-berry)" />
-            <circle cx="72" cy="20" r="4" fill="var(--color-berry)" />
-            <path d="M50 30 L 50 56" stroke="var(--color-olive)" stroke-width="1" />
-          </svg>
-        </div>
-        <div class="md:text-right">
-          <p class="label mb-2">The Place</p>
-          <p class="font-display text-3xl md:text-4xl leading-none">{wedding.venueName}</p>
-          <p class="font-serif italic text-xl text-ink-soft">{wedding.venueRegion}</p>
-        </div>
+      <!-- Hidden progress indicator — subtle mustard dot that grows with each click. -->
+      <div class="mt-8 flex justify-center" aria-hidden="true">
+        <span
+          id="progress"
+          class="block rounded-full bg-mustard transition-all duration-300"
+          style="width:6px; height:6px; opacity:0.35;"
+        ></span>
       </div>
-    </div>
-  </section>
 
-  <!-- ─────────────── DIVIDER ─────────────── -->
-  <div class="px-6 md:px-10 max-w-5xl mx-auto rule-dot text-ink-soft">
-    <span class="font-mono text-xs tracking-[0.32em] uppercase">est. {wedding.year}</span>
-  </div>
-
-  <!-- ─────────────── STORY ─────────────── -->
-  <section id="story" class="relative px-6 md:px-10 py-24 md:py-32 max-w-5xl mx-auto">
-    <p class="label">Dear friends &amp; family</p>
-    <h2 class="mt-4 font-display text-5xl md:text-7xl leading-[0.95] max-w-3xl">
-      We're getting <span class="italic text-terracotta-deep">married</span> — and we'd love nothing more than to have you there.
-    </h2>
-    <div class="mt-10 grid md:grid-cols-2 gap-10 text-xl font-serif leading-relaxed text-ink-soft">
-      <p>
-        After many shared chapters — the late dinners, the long drives, the quiet
-        Sundays — we're putting our names side-by-side and calling it official. We've
-        chosen a place that feels like us: open paddocks, a tin-roofed barn, the smell
-        of the coast a few ridges away.
+      <p class="mt-10 font-serif italic text-2xl md:text-3xl text-ink-soft">
+        are getting married.
       </p>
-      <p>
-        On this little corner of the internet you'll find the day's rhythm, how to find
-        us, where to lay your head, and a form to let us know you're coming. Read on,
-        then send the RSVP. The drinks are already on ice.
-      </p>
-    </div>
-    <p class="mt-12 font-display italic text-3xl">— {wedding.groomFirst} &amp; {wedding.brideFirst}</p>
-  </section>
 
-  <!-- ─────────────── THE DAY ─────────────── -->
-  <section id="day" class="relative bg-bg-deep">
-    <!-- Concentric arcs decoration -->
-    <svg aria-hidden="true" class="absolute top-0 right-0 w-72 h-72 text-teal opacity-30" viewBox="0 0 100 100">
-      <g fill="none" stroke="currentColor" stroke-width="0.6">
-        <path d="M100 0 A 100 100 0 0 0 0 100" />
-        <path d="M100 20 A 80 80 0 0 0 20 100" />
-        <path d="M100 40 A 60 60 0 0 0 40 100" />
-        <path d="M100 60 A 40 40 0 0 0 60 100" />
+      <p class="mt-8 font-mono text-sm tracking-[0.4em] uppercase text-ink">
+        {dateShort}
+      </p>
+      <p class="mt-3 font-serif italic text-lg text-ink-soft">
+        Jasper's Berry &middot; Berry, NSW
+      </p>
+
+      <hr class="mt-14 mb-6 border-0 h-px bg-ink/25 mx-auto w-32" />
+
+      <p class="font-serif text-lg text-ink-soft max-w-md mx-auto">
+        Full details, schedule and RSVP are on their way. Watch your inbox &mdash;
+        a proper invitation is coming soon.
+      </p>
+    </article>
+
+    <!-- Footer ornament -->
+    <svg
+      aria-hidden="true"
+      class="absolute bottom-6 left-1/2 -translate-x-1/2 text-terracotta-deep"
+      width="36" height="36" viewBox="-18 -18 36 36"
+    >
+      <g stroke="currentColor" stroke-width="1.2">
+        <line x1="-15" y1="0" x2="15" y2="0" />
+        <line x1="0" y1="-15" x2="0" y2="15" />
+        <line x1="-11" y1="-11" x2="11" y2="11" />
+        <line x1="-11" y1="11" x2="11" y2="-11" />
       </g>
+      <circle r="2.5" fill="currentColor" />
     </svg>
+  </main>
 
-    <div class="relative px-6 md:px-10 py-24 md:py-32 max-w-5xl mx-auto">
-      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-16">
-        <div>
-          <p class="label">Two</p>
-          <h2 class="mt-3 font-display text-6xl md:text-7xl leading-none">The Day</h2>
-        </div>
-        <p class="font-serif italic text-xl text-ink-soft max-w-md">
-          Ceremony begins at <strong class="not-italic font-display">{wedding.ceremonyTime}</strong>.
-          Please be seated by quarter past.
-        </p>
-      </div>
+  <script is:inline define:vars={{ invitationHref }}>
+    (function () {
+      const STORAGE_KEY = "pa_unlocked";
+      const REQUIRED_CLICKS = 5;
 
-      <ol class="divide-y divide-ink/15 border-y border-ink/15">
-        {schedule.map((item, i) => (
-          <li class="grid grid-cols-[3rem_8rem_1fr] md:grid-cols-[4rem_12rem_1fr] items-baseline gap-4 md:gap-8 py-6 group">
-            <span class="font-mono text-xs tracking-widest text-terracotta-deep">{String(i + 1).padStart(2, "0")}</span>
-            <span class="font-mono text-base md:text-lg tracking-wider">{item.time}</span>
-            <div>
-              <div class="font-display text-3xl md:text-4xl leading-tight">{item.label}</div>
-              <div class="font-serif italic text-lg text-ink-soft">{item.detail}</div>
-            </div>
-          </li>
-        ))}
-      </ol>
+      // ?lock=1 forces the waiting page even when unlocked (for previewing it).
+      const params = new URLSearchParams(window.location.search);
+      const forceLock = params.get("lock") === "1";
 
-      <p class="mt-10 font-serif italic text-lg text-ink-soft">
-        <span class="label not-italic mr-3">Dress</span>
-        Garden cocktail — long dresses, lighter suits, sensible heels for grass.
-      </p>
-    </div>
-  </section>
+      if (!forceLock && localStorage.getItem(STORAGE_KEY) === "1") {
+        window.location.replace(invitationHref);
+        return;
+      }
+      if (forceLock) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
 
-  <!-- ─────────────── VENUE ─────────────── -->
-  <section id="venue" class="relative px-6 md:px-10 py-24 md:py-32 max-w-6xl mx-auto">
-    <div class="grid md:grid-cols-12 gap-10 items-center">
-      <div class="md:col-span-7">
-        <p class="label">Three</p>
-        <h2 class="mt-3 font-display text-6xl md:text-7xl leading-[0.9]">
-          {wedding.venueName}<span class="text-terracotta-deep">.</span>
-        </h2>
-        <p class="mt-8 font-serif text-xl leading-relaxed text-ink-soft max-w-xl">
-          A working berry farm in the rolling country behind Berry, NSW. Mossy stone,
-          a hand-built barn, paddocks that drop toward the coast. We fell for it the
-          moment we drove through the gates — and we think you will too.
-        </p>
-        <div class="mt-10 grid sm:grid-cols-2 gap-6 max-w-xl">
-          <div>
-            <p class="label mb-1">Address</p>
-            <p class="font-serif text-lg leading-snug">{wedding.venueAddress}</p>
-          </div>
-          <div>
-            <p class="label mb-1">From Sydney</p>
-            <p class="font-serif text-lg leading-snug">≈ 2 hours by car, south on the M1 → A1.</p>
-          </div>
-        </div>
-        <a
-          href={wedding.venueUrl}
-          target="_blank"
-          rel="noopener"
-          class="mt-10 inline-flex items-center gap-3 border-b border-ink pb-1 font-mono text-xs tracking-[0.32em] uppercase hover:text-terracotta-deep hover:border-terracotta-deep transition-colors"
-        >
-          <span>Visit jaspersberry.com.au</span>
-          <span aria-hidden>↗</span>
-        </a>
-      </div>
+      const btn = document.getElementById("amelia");
+      const dot = document.getElementById("progress");
+      const card = document.getElementById("card");
+      let clicks = 0;
 
-      <!-- Right column: stylised landscape postcard (pure SVG, no images) -->
-      <div class="md:col-span-5">
-        <div class="relative aspect-[3/4] border border-ink/30 bg-cream p-3 shadow-[8px_8px_0_0_var(--color-terracotta)]">
-          <svg viewBox="0 0 100 130" class="w-full h-full block" aria-hidden="true">
-            <rect width="100" height="130" fill="var(--color-cream)" />
-            <!-- Sky -->
-            <rect y="0" width="100" height="62" fill="#d9c89a" />
-            <!-- Sun -->
-            <circle cx="68" cy="34" r="14" fill="var(--color-terracotta)" />
-            <!-- Distant ridge -->
-            <path d="M0 62 Q 25 50, 50 58 T 100 56 L 100 70 L 0 70 Z" fill="var(--color-teal)" />
-            <!-- Mid hills -->
-            <path d="M0 72 Q 30 60, 60 70 T 100 68 L 100 88 L 0 88 Z" fill="var(--color-olive)" />
-            <!-- Fields -->
-            <rect y="88" width="100" height="42" fill="#a78b4a" />
-            <!-- Furrows -->
-            {Array.from({ length: 6 }).map((_, i) => (
-              <path d={`M0 ${92 + i * 6} Q 50 ${88 + i * 6}, 100 ${94 + i * 6}`} stroke="#7b6432" stroke-width="0.6" fill="none" />
-            ))}
-            <!-- Barn -->
-            <g transform="translate(14 76)">
-              <polygon points="0,8 10,0 20,8 20,18 0,18" fill="var(--color-berry)" />
-              <rect x="7" y="11" width="6" height="7" fill="var(--color-ink)" />
-            </g>
-            <!-- Trees -->
-            <g fill="var(--color-teal)">
-              <circle cx="82" cy="76" r="4" />
-              <rect x="81.4" y="76" width="1.2" height="6" fill="var(--color-ink)" />
-              <circle cx="88" cy="78" r="3" />
-              <rect x="87.5" y="78" width="1" height="5" fill="var(--color-ink)" />
-            </g>
-          </svg>
-          <p class="absolute -bottom-4 left-4 right-4 bg-bg px-2 font-mono text-[0.6rem] tracking-[0.3em] uppercase text-ink-soft text-center">
-            Jasper's Berry · view from the hill
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─────────────── STAY & TRAVEL ─────────────── -->
-  <section id="stay" class="relative bg-ink text-cream">
-    <div class="px-6 md:px-10 py-24 md:py-32 max-w-6xl mx-auto">
-      <p class="label" style="color: var(--color-mustard);">Four</p>
-      <h2 class="mt-3 font-display text-6xl md:text-7xl leading-[0.9] text-cream">Stay &amp; getting there</h2>
-
-      <div class="mt-16 grid md:grid-cols-3 gap-12">
-        <div>
-          <p class="font-mono text-xs tracking-[0.32em] uppercase mb-3" style="color: var(--color-mustard);">By car</p>
-          <p class="font-serif text-lg leading-relaxed text-cream/90">
-            Two hours south of Sydney via the Princes Motorway. There's plenty of on-site
-            parking, but please nominate a sober driver — or take the coach.
-          </p>
-        </div>
-        <div>
-          <p class="font-mono text-xs tracking-[0.32em] uppercase mb-3" style="color: var(--color-mustard);">By coach</p>
-          <p class="font-serif text-lg leading-relaxed text-cream/90">
-            Return coaches will run from <span class="underline-wavy">Berry town centre</span> and
-            <span class="underline-wavy">Kiama</span>, departing at 2:30pm and returning at
-            11:30pm.
-          </p>
-        </div>
-        <div>
-          <p class="font-mono text-xs tracking-[0.32em] uppercase mb-3" style="color: var(--color-mustard);">Where to stay</p>
-          <ul class="font-serif text-lg leading-relaxed text-cream/90 space-y-2">
-            <li>— The Bangalay Luxury Villas, Shoalhaven Heads</li>
-            <li>— Bellawongarah at Berry (B&amp;B)</li>
-            <li>— The Posthouse, Berry</li>
-            <li>— Or any Airbnb in Berry, Gerringong or Kiama</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─────────────── RSVP ─────────────── -->
-  <section id="rsvp" class="relative px-6 md:px-10 py-24 md:py-32 max-w-4xl mx-auto">
-    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-16">
-      <div>
-        <p class="label">Five &mdash; the important bit</p>
-        <h2 class="mt-3 font-display text-6xl md:text-7xl leading-[0.9]">Will you be there?</h2>
-      </div>
-      <p class="font-serif italic text-xl text-ink-soft max-w-sm">
-        Kindly reply by <strong class="not-italic font-display text-2xl">{wedding.rsvpBy}</strong>.
-        One form per guest, please.
-      </p>
-    </div>
-
-    <RSVPForm />
-  </section>
-
-  <!-- ─────────────── FOOTER ─────────────── -->
-  <footer class="relative px-6 md:px-10 pb-12 pt-20">
-    <div class="max-w-5xl mx-auto flex flex-col items-center gap-6">
-      <!-- Asterisk ornament -->
-      <svg width="44" height="44" viewBox="-22 -22 44 44" aria-hidden="true" class="text-terracotta-deep">
-        <g stroke="currentColor" stroke-width="1.4">
-          <line x1="-18" y1="0" x2="18" y2="0" />
-          <line x1="0" y1="-18" x2="0" y2="18" />
-          <line x1="-13" y1="-13" x2="13" y2="13" />
-          <line x1="-13" y1="13" x2="13" y2="-13" />
-        </g>
-        <circle r="3" fill="currentColor" />
-      </svg>
-      <p class="font-display text-3xl tracking-tight">{wedding.groomFirst} &amp; {wedding.brideFirst}</p>
-      <p class="font-mono text-[0.7rem] tracking-[0.32em] uppercase text-ink-soft">
-        {wedding.dateShort} &middot; {wedding.venueName} &middot; {wedding.venueRegion}
-      </p>
-    </div>
-  </footer>
+      btn?.addEventListener("click", () => {
+        clicks += 1;
+        const pct = Math.min(clicks / REQUIRED_CLICKS, 1);
+        if (dot) {
+          const size = 6 + pct * 22;
+          dot.style.width = `${size}px`;
+          dot.style.height = `${size}px`;
+          dot.style.opacity = `${0.35 + pct * 0.65}`;
+        }
+        if (clicks >= REQUIRED_CLICKS) {
+          localStorage.setItem(STORAGE_KEY, "1");
+          if (card) card.style.opacity = "0";
+          setTimeout(() => window.location.assign(invitationHref), 650);
+        }
+      });
+    })();
+  </script>
 </Layout>
