@@ -27,7 +27,7 @@ jobs:
           PUBLIC_RSVP_ENDPOINT: ${{ secrets.PUBLIC_RSVP_ENDPOINT }}
         with:
           package-manager: pnpm@latest
-          node-version: 22
+          node-version: 24
 
   deploy:
     needs: build
