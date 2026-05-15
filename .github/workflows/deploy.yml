@@ -19,14 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build with Astro
-        uses: withastro/action@v3
+        uses: withastro/action@v6
         env:
           PUBLIC_RSVP_ENDPOINT: ${{ secrets.PUBLIC_RSVP_ENDPOINT }}
         with:
-          package-manager: pnpm@latest
+          package-manager: pnpm@10
           node-version: 24
 
   deploy:
