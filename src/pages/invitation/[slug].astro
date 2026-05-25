@@ -1,6 +1,16 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import RSVPForm from "../components/RSVPForm.astro";
+import Layout from "../../layouts/Layout.astro";
+import RSVPForm from "../../components/RSVPForm.astro";
+import { guests } from "../../data/guests";
+
+export function getStaticPaths() {
+  return guests.map((guest) => ({
+    params: { slug: guest.slug },
+    props: { guest },
+  }));
+}
+
+const { guest } = Astro.props;
 
 // Edit these to update the site --------------------------------------------
 const wedding = {
@@ -19,12 +29,12 @@ const wedding = {
 };
 
 const schedule = [
-  { time: "3:00pm", label: "Arrival",    detail: "Pre-ceremony drinks under the camellias" },
-  { time: "3:30pm", label: "Ceremony",   detail: "On the western lawn, by the dam" },
-  { time: "4:15pm", label: "Canapés",    detail: "Local oysters, fizz, sundown" },
-  { time: "6:00pm", label: "Reception",  detail: "Long-table dinner in the barn" },
-  { time: "8:30pm", label: "Dancing",    detail: "Live band, then DJ, until late" },
-  { time: "11:30pm", label: "Carriages", detail: "Coaches return to Berry & Kiama" },
+  { time: "3:00pm",  label: "Arrival",    detail: "Pre-ceremony drinks under the camellias" },
+  { time: "3:30pm",  label: "Ceremony",   detail: "On the western lawn, by the dam" },
+  { time: "4:15pm",  label: "Canapés",    detail: "Local oysters, fizz, sundown" },
+  { time: "6:00pm",  label: "Reception",  detail: "Long-table dinner in the barn" },
+  { time: "8:30pm",  label: "Dancing",    detail: "Live band, then DJ, until late" },
+  { time: "11:30pm", label: "Carriages",  detail: "Coaches return to Berry & Kiama" },
 ];
 ---
 
@@ -94,7 +104,7 @@ const schedule = [
         <div>
           <p class="label mb-2">The Date</p>
           <p class="font-display text-3xl md:text-4xl leading-none">{wedding.dateLong}</p>
-          <p class="font-serif italic text-xl text-ink-soft">two thousand and twenty-six</p>
+          <p class="font-serif italic text-xl text-ink-soft">two thousand and twenty-seven</p>
         </div>
         <div class="hidden md:flex justify-center">
           <!-- Ornament: stylised berry sprig -->
@@ -123,7 +133,7 @@ const schedule = [
 
   <!-- ─────────────── STORY ─────────────── -->
   <section id="story" class="relative px-6 md:px-10 py-24 md:py-32 max-w-5xl mx-auto">
-    <p class="label">Dear friends &amp; family</p>
+    <p class="label">Dear {guest.greeting}</p>
     <h2 class="mt-4 font-display text-5xl md:text-7xl leading-[0.95] max-w-3xl">
       We're getting <span class="italic text-terracotta-deep">married</span> — and we'd love nothing more than to have you there.
     </h2>
@@ -309,7 +319,7 @@ const schedule = [
       </p>
     </div>
 
-    <RSVPForm />
+    <RSVPForm maxGuests={guest.maxGuests} slug={guest.slug} />
   </section>
 
   <!-- ─────────────── FOOTER ─────────────── -->

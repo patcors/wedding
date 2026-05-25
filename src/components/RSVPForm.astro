@@ -1,9 +1,14 @@
 ---
-// RSVPForm.astro
 // Posts to a Google Apps Script Web App URL. Because GAS web apps don't return
 // CORS headers, we submit with `mode: "no-cors"` — we won't be able to read the
 // response, so we treat fetch resolution as success. The Apps Script side
 // appends a row to a Google Sheet (see README for the script).
+
+interface Props {
+  maxGuests?: number;
+  slug?: string;
+}
+const { maxGuests = 6, slug = "" } = Astro.props;
 const endpoint = import.meta.env.PUBLIC_RSVP_ENDPOINT ?? "";
 ---
 
@@ -13,6 +18,7 @@ const endpoint = import.meta.env.PUBLIC_RSVP_ENDPOINT ?? "";
   data-endpoint={endpoint}
   novalidate
 >
+  <input type="hidden" name="code" value={slug} />
   <div class="md:col-span-2">
     <label for="name" class="label block mb-2">Your full name</label>
     <input
@@ -64,7 +70,7 @@ const endpoint = import.meta.env.PUBLIC_RSVP_ENDPOINT ?? "";
       name="guest_count"
       type="number"
       min="1"
-      max="6"
+      max={maxGuests}
       value="1"
       class="w-full bg-transparent border-0 border-b border-ink/40 focus:border-terracotta focus:outline-none py-2 text-xl font-serif"
     />

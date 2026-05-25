@@ -22,6 +22,7 @@
   --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
   --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
+  /* Claude start here */
   --color-evergreen-50: oklch(96.5% 0.008 145.51);
   --color-evergreen-100: oklch(92.9% 0.018 148.1);
   --color-evergreen-200: oklch(85.58% 0.034 146.66);
@@ -81,6 +82,7 @@
   --color-ivory-800: oklch(49.39% 0.108 109.77);
   --color-ivory-900: oklch(31.08% 0.068 109.77);
   --color-ivory-950: oklch(25.2% 0.055 109.77);
+  /* Claude end here */
 }
 
 @layer base {

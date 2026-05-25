@@ -4,12 +4,24 @@ A single-page Astro + Tailwind site for our wedding. Hosted on GitHub Pages,
 with an RSVP form that posts to a Google Apps Script Web App which appends each
 reply to a Google Sheet.
 
+## Prerequisites
+
+- **Node.js** ≥ 22.12.0
+- **pnpm** — install with `npm install -g pnpm` if you don't have it
+
 ## Local development
 
 ```sh
 pnpm install
 cp .env.example .env       # paste your Apps Script URL in here
 pnpm dev                   # http://localhost:4321
+```
+
+## Build & preview
+
+```sh
+pnpm build      # outputs to dist/
+pnpm preview    # serves dist/ locally to verify the production build
 ```
 
 Edit the wedding details at the top of `src/pages/index.astro` (names, date,
