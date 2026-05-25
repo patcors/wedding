@@ -21,6 +21,66 @@
   --font-display: "Fraunces", "Cormorant Garamond", ui-serif, Georgia, serif;
   --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
   --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-evergreen-50: oklch(96.5% 0.008 145.51);
+  --color-evergreen-100: oklch(92.9% 0.018 148.1);
+  --color-evergreen-200: oklch(85.58% 0.034 146.66);
+  --color-evergreen-300: oklch(78.3% 0.053 146.79);
+  --color-evergreen-400: oklch(70.79% 0.07 146.07);
+  --color-evergreen-500: oklch(63.38% 0.09 145.82);
+  --color-evergreen-600: oklch(53.9% 0.074 145.65);
+  --color-evergreen-700: oklch(44.18% 0.06 146.04);
+  --color-evergreen-800: oklch(33.68% 0.042 145.8);
+  --color-evergreen-900: oklch(22.51% 0.025 147.03);
+  --color-evergreen-950: oklch(18.62% 0.016 148.83);
+
+  --color-grey-olive-50: oklch(96.16% 0.002 67.8);
+  --color-grey-olive-100: oklch(92.32% 0.003 48.72);
+  --color-grey-olive-200: oklch(84.47% 0.005 48.67);
+  --color-grey-olive-300: oklch(76.45% 0.008 48.62);
+  --color-grey-olive-400: oklch(68.2% 0.011 48.56);
+  --color-grey-olive-500: oklch(59.71% 0.014 48.47);
+  --color-grey-olive-600: oklch(50.94% 0.012 48.47);
+  --color-grey-olive-700: oklch(41.77% 0.009 48.48);
+  --color-grey-olive-800: oklch(32.06% 0.007 48.5);
+  --color-grey-olive-900: oklch(21.53% 0.004 48.55);
+  --color-grey-olive-950: oklch(18.3% 0.003 67.66);
+
+  --color-deep-mocha-50: oklch(96.1% 0.005 34.31);
+  --color-deep-mocha-100: oklch(92.32% 0.009 52.09);
+  --color-deep-mocha-200: oklch(84.45% 0.018 50.4);
+  --color-deep-mocha-300: oklch(76.49% 0.028 50.76);
+  --color-deep-mocha-400: oklch(68.28% 0.037 50.01);
+  --color-deep-mocha-500: oklch(59.98% 0.049 50.02);
+  --color-deep-mocha-600: oklch(51.12% 0.04 49.73);
+  --color-deep-mocha-700: oklch(41.94% 0.033 50.28);
+  --color-deep-mocha-800: oklch(32.14% 0.023 49.83);
+  --color-deep-mocha-900: oklch(21.61% 0.014 51.44);
+  --color-deep-mocha-950: oklch(18.14% 0.009 59.04);
+
+  --color-coffee-bean-50: oklch(96.25% 0.009 52.1);
+  --color-coffee-bean-100: oklch(92.26% 0.02 50.14);
+  --color-coffee-bean-200: oklch(84.46% 0.041 49.84);
+  --color-coffee-bean-300: oklch(76.65% 0.063 49.46);
+  --color-coffee-bean-400: oklch(68.88% 0.086 48.91);
+  --color-coffee-bean-500: oklch(61.26% 0.11 47.9);
+  --color-coffee-bean-600: oklch(52.18% 0.092 47.99);
+  --color-coffee-bean-700: oklch(42.7% 0.072 48.13);
+  --color-coffee-bean-800: oklch(32.65% 0.052 48.36);
+  --color-coffee-bean-900: oklch(21.78% 0.029 48.81);
+  --color-coffee-bean-950: oklch(18.19% 0.021 45.35);
+
+  --color-ivory-50: oklch(99.32% 0.034 107);
+  --color-ivory-100: oklch(98.75% 0.065 107.54);
+  --color-ivory-200: oklch(97.84% 0.124 108.5);
+  --color-ivory-300: oklch(97.23% 0.171 109.2);
+  --color-ivory-400: oklch(96.91% 0.201 109.62);
+  --color-ivory-500: oklch(96.8% 0.211 109.77);
+  --color-ivory-600: oklch(81.82% 0.178 109.77);
+  --color-ivory-700: oklch(66.11% 0.144 109.77);
+  --color-ivory-800: oklch(49.39% 0.108 109.77);
+  --color-ivory-900: oklch(31.08% 0.068 109.77);
+  --color-ivory-950: oklch(25.2% 0.055 109.77);
 }
 
 @layer base {
@@ -31,8 +91,16 @@
     font-size: 18px;
     /* Subtle paper grain — pure CSS, no asset request. */
     background-image:
-      radial-gradient(circle at 18% 22%, rgba(194, 90, 58, 0.05) 0, transparent 38%),
-      radial-gradient(circle at 82% 78%, rgba(95, 111, 51, 0.06) 0, transparent 42%);
+      radial-gradient(
+        circle at 18% 22%,
+        rgba(194, 90, 58, 0.05) 0,
+        transparent 38%
+      ),
+      radial-gradient(
+        circle at 82% 78%,
+        rgba(95, 111, 51, 0.06) 0,
+        transparent 42%
+      );
     background-attachment: fixed;
   }
   body {
@@ -50,11 +118,17 @@
     mix-blend-mode: multiply;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.14  0 0 0 0 0.10  0 0 0 0 0.08  0 0 0 0.65 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     font-weight: 500;
     letter-spacing: -0.01em;
-    font-variation-settings: "opsz" 144, "SOFT" 40, "WONK" 1;
+    font-variation-settings:
+      "opsz" 144,
+      "SOFT" 40,
+      "WONK" 1;
   }
   ::selection {
     background: var(--color-terracotta);
@@ -95,23 +169,54 @@
 
 /* Hero entrance — staggered, optical, no JS */
 @keyframes rise {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes spin-slow {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 @keyframes drift {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  50%      { transform: translate(0, -8px) rotate(2deg); }
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(0, -8px) rotate(2deg);
+  }
 }
 
-.hero-rise > * { opacity: 0; animation: rise 1.1s cubic-bezier(.2,.7,.2,1) forwards; }
-.hero-rise > *:nth-child(1) { animation-delay: 0.05s; }
-.hero-rise > *:nth-child(2) { animation-delay: 0.20s; }
-.hero-rise > *:nth-child(3) { animation-delay: 0.40s; }
-.hero-rise > *:nth-child(4) { animation-delay: 0.60s; }
-.hero-rise > *:nth-child(5) { animation-delay: 0.80s; }
+.hero-rise > * {
+  opacity: 0;
+  animation: rise 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.hero-rise > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.hero-rise > *:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.hero-rise > *:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.hero-rise > *:nth-child(4) {
+  animation-delay: 0.6s;
+}
+.hero-rise > *:nth-child(5) {
+  animation-delay: 0.8s;
+}
 
-.spin-slow { animation: spin-slow 120s linear infinite; transform-origin: 50% 50%; }
-.drift    { animation: drift 9s ease-in-out infinite; }
+.spin-slow {
+  animation: spin-slow 120s linear infinite;
+  transform-origin: 50% 50%;
+}
+.drift {
+  animation: drift 9s ease-in-out infinite;
+}
