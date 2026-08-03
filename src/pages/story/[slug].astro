@@ -1,0 +1,50 @@
+---
+import StoryCanvas from '../../components/story/StoryCanvas.tsx';
+import { guests } from '../../data/guests';
+import { SCROLL_VH } from '../../components/story/scrollState';
+
+export function getStaticPaths() {
+  return guests.map((guest) => ({
+    params: { slug: guest.slug },
+    props: { guest },
+  }));
+}
+
+const { guest } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Our story — {guest.greeting}</title>
+    <style>
+      html { background: #0d1117; }
+      body { margin: 0; color: #e6e9ef; }
+      /* The canvas is fixed; this spacer is what actually creates the scroll
+         distance the experience is mapped onto. */
+      .scroll-space { position: relative; z-index: 1; pointer-events: none; }
+      .intro {
+        position: relative; z-index: 1;
+        height: 100vh; display: grid; place-items: center; text-align: center;
+        font: 300 clamp(1.1rem, 3vw, 1.9rem)/1.5 ui-serif, Georgia, serif;
+        text-shadow: 0 2px 30px rgba(0,0,0,0.8);
+      }
+    </style>
+  </head>
+  <body>
+    <StoryCanvas slug={guest.slug} client:only="react" />
+
+    <div class="intro">
+      <div>
+        <p style="opacity:0.72; font-size:0.62em; letter-spacing:0.22em; text-transform:uppercase">
+          Patrick &amp; Amelia
+        </p>
+        <p>Two lives, and where they met.</p>
+        <p style="opacity:0.55; font-size:0.6em">Scroll &darr;</p>
+      </div>
+    </div>
+
+    <div class="scroll-space" style={`height:${SCROLL_VH}vh`}></div>
+  </body>
+</html>

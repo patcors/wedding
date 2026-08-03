@@ -91,9 +91,24 @@ Every redeploy of the Apps Script generates a **new URL** unless you choose
 Add a file `public/CNAME` containing your domain (one line). Then point the
 DNS at GitHub Pages per their docs.
 
+## The scroll experience
+
+`/story` (preview) and `/story/<slug>` (per-guest) render the scroll experience:
+two strands — a sailor's rope and a circus silk — weaving through suspended
+photographs, braiding at the point the two lives met.
+
+- **What to build next, in order:** [docs/ASSET_TASKS.md](docs/ASSET_TASKS.md)
+- **Jargon:** [docs/GLOSSARY.md](docs/GLOSSARY.md)
+- **Authoring content:** edit the arrays in `src/components/story/billboards.ts`
+- **Iterating:** the debug scrubber at the bottom of the page is far faster than
+  scrolling. Remove it before launch.
+
+Currently running on grey-box placeholders generated at runtime — no asset files
+required to develop against it.
+
 ## Stack
 
-- **Astro 6** — static output, zero-JS by default
+- **Astro 7** — static output, zero-JS by default
 - **Tailwind v4** — via `@tailwindcss/vite`, theme tokens declared in
   `src/styles/global.css` (`@theme { … }`)
 - **Fonts** — Fraunces (display), Cormorant Garamond (body), DM Mono (accents)
