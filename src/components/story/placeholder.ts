@@ -7,29 +7,40 @@ import * as THREE from 'three';
 
 const cache = new Map<string, THREE.Texture>();
 
-/** A numbered placeholder standing in for a photograph. */
-export function placeholderPhoto(label: string, seed = 0) {
-  const key = `photo:${label}:${seed}`;
+/**
+ * A numbered placeholder standing in for a photograph.
+ *
+ * `aspect` is width / height and should match the frame the texture gets
+ * stretched across — see PHOTO_W / PHOTO_H in frameGeometry.ts. The photo plane
+ * uses default UVs and no aspect-fit, so a square canvas in a 3:4 frame
+ * squashes both the hatching and the label. Defaults to the portrait frame.
+ */
+export function placeholderPhoto(label: string, seed = 0, aspect = 0.75) {
+  const key = `photo:${label}:${seed}:${aspect.toFixed(3)}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const size = 512;
+  const long = 640;
+  const w = aspect >= 1 ? long : Math.round(long * aspect);
+  const h = aspect >= 1 ? Math.round(long / aspect) : long;
   const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d')!;
 
   const hue = (seed * 47) % 360;
   ctx.fillStyle = `hsl(${hue} 12% 74%)`;
-  ctx.fillRect(0, 0, size, size);
+  ctx.fillRect(0, 0, w, h);
 
   // Diagonal hatching, so it's obviously a placeholder rather than a bug.
+  // Stepping from -h to w + h keeps the lines at a true 45 degrees, and the
+  // canvas covered, at any aspect.
   ctx.strokeStyle = `hsl(${hue} 14% 66%)`;
   ctx.lineWidth = 8;
-  for (let x = -size; x < size * 2; x += 44) {
+  for (let x = -h; x < w + h; x += 44) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x + size, size);
+    ctx.lineTo(x + h, h);
     ctx.stroke();
   }
 
@@ -37,7 +48,7 @@ export function placeholderPhoto(label: string, seed = 0) {
   ctx.font = '600 40px ui-sans-serif, system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, size / 2, size / 2);
+  ctx.fillText(label, w / 2, h / 2);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;

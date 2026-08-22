@@ -1,5 +1,6 @@
-import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { Suspense, useLayoutEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   MIN_LATERAL_CLEARANCE,
@@ -11,10 +12,109 @@ import {
 } from './curves';
 import type { BillboardSpec } from './billboards';
 import { captionTexture, placeholderPhoto } from './placeholder';
+import {
+  LAYOUT,
+  OUTER_H,
+  PHOTO_H,
+  PHOTO_W,
+  backingGeometry,
+  backingMaterial,
+  matGeometry,
+  matMaterial,
+  mouldingGeometry,
+  mouldingMaterial,
+} from './frameGeometry';
 
-const FRAME_W = 7.2;
-const FRAME_H = 5.0;
-const HANG = 3.1; // cord length from strand down to the top of the frame
+/**
+ * How far the frame hangs below its anchor on the strand.
+ *
+ * There is no longer a cord drawn between the two — the pair of tapered
+ * cylinders that used to run from the strand to the frame's top corners, plus
+ * the grommets they threaded through, are gone. They were the least convincing
+ * thing in the scene: five-sided cylinders read as facets at this distance, and
+ * two straight cords cannot bend the way the pendulum below implies they
+ * should, so the frame appeared to pivot while its cords stayed rigid.
+ *
+ * Without them the frame reads as suspended anyway — it hangs clear of the
+ * strand, sways slowly, and fades into the same fog. Chosen so the frame's
+ * centre stays at -6.5 from the anchor, exactly where the old cord-plus-frame
+ * stack put it, because the camera framing and MIN_LATERAL_CLEARANCE were both
+ * tuned against that position.
+ */
+const DROP = 6.5 - OUTER_H / 2;
+
+/**
+ * Caption width, deliberately decoupled from the frame's width.
+ *
+ * Scaling the caption to a portrait frame would shrink the text by ~30% on the
+ * one axis a phone has least of. This keeps the original effective width
+ * (7.2 * 1.15) so legibility is unchanged, at the cost of the caption slightly
+ * overhanging the frame — which reads fine, since it floats free rather than
+ * being mounted to anything.
+ */
+const CAPTION_W = 8.3;
+
+/**
+ * How far the caption floats in front of the frame's plane.
+ *
+ * The caption is taller than its gap below the frame, so its top strip overlaps
+ * the moulding. `depthWrite={false}` stops it fighting things drawn after it,
+ * but not things drawn before — the frame is one of those, so the overlap needs
+ * real separation too. See the note on Z layout in frameGeometry.ts for why the
+ * separation has to be this generous rather than a hair's breadth.
+ */
+const CAPTION_LIFT = 0.3;
+
+/** The grey box, and the fallback shown while a real photo decodes. */
+function PlaceholderPlane({ map }: { map: THREE.Texture }) {
+  return (
+    <mesh position={[0, 0, LAYOUT.photo]}>
+      <planeGeometry args={[PHOTO_W, PHOTO_H]} />
+      <meshBasicMaterial map={map} toneMapped={false} />
+    </mesh>
+  );
+}
+
+/**
+ * The photo plane, in its own component because `useTexture` suspends.
+ *
+ * Kept separate — and given its own <Suspense> below — so one slow photograph
+ * only stalls its own frame. Hoisting the hook into Billboard would suspend the
+ * whole component, and since every Billboard sits under the single boundary in
+ * StoryCanvas, the entire scene (rope included) would blank until the last
+ * photo decoded.
+ *
+ * Note this is not yet the progressive load that docs/ASSET_TASKS.md asks for:
+ * every Billboard mounts at scene start, so every photo is still requested at
+ * once. What it buys is that none of them block anything.
+ */
+function PhotoPlane({ src }: { src: string }) {
+  const tex = useTexture(src);
+  const gl = useThree((s) => s.gl);
+
+  useLayoutEffect(() => {
+    /**
+     * drei's `useTexture` is a bare three `TextureLoader`, which leaves
+     * `colorSpace` at the default `NoColorSpace`. For a colour map that skips
+     * the sRGB decode and the photograph renders noticeably dark and oversaturated
+     * — so this assignment is load-bearing, not tidying. (The runtime
+     * placeholders in placeholder.ts set it for the same reason.)
+     */
+    tex.colorSpace = THREE.SRGBColorSpace;
+
+    // Frames are yawed to face the camera, so every photo is seen obliquely —
+    // the one case where anisotropic filtering is worth asking for.
+    tex.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    tex.needsUpdate = true;
+  }, [tex, gl]);
+
+  return (
+    <mesh position={[0, 0, LAYOUT.photo]}>
+      <planeGeometry args={[PHOTO_W, PHOTO_H]} />
+      <meshBasicMaterial map={tex} toneMapped={false} />
+    </mesh>
+  );
+}
 
 /**
  * A photograph suspended from the strand.
@@ -62,9 +162,15 @@ export function Billboard({ spec, index }: { spec: BillboardSpec; index: number 
     return point;
   }, [spec.t, spec.side, spec.lateral, index]);
 
-  const photo = useMemo(
-    () => (spec.photo ? null : placeholderPhoto(spec.id, index + 1)),
-    [spec.photo, spec.id, index],
+  /**
+   * Built even when a real photo exists, because it doubles as the Suspense
+   * fallback — the frame shows its grey box immediately and swaps to the
+   * photograph on decode, rather than hanging empty. Cached in placeholder.ts,
+   * so a re-render costs nothing.
+   */
+  const placeholder = useMemo(
+    () => placeholderPhoto(spec.id, index + 1, PHOTO_W / PHOTO_H),
+    [spec.id, index],
   );
   const caption = useMemo(
     () => (spec.caption ? captionTexture(spec.caption) : null),
@@ -94,38 +200,36 @@ export function Billboard({ spec, index }: { spec: BillboardSpec; index: number 
   return (
     <group position={anchor} rotation={[0, yaw, 0]}>
       <group ref={pivot}>
-        {/* Cords from the strand down to the frame's top corners. */}
-        {[-FRAME_W * 0.38, FRAME_W * 0.38].map((x) => (
-          <mesh key={x} position={[x / 2, -HANG / 2, 0]} rotation={[0, 0, Math.atan2(x / 2, HANG / 2)]}>
-            <cylinderGeometry args={[0.045, 0.045, HANG * 1.02, 5]} />
-            <meshStandardMaterial color="#8d7c5e" roughness={0.9} />
-          </mesh>
-        ))}
+        <group position={[0, -DROP - OUTER_H / 2, 0]}>
+          {/* Geometries and materials are module singletons shared by every
+              billboard, so these are `args`-free and reused rather than being
+              rebuilt per frame. */}
+          <mesh
+            geometry={backingGeometry}
+            material={backingMaterial}
+            position={[0, 0, LAYOUT.backing]}
+          />
 
-        <group position={[0, -HANG - FRAME_H / 2, 0]}>
-          {/* Backing panel, slightly larger than the photo — this is the piece
-              to replace with a real glTF frame. See docs/ASSET_TASKS.md. */}
-          <mesh position={[0, 0, -0.06]} castShadow={false}>
-            <boxGeometry args={[FRAME_W + 0.5, FRAME_H + 0.5, 0.12]} />
-            <meshStandardMaterial color="#2b2723" roughness={0.75} />
-          </mesh>
+          {spec.photo ? (
+            <Suspense fallback={<PlaceholderPlane map={placeholder} />}>
+              <PhotoPlane src={spec.photo} />
+            </Suspense>
+          ) : (
+            <PlaceholderPlane map={placeholder} />
+          )}
 
-          <mesh>
-            <planeGeometry args={[FRAME_W, FRAME_H]} />
-            <meshBasicMaterial map={photo ?? undefined} toneMapped={false} />
-          </mesh>
-
-          {/* Grommets — the small detail that sells "genuinely attached". */}
-          {[-FRAME_W * 0.38, FRAME_W * 0.38].map((x) => (
-            <mesh key={x} position={[x, FRAME_H / 2 + 0.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
-              <torusGeometry args={[0.16, 0.05, 6, 12]} />
-              <meshStandardMaterial color="#c9c2b4" roughness={0.4} metalness={0.6} />
-            </mesh>
-          ))}
+          {/* Mount board, then the moulding standing proud of it. Drawn after
+              the photo so the mat's overlap covers the photo's crop edge. */}
+          <mesh geometry={matGeometry} material={matMaterial} position={[0, 0, LAYOUT.mat]} />
+          <mesh
+            geometry={mouldingGeometry}
+            material={mouldingMaterial}
+            position={[0, 0, LAYOUT.moulding]}
+          />
 
           {caption && (
-            <mesh position={[0, -FRAME_H / 2 - 1.15, 0]}>
-              <planeGeometry args={[FRAME_W * 1.15, (FRAME_W * 1.15) / 4]} />
+            <mesh position={[0, -OUTER_H / 2 - 1.0, CAPTION_LIFT]}>
+              <planeGeometry args={[CAPTION_W, CAPTION_W / 4]} />
               <meshBasicMaterial map={caption} transparent depthWrite={false} toneMapped={false} />
             </mesh>
           )}

@@ -36,22 +36,56 @@ export interface BillboardSpec {
  * deliberately held still there so the braid and the knot read clean.
  */
 export const sharedBillboards: BillboardSpec[] = [
-  { id: 'r-childhood', t: 0.06, side: 'rope', caption: 'Before any of this' },
-  { id: 's-childhood', t: 0.08, side: 'silk', caption: 'Meanwhile, elsewhere' },
-  { id: 'r-first-boat', t: 0.16, side: 'rope', caption: 'The first boat' },
-  { id: 's-first-silk', t: 0.19, side: 'silk', caption: 'Learning to fly' },
-  { id: 'r-teens', t: 0.27, side: 'rope', caption: 'Salt, sunburn, bad haircuts' },
-  { id: 's-teens', t: 0.30, side: 'silk', caption: 'Rehearsals and bruises' },
-  { id: 'r-away', t: 0.38, side: 'rope', caption: 'Somewhere offshore' },
-  { id: 's-away', t: 0.41, side: 'silk', caption: 'Somewhere mid-air' },
-  { id: 'r-almost', t: 0.48, side: 'rope', caption: 'Closer than either of us knew' },
-  { id: 's-almost', t: 0.50, side: 'silk', caption: 'Closer than either of us knew' },
+  // { id: 'r-childhood', t: 0.06, side: 'rope', caption: 'Before any of this' },
+  // { id: 's-childhood', t: 0.08, side: 'silk', caption: 'Meanwhile, elsewhere' },
+  // { id: 'r-first-boat', t: 0.16, side: 'rope', caption: 'The first boat' },
+  // { id: 's-first-silk', t: 0.19, side: 'silk', caption: 'Learning to fly' },
+  // { id: 'r-teens', t: 0.27, side: 'rope', caption: 'Salt, sunburn, bad haircuts' },
+  // { id: 's-teens', t: 0.30, side: 'silk', caption: 'Rehearsals and bruises' },
+  // { id: 'r-away', t: 0.38, side: 'rope', caption: 'Somewhere offshore' },
+  // { id: 's-away', t: 0.41, side: 'silk', caption: 'Somewhere mid-air' },
+  // { id: 'r-almost', t: 0.48, side: 'rope', caption: 'Closer than either of us knew' },
+  // { id: 's-almost', t: 0.50, side: 'silk', caption: 'Closer than either of us knew' },
 
   // --- the braid: this is where the two lives meet -------------------------
-  { id: 'the-night', t: 0.63, side: 'shared', caption: 'And then, this' },
-  { id: 'first-trip', t: 0.70, side: 'shared', caption: 'The first trip away' },
-  { id: 'the-flat', t: 0.77, side: 'shared', caption: 'The flat with the bad kitchen' },
-  { id: 'the-dog', t: 0.83, side: 'shared', caption: 'A questionable decision, beloved' },
+  {
+    id: 'early-days',
+    t: 0.60,
+    side: 'shared',
+    lateral: 1,
+    caption: 'Back when there was always someone else in the photo',
+    photo: '/photos/20191122_191734.jpg',
+  },
+  {
+    id: 'the-night',
+    t: 0.63,
+    side: 'shared',
+    caption: 'And then, this',
+    photo: '/photos/IMG_5509.jpg',
+  },
+  {
+    id: 'first-trip',
+    t: 0.70,
+    side: 'shared',
+    caption: 'The first trip away',
+    photo: '/photos/IMG_7024.jpg',
+  },
+  {
+    id: 'the-flat',
+    t: 0.77,
+    side: 'shared',
+    caption: 'Dressed up, somewhere with a view',
+    photo: '/photos/944d7da37c56a0522ee21fd47b54a4b0.jpg',
+  },
+  {
+    id: 'the-dog',
+    t: 0.83,
+    side: 'shared',
+    caption: 'Neither of us has ever taken a normal photograph',
+    photo: '/photos/IMG_0466.jpg',
+  },
+  // Left on its grey box deliberately — this is the payoff frame, and it wants
+  // the actual proposal photograph rather than a stand-in that nearly fits.
   { id: 'proposal', t: 0.90, side: 'shared', caption: 'Yes' },
 ];
 
@@ -108,7 +142,7 @@ export function billboardsFor(slug?: string): BillboardSpec[] {
       ? [fallbackFor(slug)].filter((b): b is BillboardSpec => b !== null)
       : personal;
 
-  return [...sharedBillboards, ...withFallback].sort((a, b) => a.t - b.t);
+  return [...sharedBillboards].sort((a, b) => a.t - b.t);
 }
 
 export { BRAID_T };

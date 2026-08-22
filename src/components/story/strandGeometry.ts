@@ -17,7 +17,7 @@ import * as THREE from 'three';
  * rather than wave it.
  */
 
-function addStrandAttributes(
+export function addStrandAttributes(
   geo: THREE.BufferGeometry,
   centers: number[],
   offsets: number[],
@@ -35,15 +35,33 @@ function addStrandAttributes(
 }
 
 /**
- * Rope: a tube. Generous along its length (the wave needs the segments) but
- * cheap around its circumference — the fibre detail comes from a normal map,
- * not geometry. 1400 x 8 is only ~11k verts.
+ * Rope: a tube, with the strands faked as a cosine bulge of the radius.
+ *
+ * Superseded by buildLaidRopeGeometry in ropeGeometry.ts, which sweeps the
+ * strands as separate solids so they can overlap. Kept only so the two can be
+ * A/B'd from the scrubber — delete it, and the `tube` branch of
+ * injectStrandDisplacement, once the laid rope is confirmed.
+ *
+ * The tessellation is set by the **strand lay** (see ropeLay in
+ * strandMaterial.ts), not by the wave, and it is much more demanding:
+ *
+ * - **radialSegments 24.** 8 was enough while the surface was smooth and all
+ *   detail came from the normal map, but it left a visibly octagonal
+ *   silhouette — and no normal map can fix an outline. 24 gives 8 segments per
+ *   strand across 3 strands.
+ * - **tubularSegments 2800.** The lay is a ~45° helix, so it crosses any given
+ *   longitudinal line ~360 times over the length. At 1400 that is under 4
+ *   segments per crossing and the strands alias into a shimmer; 2800 gives ~8.
+ *
+ * 2800 x 24 is ~70k verts — four times the old count, still small for a single
+ * hero mesh. If it ever needs to come back down, lower `uLayTurns` (a shallower
+ * lay needs fewer segments) before lowering this.
  */
 export function buildRopeGeometry(
   curve: THREE.Curve<THREE.Vector3>,
   radius = 0.62,
-  tubularSegments = 1400,
-  radialSegments = 8,
+  tubularSegments = 2800,
+  radialSegments = 24,
 ) {
   const geo = new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, false);
   const pos = geo.attributes.position as THREE.BufferAttribute;
