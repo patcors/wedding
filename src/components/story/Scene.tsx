@@ -2,16 +2,14 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import {
-  buildCameraCurve,
-  cameraTargetAt,
-} from './curves';
 import { currentProgress, scrollState } from './scrollState';
 import { cameraReadout, freeCamera, useDebugValue } from './debugStore';
 import { Rope, Silk } from './Strands';
+import { buildStoryStrandCurve } from './storyStrandCurve';
 import { softDot } from './placeholder';
 import { Billboard } from './Billboard';
-import { billboardsFor } from './billboards';
+import { billboardsFor, type BillboardSpec } from './billboards';
+import { buildCameraJourney } from './cameraJourney';
 
 const FOG_COLOR = '#0d1117';
 
@@ -41,7 +39,7 @@ function Dust({ count = 900 }: { count?: number }) {
   return (
     <points geometry={geometry} frustumCulled={false}>
       <pointsMaterial
-        size={0.5}
+        size={0.18}
         color="#cbd5e1"
         transparent
         opacity={0.45}
@@ -140,18 +138,22 @@ function StudioEnvironment() {
  * Drives the camera from the scroll value and maintains the smoothed velocity
  * the strands read for their billow.
  *
- * The camera rides its own smoothed curve and always looks a little further
- * down the spine than it sits. It is never placed on a strand.
+ * Smooth progress before sampling both position and aim, so the lens never
+ * lags behind a target that has already jumped to the next photograph.
  */
 function CameraRig({
   velocityRef,
   free,
+  specs,
 }: {
   velocityRef: React.RefObject<number>;
   free: boolean;
+  specs: BillboardSpec[];
 }) {
   const camera = useThree((s) => s.camera);
-  const curve = useMemo(() => buildCameraCurve(), []);
+  const size = useThree((s) => s.size);
+  const journey = useMemo(() => buildCameraJourney(specs, size.width / size.height, 48), [specs, size.width, size.height]);
+  const progress = useRef(currentProgress());
   const lastProgress = useRef(currentProgress());
   const smoothed = useRef(0);
 
@@ -166,7 +168,7 @@ function CameraRig({
     const raw = Math.abs(p - lastProgress.current) / Math.max(dt, 1e-4);
     lastProgress.current = p;
     const normalised = Math.min(1, raw * 14);
-    const k = normalised > smoothed.current ? 0.25 : 0.035;
+    const k = 1 - Math.exp(-dt * (normalised > smoothed.current ? 17 : 2.2));
     smoothed.current += (normalised - smoothed.current) * k;
     velocityRef.current = smoothed.current;
     scrollState.velocity = smoothed.current;
@@ -176,9 +178,9 @@ function CameraRig({
     // change the very thing you detached the camera to look at.
     if (free) return;
 
-    curve.getPointAt(p, pos);
-    camera.position.lerp(pos, 1 - Math.pow(0.0015, dt)); // frame-rate independent
-    cameraTargetAt(p, target);
+    progress.current = THREE.MathUtils.damp(progress.current, p, 9, dt);
+    journey(progress.current, pos, target);
+    camera.position.copy(pos);
     camera.lookAt(target);
   });
 
@@ -205,7 +207,7 @@ function FreeCamera() {
 
   // Read once, on mount: the initial aim point, not a live tie to the scroll.
   const initialTarget = useMemo(
-    () => cameraTargetAt(THREE.MathUtils.clamp(currentProgress(), 0, 1)),
+    () => camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(15).add(camera.position),
     [],
   );
 
@@ -239,15 +241,17 @@ export function Scene({ slug }: { slug?: string }) {
   const velocityRef = useRef(0);
   const specs = useMemo(() => billboardsFor(slug), [slug]);
   const free = useDebugValue(freeCamera);
+  const ropeCurve = useMemo(() => buildStoryStrandCurve('rope', specs), [specs]);
+  const silkCurve = useMemo(() => buildStoryStrandCurve('silk', specs), [specs]);
 
   return (
     <>
       <color attach="background" args={[FOG_COLOR]} />
       {/* Fog is not optional. Without depth cueing the billboards read as
           sprites pasted on a flat background rather than objects in space. */}
-      <fogExp2 attach="fog" args={[FOG_COLOR, 0.0075]} />
+      <fogExp2 attach="fog" args={[FOG_COLOR, 0.014]} />
 
-      <CameraRig velocityRef={velocityRef} free={free} />
+      <CameraRig velocityRef={velocityRef} free={free} specs={specs} />
       {free && <FreeCamera />}
 
       {/* The hemisphere light that used to sit here is gone: it was flooding
@@ -262,8 +266,8 @@ export function Scene({ slug }: { slug?: string }) {
           [18, 26, 12] this was the main cause of the flat, washed-out tops. */}
       <directionalLight position={[24, 7, 14]} intensity={1.8} color="#fff3e0" />
 
-      <Rope velocityRef={velocityRef} />
-      <Silk velocityRef={velocityRef} />
+      <Rope velocityRef={velocityRef} curve={ropeCurve} />
+      <Silk velocityRef={velocityRef} curve={silkCurve} />
 
       {specs.map((spec, i) => (
         <Billboard key={spec.id} spec={spec} index={i} />

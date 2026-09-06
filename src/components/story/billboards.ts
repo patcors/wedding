@@ -142,7 +142,7 @@ export function billboardsFor(slug?: string): BillboardSpec[] {
       ? [fallbackFor(slug)].filter((b): b is BillboardSpec => b !== null)
       : personal;
 
-  return [...sharedBillboards].sort((a, b) => a.t - b.t);
+  return [...sharedBillboards, ...withFallback].sort((a, b) => a.t - b.t);
 }
 
 export { BRAID_T };

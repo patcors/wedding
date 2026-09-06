@@ -21,7 +21,7 @@ export function currentProgress() {
 }
 
 /** How many viewport heights of scroll the story occupies. */
-export const SCROLL_VH = 1200;
+export const SCROLL_VH = 700;
 
 export function attachScrollListener() {
   const read = () => {

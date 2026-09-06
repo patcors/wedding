@@ -49,18 +49,14 @@ export function buildRopeFrames(curve: THREE.Curve<THREE.Vector3>, along: number
   const ts: THREE.Vector3[] = new Array(slices);
   const bs: THREE.Vector3[] = new Array(slices);
   const ns: THREE.Vector3[] = new Array(slices);
-  const up = new THREE.Vector3(0, 1, 0);
+  const frames = curve.computeFrenetFrames(along, false);
 
   for (let i = 0; i < slices; i++) {
     const u = i / along;
     const c = curve.getPointAt(u, new THREE.Vector3());
     const t = curve.getTangentAt(u, new THREE.Vector3()).normalize();
-    // Fixed world-up reference rather than a Frenet frame, matching the silk:
-    // Frenet frames roll unpredictably through inflection points, and here that
-    // would make the whole lay corkscrew at random.
-    const b = new THREE.Vector3().crossVectors(t, up);
-    if (b.lengthSq() < 1e-8) b.set(1, 0, 0);
-    b.normalize();
+    // Parallel transport avoids a sudden half-turn when a loop becomes vertical.
+    const b = frames.normals[i];
 
     cs[i] = c;
     ts[i] = t;

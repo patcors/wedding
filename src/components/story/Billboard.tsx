@@ -2,19 +2,13 @@ import { Suspense, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import {
-  MIN_LATERAL_CLEARANCE,
-  cameraPositionAt,
-  spineAt,
-  spineRightAt,
-  strandPointAt,
-  type Side,
-} from './curves';
+import { billboardAnchor, billboardNormal } from './cameraJourney';
 import type { BillboardSpec } from './billboards';
 import { captionTexture, placeholderPhoto } from './placeholder';
 import {
   LAYOUT,
   OUTER_H,
+  OUTER_W,
   PHOTO_H,
   PHOTO_W,
   backingGeometry,
@@ -43,16 +37,8 @@ import {
  */
 const DROP = 6.5 - OUTER_H / 2;
 
-/**
- * Caption width, deliberately decoupled from the frame's width.
- *
- * Scaling the caption to a portrait frame would shrink the text by ~30% on the
- * one axis a phone has least of. This keeps the original effective width
- * (7.2 * 1.15) so legibility is unchanged, at the cost of the caption slightly
- * overhanging the frame — which reads fine, since it floats free rather than
- * being mounted to anything.
- */
-const CAPTION_W = 8.3;
+/** Keep captions within the frame width on phones as well as desktop. */
+const CAPTION_W = OUTER_W;
 
 /**
  * How far the caption floats in front of the frame's plane.
@@ -105,6 +91,12 @@ function PhotoPlane({ src }: { src: string }) {
     // Frames are yawed to face the camera, so every photo is seen obliquely —
     // the one case where anisotropic filtering is worth asking for.
     tex.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    // Cover the portrait aperture without distorting the photograph.
+    const image = tex.image as HTMLImageElement;
+    const imageAspect = image.naturalWidth / image.naturalHeight;
+    const frameAspect = PHOTO_W / PHOTO_H;
+    tex.repeat.set(Math.min(1, frameAspect / imageAspect), Math.min(1, imageAspect / frameAspect));
+    tex.offset.set((1 - tex.repeat.x) / 2, (1 - tex.repeat.y) / 2);
     tex.needsUpdate = true;
   }, [tex, gl]);
 
@@ -129,38 +121,7 @@ function PhotoPlane({ src }: { src: string }) {
 export function Billboard({ spec, index }: { spec: BillboardSpec; index: number }) {
   const pivot = useRef<THREE.Group>(null);
 
-  const anchor = useMemo(() => {
-    const v = new THREE.Vector3();
-    const point =
-      spec.side === 'shared'
-        ? spineAt(spec.t, v).clone()
-        : strandPointAt(spec.t, spec.side as Side, v).clone();
-
-    /**
-     * Guarantee a minimum lateral clearance from the spine, or the camera flies
-     * straight through the frame.
-     *
-     * This has to apply to every billboard, not just 'shared' ones: the strands
-     * have essentially converged well before BRAID_T, so a rope or silk
-     * billboard placed near the braid sits on the centre line too — which is
-     * exactly the camera's path.
-     *
-     * Billboards already clear of the line keep the side they were on, so the
-     * pre-braid rope/silk split is preserved.
-     */
-    const spine = spineAt(spec.t, new THREE.Vector3());
-    const right = spineRightAt(spec.t, new THREE.Vector3());
-    const lateral = point.clone().sub(spine).dot(right);
-
-    if (Math.abs(lateral) < MIN_LATERAL_CLEARANCE) {
-      // Always pushed left, because the camera drifts *right* through the braid
-      // (see cameraPositionAt). Alternating sides here would simply relocate the
-      // collision rather than remove it.
-      const dir = spec.lateral ?? -1;
-      point.add(right.multiplyScalar(dir * MIN_LATERAL_CLEARANCE - lateral));
-    }
-    return point;
-  }, [spec.t, spec.side, spec.lateral, index]);
+  const anchor = useMemo(() => billboardAnchor(spec, index), [spec, index]);
 
   /**
    * Built even when a real photo exists, because it doubles as the Suspense
@@ -186,19 +147,19 @@ export function Billboard({ spec, index }: { spec: BillboardSpec; index: number 
    * oblique text is the classic failure of this whole genre.
    */
   const yaw = useMemo(() => {
-    const cam = cameraPositionAt(spec.t, new THREE.Vector3());
-    return Math.atan2(cam.x - anchor.x, cam.z - anchor.z);
-  }, [anchor, spec.t]);
+    const normal = billboardNormal(index);
+    return Math.atan2(normal.x, normal.z);
+  }, [index]);
 
   useFrame((state) => {
     if (!pivot.current) return;
     const t = state.clock.elapsedTime;
-    pivot.current.rotation.z = Math.sin(t * 0.42 + phase) * 0.035;
-    pivot.current.rotation.x = Math.sin(t * 0.31 + phase * 1.7) * 0.018;
+    pivot.current.rotation.z = Math.sin(t * 0.42 + phase) * 0.012;
+    pivot.current.rotation.x = Math.sin(t * 0.31 + phase * 1.7) * 0.006;
   });
 
   return (
-    <group position={anchor} rotation={[0, yaw, 0]}>
+    <group dispose={null} position={anchor} rotation={[0, yaw, 0]}>
       <group ref={pivot}>
         <group position={[0, -DROP - OUTER_H / 2, 0]}>
           {/* Geometries and materials are module singletons shared by every

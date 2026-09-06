@@ -143,7 +143,7 @@ export function cameraTargetAt(t: number, out = new THREE.Vector3()) {
  * line, so anything hanging there is directly in its way.
  */
 export function spineRightAt(t: number, out = new THREE.Vector3()) {
-  const a = spineAt(t, out);
+  const a = spineAt(Math.min(t, 0.996), out);
   const b = spineAt(Math.min(1, t + 0.004), _tmp2);
   const tangent = b.sub(a).normalize();
   return out.crossVectors(tangent, UP).normalize();

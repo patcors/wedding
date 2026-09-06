@@ -78,7 +78,7 @@ export function captionTexture(text: string, width = 1024) {
 
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = 'rgba(250,248,244,0.95)';
-  ctx.font = `500 ${Math.round(height * 0.34)}px ui-serif, Georgia, serif`;
+  ctx.font = `500 ${Math.round(height * 0.21)}px ui-serif, Georgia, serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
@@ -97,7 +97,7 @@ export function captionTexture(text: string, width = 1024) {
   }
   lines.push(line);
 
-  const lh = height * 0.42;
+  const lh = height * 0.29;
   const top = height / 2 - ((lines.length - 1) * lh) / 2;
   lines.forEach((l, i) => ctx.fillText(l, width / 2, top + i * lh));
 

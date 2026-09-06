@@ -109,14 +109,13 @@ export function buildRopeGeometry(
 /**
  * Silk: a ribbon swept along the curve.
  *
- * Uses a fixed world-up reference to derive the across direction rather than
- * Frenet frames, which twist unpredictably through inflection points and would
- * make the ribbon barrel-roll.
+ * Transport the across direction along the curve to preserve a continuous
+ * cross-section through vertical bends and the photograph loops.
  */
 export function buildSilkGeometry(
   curve: THREE.Curve<THREE.Vector3>,
   width = 2.8,
-  lengthSegments = 1400,
+  lengthSegments = Math.max(3200, Math.ceil(curve.getLength() * 8)),
   widthSegments = 6,
 ) {
   const positions: number[] = [];
@@ -128,7 +127,7 @@ export function buildSilkGeometry(
   const vs: number[] = [];
   const indices: number[] = [];
 
-  const up = new THREE.Vector3(0, 1, 0);
+  const frames = curve.computeFrenetFrames(lengthSegments, false);
   const c = new THREE.Vector3();
   const tan = new THREE.Vector3();
   const bin = new THREE.Vector3();
@@ -138,9 +137,8 @@ export function buildSilkGeometry(
     const u = i / lengthSegments;
     curve.getPointAt(u, c);
     curve.getTangentAt(u, tan).normalize();
-    bin.crossVectors(tan, up);
-    if (bin.lengthSq() < 1e-8) bin.set(1, 0, 0);
-    bin.normalize();
+    // Transport the cross-section through bends; world-up flips at vertical tangents.
+    bin.copy(frames.normals[i]);
 
     for (let j = 0; j <= widthSegments; j++) {
       const v = j / widthSegments;

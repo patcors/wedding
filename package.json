@@ -6,7 +6,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=fort-cachy.tailc0ce61.ts.net astro dev --host 0.0.0.0",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"

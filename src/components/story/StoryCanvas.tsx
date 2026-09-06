@@ -12,7 +12,7 @@ import { freeCamera, useDebugValue } from './debugStore';
  */
 export default function StoryCanvas({
   slug,
-  debug = true,
+  debug = false,
 }: {
   slug?: string;
   debug?: boolean;
@@ -45,21 +45,7 @@ export default function StoryCanvas({
         }}
       >
         <Canvas
-          /**
-           * near is 1, not the three.js default of 0.1, and that is a depth
-           * precision decision rather than a clipping one.
-           *
-           * Depth buffer resolution is dominated by the near plane — halving
-           * near halves the resolvable step at every distance in the scene. At
-           * 0.1 against far=700 the buffer spends most of its range on the first
-           * couple of units, which is empty: cameraPositionAt keeps the lens at
-           * least 30 units back from the spine it looks at, and no billboard is
-           * permitted within MIN_LATERAL_CLEARANCE (13) of the camera path. So
-           * nothing is ever within 1 unit to clip, and pulling near up to 1 buys
-           * a 10x precision improvement over the depths that are actually
-           * occupied — which is what keeps close-but-not-coplanar surfaces
-           * (see the Z layout in frameGeometry.ts) stable on 16-bit mobile buffers.
-           */
+          // A 1-unit near plane preserves depth precision during close-ups.
           camera={{ fov: 48, near: 1, far: 700 }}
           dpr={[1, 1.75]}
           gl={{ antialias: true, powerPreference: 'high-performance' }}

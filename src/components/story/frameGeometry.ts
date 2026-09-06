@@ -16,33 +16,20 @@ import * as THREE from 'three';
  * total rather than per billboard.
  */
 
-/**
- * The photograph itself. Still 3:4 portrait, and still ~95% of a phone's
- * horizontal window at closest approach once the mat and moulding are added on
- * — the aperture shrank from 5.1 x 6.8 so the *outer* dimension could stay put.
- * three.js `fov` is the *vertical* angle (48 in StoryCanvas) and horizontal
- * falls out of the canvas aspect, so a phone held upright has ~23° of
- * horizontal against 48° of vertical: portrait puts the frame's long edge on
- * the axis that has room for it. See docs/ASSET_TASKS.md task 1.
- */
+/** Portrait aperture, cropped to cover without stretching. */
 export const PHOTO_W = 4.5;
 export const PHOTO_H = 6.0;
 
 /** Visible card between photograph and moulding. */
-const MAT_BORDER = 0.3;
+const MAT_BORDER = 0.38;
 /** Width of the moulding's face. */
-const MOULDING_W = 0.35;
+const MOULDING_W = 0.10;
 /** How far the moulding stands proud of the mat. */
-const MOULDING_D = 0.2;
+const MOULDING_D = 0.16;
 
-/**
- * Outer dimensions, deliberately equal to the old grey backing panel
- * (5.6 x 7.3): the composition, the camera framing and the lateral clearance
- * were all tuned against that footprint, so the frame gets nicer without
- * anything else needing to move.
- */
-export const OUTER_W = PHOTO_W + 2 * (MAT_BORDER + MOULDING_W); // 5.8
-export const OUTER_H = PHOTO_H + 2 * (MAT_BORDER + MOULDING_W); // 7.3
+/** Slim metal moulding around a generous warm mount. */
+export const OUTER_W = PHOTO_W + 2 * (MAT_BORDER + MOULDING_W);
+export const OUTER_H = PHOTO_H + 2 * (MAT_BORDER + MOULDING_W);
 
 /**
  * Edge radius. Sharp 90° edges are the single biggest reason CG props read as
@@ -50,7 +37,7 @@ export const OUTER_H = PHOTO_H + 2 * (MAT_BORDER + MOULDING_W); // 7.3
  * key light in Scene.tsx rakes almost horizontally, which is exactly the angle
  * that finds one.
  */
-const BEVEL = 0.045;
+const BEVEL = 0.025;
 
 /**
  * The mat overlaps the photograph slightly, as a real mount does. Hides the
@@ -147,18 +134,11 @@ export const matGeometry = buildMat();
  */
 export const backingGeometry = new THREE.BoxGeometry(OUTER_W - 0.1, OUTER_H - 0.1, BACKING_D);
 
-/**
- * Dark walnut and cream card: a gallery frame, which is what "nicer than a grey
- * border" means here. A light mat also does real work in a dark foggy scene —
- * it separates the photograph from the void instead of letting it bleed out.
- *
- * For a gilt frame instead, this is a one-liner: color '#b08d57',
- * metalness 0.8, roughness 0.32.
- */
+/** Brushed champagne metal catches the studio light along the bevel. */
 export const mouldingMaterial = new THREE.MeshStandardMaterial({
-  color: '#4a3a2c',
-  roughness: 0.55,
-  metalness: 0.05,
+  color: '#b9a080',
+  roughness: 0.32,
+  metalness: 0.72,
 });
 
 export const matMaterial = new THREE.MeshStandardMaterial({

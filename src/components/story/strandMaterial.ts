@@ -11,6 +11,7 @@ import { BRAID_T } from './curves';
 
 export interface StrandUniforms {
   uTime: { value: number };
+  uLength: { value: number };
   uAmp: { value: number };
   uFreq: { value: number };
   uSpeed: { value: number };
@@ -33,6 +34,7 @@ export interface StrandUniforms {
 export function makeStrandUniforms(overrides: Partial<Record<keyof StrandUniforms, number>> = {}) {
   const u: StrandUniforms = {
     uTime: { value: 0 },
+    uLength: { value: 420 },
     uAmp: { value: 1 },
     uFreq: { value: 60 },
     uSpeed: { value: 1 },
@@ -60,6 +62,7 @@ const COMMON = /* glsl */ `
   attribute float aV;
 
   uniform float uTime;
+  uniform float uLength;
   uniform float uAmp;
   uniform float uFreq;
   uniform float uSpeed;
@@ -100,7 +103,7 @@ const COMMON = /* glsl */ `
   float strandTaper(float u) {
     float start = smoothstep(0.0, 0.10, u);
     float braid = 1.0 - 0.8 * exp(-pow((u - uBraidT) / 0.055, 2.0));
-    float knot  = smoothstep(1.0, 0.86, u);
+    float knot  = (1.0 - smoothstep(0.86, 1.0, u));
     return start * braid * knot;
   }
 
@@ -127,7 +130,7 @@ const COMMON = /* glsl */ `
   vec3 strandTangent() {
     float du = 0.0015;
     vec3 c0 = strandWave(aCenter, aU);
-    vec3 c1 = strandWave(aCenter + aTangent * (du * 420.0), aU + du);
+    vec3 c1 = strandWave(aCenter + aTangent * (du * uLength), aU + du);
     return normalize(c1 - c0);
   }
 `;

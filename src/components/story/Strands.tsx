@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { buildStrandCurve } from './curves';
+import { configureRopeTextures } from './ropeTextures';
 import { buildRopeGeometry, buildSilkGeometry } from './strandGeometry';
 import { buildLaidRopeGeometry } from './ropeGeometry';
 import { buildFuzzGeometry } from './ropeFuzz';
@@ -23,17 +24,7 @@ import {
   yarnScale,
 } from './debugStore';
 
-/**
- * Rope and silk share one shader but not one parameter set, and that contrast
- * is the entire point of having chosen these two objects.
- *
- * Rope is stiff: low amplitude, low frequency, slow, barely responsive to
- * scroll velocity. Rope sways under its own weight — it does not ripple. If it
- * ripples it reads as a garden hose and the material contrast dies.
- *
- * Silk billows: larger amplitude, a travelling wave, cross-wise flutter, and a
- * strong velocity response so it settles when the reader stops scrolling.
- */
+/** Rope has a broad, weighted sway; silk keeps a quiet travelling ripple. */
 
 /**
  * Rope tiling — the one number here that actually matters.
@@ -80,15 +71,17 @@ const ROPE_LAY_TURNS = ROPE_REPEAT.x;
  */
 const ROPE_LAY_STRANDS = 6;
 
-export function Rope({ velocityRef }: { velocityRef: React.RefObject<number> }) {
+type StrandProps = { velocityRef: React.RefObject<number>; curve: THREE.Curve<THREE.Vector3> };
+
+export function Rope({ velocityRef, curve }: StrandProps) {
   const mode = useDebugValue(ropeMode);
-  const turns = useDebugValue(laidTurns);
+  const baseTurns = useDebugValue(laidTurns);
+  const turns = useMemo(() => baseTurns * curve.getLength() / buildStrandCurve('rope').getLength(), [baseTurns, curve]);
   const fill = useDebugValue(laidFill);
   const fray = useDebugValue(laidFray);
   const yarn = useDebugValue(yarnScale);
 
   const geometry = useMemo(() => {
-    const curve = buildStrandCurve('rope');
     if (mode === 'tube') return buildRopeGeometry(curve);
     const geo = buildLaidRopeGeometry(curve, { turns, strandFill: fill, fray });
     // Cheap to print, and the numbers that matter — crown angle for the look,
@@ -96,7 +89,7 @@ export function Rope({ velocityRef }: { velocityRef: React.RefObject<number> }) 
     // budget — are otherwise invisible.
     console.info('[rope]', geo.userData.rope);
     return geo;
-  }, [mode, turns, fill, fray]);
+  }, [mode, turns, fill, fray, curve]);
 
   // Geometry is now rebuilt on a knob drag, so the old buffers have to go back.
   // Without this every drag leaks a few MB of GPU memory.
@@ -105,10 +98,10 @@ export function Rope({ velocityRef }: { velocityRef: React.RefObject<number> }) 
   const uniforms = useMemo(
     () =>
       makeStrandUniforms({
-        uAmp: 0.5,
+        uAmp: 0.95,
         uFreq: 34,
-        uSpeed: 0.55,
-        uVelGain: 0.5,
+        uSpeed: 0.7,
+        uVelGain: 0.65,
         uLayStrands: ROPE_LAY_STRANDS,
         uLayTurns: ROPE_LAY_TURNS,
       }),
@@ -151,20 +144,7 @@ export function Rope({ velocityRef }: { velocityRef: React.RefObject<number> }) 
    * material would re-run onBeforeCompile and hitch for nothing.
    */
   useEffect(() => {
-    for (const tex of textures) {
-      // Without RepeatWrapping, repeat values above 1 clamp instead of tiling.
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      if (mode === 'tube') tex.repeat.copy(ROPE_REPEAT);
-      else tex.repeat.set(yarn, yarn);
-      // The rope is viewed at a grazing angle almost everywhere at these repeat
-      // counts. Anisotropic filtering is the difference between crisp fibre and
-      // a smear.
-      tex.anisotropy = maxAnisotropy;
-    }
-    // Colour is sRGB. Normal and roughness are *data* — gamma-correcting them
-    // flattens the bumps and lifts the roughness.
-    map.colorSpace = THREE.SRGBColorSpace;
+    configureRopeTextures(textures, map, mode, yarn, maxAnisotropy);
   }, [textures, map, mode, yarn, maxAnisotropy]);
 
   const material = useMemo(() => {
@@ -198,6 +178,7 @@ export function Rope({ velocityRef }: { velocityRef: React.RefObject<number> }) 
   }, [material, depth, normal8, normal16]);
 
   useFrame((_, dt) => {
+    uniforms.uLength.value = curve.getLength();
     uniforms.uTime.value += dt;
     uniforms.uVel.value = velocityRef.current;
 
@@ -219,7 +200,7 @@ export function Rope({ velocityRef }: { velocityRef: React.RefObject<number> }) 
     <>
       <mesh geometry={geometry} material={material} frustumCulled={false} />
       {/* Shares `uniforms`, so the fibres wave with the rope rather than beside it. */}
-      {mode === 'laid' && <RopeFuzz uniforms={uniforms} turns={turns} fill={fill} />}
+      {mode === 'laid' && <RopeFuzz uniforms={uniforms} turns={turns} fill={fill} curve={curve} />}
     </>
   );
 }
@@ -237,10 +218,12 @@ function RopeFuzz({
   uniforms,
   turns,
   fill,
+  curve,
 }: {
   uniforms: ReturnType<typeof makeStrandUniforms>;
   turns: number;
   fill: number;
+  curve: THREE.Curve<THREE.Vector3>;
 }) {
   const count = useDebugValue(fuzzCount);
   const standoff = useDebugValue(fuzzStandoff);
@@ -248,14 +231,14 @@ function RopeFuzz({
   const geometry = useMemo(
     () =>
       count > 0
-        ? buildFuzzGeometry(buildStrandCurve('rope'), {
+        ? buildFuzzGeometry(curve, {
             turns,
             strandFill: fill,
             count,
             standoff,
           })
         : null,
-    [turns, fill, count, standoff],
+    [turns, fill, count, standoff, curve],
   );
 
   const material = useMemo(() => {
@@ -282,16 +265,16 @@ function RopeFuzz({
   return <mesh geometry={geometry} material={material} frustumCulled={false} />;
 }
 
-export function Silk({ velocityRef }: { velocityRef: React.RefObject<number> }) {
-  const geometry = useMemo(() => buildSilkGeometry(buildStrandCurve('silk')), []);
+export function Silk({ velocityRef, curve }: StrandProps) {
+  const geometry = useMemo(() => buildSilkGeometry(curve, 1.8), [curve]);
   const uniforms = useMemo(
     () =>
       makeStrandUniforms({
-        uAmp: 2.1,
+        uAmp: 0.75,
         uFreq: 17,
-        uSpeed: 1.5,
-        uVelGain: 2.4,
-        uCrossAmp: 0.42,
+        uSpeed: 0.75,
+        uVelGain: 0.65,
+        uCrossAmp: 0.14,
         uCrossFreq: 1.6,
       }),
     [],
@@ -308,14 +291,17 @@ export function Silk({ velocityRef }: { velocityRef: React.RefObject<number> }) 
       sheenRoughness: 0.5,
       sheenColor: new THREE.Color('#ffd9e2'),
       side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.94,
+
     });
     injectStrandDisplacement(m, uniforms, 'ribbon');
     return m;
   }, [uniforms]);
 
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => material.dispose(), [material]);
+
   useFrame((_, dt) => {
+    uniforms.uLength.value = curve.getLength();
     uniforms.uTime.value += dt;
     uniforms.uVel.value = velocityRef.current;
   });
