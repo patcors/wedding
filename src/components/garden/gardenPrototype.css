@@ -25,10 +25,25 @@
 .garden-subtitle { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 25px; font-style: italic; margin: 0; color: #59634f; }
 .garden-date { margin-top: 33px; display: flex; justify-content: center; align-items: center; gap: 17px; font-size: 9px; text-transform: uppercase; letter-spacing: .23em; }
 .garden-date i { width: 3px; height: 3px; border-radius: 50%; background: #7a826d; }
-.garden-memory { left: 50%; top: 22%; width: 700px; margin-left: -350px; display: flex; align-items: center; gap: 60px; text-align: left; }
-.garden-memory figure { width: 245px; margin: 0; padding: 10px 10px 16px; background: #f7f3e8; box-shadow: 0 12px 45px #48513a18; transform: rotate(-4deg); flex-shrink: 0; }
-.garden-memory img { width: 100%; height: 265px; object-fit: cover; display: block; }
-.garden-memory figcaption { font: italic 18px 'Cormorant Garamond', Georgia, serif; margin-top: 12px; text-align: center; }
+.garden-memory { left: 50%; top: 17%; width: 860px; margin-left: -430px; display: flex; align-items: center; gap: 45px; text-align: left; }
+.garden-album { width: 450px; flex-shrink: 0; }
+.garden-photo-stack { position: relative; width: 100%; height: 375px; touch-action: pan-y; pointer-events: auto; }
+.garden-memory figure { position: absolute; top: 14px; left: 50%; width: 245px; margin: 0; padding: 10px 10px 14px; background: #f7f3e8; box-shadow: 0 12px 45px #48513a24;
+  transform: translateX(calc(-50% + var(--photo-offset) * 115px)) rotate(calc(var(--photo-offset) * 12deg)) scale(.80); opacity: .65;
+  transition: transform .65s ease, opacity .65s ease; }
+.garden-memory figure.is-current { transform: translateX(-50%) rotate(-3deg); opacity: 1; }
+.garden-memory img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
+.garden-memory figcaption { font: italic 17px/1.15 'Cormorant Garamond', Georgia, serif; margin-top: 10px; min-height: 36px; display: grid; place-items: center; text-align: center; }
+.garden-photo-controls { display: flex; justify-content: center; align-items: center; gap: 8px; }
+.garden-photo-controls > button { width: 44px; height: 44px; font-size: 22px; }
+.garden-photo-dots { display: flex; }
+.garden-photo-dots button { display: grid; place-items: center; width: 30px; height: 40px; }
+.garden-photo-dots button span { width: 4px; height: 4px; border-radius: 50%; background: #7a826d; opacity: .4; transition: transform .3s, opacity .3s; }
+.garden-photo-dots button[aria-pressed=true] span { transform: scale(1.5); opacity: 1; }
+.garden-memory .garden-photo-count { font: 9px 'Montserrat', sans-serif !important; text-align: center; letter-spacing: .18em; margin: 2px 0 0 !important; }
+.garden-photo-count span { opacity: .5; margin-left: 6px; }
+.garden-memory-copy { flex: 1; padding-bottom: 35px; position: relative; isolation: isolate; }
+.garden-memory-copy::before { content: ''; position: absolute; z-index: -1; inset: -30px -45px; background: radial-gradient(ellipse, #eeeee5eb 15%, #eeeee5a8 45%, transparent 72%); pointer-events: none; }
 .garden-panel h2 { font: 400 clamp(48px, 5vw, 76px)/.98 'Cormorant Garamond', Georgia, serif; letter-spacing: -.045em; margin: 24px 0; }
 .garden-panel h2 em { font-weight: 300; }
 .garden-memory p:not(.garden-eyebrow) { font: 20px/1.5 'Cormorant Garamond', Georgia, serif; }
@@ -60,20 +75,22 @@
 .garden-review button:disabled { cursor: default; opacity: .6; }
 .garden-copy { transition: opacity .5s; }
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
-.garden-scroll-space { height: 330vh; pointer-events: none; }
+.garden-scroll-space { height: 560svh; pointer-events: none; }
 .garden-fallback { padding: 120px 30px; text-align: center; font-size: 12px; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
 @media (max-width: 700px) {
   .garden-header { padding: 24px; }
   .garden-header-date { display: none; }
-  .garden-invitation-link { font-size: 9px; }
+  .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
+  .garden-arrival::before, .garden-celebrate::before { content: ''; position: absolute; z-index: -1; inset: -25px 12px; background: radial-gradient(ellipse, #eeeee5df 10%, #eeeee58f 48%, transparent 73%); pointer-events: none; }
   .garden-arrival h1 { font-size: clamp(60px, 16vw, 90px); line-height: .9; margin: 24px 0 20px; }
   .garden-arrival h1 span { display: block; font-size: 35px; line-height: 1.2; margin: 4px 0; }
-  .garden-eyebrow { font-size: 7px; letter-spacing: .2em; }
+  .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
   .garden-subtitle { font-size: 22px; }
-  .garden-date { font-size: 7px; gap: 12px; margin-top: 26px; }
-  .garden-chapters { right: 13px; gap: 14px; }
+  .garden-date { font-size: 8px; gap: 12px; margin-top: 26px; }
+  .garden-chapters { right: 4px; gap: 0; }
+  .garden-chapters button { width: 30px; min-height: 44px; padding: 8px; }
   .garden-chapter-number, .garden-chapter-name { display: none; }
   .garden-chapter-line { width: 7px; }
   .garden-chapters button[aria-current] .garden-chapter-line { width: 15px; }
@@ -83,16 +100,26 @@
   .garden-review { bottom: 20px; gap: 13px; padding: 11px 16px; }
   .garden-review button { font-size: 8px; }
   .garden-study-label { font-size: 7px; }
-  .garden-memory { top: 14%; left: 0; width: 100%; margin: 0; padding: 0 42px; flex-direction: column; gap: 22px; text-align: center; }
-  .garden-memory figure { width: 145px; padding: 6px 6px 10px; }
-  .garden-memory img { height: 150px; }
-  .garden-memory figcaption { font-size: 14px; margin-top: 6px; }
-  .garden-memory h2 { font-size: 43px; margin: 12px 0; }
-  .garden-memory p:not(.garden-eyebrow) { font-size: 17px; margin: 8px 0; }
+  .garden-memory { top: 12%; left: 0; width: 100%; margin: 0; padding: 0 28px; flex-direction: column; gap: 10px; text-align: center; }
+  .garden-album { width: 100%; max-width: 350px; }
+  .garden-photo-stack { height: clamp(220px, 34svh, 292px); }
+  .garden-memory figure { width: min(46vw, 22svh, 190px); padding: 8px 8px 10px;
+    transform: translateX(calc(-50% + var(--photo-offset) * 70px)) rotate(calc(var(--photo-offset) * 12deg)) scale(.78); }
+  .garden-memory figure.is-current { transform: translateX(-50%) rotate(-3deg); }
+  .garden-memory figcaption { font-size: 14px; margin-top: 6px; min-height: 30px; }
+  .garden-memory-copy { padding-bottom: 0; }
+  .garden-memory h2 { font-size: clamp(30px, 4.6svh, 39px); margin: 10px 0; }
+  .garden-memory p:not(.garden-eyebrow) { font-size: 17px; margin: 6px 0; }
   .garden-memory .garden-eyebrow { margin: 0; }
   .garden-celebrate { top: 23%; padding: 0 25px; }
   .garden-celebrate h2 { font-size: 65px; }
   .garden-venue { font-size: 21px; }
+}
+@media (max-width: 700px) and (max-height: 700px) {
+  .garden-memory { top: 11%; gap: 6px; }
+  .garden-memory-copy > p:not(.garden-eyebrow) { display: none; }
+  .garden-arrival { top: 19%; }
+  .garden-review { bottom: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .garden-prototype *, .garden-prototype *::before { transition: none !important; scroll-behavior: auto !important; }

@@ -1,12 +1,20 @@
 // PROTOTYPE: does a bright, reflective garden work as the wedding's opening?
 // One direction requested by the user; review controls expose motion and composition.
-import { Component, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Component, Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import GardenScene from './GardenScene';
 import './gardenPrototype.css';
 
 const BASE = import.meta.env.BASE_URL;
+const MEMORY_START = .20, MEMORY_END = .82;
+const memories = [
+  { file: '20191122_191734.jpg', caption: 'The early days.', alt: 'Patrick and Amelia with a friend beside the harbour' },
+  { file: 'IMG_5509.jpg', caption: 'And then, this.', alt: 'Patrick and Amelia smiling together on a night out' },
+  { file: 'IMG_7024.jpg', caption: 'The first trip away.', alt: 'Patrick and Amelia with hot-air balloons in the sky behind them' },
+  { file: '944d7da37c56a0522ee21fd47b54a4b0.jpg', caption: 'Dressed up, somewhere with a view.', alt: 'Patrick and Amelia dressed up together at sunset' },
+  { file: 'IMG_0466.jpg', caption: 'Us, being us.', alt: 'A playful close-up selfie of Patrick and Amelia' },
+];
 
 class CanvasFallback extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -20,6 +28,7 @@ export default function GardenPrototype() {
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
   const [ready, setReady] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onReady = useCallback(() => setReady(true), []);
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)');
@@ -34,18 +43,31 @@ export default function GardenPrototype() {
       window.removeEventListener('scroll', update); window.removeEventListener('resize', update);
     };
   }, []);
-  const chapter = progress < .30 ? 0 : progress < .72 ? 1 : 2;
-  const scrollToChapter = (index: number) => {
-    const next = [0, .49, 1][index];
+  const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
+  const memoryIndex = Math.max(0, Math.min(memories.length - 1,
+    Math.floor((progress - MEMORY_START) / (MEMORY_END - MEMORY_START) * memories.length)));
+  const goToProgress = (next: number) => {
     setProgress(next);
+    window.scrollTo({ top: (document.documentElement.scrollHeight - innerHeight) * next, behavior: 'instant' });
+  };
+  const scrollToMemory = (index: number) => {
+    const wrapped = (index + memories.length) % memories.length;
+    goToProgress(MEMORY_START + (wrapped + .5) / memories.length * (MEMORY_END - MEMORY_START));
+  };
+  const scrollToChapter = (index: number) => {
     // The camera already eases between chapters; native smooth scrolling would
     // introduce a second animation and delay the content on slower devices.
-    window.scrollTo({ top: (document.documentElement.scrollHeight - innerHeight) * next, behavior: 'instant' });
+    if (index === 1) scrollToMemory(0);
+    else goToProgress(index === 0 ? 0 : 1);
+  };
+  const nextStop = () => {
+    if (chapter === 1 && memoryIndex < memories.length - 1) scrollToMemory(memoryIndex + 1);
+    else scrollToChapter(chapter === 2 ? 0 : chapter + 1);
   };
   return <main className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`}>
     <div className={`garden-canvas ${ready ? 'is-ready' : ''}`} aria-hidden="true">
       <CanvasFallback>
-        <Canvas shadows frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.5]} camera={{ position: [0, 3.2, 18], fov: 48, near: .2, far: 220 }}
+        <Canvas shadows frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.25]} camera={{ position: [0, 3.2, 18], fov: 48, near: .2, far: 220 }}
           gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}>
           <Suspense fallback={null}>
             <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} />
@@ -69,11 +91,39 @@ export default function GardenPrototype() {
       </section>
 
       <section className={`garden-panel garden-memory ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
-        <figure>
-          <img src={`${BASE}photos/IMG_5509.jpg`} alt="A photograph from Patrick and Amelia’s story" />
-          <figcaption>Us, along the way.</figcaption>
-        </figure>
-        <div>
+        <div className="garden-album" role="group" aria-label="Our photographs" onKeyDown={event => {
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.preventDefault(); scrollToMemory(memoryIndex + (event.key === 'ArrowLeft' ? -1 : 1));
+          }
+        }}>
+          <div className="garden-photo-stack" onTouchStart={event => {
+            const touch = event.touches[0]; touchStart.current = { x: touch.clientX, y: touch.clientY };
+          }} onTouchEnd={event => {
+            if (!touchStart.current) return;
+            const touch = event.changedTouches[0], dx = touch.clientX - touchStart.current.x, dy = touch.clientY - touchStart.current.y;
+            if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) scrollToMemory(memoryIndex + (dx < 0 ? 1 : -1));
+            touchStart.current = null;
+          }}>
+            {memories.map((memory, i) => {
+              const offset = (i - memoryIndex + memories.length + 2) % memories.length - 2;
+              return <figure key={memory.file} className={offset === 0 ? 'is-current' : ''} aria-hidden={offset !== 0}
+                style={{ '--photo-offset': offset, zIndex: 3 - Math.abs(offset), visibility: Math.abs(offset) > 1 ? 'hidden' : 'visible' } as CSSProperties}>
+                <img src={`${BASE}photos/${memory.file}`} alt={offset === 0 ? memory.alt : ''} decoding="async" draggable={false} />
+                <figcaption>{memory.caption}</figcaption>
+              </figure>;
+            })}
+          </div>
+          <div className="garden-photo-controls">
+            <button aria-label="Previous photograph" onClick={() => scrollToMemory(memoryIndex - 1)}>←</button>
+            <div className="garden-photo-dots">
+              {memories.map((memory, i) => <button key={memory.file} aria-label={`Photograph ${i + 1}: ${memory.caption}`}
+                aria-pressed={i === memoryIndex} onClick={() => scrollToMemory(i)}><span /></button>)}
+            </div>
+            <button aria-label="Next photograph" onClick={() => scrollToMemory(memoryIndex + 1)}>→</button>
+          </div>
+          <p className="garden-photo-count">0{memoryIndex + 1} <span>/ 05</span></p>
+        </div>
+        <div className="garden-memory-copy">
           <p className="garden-eyebrow">Our story</p>
           <h2>A lifetime of<br /><em>little moments.</em></h2>
           <p>And now, one more to share<br />with the people we love.</p>
@@ -98,12 +148,12 @@ export default function GardenPrototype() {
     </nav>
     <div className="garden-bottom garden-copy">
       <span className="garden-place">BERRY, NEW SOUTH WALES</span>
-      <button className="garden-scroll-cue" onClick={() => scrollToChapter(chapter === 2 ? 0 : chapter + 1)}>
+      <button className="garden-scroll-cue" onClick={nextStop}>
         {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
       </button>
     </div>
     <aside className="garden-review" aria-label="Proof of concept controls">
-      <span className="garden-study-label">Garden study <b>01</b></span>
+      <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
       <button onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={paused || reduced}>
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}

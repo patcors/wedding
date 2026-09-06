@@ -11,27 +11,27 @@ export function random(seed: number) {
   };
 }
 
-export function bankEdge(z: number) {
-  return 5.5 + Math.sin(z * .17) * .9 + Math.sin(z * .48) * .25;
+export function bankEdge(z: number, width = 1) {
+  return (5.5 + Math.sin(z * .17) * .9 + Math.sin(z * .48) * .25) * width;
 }
 
-export function groundHeight(x: number, z: number) {
-  const inland = Math.abs(x) - bankEdge(z);
+export function groundHeight(x: number, z: number, width = 1) {
+  const inland = Math.abs(x) - bankEdge(z, width);
   return -.12 + Math.min(1, Math.max(0, inland / 2.4)) * .85
     + Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045;
 }
 
-export function bankGeometry(side: number) {
-  const geometry = new THREE.PlaneGeometry(26, 140, 65, 210);
+export function bankGeometry(side: number, width = 1) {
+  const geometry = new THREE.PlaneGeometry(54, 140, 90, 180);
   const position = geometry.attributes.position;
   const uv = geometry.attributes.uv;
   const colors = [];
   const color = new THREE.Color();
   for (let i = 0; i < position.count; i++) {
     const z = position.getY(i) - 44;
-    const inland = position.getX(i) + 13;
-    const x = (bankEdge(z) + inland) * side;
-    const y = groundHeight(x, z);
+    const inland = position.getX(i) + 27;
+    const x = (bankEdge(z, width) + inland) * side;
+    const y = groundHeight(x, z, width);
     position.setXYZ(i, x, y, z);
     uv.setXY(i, x / 16, z / 16);
     color.set(inland < .6 ? '#797866' : '#e3dfc8');
@@ -66,7 +66,7 @@ export function leafGeometry(petal = false) {
 
 export type LeafPlacement = { position: THREE.Vector3; scale: number };
 
-export function treeGeometry(seed: number) {
+export function treeGeometry(seed: number, distant = false) {
   const rand = random(seed);
   const branches: THREE.BufferGeometry[] = [];
   const leaves: LeafPlacement[] = [];
@@ -74,10 +74,10 @@ export function treeGeometry(seed: number) {
     const end = start.clone().addScaledVector(direction, length);
     const middle = start.clone().lerp(end, .5).add(new THREE.Vector3((rand() - .5) * length * .14, .12, (rand() - .5) * length * .14));
     const curve = new THREE.CatmullRomCurve3([start, middle, end]);
-    const tube = new THREE.TubeGeometry(curve, depth === 0 ? 16 : 8, radius, depth < 2 ? 14 : 7, false);
+    const radial = distant ? 5 : depth < 2 ? 14 : 7;
+    const segments = distant ? 4 : depth === 0 ? 16 : 8;
+    const tube = new THREE.TubeGeometry(curve, segments, radius, radial, false);
     const positions = tube.attributes.position;
-    const radial = depth < 2 ? 14 : 7;
-    const segments = depth === 0 ? 16 : 8;
     for (let i = 0; i <= segments; i++) {
       const center = curve.getPointAt(i / segments);
       for (let j = 0; j <= radial; j++) {
@@ -92,15 +92,15 @@ export function treeGeometry(seed: number) {
     smoothTube.computeVertexNormals();
     branches.push(smoothTube);
     tube.dispose();
-    if (depth >= 3) {
-      for (let i = 0; i < 10; i++) {
+    if (depth >= (distant ? 2 : 3)) {
+      for (let i = 0; i < (distant ? 7 : 10); i++) {
         const t = .25 + rand() * .9;
         const position = start.clone().lerp(end, t);
         position.add(new THREE.Vector3((rand() - .5) * 1.15, (rand() - .5) * .8, (rand() - .5) * 1.15));
-        leaves.push({ position, scale: .27 + rand() * .27 });
+        leaves.push({ position, scale: (distant ? .45 : .27) + rand() * .27 });
       }
     }
-    if (depth >= 4) return;
+    if (depth >= (distant ? 3 : 4)) return;
     const count = depth === 0 ? 7 : depth === 1 ? 4 : 3;
     for (let i = 0; i < count; i++) {
       const t = depth === 0 ? .45 + i / count * .55 : .50 + rand() * .50;

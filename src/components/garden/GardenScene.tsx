@@ -16,7 +16,7 @@ function Pool({ paused }: { paused: boolean }) {
   const water = useMemo(() => {
     normals.wrapS = normals.wrapT = THREE.RepeatWrapping;
     const object = new Water(new THREE.PlaneGeometry(240, 260), {
-      textureWidth: 768, textureHeight: 768,
+      textureWidth: 512, textureHeight: 512,
       waterNormals: normals, waterColor: '#b5bca6', sunColor: '#fff9e9',
       sunDirection: new THREE.Vector3(-.5, .8, -.2).normalize(),
       distortionScale: .65, fog: true,
@@ -31,7 +31,7 @@ function Pool({ paused }: { paused: boolean }) {
   return <primitive object={water} />;
 }
 
-function Banks() {
+function Banks({ width }: { width: number }) {
   const maps = useTexture([
     `${BASE}textures/garden/ground-color.jpg`, `${BASE}textures/garden/ground-normal.jpg`,
     `${BASE}textures/garden/ground-roughness.jpg`,
@@ -40,7 +40,8 @@ function Banks() {
     maps.forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; });
     maps[0].colorSpace = THREE.SRGBColorSpace;
   }, [maps]);
-  const geometries = useMemo(() => [bankGeometry(-1), bankGeometry(1)], []);
+  const geometries = useMemo(() => [bankGeometry(-1, width), bankGeometry(1, width)], [width]);
+  useEffect(() => () => geometries.forEach(g => g.dispose()), [geometries]);
   return <>{geometries.map((geometry, i) => <mesh key={i} geometry={geometry} receiveShadow>
     <meshStandardMaterial map={maps[0]} normalMap={maps[1]} roughnessMap={maps[2]}
       normalScale={[.8, .8]} roughness={1} vertexColors onBeforeCompile={shader => {
@@ -54,53 +55,70 @@ function Banks() {
   </mesh>)}</>;
 }
 
-function Trees() {
-  const trees = useMemo(() => [treeGeometry(12), treeGeometry(83)], []);
+function Trees({ width, mobile }: { width: number; mobile: boolean }) {
+  const trees = useMemo(() => [treeGeometry(12), treeGeometry(83), treeGeometry(47, true)], []);
   const leaf = useMemo(() => leafGeometry(), []);
   const bark = useMemo(() => barkTexture(), []);
-  const placements = useMemo(() => [
+  const placements = useMemo(() => {
+    const avenue = [
     [-8.6, 4, 1.22, .3], [8.8, 0, 1.30, 2.1],
     [-11.5, -17, 1.08, 1.3], [11.7, -21, 1.2, .7],
     [-10.2, -37, 1.17, 2.9], [10.7, -43, 1.03, .1],
     [-8.7, -59, 1.12, 1.8], [9, -67, 1.23, 3.5],
     [-8, -85, 1.05, .2], [8, -95, 1.15, 2.2],
-  ], []);
+    ].map(([x, z, scale, rotation], i) => ({
+      x: mobile ? Math.sign(x) * (bankEdge(z, width) + 3.8 + (i % 3) * .2) : x,
+      z, scale: scale * (mobile ? .88 : 1), rotation, type: i >= 4 ? 2 : i % 2, distant: i >= 4,
+    }));
+    // Staggered outer groves fill the edges of the horizon. These use much
+    // simpler branches and foliage than the trees close to the camera.
+    const rand = random(415);
+    const groves = Array.from({ length: mobile ? 12 : 24 }, (_, i) => {
+      const row = Math.floor(i / 8), column = Math.floor(i % 8 / 2);
+      return {
+        x: (i % 2 ? 1 : -1) * ((mobile ? 6.5 : 17) + column * (mobile ? 3 : 8) + rand() * 2),
+        z: -14 - row * 23 - rand() * 11,
+        scale: 1.05 + rand() * .5, rotation: rand() * Math.PI * 2, type: 2, distant: true,
+      };
+    });
+    return [...avenue, ...groves];
+  }, [width, mobile]);
   const instances = useRef<THREE.InstancedMesh>(null);
-  const total = placements.reduce((n, _, i) => n + trees[i % 2].leaves.length, 0);
+  const total = placements.reduce((n, p) => n + trees[p.type].leaves.length, 0);
   useLayoutEffect(() => {
     if (!instances.current) return;
     const dummy = new THREE.Object3D(), group = new THREE.Object3D();
     const rand = random(631), color = new THREE.Color();
     let i = 0;
-    placements.forEach(([x, z, scale, rotation], ti) => {
-      group.position.set(x, groundHeight(x, z), z); group.rotation.y = rotation;
+    placements.forEach(({ x, z, scale, rotation, type, distant }) => {
+      group.position.set(x, groundHeight(x, z, width), z); group.rotation.y = rotation;
       group.scale.setScalar(scale); group.updateMatrix();
-      trees[ti % 2].leaves.forEach(l => {
+      trees[type].leaves.forEach(l => {
         dummy.position.copy(l.position);
         dummy.rotation.set(rand() * 2.7, rand() * 6.28, rand() * 6.28);
         dummy.scale.set(l.scale * .65, l.scale, l.scale);
         dummy.updateMatrix();
         instances.current!.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(group.matrix, dummy.matrix));
-        color.setHSL(.20 + rand() * .07, .12 + rand() * .16, .30 + rand() * .26);
+        color.setHSL(.20 + rand() * .07, .12 + rand() * .16, (distant ? .26 : .30) + rand() * .26);
         instances.current!.setColorAt(i++, color);
       });
     });
     instances.current.instanceMatrix.needsUpdate = true;
     if (instances.current.instanceColor) instances.current.instanceColor.needsUpdate = true;
     instances.current.computeBoundingSphere();
-  }, [placements, trees]);
+  }, [placements, trees, width]);
   return <>
-    {placements.map(([x, z, scale, rotation], i) => <mesh key={i} geometry={trees[i % 2].trunk}
-      position={[x, groundHeight(x, z), z]} scale={scale} rotation={[0, rotation, 0]} castShadow receiveShadow>
+    {placements.map(({ x, z, scale, rotation, type, distant }, i) => <mesh key={i} geometry={trees[type].trunk}
+      position={[x, groundHeight(x, z, width), z]} scale={scale} rotation={[0, rotation, 0]} castShadow={!distant} receiveShadow>
       <meshStandardMaterial map={bark} bumpMap={bark} bumpScale={.045} color="#d8cbb0" roughness={.95} />
     </mesh>)}
-    <instancedMesh ref={instances} args={[leaf, undefined, total]} castShadow>
+    <instancedMesh ref={instances} args={[leaf, undefined, total]} castShadow={!mobile}>
       <meshStandardMaterial side={THREE.DoubleSide} roughness={.86} />
     </instancedMesh>
   </>;
 }
 
-function BankDetails() {
+function BankDetails({ width }: { width: number }) {
   const stones = useRef<THREE.InstancedMesh>(null);
   const grasses = useRef<THREE.InstancedMesh>(null);
   const flowers = useRef<THREE.InstancedMesh>(null);
@@ -126,8 +144,8 @@ function BankDetails() {
   useLayoutEffect(() => {
     const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color();
     for (let i = 0; i < 260; i++) {
-      const z = 16 - rand() * 116, x = (bankEdge(z) + rand() * 3.4) * (i % 2 ? 1 : -1);
-      dummy.position.set(x, groundHeight(x, z) - .04, z);
+      const z = 26 - rand() * 126, x = (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
+      dummy.position.set(x, groundHeight(x, z, width) - .04, z);
       dummy.rotation.set(rand(), rand() * 6, rand());
       const s = .1 + Math.pow(rand(), 3) * .55;
       dummy.scale.set(s * 1.4, s * .5, s);
@@ -136,9 +154,9 @@ function BankDetails() {
     }
     for (let i = 0; i < 7000; i++) {
       const cluster = Math.floor(i / 20), r = random(cluster * 91 + 31);
-      const z = 15 - r() * 115, x = (bankEdge(z) + .5 + r() * 4) * (cluster % 2 ? 1 : -1);
+      const z = 26 - r() * 126, x = (bankEdge(z, width) + .5 + r() * 4) * (cluster % 2 ? 1 : -1);
       const px = x + (rand() - .5) * .9, pz = z + (rand() - .5) * .9;
-      dummy.position.set(px, groundHeight(px, pz) - .02, pz);
+      dummy.position.set(px, groundHeight(px, pz, width) - .02, pz);
       dummy.rotation.set((rand() - .5) * .3, rand() * 6.28, (rand() - .5) * .5);
       dummy.scale.setScalar(.25 + rand() * .48);
       dummy.updateMatrix(); grasses.current!.setMatrixAt(i, dummy.matrix);
@@ -146,9 +164,9 @@ function BankDetails() {
     }
     for (let i = 0; i < 1500; i++) {
       const cluster = Math.floor(i / 5), r = random(cluster * 79 + 16);
-      const z = 12 - r() * 86, x = (bankEdge(z) + .8 + r() * 2.6) * (cluster % 2 ? 1 : -1);
+      const z = 24 - r() * 98, x = (bankEdge(z, width) + .8 + r() * 2.6) * (cluster % 2 ? 1 : -1);
       const angle = i % 5 / 5 * Math.PI * 2;
-      dummy.position.set(x, groundHeight(x, z) + .18 + r() * .2, z);
+      dummy.position.set(x, groundHeight(x, z, width) + .18 + r() * .2, z);
       dummy.rotation.set(-Math.PI / 2 + .4, angle, angle);
       dummy.scale.setScalar(.11); dummy.updateMatrix(); flowers.current!.setMatrixAt(i, dummy.matrix);
       color.set(cluster % 3 ? '#ece6cc' : '#d6a6a0'); flowers.current!.setColorAt(i, color);
@@ -158,7 +176,7 @@ function BankDetails() {
       if (ref.current!.instanceColor) ref.current!.instanceColor!.needsUpdate = true;
       ref.current!.computeBoundingSphere();
     });
-  }, []);
+  }, [width]);
   return <>
     <instancedMesh ref={stones} args={[stone, undefined, 260]} castShadow receiveShadow>
       <meshStandardMaterial color="#b4b29b" roughness={.95} />
@@ -178,7 +196,7 @@ function Petals({ paused }: { paused: boolean }) {
   const time = useRef(0);
   const data = useMemo(() => {
     const rand = random(72);
-    return Array.from({ length: 100 }, () => ({
+    return Array.from({ length: 45 }, () => ({
       x: (rand() - .5) * 26, y: 1 + rand() * 13, z: 13 - rand() * 90,
       phase: rand() * 6.28, size: .1 + rand() * .18, speed: .2 + rand() * .4,
     }));
@@ -200,33 +218,79 @@ function Petals({ paused }: { paused: boolean }) {
   </instancedMesh>;
 }
 
+function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const geometry = useMemo(() => leafGeometry(), []);
+  const time = useRef(0);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const leaves = useMemo(() => {
+    const rand = random(3198);
+    return Array.from({ length: 18 }, (_, i) => {
+      const z = 19 - rand() * 64;
+      return { x: (bankEdge(z, width) + .3 + rand() * 1.8) * (i % 2 ? 1 : -1), z,
+        phase: rand() * 11, speed: .20 + rand() * .22, size: .16 + rand() * .13 };
+    });
+  }, [width]);
+  useLayoutEffect(() => {
+    leaves.forEach((_, i) => ref.current!.setColorAt(i, new THREE.Color(i % 3 ? '#92996d' : '#ba9565')));
+    if (ref.current?.instanceColor) ref.current.instanceColor.needsUpdate = true;
+  }, [leaves]);
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    if (!paused) time.current += Math.min(dt, .05);
+    leaves.forEach((leaf, i) => {
+      const t = time.current, height = 11 - (t * leaf.speed + leaf.phase) % 11;
+      dummy.position.set(leaf.x + Math.sin(t * .35 + leaf.phase) * .5, .3 + height,
+        leaf.z + Math.cos(t * .21 + leaf.phase) * .6);
+      dummy.rotation.set(.6 + Math.sin(t * .7 + leaf.phase), t * .3 + leaf.phase, Math.sin(t * .4 + leaf.phase) * .65);
+      // Fade at both ends of the fall so respawning never pops into view.
+      dummy.scale.setScalar(leaf.size * Math.min(1, height * 2, (11 - height) * 2));
+      dummy.updateMatrix(); ref.current!.setMatrixAt(i, dummy.matrix);
+    });
+    ref.current.instanceMatrix.needsUpdate = true;
+  });
+  return <instancedMesh name="falling-leaves" ref={ref} args={[geometry, undefined, leaves.length]} frustumCulled={false}>
+    <meshStandardMaterial side={THREE.DoubleSide} roughness={.9} />
+  </instancedMesh>;
+}
+
 export default function GardenScene({ progress, paused, reduced, onReady }: SceneProps) {
   const { camera, size } = useThree();
+  const mobile = size.width / size.height < .85;
+  const bankWidth = mobile ? .30 : 1;
   const current = useRef(0);
   const target = useMemo(() => new THREE.Vector3(), []);
   useEffect(() => { onReady(); }, [onReady]);
+  useLayoutEffect(() => {
+    const lens = camera as THREE.PerspectiveCamera;
+    lens.fov = mobile ? 58 : 48;
+    lens.updateProjectionMatrix();
+  }, [camera, mobile]);
   useFrame((_, dt) => {
     const p = reduced ? 0 : progress;
     if (reduced) current.current = 0;
     else if (!paused) current.current = THREE.MathUtils.damp(current.current, p, 2, Math.min(dt, .05));
     const t = current.current;
-    const narrow = size.width < 700;
-    camera.position.set(Math.sin(t * Math.PI) * .75, narrow ? 3.9 : 3.2, (narrow ? 32 : 18) - t * 19);
-    target.set(Math.sin(t * Math.PI) * .3, narrow ? 3.2 : 2.5, -28 - t * 19);
+    // Portrait is its own garden composition: narrow water, visible banks,
+    // and a shorter journey that keeps a pair of trunks in view throughout.
+    const travel = t * (mobile ? 8 : 19);
+    camera.position.set(Math.sin(t * Math.PI) * (mobile ? .15 : .75), mobile ? 5.4 : 3.2, (mobile ? 27 : 18) - travel);
+    target.set(Math.sin(t * Math.PI) * .3, mobile ? 4 : 2.5, -28 - travel);
     camera.lookAt(target);
   });
   return <>
     <color attach="background" args={[SKY]} />
-    <fog attach="fog" args={[SKY, 12, 85]} />
+    <fog attach="fog" args={[SKY, mobile ? 8 : 16, mobile ? 85 : 110]} />
     <hemisphereLight args={['#fffbee', '#b0b5a0', 1.7]} />
     <directionalLight position={[-18, 24, 9]} intensity={2.3} color="#fff2d6" castShadow
-      shadow-mapSize={[2048, 2048]} shadow-camera-left={-30} shadow-camera-right={30}
+      shadow-mapSize={[1024, 1024]} shadow-camera-left={-30} shadow-camera-right={30}
       shadow-camera-top={35} shadow-camera-bottom={-35} shadow-camera-far={110}
       shadow-bias={-.0003} shadow-normalBias={.07} />
-    <Banks />
-    <Trees />
-    <BankDetails />
+    <Banks width={bankWidth} />
+    <Trees width={bankWidth} mobile={mobile} />
+    <BankDetails width={bankWidth} />
     <Pool paused={paused || reduced} />
     <Petals paused={paused || reduced} />
+    <FallingLeaves paused={paused || reduced} width={bankWidth} />
   </>;
 }
