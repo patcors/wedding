@@ -3,7 +3,6 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { buildStrandCurve } from './curves';
-import { configureRopeTextures } from './ropeTextures';
 import { buildRopeGeometry, buildSilkGeometry } from './strandGeometry';
 import { buildLaidRopeGeometry } from './ropeGeometry';
 import { buildFuzzGeometry } from './ropeFuzz';
@@ -133,6 +132,48 @@ export function Rope({ velocityRef, curve }: StrandProps) {
   );
 
   /**
+   * Sampler state — and the `needsUpdate` at the end of it is the whole point.
+   *
+   * three.js sends wrap, filtering, anisotropy and colour space to GL in one
+   * place only: `setTextureParameters`, called from inside `uploadTexture`.
+   * Assigning `wrapS` afterwards does not bump `texture.version`, so nothing
+   * re-uploads and the sampler keeps whatever it was created with — and the
+   * default is `ClampToEdgeWrapping`.
+   *
+   * That is not a hypothetical. drei's `useTexture` uploads eagerly from a
+   * passive effect of its own (`gl.initTexture`, its workaround for
+   * three#22696), and that hook is declared above this one, so a passive effect
+   * here runs *after* the upload and always loses. The rope's UVs are baked in
+   * circumferences of arc, ~268 of them over the length, so clamping showed the
+   * yarn for exactly one tile — 1.46 rope diameters at the start — and then
+   * stretched the texture's last column down the remaining 450 units. It reads
+   * as a smooth rope with faint lengthwise streaks, which looks like a shading
+   * problem rather than a wrap mode.
+   *
+   * `needsUpdate` bumps both the texture's and its source's version, which is
+   * what makes the re-upload re-send the parameters. Once, on mount — which is
+   * why this is split from the repeat effect below rather than folded into it.
+   */
+  useEffect(() => {
+    // Colour is sRGB. Normal and roughness are *data* — gamma-correcting them
+    // flattens the bumps and lifts the roughness. Set before the loop so the
+    // one re-upload below carries it; colour space is chosen at upload too, so
+    // it was being dropped for the same reason the wrap mode was.
+    map.colorSpace = THREE.SRGBColorSpace;
+
+    for (const tex of textures) {
+      // Without RepeatWrapping, repeat values above 1 clamp instead of tiling.
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      // The rope is viewed at a grazing angle almost everywhere at these repeat
+      // counts. Anisotropic filtering is the difference between crisp fibre and
+      // a smear.
+      tex.anisotropy = maxAnisotropy;
+      tex.needsUpdate = true;
+    }
+  }, [textures, map, maxAnisotropy]);
+
+  /**
    * Tiling, which now depends on the mode.
    *
    * `tube` needs the old (120, 1): its UVs run the length of the whole rope, so
@@ -141,11 +182,17 @@ export function Rope({ velocityRef, curve }: StrandProps) {
    * repeat is aspect-correct by construction and one whole number does it.
    *
    * Separate from the material below so yarnScale stays live — rebuilding the
-   * material would re-run onBeforeCompile and hitch for nothing.
+   * material would re-run onBeforeCompile and hitch for nothing. Separate from
+   * the sampler state above for the same reason: `repeat` reaches the shader as
+   * a uv-transform uniform rather than as sampler state, so it needs no
+   * re-upload and stays smooth to drag.
    */
   useEffect(() => {
-    configureRopeTextures(textures, map, mode, yarn, maxAnisotropy);
-  }, [textures, map, mode, yarn, maxAnisotropy]);
+    for (const tex of textures) {
+      if (mode === 'tube') tex.repeat.copy(ROPE_REPEAT);
+      else tex.repeat.set(yarn, yarn);
+    }
+  }, [textures, mode, yarn]);
 
   const material = useMemo(() => {
     const m = new THREE.MeshStandardMaterial({

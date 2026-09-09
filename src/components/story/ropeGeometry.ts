@@ -173,6 +173,32 @@ export interface LaidRopeStats {
  * @returns geometry carrying the same attribute set as the tube.
  *          `userData.rope` holds a LaidRopeStats.
  */
+/**
+ * Octaves the fray noise is built from, and how many mesh samples each of its
+ * finest features must get.
+ *
+ * Both feed the frequencies derived per strand below, and the second one is the
+ * whole fix for a real bug. The frequencies used to be hard-coded — arc length
+ * times 2.2, sampled on a *unit* circle around the strand — and at the current
+ * tessellation both alias badly. At 84 turns x 24 segments a strand carries a
+ * sample every ~0.24 units of arc, so `s * 2.2` gave the base octave 1.9
+ * samples per feature and the third octave 0.47; around the circumference a
+ * unit circle put ~25 features of the finest octave against 12 radial segments.
+ *
+ * Under-sampled noise does not come back as fine detail, it comes back as its
+ * fold-down: broad smooth lobes with a ridge running the full length of every
+ * strand, and enough garbage in the computed normals to swamp the yarn in the
+ * normal map entirely. That is what the "horrible line" was — not a UV seam,
+ * which is what it looks like.
+ *
+ * 6 is below the ~8 in docs/GLOSSARY.md's aliasing note, but this is a soft
+ * displacement rather than a silhouette feature and 6 holds up. The honest
+ * consequence is that the fray is now *lumpiness* at a scale the mesh can
+ * actually carry — fibre is what ropeFuzz.ts is for, and always was.
+ */
+const FRAY_OCTAVES = 3;
+const FRAY_SAMPLES_PER_FEATURE = 6;
+
 export function buildLaidRopeGeometry(
   curve: THREE.Curve<THREE.Vector3>,
   {
@@ -237,6 +263,23 @@ export function buildLaidRopeGeometry(
     for (let i = 1; i < slices; i++) arc[i] = arc[i - 1]! + path[i]!.distanceTo(path[i - 1]!);
     maxArc = Math.max(maxArc, arc[slices - 1]!);
 
+    /**
+     * Fray frequencies, from this strand's actual sample spacing — so they
+     * follow the `turns` and `radialSegments` knobs instead of silently
+     * aliasing the moment either moves. See FRAY_SAMPLES_PER_FEATURE.
+     *
+     * `finest` is fbm3's top octave multiplier; both axes are sized so that
+     * octave, not the base one, is the one that just clears the sample budget.
+     * The ring radius is small on purpose: the noise still travels a closed
+     * circle, so it stays seamless around the strand by construction, but a
+     * 12-sided cross-section cannot carry more than a couple of features around
+     * its circumference and asking for more is what produced the ridge.
+     */
+    const arcStep = arc[slices - 1]! / along;
+    const finest = 1 << (FRAY_OCTAVES - 1);
+    const frayFreq = 1 / (FRAY_SAMPLES_PER_FEATURE * arcStep * finest);
+    const frayRing = radialSegments / (FRAY_SAMPLES_PER_FEATURE * 2 * Math.PI * finest);
+
     for (let i = 0; i < slices; i++) {
       const centre = path[i]!;
       const ropeCentre = cs[i]!;
@@ -270,7 +313,12 @@ export function buildLaidRopeGeometry(
         const r =
           strandRadius +
           (frayAmp > 0
-            ? fbm3(s * 2.2 + fraySeed, Math.cos(phi), Math.sin(phi)) * frayAmp
+            ? fbm3(
+                s * frayFreq + fraySeed,
+                Math.cos(phi) * frayRing,
+                Math.sin(phi) * frayRing,
+                FRAY_OCTAVES,
+              ) * frayAmp
             : 0);
 
         const px = centre.x + nrm.x * r;
