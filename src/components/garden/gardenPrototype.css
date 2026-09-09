@@ -19,6 +19,8 @@
 .garden-panel.is-active { opacity: 1; visibility: visible; transform: translateY(0); }
 .garden-panel a, .garden-panel button { pointer-events: auto; }
 .garden-arrival { top: 22%; left: 0; width: 100%; }
+.garden-arrival::before, .garden-celebrate::before { content: ''; position: absolute; z-index: -1; inset: -18px 17% -12px; pointer-events: none;
+  background: radial-gradient(ellipse, #eeeee5e6 12%, #eeeee5ad 40%, #eeeee53d 62%, transparent 76%); }
 .garden-eyebrow { font-size: 9px; font-weight: 400; text-transform: uppercase; letter-spacing: .28em; line-height: 1.8; }
 .garden-arrival h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300; font-size: clamp(66px, 8.8vw, 144px); line-height: 1.1; letter-spacing: -.06em; margin: 20px 0 10px; }
 .garden-arrival h1 span { font-size: .6em; font-style: italic; font-weight: 300; color: #7a826d; display: inline-block; margin: 0 .14em; }
@@ -86,7 +88,7 @@
   .garden-header-date { display: none; }
   .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
-  .garden-arrival::before, .garden-celebrate::before { content: ''; position: absolute; z-index: -1; inset: -25px 12px; background: radial-gradient(ellipse, #eeeee5df 10%, #eeeee58f 48%, transparent 73%); pointer-events: none; }
+  .garden-arrival::before, .garden-celebrate::before { inset: -12px 14px; background: radial-gradient(ellipse, #eeeee5e6 16%, #eeeee5ad 44%, #eeeee53d 66%, transparent 80%); }
   .garden-arrival h1 { font-size: clamp(60px, 16vw, 90px); line-height: .9; margin: 24px 0 20px; }
   .garden-arrival h1 span { display: block; font-size: 35px; line-height: 1.2; margin: 4px 0; }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
@@ -102,7 +104,7 @@
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }
   .garden-scroll-cue { font-size: 18px !important; }
-  .garden-review { bottom: 20px; gap: 13px; padding: 11px 16px; }
+  .garden-review { bottom: 20px; gap: 10px; padding: 11px 12px; max-width: calc(100vw - 24px); width: max-content; flex-wrap: wrap; justify-content: center; }
   .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
   .garden-review button { font-size: 8px; }
   .garden-study-label { font-size: 7px; }

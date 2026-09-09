@@ -11,12 +11,20 @@ export function random(seed: number) {
   };
 }
 
+export const GARDEN_CAMERA = { fov: 48, mobileFov: 68, height: 3.2, startZ: 18, targetY: 2.5, targetZ: -28, travel: 28.5 };
+// Portrait uses the same irregular shoreline as desktop, at a smaller scale.
+export const MOBILE_RIVER_WIDTH = .45;
+
+export function riverCenter(z: number, width = 1) {
+  return (Math.sin(z * .12 + .7) * 1.15 + Math.sin(z * .26 - 1.2) * .25) * width;
+}
+
 export function bankEdge(z: number, width = 1) {
-  return (5.5 + Math.sin(z * .17) * .9 + Math.sin(z * .48) * .25) * width;
+  return (5.5 + Math.sin(z * .17) * 1.15 + Math.sin(z * .48) * .38) * width;
 }
 
 export function groundHeight(x: number, z: number, width = 1) {
-  const inland = Math.abs(x) - bankEdge(z, width);
+  const inland = Math.abs(x - riverCenter(z, width)) - bankEdge(z, width);
   return -.12 + Math.min(1, Math.max(0, inland / 2.4)) * .85
     + Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045;
 }
@@ -30,7 +38,7 @@ export function bankGeometry(side: number, width = 1) {
   for (let i = 0; i < position.count; i++) {
     const z = position.getY(i) - 44;
     const inland = position.getX(i) + 27;
-    const x = (bankEdge(z, width) + inland) * side;
+    const x = riverCenter(z, width) + (bankEdge(z, width) + inland) * side;
     const y = groundHeight(x, z, width);
     position.setXYZ(i, x, y, z);
     uv.setXY(i, x / 16, z / 16);

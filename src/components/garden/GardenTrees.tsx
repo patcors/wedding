@@ -2,21 +2,21 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { bankEdge, groundHeight, random } from './gardenGeometry';
+import { riverCenter, bankEdge, groundHeight, random } from './gardenGeometry';
 
 const BASE = `${import.meta.env.BASE_URL}models/garden/`;
 type Placement = { x: number; z: number; scale: number; rotation: number; type: number; distant: boolean };
 
-function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobile }: {
+function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobile, width }: {
   geometry: THREE.BufferGeometry; material: THREE.Material; depthMaterial?: THREE.Material;
-  placements: Placement[]; leaves: boolean; mobile: boolean;
+  width: number; placements: Placement[]; leaves: boolean; mobile: boolean;
 }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   useLayoutEffect(() => {
     if (!mesh.current) return;
     const dummy = new THREE.Object3D();
     placements.forEach((p, i) => {
-      dummy.position.set(p.x, groundHeight(p.x, p.z, mobile ? .30 : 1) - .08, p.z);
+      dummy.position.set(p.x, groundHeight(p.x, p.z, width) - .08, p.z);
       dummy.rotation.set(0, p.rotation, 0);
       dummy.scale.setScalar(p.scale);
       dummy.updateMatrix();
@@ -26,7 +26,7 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
     mesh.current.computeBoundingSphere();
     // Account for the small shader displacement when frustum culling.
     if (mesh.current.boundingSphere) mesh.current.boundingSphere.radius += .3;
-  }, [placements, mobile]);
+  }, [placements, width]);
   useEffect(() => {
     const instance = mesh.current;
     return () => { instance?.dispose(); };
@@ -36,23 +36,26 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
     castShadow={!placements[0]?.distant && (!leaves || !mobile)} receiveShadow />;
 }
 
-export default function GardenTrees({ width, mobile, paused }: { width: number; mobile: boolean; paused: boolean }) {
+export default function GardenTrees({ width, mobile, paused, lightTrees }: {
+  width: number; mobile: boolean; paused: boolean; lightTrees: boolean;
+}) {
   const models = useGLTF(['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb'].map(file => BASE + file));
-  const [barkColor, barkNormal, barkRoughness, leafMap] = useTexture(
-    ['bark-color.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves.webp'].map(file => BASE + file));
+  const [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap] = useTexture(
+    ['bark-color.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves.webp',
+      'bark-color-dark.webp', 'ash-leaves-dark.webp'].map(file => BASE + file));
   const windTime = useMemo(() => ({ value: 0 }), []);
   const materials = useMemo(() => {
-    for (const texture of [barkColor, barkNormal, barkRoughness]) {
+    for (const texture of [barkColor, darkBarkColor, barkNormal, barkRoughness]) {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(.5, .20);
       texture.anisotropy = 4;
       texture.needsUpdate = true;
     }
-    barkColor.colorSpace = leafMap.colorSpace = THREE.SRGBColorSpace;
-    leafMap.anisotropy = 4;
+    for (const texture of [barkColor, darkBarkColor, leafMap, darkLeafMap]) texture.colorSpace = THREE.SRGBColorSpace;
+    leafMap.anisotropy = darkLeafMap.anisotropy = 4;
     // These geometry-only GLBs preserve EZ-Tree's original UVs. No exporter
     // texture flip was baked in, so keep the source TextureLoader convention.
-    for (const texture of [barkColor, barkNormal, barkRoughness, leafMap]) {
+    for (const texture of [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap]) {
       texture.flipY = true;
       texture.needsUpdate = true;
     }
@@ -82,7 +85,14 @@ export default function GardenTrees({ width, mobile, paused }: { width: number; 
     leaves.onBeforeCompile = depth.onBeforeCompile = animate;
     leaves.customProgramCacheKey = depth.customProgramCacheKey = () => 'garden-leaf-wind-v1';
     return { bark, leaves, depth };
-  }, [barkColor, barkNormal, barkRoughness, leafMap, windTime]);
+  }, [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap, windTime]);
+  useLayoutEffect(() => {
+    // Reuse the same meshes, materials and wind clock; only the palette changes.
+    materials.bark.map = lightTrees ? barkColor : darkBarkColor;
+    materials.bark.color.set(lightTrees ? '#eee4d2' : '#c8bea7');
+    materials.leaves.map = materials.depth.map = lightTrees ? leafMap : darkLeafMap;
+    materials.leaves.color.set(lightTrees ? '#edf0d7' : '#becba4');
+  }, [lightTrees, materials, barkColor, leafMap, darkBarkColor, darkLeafMap]);
   useEffect(() => () => { materials.bark.dispose(); materials.leaves.dispose(); materials.depth.dispose(); }, [materials]);
   useFrame((_, dt) => { if (!paused) windTime.value += Math.min(dt, .05); });
 
@@ -94,7 +104,7 @@ export default function GardenTrees({ width, mobile, paused }: { width: number; 
       [-8.7, -59, 1.12, 1.8], [9, -67, 1.23, 3.5],
       [-8, -85, 1.05, .2], [8, -95, 1.15, 2.2],
     ].map(([x, z, scale, rotation], i) => ({
-      x: mobile ? Math.sign(x) * (bankEdge(z, width) + 3.8 + (i % 3) * .2) : x,
+      x: riverCenter(z, width) + (mobile ? Math.sign(x) * (bankEdge(z, width) + 3.8 + (i % 3) * .2) : x),
       z, scale: scale * (mobile ? .88 : 1), rotation, type: i % 2 + (i >= 4 ? 2 : 0), distant: i >= 4,
     }));
     const rand = random(415);
@@ -109,9 +119,9 @@ export default function GardenTrees({ width, mobile, paused }: { width: number; 
   return <group name="ez-tree-grove" dispose={null}>
     {models.map((model, i) => <group key={i}>
       <TreeBatch geometry={(model.nodes.branches as THREE.Mesh).geometry} material={materials.bark}
-        placements={placements[i]} leaves={false} mobile={mobile} />
+        placements={placements[i]} leaves={false} mobile={mobile} width={width} />
       <TreeBatch geometry={(model.nodes.leaves as THREE.Mesh).geometry} material={materials.leaves}
-        depthMaterial={materials.depth} placements={placements[i]} leaves mobile={mobile} />
+        depthMaterial={materials.depth} placements={placements[i]} leaves mobile={mobile} width={width} />
     </group>)}
   </group>;
 }

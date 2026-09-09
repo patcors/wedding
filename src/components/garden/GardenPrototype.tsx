@@ -4,6 +4,7 @@ import { Component, Suspense, useCallback, useEffect, useRef, useState, type Rea
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import GardenScene from './GardenScene';
+import { GARDEN_CAMERA } from './gardenGeometry';
 import './gardenPrototype.css';
 
 const BASE = import.meta.env.BASE_URL;
@@ -27,7 +28,8 @@ export default function GardenPrototype() {
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
-  const [ezTrees, setEzTrees] = useState(true);
+  const [lightTrees, setLightTrees] = useState(false);
+  const [invertComposition, setInvertComposition] = useState(false);
   const [ready, setReady] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -69,10 +71,10 @@ export default function GardenPrototype() {
   return <main className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`}>
     <div className={`garden-canvas ${ready ? 'is-ready' : ''}`} aria-hidden="true">
       <CanvasFallback>
-        <Canvas shadows style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.25]} camera={{ position: [0, 3.2, 18], fov: 48, near: .2, far: 220 }}
+        <Canvas shadows style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.25]} camera={{ position: [0, GARDEN_CAMERA.height, GARDEN_CAMERA.startZ], fov: GARDEN_CAMERA.fov, near: .2, far: 220 }}
           gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}>
           <Suspense fallback={null}>
-            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} boatLaunchRequest={boatLaunchRequest} ezTrees={ezTrees} />
+            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} invertComposition={invertComposition} />
           </Suspense>
         </Canvas>
       </CanvasFallback>
@@ -155,11 +157,11 @@ export default function GardenPrototype() {
       </button>)}
     </nav>
     <div className="garden-bottom garden-copy">
-      <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a paper boat">
+      <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
         <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">
           <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
         </svg>
-        <span>Float a paper boat</span>
+        <span>Float a boat</span>
       </button>
       <button className="garden-scroll-cue" onClick={nextStop}>
         {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
@@ -168,9 +170,13 @@ export default function GardenPrototype() {
     <aside className="garden-review" aria-label="Proof of concept controls">
       <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
-      <button onClick={() => setEzTrees(value => !value)} aria-pressed={ezTrees}
-        aria-label="Use EZ-Tree trees" title={ezTrees ? 'Switch to original trees' : 'Switch to EZ-Tree trees'}>
-        Trees: {ezTrees ? 'EZ-Tree' : 'Original'}
+      <button onClick={() => setLightTrees(value => !value)} aria-pressed={lightTrees}
+        aria-label="Use light EZ-Tree colours" title={lightTrees ? 'Switch to dark EZ-Tree colours' : 'Switch to light EZ-Tree colours'}>
+        Trees: {lightTrees ? 'Light' : 'Dark'}
+      </button>
+      <button onClick={() => setInvertComposition(value => !value)} aria-pressed={invertComposition}
+        aria-label="Swap mobile and desktop landscapes" title="Preview the desktop landscape on mobile, or the mobile landscape on desktop">
+        View: {invertComposition ? 'Swapped' : 'Auto'}
       </button>
       <button onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={paused || reduced}>
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}

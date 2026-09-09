@@ -5,14 +5,13 @@ import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bankEdge, bankGeometry, groundHeight, leafGeometry, random } from './gardenGeometry';
+import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, riverCenter, bankEdge, bankGeometry, groundHeight, leafGeometry, random } from './gardenGeometry';
 import GardenTrees from './GardenTrees';
-import OriginalGardenTrees from './OriginalGardenTrees';
 import { BOAT_MARGIN, PaperBoat, type BoatLaunch } from './PaperBoat';
 
 const BASE = import.meta.env.BASE_URL;
 export const SKY = '#eeeee5';
-type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; ezTrees: boolean };
+type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; lightTrees: boolean; invertComposition: boolean };
 
 function Pool({ paused, width, launchRequest }: { paused: boolean; width: number; launchRequest: number }) {
   const camera = useThree(s => s.camera);
@@ -20,7 +19,10 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
   const nextId = useRef(0), lastRequest = useRef(launchRequest);
   const launch = useCallback((x: number, z: number) => {
     const halfWidth = Math.max(.1, bankEdge(z, width) - BOAT_MARGIN);
-    const boat = { id: ++nextId.current, z, lateral: THREE.MathUtils.clamp(x / halfWidth, -1, 1) };
+    // Decide once per launch, so rerenders and animation never change the model.
+    const roll = Math.random();
+    const boat: BoatLaunch = { id: ++nextId.current, z, lateral: THREE.MathUtils.clamp((x - riverCenter(z, width)) / halfWidth, -1, 1),
+      kind: roll < .45 ? 'sailboat' : roll < .50 ? 'tugboat' : 'paper' };
     // Keep this a small passing detail even if someone taps repeatedly.
     setBoats(previous => [...previous.slice(-3), boat]);
   }, [width]);
@@ -28,13 +30,14 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
   useEffect(() => {
     if (launchRequest === lastRequest.current) return;
     lastRequest.current = launchRequest;
-    launch(0, camera.position.z - 10);
-  }, [launchRequest, launch, camera]);
+    const z = camera.position.z - 10;
+    launch(riverCenter(z, width), z);
+  }, [launchRequest, launch, camera, width]);
   const tapWater = (event: ThreeEvent<MouseEvent>) => {
     const { x, z } = event.point;
     // The reflecting plane extends underneath the terrain. Only exposed
     // stream water is interactive; drags and native touch scrolling are not taps.
-    if (event.delta > 6 || event.button !== 0 || Math.abs(x) >= bankEdge(z, width) - .08
+    if (event.delta > 6 || event.button !== 0 || Math.abs(x - riverCenter(z, width)) >= bankEdge(z, width) - .08
       || z < camera.position.z - 65 || z > camera.position.z - 1) return;
     event.stopPropagation();
     launch(x, z);
@@ -111,7 +114,7 @@ function BankDetails({ width }: { width: number }) {
   useLayoutEffect(() => {
     const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color();
     for (let i = 0; i < 260; i++) {
-      const z = 26 - rand() * 126, x = (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
+      const z = 26 - rand() * 126, x = riverCenter(z, width) + (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
       dummy.position.set(x, groundHeight(x, z, width) - .04, z);
       dummy.rotation.set(rand(), rand() * 6, rand());
       const s = .1 + Math.pow(rand(), 3) * .55;
@@ -121,7 +124,7 @@ function BankDetails({ width }: { width: number }) {
     }
     for (let i = 0; i < 7000; i++) {
       const cluster = Math.floor(i / 20), r = random(cluster * 91 + 31);
-      const z = 26 - r() * 126, x = (bankEdge(z, width) + .5 + r() * 4) * (cluster % 2 ? 1 : -1);
+      const z = 26 - r() * 126, x = riverCenter(z, width) + (bankEdge(z, width) + .5 + r() * 4) * (cluster % 2 ? 1 : -1);
       const px = x + (rand() - .5) * .9, pz = z + (rand() - .5) * .9;
       dummy.position.set(px, groundHeight(px, pz, width) - .02, pz);
       dummy.rotation.set((rand() - .5) * .3, rand() * 6.28, (rand() - .5) * .5);
@@ -131,7 +134,7 @@ function BankDetails({ width }: { width: number }) {
     }
     for (let i = 0; i < 1500; i++) {
       const cluster = Math.floor(i / 5), r = random(cluster * 79 + 16);
-      const z = 24 - r() * 98, x = (bankEdge(z, width) + .8 + r() * 2.6) * (cluster % 2 ? 1 : -1);
+      const z = 24 - r() * 98, x = riverCenter(z, width) + (bankEdge(z, width) + .8 + r() * 2.6) * (cluster % 2 ? 1 : -1);
       const angle = i % 5 / 5 * Math.PI * 2;
       dummy.position.set(x, groundHeight(x, z, width) + .18 + r() * .2, z);
       dummy.rotation.set(-Math.PI / 2 + .4, angle, angle);
@@ -194,7 +197,7 @@ function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
     const rand = random(3198);
     return Array.from({ length: 18 }, (_, i) => {
       const z = 19 - rand() * 64;
-      return { x: (bankEdge(z, width) + .3 + rand() * 1.8) * (i % 2 ? 1 : -1), z,
+      return { x: riverCenter(z, width) + (bankEdge(z, width) + .3 + rand() * 1.8) * (i % 2 ? 1 : -1), z,
         phase: rand() * 11, speed: .20 + rand() * .22, size: .16 + rand() * .13 };
     });
   }, [width]);
@@ -221,16 +224,16 @@ function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
   </instancedMesh>;
 }
 
-export default function GardenScene({ progress, paused, reduced, onReady, boatLaunchRequest, ezTrees }: SceneProps) {
+export default function GardenScene({ progress, paused, reduced, onReady, boatLaunchRequest, lightTrees, invertComposition }: SceneProps) {
   const { camera, size } = useThree();
-  const mobile = size.width / size.height < .85;
-  const bankWidth = mobile ? .30 : 1;
+  const mobile = (size.width / size.height < .85) !== invertComposition;
+  const bankWidth = mobile ? MOBILE_RIVER_WIDTH : 1;
   const current = useRef(0);
   const target = useMemo(() => new THREE.Vector3(), []);
   useEffect(() => { onReady(); }, [onReady]);
   useLayoutEffect(() => {
     const lens = camera as THREE.PerspectiveCamera;
-    lens.fov = mobile ? 58 : 48;
+    lens.fov = mobile ? GARDEN_CAMERA.mobileFov : GARDEN_CAMERA.fov;
     lens.updateProjectionMatrix();
   }, [camera, mobile]);
   useFrame((_, dt) => {
@@ -238,11 +241,11 @@ export default function GardenScene({ progress, paused, reduced, onReady, boatLa
     if (reduced) current.current = 0;
     else if (!paused) current.current = THREE.MathUtils.damp(current.current, p, 2, Math.min(dt, .05));
     const t = current.current;
-    // Portrait is its own garden composition: narrow water, visible banks,
-    // and a shorter journey that keeps a pair of trunks in view throughout.
-    const travel = t * (mobile ? 8 : 19);
-    camera.position.set(Math.sin(t * Math.PI) * (mobile ? .15 : .75), mobile ? 5.4 : 3.2, (mobile ? 27 : 18) - travel);
-    target.set(Math.sin(t * Math.PI) * .3, mobile ? 4 : 2.5, -28 - travel);
+    // Both compositions look along the same route from the same height. Only
+    // the lens widens on portrait, preserving the desktop viewpoint.
+    const travel = t * GARDEN_CAMERA.travel;
+    camera.position.set(Math.sin(t * Math.PI) * .75, GARDEN_CAMERA.height, GARDEN_CAMERA.startZ - travel);
+    target.set(Math.sin(t * Math.PI) * .3, GARDEN_CAMERA.targetY, GARDEN_CAMERA.targetZ - travel);
     camera.lookAt(target);
   });
   return <>
@@ -254,12 +257,7 @@ export default function GardenScene({ progress, paused, reduced, onReady, boatLa
       shadow-camera-top={35} shadow-camera-bottom={-35} shadow-camera-far={110}
       shadow-bias={-.0003} shadow-normalBias={.07} />
     <Banks width={bankWidth} />
-    <group visible={ezTrees}>
-      <GardenTrees width={bankWidth} mobile={mobile} paused={paused || reduced} />
-    </group>
-    <group name="original-tree-grove" visible={!ezTrees}>
-      <OriginalGardenTrees width={bankWidth} mobile={mobile} />
-    </group>
+    <GardenTrees width={bankWidth} mobile={mobile} paused={paused || reduced} lightTrees={lightTrees} />
     <BankDetails width={bankWidth} />
     <Pool paused={paused || reduced} width={bankWidth} launchRequest={boatLaunchRequest} />
     <Petals paused={paused || reduced} />

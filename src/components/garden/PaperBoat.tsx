@@ -1,10 +1,12 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { bankEdge } from './gardenGeometry';
+import { riverCenter, bankEdge } from './gardenGeometry';
 import { foldedPaper } from './paperBoatGeometry';
+import { woodenSailboat } from './woodenSailboatGeometry';
+import { toyTugboat } from './tugboatGeometry';
 
-export type BoatLaunch = { id: number; z: number; lateral: number };
+export type BoatLaunch = { id: number; z: number; lateral: number; kind: 'paper' | 'sailboat' | 'tugboat' };
 // Leave room for the bow and stern when a boat turns broadside to the current.
 export const BOAT_MARGIN = .88;
 const LIFETIME = 48;
@@ -20,14 +22,15 @@ export function PaperBoat({ boat, width, paused, onRetire }: {
   const ink = useRef<THREE.LineBasicMaterial>(null);
   const ripples = useRef<(THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial> | null)[]>([]);
   const age = useRef(0), retired = useRef(false);
-  const { geometry, creases } = useMemo(foldedPaper, []);
-  const startX = boat.lateral * Math.max(.1, bankEdge(boat.z, width) - BOAT_MARGIN);
+  const { geometry, creases } = useMemo(
+    () => boat.kind === 'tugboat' ? toyTugboat() : boat.kind === 'sailboat' ? woodenSailboat() : foldedPaper(), [boat.kind]);
+  const startX = riverCenter(boat.z, width) + boat.lateral * Math.max(.1, bankEdge(boat.z, width) - BOAT_MARGIN);
   const phase = boat.id * 2.399963;
   const startYaw = Math.sin(phase) * .12;
   const spin = (boat.id % 2 ? 1 : -1) * (.10 + (.5 + Math.sin(phase) * .5) * .06);
   const positionX = (t: number, z: number) => {
     const channel = Math.max(.1, bankEdge(z, width) - BOAT_MARGIN);
-    return THREE.MathUtils.clamp(boat.lateral * channel * Math.exp(-t * .035)
+    return riverCenter(z, width) + THREE.MathUtils.clamp(boat.lateral * channel * Math.exp(-t * .035)
       + (Math.sin(t * .48 + boat.id) - Math.sin(boat.id)) * .07, -channel, channel);
   };
 
@@ -73,7 +76,8 @@ export function PaperBoat({ boat, width, paused, onRetire }: {
   });
 
   return <>
-    <group ref={group} name={`paper-boat-${boat.id}`} position={[startX, -.02, boat.z]} rotation={[0, startYaw, 0]}>
+    <group ref={group} name={`${boat.kind === 'tugboat' ? 'tugboat' : boat.kind === 'sailboat' ? 'wooden-sailboat' : 'paper-boat'}-${boat.id}`}
+      position={[startX, -.02, boat.z]} rotation={[0, startYaw, 0]}>
       <mesh geometry={geometry} castShadow>
         <meshStandardMaterial ref={paper} vertexColors side={THREE.DoubleSide} roughness={1} transparent />
       </mesh>
