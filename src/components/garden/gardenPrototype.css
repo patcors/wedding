@@ -103,6 +103,7 @@
   .garden-boat-launch span { font-size: 14px; }
   .garden-scroll-cue { font-size: 18px !important; }
   .garden-review { bottom: 20px; gap: 13px; padding: 11px 16px; }
+  .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
   .garden-review button { font-size: 8px; }
   .garden-study-label { font-size: 7px; }
   .garden-memory { top: 12%; left: 0; width: 100%; margin: 0; padding: 0 28px; flex-direction: column; gap: 10px; text-align: center; }

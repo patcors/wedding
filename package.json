@@ -9,7 +9,8 @@
     "dev": "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=fort-cachy.tailc0ce61.ts.net astro dev --host 0.0.0.0",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "generate:garden-trees": "node scripts/generate-garden-trees.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.2",
@@ -26,9 +27,14 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@dgreenheck/ez-tree": "1.1.0",
+    "@gltf-transform/core": "4.5.0",
+    "@gltf-transform/extensions": "4.5.0",
+    "@gltf-transform/functions": "4.5.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/three": "^0.185.3",
+    "meshoptimizer": "1.2.0",
     "typescript": "^6.0.3"
   }
 }

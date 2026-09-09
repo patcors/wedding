@@ -27,6 +27,7 @@ export default function GardenPrototype() {
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
+  const [ezTrees, setEzTrees] = useState(true);
   const [ready, setReady] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -71,7 +72,7 @@ export default function GardenPrototype() {
         <Canvas shadows style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.25]} camera={{ position: [0, 3.2, 18], fov: 48, near: .2, far: 220 }}
           gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}>
           <Suspense fallback={null}>
-            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} boatLaunchRequest={boatLaunchRequest} />
+            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} boatLaunchRequest={boatLaunchRequest} ezTrees={ezTrees} />
           </Suspense>
         </Canvas>
       </CanvasFallback>
@@ -167,6 +168,10 @@ export default function GardenPrototype() {
     <aside className="garden-review" aria-label="Proof of concept controls">
       <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
+      <button onClick={() => setEzTrees(value => !value)} aria-pressed={ezTrees}
+        aria-label="Use EZ-Tree trees" title={ezTrees ? 'Switch to original trees' : 'Switch to EZ-Tree trees'}>
+        Trees: {ezTrees ? 'EZ-Tree' : 'Original'}
+      </button>
       <button onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={paused || reduced}>
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
