@@ -81,7 +81,10 @@ export default function GardenPrototype() {
     <header className="garden-header garden-copy">
       <button className="garden-monogram" onClick={() => scrollToChapter(0)} aria-label="Back to the beginning">P<span>&</span>A</button>
       <span className="garden-header-date">16 APRIL 2027</span>
-      <a className="garden-invitation-link" href={`${BASE}invitation/`}>Your invitation <span aria-hidden="true">↗</span></a>
+      <div className="garden-header-links">
+        <a className="garden-invitation-link" href={`${BASE}info/`}>The details</a>
+        <a className="garden-invitation-link" href={`${BASE}invitation/`}>Your invitation <span aria-hidden="true">↗</span></a>
+      </div>
     </header>
 
     <div className="garden-panels garden-copy">

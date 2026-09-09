@@ -1,0 +1,378 @@
+---
+// Flat, non-personalised information page: everything guests need, revisitable any time.
+// All content lives in the objects below — edit there, not in the markup.
+// Anything wrapped in tbc() renders with a soft "to be confirmed" mark until replaced.
+const BASE = import.meta.env.BASE_URL;
+
+const tbcValues = new Set<string>();
+const tbc = (placeholder: string) => { tbcValues.add(placeholder); return placeholder; };
+
+const schedule = [
+  { time: '3:00 pm', name: 'Guests arrive', note: 'Find a seat in the garden — there will be something cold to drink.' },
+  { time: '3:30 pm', name: 'The ceremony', note: 'Short, sweet, and outdoors.' },
+  { time: '4:00 pm', name: 'Cocktail hour', note: 'Canapés and cocktails on the lawn while we sneak off for photos.' },
+  { time: '5:15 pm', name: 'Into the Orangery', note: 'Dinner, a video worth staying for, and a few short speeches.' },
+  { time: '7:30 pm', name: 'First dances', note: 'Then the floor is yours. Bring your best moves — Amelia will out-dance you.' },
+  { time: '8:00 pm', name: 'Dessert', note: 'And more dancing.' },
+  { time: '9:00 pm', name: 'Supper', note: 'A little something for the road home.' },
+  { time: '11:30 pm', name: 'The send-off', note: 'One last song, then home to bed.' },
+];
+
+const venue = {
+  name: 'Jasper’s Berry',
+  place: 'Berry, New South Wales',
+  address: '4 O’Keeffes Lane, Jaspers Brush NSW 2535',
+  mapsUrl: 'https://maps.google.com/?q=4+O%27Keeffes+Ln,+Jaspers+Brush+NSW+2535',
+  travel: [
+    { name: 'Driving', note: 'Around two hours south of Sydney, and there is plenty of parking on site.' },
+    { name: 'Bus', note: tbc('We’re organising a bus to and from the venue, with stops between Wollongong and Gerringong. Exact stops and times to come.') },
+    { name: 'Train', note: 'South Coast line to Berry station, then a ten-minute taxi.' },
+  ],
+};
+
+const stay = [
+  { name: 'In Berry village', note: 'Guesthouses and cottages a short drive from the venue. Book early — Berry weekends fill up.' },
+  { name: 'In Gerringong', note: 'By the sea, and the bus will stop there on the way home.' },
+  { name: 'Around the countryside', note: 'Airbnbs across Jaspers Brush, Broughton Village and the surrounding hills.' },
+  { name: 'Our recommendations', note: tbc('We’ll add specific places we love here.') },
+];
+
+const faqs = [
+  { q: 'What should I wear?', a: 'Formal — long dresses, and suits with ties. The ceremony is on grass, so choose heels accordingly.' },
+  { q: 'What if it rains?', a: 'The garden has a beautiful plan B under cover. The day happens rain, hail or shine.' },
+  { q: 'What about dietary requirements?', a: 'Tell us when you RSVP and we’ll take care of the rest.' },
+  { q: 'Are there gifts?', a: 'Your company is the gift. If you’d like to give something, a wishing well will be there on the day.' },
+  { q: 'Who do I ask about everything else?', a: 'Amelia or Patrick — you already know how to find us.' },
+];
+
+const photos = {
+  hero: { src: 'gerringong-film-10.jpg', alt: 'Patrick twirling Amelia on a green hillside at golden hour' },
+  dance: { src: 'gerringong-film-12.jpg', alt: 'Patrick and Amelia holding hands in a paddock at sunset' },
+  embrace: { src: 'gerringong-film-3.jpg', alt: 'Amelia resting her head on Patrick’s chest in golden light' },
+};
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#eeeee5" />
+    <title>Patrick &amp; Amelia — The details</title>
+    <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, the garden, where to stay." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="info">
+      <header class="info-header">
+        <a class="info-monogram" href={`${BASE}garden`} aria-label="Back to the garden">P<span>&</span>A</a>
+        <span class="info-header-date">16 APRIL 2027</span>
+        <a class="info-rsvp-link" href={`${BASE}invitation/`}>RSVP <span aria-hidden="true">↗</span></a>
+      </header>
+
+      <section class="info-hero">
+        <div class="info-hero-copy">
+          <p class="info-eyebrow">The details</p>
+          <h1>One day<br /><em>in the garden.</em></h1>
+          <p class="info-subtitle">Everything you need for the day — kept here, so you can wander back any time.</p>
+          <div class="info-date-row"><span>Friday 16 April 2027</span><i></i><span>{venue.name}</span><i></i><span>{venue.place}</span></div>
+        </div>
+        <figure class="info-photo info-hero-photo">
+          <img src={`${BASE}photos/${photos.hero.src}`} alt={photos.hero.alt} width="1800" height="2714" fetchpriority="high" />
+          <figcaption>Gerringong, on film.</figcaption>
+        </figure>
+      </section>
+
+      <nav class="info-nav" aria-label="On this page">
+        <a href="#day">The day</a><a href="#venue">Getting there</a><a href="#stay">Where to stay</a><a href="#faq">Questions</a><a href="#rsvp">RSVP</a>
+      </nav>
+
+      <div class="info-divider" aria-hidden="true">
+        <svg width="104" height="26" viewBox="0 0 104 26" fill="none">
+          <path d="M4 17 C 30 9, 74 9, 100 15" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+          <path d="M26 12.2 q -3.5 -7 1.6 -9.4 q 3.6 5.8 -1.6 9.4 Z M46 10.6 q -2.6 -7.4 2.8 -9 q 2.8 6.2 -2.8 9 Z M66 10.6 q 2.6 -7.4 -2.8 -9 q -2.8 6.2 2.8 9 Z M84 12.4 q 3.5 -7 -1.6 -9.4 q -3.6 5.8 1.6 9.4 Z" fill="currentColor" opacity=".55" />
+          <path d="M36 11.4 q -1 6.4 5 7.6 q 1.4 -5.4 -5 -7.6 Z M70 11.6 q 1 6.4 -5 7.6 q -1.4 -5.4 5 -7.6 Z" fill="currentColor" opacity=".35" />
+        </svg>
+      </div>
+
+      <section id="day" class="info-section info-day">
+        <p class="info-eyebrow">How the day unfolds</p>
+        <h2>The order <em>of things.</em></h2>
+        <ol class="info-schedule">
+          {schedule.map(item => <li>
+            <svg class="info-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M50 0 C 26 33, 26 66, 50 100" pathLength="1" vector-effect="non-scaling-stroke" />
+            </svg>
+            <span class="info-leaf info-leaf-a" aria-hidden="true"></span>
+            <span class="info-leaf info-leaf-b" aria-hidden="true"></span>
+            <div class="info-stop">
+              <span class="info-time">{item.time}</span>
+              <h3>{item.name}</h3>
+              <p>{item.note}</p>
+            </div>
+          </li>)}
+        </ol>
+      </section>
+
+      <section id="venue" class="info-section info-split">
+        <figure class="info-photo info-photo-tilt-left">
+          <img src={`${BASE}photos/${photos.dance.src}`} alt={photos.dance.alt} width="1400" height="2111" loading="lazy" />
+          <figcaption>Practising the first dance.</figcaption>
+        </figure>
+        <div>
+          <p class="info-eyebrow">The garden</p>
+          <h2>Getting <em>there.</em></h2>
+          <p class="info-venue-name">{venue.name} · {venue.place}</p>
+          <p class="info-address">{venue.address}</p>
+          <dl class="info-list">
+            {venue.travel.map(row => <>
+              <dt>{row.name}</dt>
+              <dd class:list={{ 'is-tbc': tbcValues.has(row.note) }}>{row.note}</dd>
+            </>)}
+          </dl>
+          <a class="info-text-link" href={venue.mapsUrl} rel="noopener">Open in maps <span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+
+      <section id="stay" class="info-section info-split info-split-reverse">
+        <figure class="info-photo info-photo-tilt-right">
+          <img src={`${BASE}photos/${photos.embrace.src}`} alt={photos.embrace.alt} width="1400" height="2111" loading="lazy" />
+          <figcaption>Golden hour, held onto.</figcaption>
+        </figure>
+        <div>
+          <p class="info-eyebrow">Make a weekend of it</p>
+          <h2>Where <em>to stay.</em></h2>
+          <dl class="info-list">
+            {stay.map(row => <>
+              <dt>{row.name}</dt>
+              <dd class:list={{ 'is-tbc': tbcValues.has(row.note) }}>{row.note}</dd>
+            </>)}
+          </dl>
+        </div>
+      </section>
+
+      <div class="info-divider" aria-hidden="true">
+        <svg width="104" height="26" viewBox="0 0 104 26" fill="none">
+          <path d="M4 17 C 30 9, 74 9, 100 15" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+          <path d="M26 12.2 q -3.5 -7 1.6 -9.4 q 3.6 5.8 -1.6 9.4 Z M46 10.6 q -2.6 -7.4 2.8 -9 q 2.8 6.2 -2.8 9 Z M66 10.6 q 2.6 -7.4 -2.8 -9 q -2.8 6.2 2.8 9 Z M84 12.4 q 3.5 -7 -1.6 -9.4 q -3.6 5.8 1.6 9.4 Z" fill="currentColor" opacity=".55" />
+          <path d="M36 11.4 q -1 6.4 5 7.6 q 1.4 -5.4 -5 -7.6 Z M70 11.6 q 1 6.4 -5 7.6 q -1.4 -5.4 5 -7.6 Z" fill="currentColor" opacity=".35" />
+        </svg>
+      </div>
+
+      <section id="faq" class="info-section">
+        <p class="info-eyebrow">The practical bits</p>
+        <h2>Questions, <em>answered.</em></h2>
+        <div class="info-faqs">
+          {faqs.map(faq => <div class="info-faq">
+            <h3>{faq.q}</h3>
+            <p class:list={{ 'is-tbc': tbcValues.has(faq.a) }}>{faq.a}</p>
+          </div>)}
+        </div>
+      </section>
+
+      <section id="rsvp" class="info-rsvp">
+        <svg class="info-boat" width="40" height="34" viewBox="0 0 28 24" fill="none" aria-hidden="true">
+          <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" stroke-width="1" stroke-linejoin="round" />
+        </svg>
+        <h2>We’d love to <em>know you’re coming.</em></h2>
+        <p class="info-subtitle">Please reply by the 16th of February.</p>
+        <a class="info-button" href={`${BASE}invitation/`}>Open your invitation <span aria-hidden="true">↗</span></a>
+      </section>
+
+      <footer class="info-footer">
+        <span class="info-monogram">P<span>&</span>A</span>
+        <p>Friday 16 April 2027 · {venue.name}, {venue.place}</p>
+      </footer>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  @view-transition { navigation: auto; }
+  html { background: #eeeee5; scroll-behavior: smooth; }
+  body { margin: 0; }
+  ::selection { background: #b9c2a7; color: #30382e; }
+  astro-dev-toolbar { display: none; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+
+<style>
+  .info { --ink: #384135; --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --paper: #f7f3e8;
+    color: var(--ink); font-family: 'Montserrat', sans-serif; overflow-x: clip; }
+  .info a { color: inherit; text-decoration: none; }
+  .info a:focus-visible { outline: 2px solid #6e775c; outline-offset: 7px; }
+
+  .info-eyebrow { font-size: 9px; text-transform: uppercase; letter-spacing: .28em; line-height: 1.8; color: var(--muted); margin: 0; }
+  h1, h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; letter-spacing: -.045em; margin: 20px 0 18px; }
+  h1 { font-size: clamp(58px, 6.8vw, 108px); line-height: .98; font-weight: 300; }
+  h1 em, h2 em { font-weight: 300; color: #59634f; }
+  h2 { font-size: clamp(42px, 4.4vw, 66px); line-height: 1; }
+  .info-subtitle { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 23px; color: #59634f; margin: 0; }
+
+  .is-tbc { position: relative; }
+  .is-tbc::after { content: 'to confirm'; font: 500 7px 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase;
+    color: #8b6158c9; border: 1px solid #8b615826; border-radius: 20px; padding: 2px 7px; margin-left: 9px; vertical-align: 2px; white-space: nowrap; }
+
+  .info-divider { display: flex; justify-content: center; color: var(--leaf); padding-top: clamp(70px, 11vh, 130px); margin-bottom: -30px; }
+
+  .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+    padding: 26px 48px; background: linear-gradient(#eeeee5 55%, #eeeee500); }
+  .info-monogram { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; letter-spacing: -.1em; }
+  .info-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
+  .info-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
+  .info-rsvp-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid #73796770; padding-bottom: 8px; }
+  .info-rsvp-link span { margin-left: 14px; }
+
+  .info-hero { display: flex; align-items: center; gap: clamp(40px, 6vw, 90px); max-width: 1180px; margin: 0 auto; padding: clamp(30px, 6vh, 80px) 48px 40px; }
+  .info-hero-copy { flex: 1.2; }
+  .info-date-row { margin-top: 34px; display: flex; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 9px; text-transform: uppercase; letter-spacing: .23em; }
+  .info-date-row i { width: 3px; height: 3px; border-radius: 50%; background: var(--leaf); }
+  .info-hero-copy .info-subtitle { max-width: 380px; }
+
+  .info-photo { flex: 1; margin: 0; padding: 12px 12px 15px; background: var(--paper); box-shadow: 0 14px 50px #48513a24; max-width: 400px; }
+  .info-photo img { width: 100%; height: auto; display: block; }
+  .info-photo figcaption { font: italic 17px/1.2 'Cormorant Garamond', Georgia, serif; text-align: center; padding-top: 11px; color: var(--muted); }
+  .info-hero-photo { rotate: 2deg; }
+  .info-photo-tilt-left { rotate: -2.5deg; }
+  .info-photo-tilt-right { rotate: 2deg; }
+
+  .info-nav { position: sticky; top: 0; z-index: 4; display: flex; justify-content: center; flex-wrap: wrap; gap: clamp(18px, 3.5vw, 44px);
+    padding: 20px 24px; margin: 20px 0 0; font-size: 9px; text-transform: uppercase; letter-spacing: .2em; }
+  .info-nav a { padding: 6px 0 8px; border-bottom: 1px solid transparent; transition: border-color .3s; }
+  .info-nav a:hover { border-color: #73796770; }
+
+  .info-section { max-width: 1180px; margin: 0 auto; padding: clamp(60px, 10vh, 120px) 48px 0; }
+  .info-day { text-align: center; }
+  .info-schedule { list-style: none; margin: 50px auto 0; padding: 0; max-width: 720px; text-align: left; }
+  .info-schedule li { position: relative; display: grid; grid-template-columns: 1fr 1fr; }
+  .info-schedule li::before, .info-schedule li:last-child::after { content: ''; position: absolute; left: 50%; top: -2.5px;
+    width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--leaf); z-index: 1; }
+  .info-schedule li:last-child::after { top: auto; bottom: -2.5px; }
+  .info-path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .info-path path { fill: none; stroke: var(--leaf); stroke-width: 1.4; opacity: .7; }
+  .info-schedule li:nth-child(even) .info-path { transform: scaleX(-1); }
+  /* Vine leaves, anchored to points along each curve (t=.3 and t=.7 of the cubic). */
+  .info-leaf { position: absolute; width: 14px; height: 14px; background: var(--leaf); opacity: .5;
+    border-radius: 0 100%; transform-origin: 0 0; margin: -1px 0 0 -1px; }
+  .info-leaf-a { left: 34.9%; top: 29.7%; rotate: 160deg; }
+  .info-leaf-b { left: 34.9%; top: 70.3%; rotate: -25deg; }
+  .info-schedule li:nth-child(even) .info-leaf { border-radius: 100% 0; transform-origin: 100% 0; margin: -1px -1px 0 0; }
+  .info-schedule li:nth-child(even) .info-leaf-a { left: auto; right: 34.9%; rotate: -160deg; }
+  .info-schedule li:nth-child(even) .info-leaf-b { left: auto; right: 34.9%; rotate: 25deg; }
+  .info-stop { grid-column: 2; grid-row: 1; padding: 36px 0 36px clamp(55px, 9vw, 95px); }
+  .info-schedule li:nth-child(even) .info-stop { grid-column: 1; padding: 36px clamp(55px, 9vw, 95px) 36px 0; text-align: right; }
+  .info-time { display: block; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .info-schedule h3 { font: 500 24px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin: 8px 0 6px; }
+  .info-schedule p { font: italic 17px/1.45 'Cormorant Garamond', Georgia, serif; color: var(--muted); margin: 0; }
+
+  .info-split { display: flex; align-items: center; gap: clamp(45px, 7vw, 110px); }
+  .info-split > div { flex: 1.15; }
+  .info-split-reverse { flex-direction: row-reverse; }
+  .info-venue-name { font: italic 23px 'Cormorant Garamond', Georgia, serif; color: #59634f; margin: 6px 0 4px; }
+  .info-address { font-size: 11px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  .info-list { margin: 26px 0 0; }
+  .info-list dt { font-size: 9px; text-transform: uppercase; letter-spacing: .22em; color: var(--muted); padding-top: 18px; }
+  .info-list dd { font: 18px/1.5 'Cormorant Garamond', Georgia, serif; margin: 7px 0 0; max-width: 430px; }
+  .info-text-link { display: inline-block; margin-top: 30px; font-size: 9px; text-transform: uppercase; letter-spacing: .15em; padding-bottom: 12px; border-bottom: 1px solid #73796770; }
+  .info-text-link span { padding-left: 18px; }
+
+  .info-faqs { margin-top: 45px; columns: 2; column-gap: clamp(45px, 6vw, 90px); max-width: 1020px; }
+  .info-faq { break-inside: avoid; padding: 0 0 34px; }
+  .info-faq h3 { font: 500 23px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin: 0 0 8px; }
+  .info-faq p { font: 17px/1.5 'Cormorant Garamond', Georgia, serif; color: var(--ink); margin: 0; max-width: 430px; }
+
+  .info-rsvp { text-align: center; max-width: 700px; margin: 0 auto; padding: clamp(80px, 13vh, 150px) 48px; }
+  .info-boat { color: var(--leaf); }
+  .info-rsvp h2 { margin-top: 22px; }
+  .info a.info-button { display: inline-block; font-size: 10px; letter-spacing: .1em; padding: 18px 25px; background: var(--deep); color: #f6f3e7; margin-top: 26px; }
+  .info-button span { margin-left: 25px; }
+
+  .info-footer { text-align: center; padding: 30px 24px 55px; }
+  .info-footer .info-monogram { font-size: 24px; }
+  .info-footer p { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
+
+  /* Gentle rise-and-fade as sections enter the viewport, and the garden path
+     drawing itself between schedule stops; browsers without scroll-driven
+     animations (or with reduced motion) simply show everything. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .info-section > *, .info-rsvp > *, .info-divider {
+        animation: info-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 55%;
+      }
+      .info-schedule li { view-timeline: --info-stop; }
+      .info-path path {
+        stroke-dasharray: 1; stroke-dashoffset: 1;
+        animation: info-draw linear both;
+        animation-timeline: --info-stop;
+        animation-range: cover 15% cover 60%;
+      }
+      /* Leaves sprout roughly when the drawing stroke reaches them. */
+      .info-leaf {
+        scale: 0;
+        animation: info-sprout linear both;
+        animation-timeline: --info-stop;
+      }
+      .info-leaf-a { animation-range: cover 28% cover 42%; }
+      .info-leaf-b { animation-range: cover 46% cover 60%; }
+      /* Schedule copy slides in from its own side as the vine reaches it
+         (and back out when scrolling up, since the timeline is scroll-driven).
+         Desktop only — the mobile list has no sides to speak of. */
+      @media (min-width: 861px) {
+        .info-stop {
+          animation: info-in-r linear both;
+          animation-timeline: --info-stop;
+          animation-range: cover 18% cover 48%;
+        }
+        .info-schedule li:nth-child(even) .info-stop { animation-name: info-in-l; }
+      }
+    }
+  }
+  @keyframes info-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes info-draw { to { stroke-dashoffset: 0; } }
+  @keyframes info-sprout { to { scale: 1; } }
+  @keyframes info-in-r { from { opacity: 0; transform: translateX(70px); } }
+  @keyframes info-in-l { from { opacity: 0; transform: translateX(-70px); } }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Extra specificity: this must beat the scroll-fade rule (.info-rsvp > *)
+       regardless of how the bundler merges media blocks. */
+    .info .info-rsvp .info-boat { animation: info-bob 6s ease-in-out infinite; }
+  }
+  @keyframes info-bob {
+    0%, 100% { transform: translateY(0) rotate(-2.5deg); }
+    50% { transform: translateY(-6px) rotate(2.5deg); }
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .info-photo { transition: translate .5s ease, box-shadow .5s ease; }
+    .info-photo:hover { translate: 0 -8px; box-shadow: 0 24px 60px #48513a30; }
+  }
+
+  @media (max-width: 860px) {
+    .info-header { padding: 22px 24px; }
+    .info-header-date { display: none; }
+    .info-hero { flex-direction: column; padding: 20px 28px 10px; text-align: center; }
+    .info-hero-copy .info-subtitle { margin: 0 auto; }
+    .info-date-row { justify-content: center; }
+    .info-hero-photo { max-width: 330px; margin-top: 20px; }
+    .info-nav { gap: 16px 22px; padding: 16px 20px; background: linear-gradient(#eeeee5 78%, #eeeee500); }
+    .info-section { padding: 65px 28px 0; }
+    .info-split, .info-split-reverse { flex-direction: column; align-items: center; text-align: center; }
+    .info-split .info-photo { max-width: 300px; }
+    .info-list dd, .info-faq p { margin-inline: auto; }
+    /* The vine reads poorly at phone widths; fall back to plain bordered rows. */
+    .info-path, .info-leaf, .info-schedule li::before, .info-schedule li:last-child::after { display: none; }
+    .info-schedule li { display: block; }
+    .info-stop, .info-schedule li:nth-child(even) .info-stop { padding: 22px 0; text-align: left; border-top: 1px solid #7379672e; }
+    .info-schedule li:last-child .info-stop { border-bottom: 1px solid #7379672e; }
+    .info-faqs { columns: 1; text-align: center; }
+    .info-rsvp { padding: 90px 28px 110px; }
+  }
+</style>
