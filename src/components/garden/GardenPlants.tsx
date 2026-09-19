@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { plantGeometry, plantSites, type PlantKind } from './gardenPlantGeometry';
+import { configureGrassMaterial } from './gardenGrassMaterial';
 
 function PlantBatch({ kind, width, mobile, paused, visible }: {
   kind: PlantKind; width: number; mobile: boolean; paused: boolean; visible: boolean;
@@ -24,14 +25,16 @@ function PlantBatch({ kind, width, mobile, paused, visible }: {
       `);
     };
     result.customProgramCacheKey = () => 'garden-plant-wind-1';
+    if (kind === 'meadow') configureGrassMaterial(result, wind, mobile);
     return result;
-  }, [kind, wind]);
+  }, [kind, wind, mobile]);
   useLayoutEffect(() => {
     const dummy = new THREE.Object3D(), color = new THREE.Color();
     sites.forEach((site, i) => {
       dummy.position.set(site.x, site.y, site.z);
       dummy.rotation.set(0, site.angle, 0);
-      dummy.scale.setScalar(site.scale);
+      if (kind === 'meadow') dummy.scale.set(.85 + site.tint * .35, site.scale, .8 + site.scale * .3);
+      else dummy.scale.setScalar(site.scale);
       dummy.updateMatrix();
       mesh.current!.setMatrixAt(i, dummy.matrix);
       mesh.current!.setColorAt(i, color.setRGB(site.tint, site.tint, site.tint * .96));
@@ -41,7 +44,7 @@ function PlantBatch({ kind, width, mobile, paused, visible }: {
     mesh.current!.computeBoundingSphere();
     // Include the taller reeds' wind displacement at frustum boundaries.
     mesh.current!.boundingSphere!.radius += .4;
-  }, [sites]);
+  }, [sites, kind]);
   useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
   useFrame((_, dt) => { if (!paused && visible) wind.value += Math.min(dt, .05); });
   return <instancedMesh key={sites.length} name={`garden-plants-${kind}`} ref={mesh}

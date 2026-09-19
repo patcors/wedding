@@ -46,11 +46,23 @@ export function plantGeometry(kind: PlantKind) {
     }
   }
   if (kind === 'meadow') {
-    // Broad, simple blades give the inland meadow coverage at low vertex cost.
-    for (let blade = 0; blade < 3; blade++) {
-      const angle = blade * 2.4 + rand() * .6;
-      ribbon(new THREE.Vector3(Math.sin(angle) * .14, 0, Math.cos(angle) * .14), angle,
-        .35 + rand() * .2, .3 + rand() * .3, .045 + rand() * .025, true);
+    // One tapered blade following a quadratic Bezier; instances vary its
+    // width, height and orientation instead of repeating a three-blade tuft.
+    for (let row = 0; row <= 3; row++) {
+      const t = row / 3;
+      const halfWidth = .026 * Math.pow(1 - t, .8);
+      const y = 2 * (1 - t) * t * .19 + t * t * .28;
+      const z = t * t * .12;
+      color.copy(rootColor).multiplyScalar(.65).lerp(tipColor, Math.sqrt(t) * .85);
+      for (const side of [-1, 1]) {
+        positions.push(side * halfWidth, y, z);
+        colors.push(color.r, color.g, color.b);
+      }
+      if (row < 3) {
+        const a = row * 2;
+        indices.push(a, a + 2, a + 1);
+        if (row < 2) indices.push(a + 1, a + 2, a + 3);
+      }
     }
   } else if (kind === 'grass') {
     for (let blade = 0; blade < 9; blade++) {
@@ -99,28 +111,38 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
     const rand = random(kind === 'reed' ? 3107 : 4129);
     const patches = [{ z: 7, side: -1 }, { z: -5, side: 1 }, { z: -23, side: -1 },
       { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 }];
-    const perPatch = kind === 'reed' ? (mobile ? 18 : 30) : (mobile ? 4 : 7);
-    return patches.flatMap(patch => Array.from({ length: perPatch }, () => {
-      const z = patch.z + (rand() - .5) * 4.5;
-      const inland = .9 + rand() * .65;
+    const reedColumns = 8, reedRows = mobile ? 8 : 12;
+    const perPatch = kind === 'reed' ? reedColumns * reedRows : (mobile ? 4 : 6);
+    return patches.flatMap(patch => Array.from({ length: perPatch }, (_, i) => {
+      // A gently jittered grid fills the shallows with a small overlap onto
+      // the bank, keeping the fringe connected where the shoreline bends.
+      const z = kind === 'reed'
+        ? patch.z + ((Math.floor(i / reedColumns) + .3 + rand() * .4) / reedRows - .5) * 3.5
+        : patch.z + (rand() - .5) * 3;
+      const inland = kind === 'cattail' ? -.4 - rand() * .4
+        : -1.05 + (i % reedColumns + .3 + rand() * .4) / reedColumns * 1.825;
       const x = riverCenter(z, width) + patch.side * (bankEdge(z, width) + inland);
-      return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
+      const y = inland < 0 ? -.22 : groundHeight(x, z, width) - .025;
+      return { x, y, z, angle: rand() * Math.PI * 2,
         scale: .8 + rand() * .3, tint: .85 + rand() * .2 };
     }));
   }
   if (kind === 'meadow') {
     const rand = random(2081);
-    const columns = mobile ? 50 : 100;
-    const rows = 120;
+    const columns = mobile ? 100 : 200;
+    const rows = mobile ? 200 : 250;
     // Jitter a continuous carpet across the whole terrain, beyond the narrow
     // shoreline colonies. Both sides retain coverage at every depth.
     return Array.from({ length: columns * rows * 2 }, (_, i) => {
       const cell = Math.floor(i / 2);
-      const inland = 3 + (cell % columns + .15 + rand() * .7) / columns * 50;
+      // Concentrate blades on the visible inner meadow, retaining coverage
+      // beneath the outer trees. Roots remain clear of the water.
+      const lateral = (cell % columns + .1 + rand() * .8) / columns;
+      const inland = .65 + Math.pow(lateral, 1.6) * 52;
       const z = 25 - (Math.floor(cell / columns) + .15 + rand() * .7) / rows * 138;
       const x = riverCenter(z, width) + (i % 2 ? 1 : -1) * (bankEdge(z, width) + inland);
       return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
-        scale: .9 + rand() * .65, tint: .8 + rand() * .3 };
+        scale: .65 + rand() * .65, tint: .8 + rand() * .3 };
     });
   }
   const counts = mobile ? { grass: 1530, clover: 650, fern: 100 } : { grass: 3000, clover: 1250, fern: 220 };
