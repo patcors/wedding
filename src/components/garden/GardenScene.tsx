@@ -5,13 +5,17 @@ import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, riverCenter, bankEdge, bankGeometry, groundHeight, leafGeometry, random } from './gardenGeometry';
+import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, riverCenter, bankEdge, groundHeight, leafGeometry, random } from './gardenGeometry';
 import GardenTrees from './GardenTrees';
+import GardenGround, { type GroundStyle, type RockStyle } from './GardenGround';
+import GardenRocks from './GardenRocks';
+import GardenPlants from './GardenPlants';
+import type { PlantStyle } from './gardenPlantGeometry';
 import { BOAT_MARGIN, PaperBoat, type BoatLaunch } from './PaperBoat';
 
 const BASE = import.meta.env.BASE_URL;
 export const SKY = '#eeeee5';
-type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; lightTrees: boolean; invertComposition: boolean };
+type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle };
 
 function Pool({ paused, width, launchRequest }: { paused: boolean; width: number; launchRequest: number }) {
   const camera = useThree(s => s.camera);
@@ -64,31 +68,7 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
   </>;
 }
 
-function Banks({ width }: { width: number }) {
-  const maps = useTexture([
-    `${BASE}textures/garden/ground-color.jpg`, `${BASE}textures/garden/ground-normal.jpg`,
-    `${BASE}textures/garden/ground-roughness.jpg`,
-  ]);
-  useMemo(() => {
-    maps.forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; });
-    maps[0].colorSpace = THREE.SRGBColorSpace;
-  }, [maps]);
-  const geometries = useMemo(() => [bankGeometry(-1, width), bankGeometry(1, width)], [width]);
-  useEffect(() => () => geometries.forEach(g => g.dispose()), [geometries]);
-  return <>{geometries.map((geometry, i) => <mesh key={i} geometry={geometry} receiveShadow>
-    <meshStandardMaterial map={maps[0]} normalMap={maps[1]} roughnessMap={maps[2]}
-      normalScale={[.8, .8]} roughness={1} vertexColors onBeforeCompile={shader => {
-        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
-          #include <map_fragment>
-          float groundLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(groundLuma), 0.65);
-          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.30, 0.32, 0.22), 0.30);
-        `);
-      }} />
-  </mesh>)}</>;
-}
-
-function BankDetails({ width }: { width: number }) {
+function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyle: RockStyle; plantStyle: PlantStyle }) {
   const stones = useRef<THREE.InstancedMesh>(null);
   const grasses = useRef<THREE.InstancedMesh>(null);
   const flowers = useRef<THREE.InstancedMesh>(null);
@@ -148,13 +128,13 @@ function BankDetails({ width }: { width: number }) {
     });
   }, [width]);
   return <>
-    <instancedMesh ref={stones} args={[stone, undefined, 260]} castShadow receiveShadow>
+    <instancedMesh name="garden-original-rocks" visible={rockStyle === 'original'} ref={stones} args={[stone, undefined, 260]} castShadow receiveShadow>
       <meshStandardMaterial color="#b4b29b" roughness={.95} />
     </instancedMesh>
-    <instancedMesh ref={grasses} args={[blade, undefined, 7000]}>
+    <instancedMesh name="garden-original-grass" visible={plantStyle === 'original'} ref={grasses} args={[blade, undefined, 7000]}>
       <meshStandardMaterial color="#6d7954" side={THREE.DoubleSide} roughness={1} />
     </instancedMesh>
-    <instancedMesh ref={flowers} args={[petal, undefined, 1500]}>
+    <instancedMesh name="garden-bank-flowers" ref={flowers} args={[petal, undefined, 1500]}>
       <meshStandardMaterial side={THREE.DoubleSide} roughness={.8} />
     </instancedMesh>
   </>;
@@ -224,9 +204,9 @@ function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
   </instancedMesh>;
 }
 
-export default function GardenScene({ progress, paused, reduced, onReady, boatLaunchRequest, lightTrees, invertComposition }: SceneProps) {
+export default function GardenScene({ progress, paused, reduced, onReady, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle }: SceneProps) {
   const { camera, size } = useThree();
-  const mobile = (size.width / size.height < .85) !== invertComposition;
+  const mobile = size.width / size.height < .85;
   const bankWidth = mobile ? MOBILE_RIVER_WIDTH : 1;
   const current = useRef(0);
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -256,9 +236,11 @@ export default function GardenScene({ progress, paused, reduced, onReady, boatLa
       shadow-mapSize={[1024, 1024]} shadow-camera-left={-30} shadow-camera-right={30}
       shadow-camera-top={35} shadow-camera-bottom={-35} shadow-camera-far={110}
       shadow-bias={-.0003} shadow-normalBias={.07} />
-    <Banks width={bankWidth} />
+    <GardenGround width={bankWidth} style={groundStyle} />
     <GardenTrees width={bankWidth} mobile={mobile} paused={paused || reduced} lightTrees={lightTrees} />
-    <BankDetails width={bankWidth} />
+    <BankDetails width={bankWidth} rockStyle={rockStyle} plantStyle={plantStyle} />
+    <GardenPlants width={bankWidth} mobile={mobile} paused={paused || reduced} visible={plantStyle === 'varied'} />
+    <GardenRocks width={bankWidth} visible={rockStyle === 'moss'} />
     <Pool paused={paused || reduced} width={bankWidth} launchRequest={boatLaunchRequest} />
     <Petals paused={paused || reduced} />
     <FallingLeaves paused={paused || reduced} width={bankWidth} />

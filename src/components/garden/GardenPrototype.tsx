@@ -4,6 +4,8 @@ import { Component, Suspense, useCallback, useEffect, useRef, useState, type Rea
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import GardenScene from './GardenScene';
+import type { GroundStyle, RockStyle } from './GardenGround';
+import type { PlantStyle } from './gardenPlantGeometry';
 import { GARDEN_CAMERA } from './gardenGeometry';
 import './gardenPrototype.css';
 
@@ -29,7 +31,9 @@ export default function GardenPrototype() {
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
   const [lightTrees, setLightTrees] = useState(false);
-  const [invertComposition, setInvertComposition] = useState(false);
+  const [groundStyle, setGroundStyle] = useState<GroundStyle>('meadow');
+  const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
+  const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
   const [ready, setReady] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -74,7 +78,7 @@ export default function GardenPrototype() {
         <Canvas shadows style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.25]} camera={{ position: [0, GARDEN_CAMERA.height, GARDEN_CAMERA.startZ], fov: GARDEN_CAMERA.fov, near: .2, far: 220 }}
           gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}>
           <Suspense fallback={null}>
-            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} invertComposition={invertComposition} />
+            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} />
           </Suspense>
         </Canvas>
       </CanvasFallback>
@@ -170,13 +174,24 @@ export default function GardenPrototype() {
     <aside className="garden-review" aria-label="Proof of concept controls">
       <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
+      <label className="garden-material-selector">Ground
+        <select aria-label="Ground material" value={groundStyle} onChange={event => setGroundStyle(event.target.value as GroundStyle)}>
+          <option value="original">Original</option><option value="leafy">Leafy</option><option value="meadow">Meadow</option>
+        </select>
+      </label>
+      <label className="garden-material-selector">Rocks
+        <select aria-label="Rock style" value={rockStyle} onChange={event => setRockStyle(event.target.value as RockStyle)}>
+          <option value="original">Original</option><option value="moss">Mossy</option>
+        </select>
+      </label>
+      <label className="garden-material-selector">Plants
+        <select aria-label="Plant variety" value={plantStyle} onChange={event => setPlantStyle(event.target.value as PlantStyle)}>
+          <option value="original">Original</option><option value="varied">Varied</option>
+        </select>
+      </label>
       <button onClick={() => setLightTrees(value => !value)} aria-pressed={lightTrees}
         aria-label="Use light EZ-Tree colours" title={lightTrees ? 'Switch to dark EZ-Tree colours' : 'Switch to light EZ-Tree colours'}>
         Trees: {lightTrees ? 'Light' : 'Dark'}
-      </button>
-      <button onClick={() => setInvertComposition(value => !value)} aria-pressed={invertComposition}
-        aria-label="Swap mobile and desktop landscapes" title="Preview the desktop landscape on mobile, or the mobile landscape on desktop">
-        View: {invertComposition ? 'Swapped' : 'Auto'}
       </button>
       <button onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={paused || reduced}>
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
