@@ -16,7 +16,8 @@ function ReleasedButterfly({ visit, paused, available, onRetire }: {
   visit: ButterflyVisit; paused: boolean; available: boolean; onRetire: (id: number) => void;
 }) {
   const onComplete = useCallback(() => onRetire(visit.id), [visit.id, onRetire]);
-  return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle} available={available} onComplete={onComplete} />;
+  return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle}
+    available={available} onComplete={onComplete} />;
 }
 
 const MEMORY_START = .20, MEMORY_END = .82;
@@ -184,7 +185,7 @@ export default function GardenPrototype() {
         <span>Float a boat</span>
       </button>
       <button className="garden-boat-launch" disabled={!butterflies.canRelease}
-        onClick={butterflies.release}>
+        onClick={() => butterflies.release()}>
         <svg width="23" height="23" viewBox="0 0 28 28" fill="none" aria-hidden="true">
           <path d="M14 12C9 3 3 2 3 7c0 4 3 7 7 8-6 0-6 7-2 7 3 0 5-4 6-7m0-3c5-9 11-10 11-5 0 4-3 7-7 8 6 0 6 7 2 7-3 0-5-4-6-7m0-5v12m0-12-3-4m3 4 3-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

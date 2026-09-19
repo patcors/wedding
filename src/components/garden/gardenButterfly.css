@@ -1,8 +1,12 @@
 .garden-perch { font: inherit; }
 .garden-butterfly-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
-.garden-butterfly { position: absolute; top: 0; left: 0; width: 64px; height: 64px; opacity: 0; will-change: transform; }
+.garden-butterfly { position: absolute; top: 0; left: 0; width: 64px; height: 64px; opacity: 0; will-change: transform; perspective: 450px; }
 /* The feet at (50, 65) touch the measured top of the letter. */
-.garden-butterfly-shape { width: 100%; height: 100%; overflow: visible; transform-origin: 50% 65%; transform: translate(-50%, -65%) rotate(var(--butterfly-bank, 0deg)); filter: drop-shadow(0 3px 2px #152d3825); }
-.garden-butterfly-wing { transform-origin: 50px 50px; transform: rotateY(var(--butterfly-fold, 0deg)); }
+.garden-butterfly-shape { width: 100%; height: 100%; overflow: visible; transform-origin: 50% 65%; transform: translate(-50%, -65%) rotate(var(--butterfly-bank, 0deg)) rotateX(var(--butterfly-pitch, 0deg)) rotateY(var(--butterfly-yaw, 0deg)) scale(var(--butterfly-scale, 1)); filter: drop-shadow(0 3px 2px #152d3825); }
+.garden-butterfly-wing { transform-origin: 50px 50px; }
+.garden-butterfly-wing.is-left { transform: rotateY(var(--butterfly-left-fold, 0deg)); }
+.garden-butterfly-wing.is-right { transform: rotateY(var(--butterfly-right-fold, 0deg)); }
+.garden-butterfly-hindwing { transform-origin: 48px 54px; transform: rotate(var(--butterfly-flex, 0deg)); }
+.garden-butterfly-abdomen { transform-origin: 50px 45px; transform: rotate(var(--butterfly-abdomen, 0deg)); }
 @media (max-width: 700px) { .garden-butterfly { width: 50px; height: 50px; } }
 @media (prefers-reduced-motion: reduce) { .garden-butterfly-layer { display: none; } }

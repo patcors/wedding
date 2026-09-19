@@ -24,6 +24,8 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly }: {
 }) {
   const [visits, setVisits] = useState<ButterflyVisit[]>([]);
   const [spots, setSpots] = useState<MeasuredPerch[]>([]);
+  const [fontsReady, setFontsReady] = useState(false);
+  const initialReleased = useRef(false);
   const reservations = useRef(new Map<number, ButterflyVisit>());
   const nextId = useRef(0);
   const currentSpots = useRef<MeasuredPerch[]>([]);
@@ -68,7 +70,10 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly }: {
     window.addEventListener('resize', update);
     // Recheck after the chapter's entrance transform and webfonts settle.
     heading?.closest('.garden-panel')?.addEventListener('transitionend', update);
-    void document.fonts.ready.then(update);
+    void document.fonts.ready.then(() => {
+      if (disposed) return;
+      update(); setFontsReady(true);
+    });
     return () => {
       disposed = true; observer.disconnect(); window.removeEventListener('resize', update);
       heading?.closest('.garden-panel')?.removeEventListener('transitionend', update);
@@ -91,6 +96,14 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly }: {
     setVisits([...live.values()]);
   }, [enabled, paused]);
 
+  useEffect(() => {
+    if (!enabled || paused || !fontsReady || !spots.length || initialReleased.current) return;
+    initialReleased.current = true;
+    // The opening flock shares the same reservations and capacity as manual
+    // releases. Narrow layouts may have fewer than five safe landing spots.
+    for (let i = 0; i < Math.min(5, spots.length); i++) release();
+  }, [enabled, paused, fontsReady, spots.length, release]);
+
   const retire = useCallback((id: number) => {
     reservations.current.delete(id);
     setVisits([...reservations.current.values()]);
@@ -100,7 +113,7 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly }: {
     if (!enabled || paused) return;
     let timer: ReturnType<typeof setTimeout>;
     const visit = () => {
-      if (!document.hidden) release();
+      if (!document.hidden && reservations.current.size === 0) release();
       timer = setTimeout(visit, (22 + Math.random() * 24) * 1000);
     };
     timer = setTimeout(visit, (5 + Math.random() * 4) * 1000);
