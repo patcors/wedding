@@ -108,11 +108,20 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
       z, scale: scale * (mobile ? .88 : 1), rotation, type: i % 2 + (i >= 4 ? 2 : 0), distant: i >= 4,
     }));
     const rand = random(415);
-    const groves = Array.from({ length: mobile ? 12 : 24 }, (_, i) => ({
-      x: (i % 2 ? 1 : -1) * ((mobile ? 6.5 : 17) + Math.floor(i % 8 / 2) * (mobile ? 3 : 8) + rand() * 2),
-      z: -14 - Math.floor(i / 8) * 23 - rand() * 11,
-      scale: 1.05 + rand() * .5, rotation: rand() * Math.PI * 2, type: 2 + i % 2, distant: true,
-    }));
+    // Stagger groves along both banks all the way into the mist. The inner
+    // trees overlap the avenue while outer trees fill gaps between canopies.
+    const groves = Array.from({ length: mobile ? 48 : 80 }, (_, i) => {
+      const perRow = mobile ? 6 : 10;
+      const row = Math.floor(i / perRow);
+      const lane = Math.floor(i % perRow / 2);
+      const z = -16 - row * 12 - rand() * 8;
+      const inland = 4.8 + lane * (mobile ? 3.8 : 6) + rand() * 2.5;
+      return {
+        x: riverCenter(z, width) + (i % 2 ? 1 : -1) * (bankEdge(z, width) + inland),
+        z, scale: .95 + rand() * .6, rotation: rand() * Math.PI * 2,
+        type: 2 + (i + row + lane) % 2, distant: true,
+      };
+    });
     return [0, 1, 2, 3].map(type => [...avenue, ...groves].filter(p => p.type === type));
   }, [width, mobile]);
 

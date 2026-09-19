@@ -39,8 +39,8 @@ function PlantBatch({ kind, width, mobile, paused, visible }: {
     mesh.current!.instanceMatrix.needsUpdate = true;
     if (mesh.current!.instanceColor) mesh.current!.instanceColor!.needsUpdate = true;
     mesh.current!.computeBoundingSphere();
-    // Wind is only a few centimetres; retain it at frustum boundaries.
-    mesh.current!.boundingSphere!.radius += .15;
+    // Include the taller reeds' wind displacement at frustum boundaries.
+    mesh.current!.boundingSphere!.radius += .4;
   }, [sites]);
   useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
   useFrame((_, dt) => { if (!paused && visible) wind.value += Math.min(dt, .05); });
@@ -49,5 +49,5 @@ function PlantBatch({ kind, width, mobile, paused, visible }: {
 }
 
 export default function GardenPlants(props: { width: number; mobile: boolean; paused: boolean; visible: boolean }) {
-  return <>{(['grass', 'clover', 'fern'] as const).map(kind => <PlantBatch key={kind} kind={kind} {...props} />)}</>;
+  return <>{(['grass', 'clover', 'fern', 'meadow', 'reed', 'cattail'] as const).map(kind => <PlantBatch key={kind} kind={kind} {...props} />)}</>;
 }

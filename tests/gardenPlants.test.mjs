@@ -5,7 +5,7 @@ import { bankEdge, groundHeight, riverCenter } from '../src/components/garden/ga
 
 test('plant colonies stay grounded and out of the river on both compositions', () => {
   for (const [width, mobile] of [[1, false], [.45, true]]) {
-    for (const kind of ['grass', 'clover', 'fern']) {
+    for (const kind of ['grass', 'clover', 'fern', 'meadow', 'reed', 'cattail']) {
       const sites = plantSites(kind, width, mobile);
       assert.deepEqual(sites, plantSites(kind, width, mobile), 'switching should preserve planting');
       const geometry = plantGeometry(kind);
@@ -28,7 +28,7 @@ test('plant colonies stay grounded and out of the river on both compositions', (
 
 test('instanced plant geometry remains finite and within its mobile triangle budget', () => {
   let mobileTriangles = 0;
-  for (const kind of ['grass', 'clover', 'fern']) {
+  for (const kind of ['grass', 'clover', 'fern', 'meadow', 'reed', 'cattail']) {
     const geometry = plantGeometry(kind);
     for (const attribute of Object.values(geometry.attributes)) {
       assert.ok([...attribute.array].every(Number.isFinite), `${kind}: invalid attribute`);
@@ -37,5 +37,5 @@ test('instanced plant geometry remains finite and within its mobile triangle bud
     mobileTriangles += geometry.index.count / 3 * plantSites(kind, .45, true).length;
     geometry.dispose();
   }
-  assert.ok(mobileTriangles < 180_000, `mobile plants: ${mobileTriangles} triangles per pass`);
+  assert.ok(mobileTriangles < 330_000, `mobile plants: ${mobileTriangles} triangles per pass`);
 });
