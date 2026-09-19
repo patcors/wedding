@@ -7,6 +7,7 @@ import { Water } from 'three/addons/objects/Water.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, riverCenter, bankEdge, groundHeight, leafGeometry, random } from './gardenGeometry';
 import GardenTrees from './GardenTrees';
+import GardenPreparation from './GardenPreparation';
 import GardenGround, { type GroundStyle, type RockStyle } from './GardenGround';
 import GardenRocks from './GardenRocks';
 import GardenPlants from './GardenPlants';
@@ -17,7 +18,7 @@ import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch } from './b
 const BASE = import.meta.env.BASE_URL;
 const boatRiver = { center: riverCenter, halfWidth: bankEdge };
 export const SKY = '#eeeee5';
-type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle };
+type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle };
 
 function Pool({ paused, width, launchRequest }: { paused: boolean; width: number; launchRequest: number }) {
   const camera = useThree(s => s.camera);
@@ -211,13 +212,12 @@ function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
   </instancedMesh>;
 }
 
-export default function GardenScene({ progress, paused, reduced, onReady, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle }: SceneProps) {
+export default function GardenScene({ progress, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle }: SceneProps) {
   const { camera, size } = useThree();
   const mobile = size.width / size.height < .85;
   const bankWidth = mobile ? MOBILE_RIVER_WIDTH : 1;
   const current = useRef(0);
   const target = useMemo(() => new THREE.Vector3(), []);
-  useEffect(() => { onReady(); }, [onReady]);
   useLayoutEffect(() => {
     const lens = camera as THREE.PerspectiveCamera;
     lens.fov = mobile ? GARDEN_CAMERA.mobileFov : GARDEN_CAMERA.fov;
@@ -251,5 +251,6 @@ export default function GardenScene({ progress, paused, reduced, onReady, boatLa
     <Pool paused={paused || reduced} width={bankWidth} launchRequest={boatLaunchRequest} />
     <Petals paused={paused || reduced} />
     <FallingLeaves paused={paused || reduced} width={bankWidth} />
+    <GardenPreparation onReady={onReady} onError={onError} />
   </>;
 }

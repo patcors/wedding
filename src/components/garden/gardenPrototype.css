@@ -5,7 +5,7 @@
 .garden-prototype button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
 .garden-prototype a { color: inherit; text-decoration: none; }
 .garden-prototype button:focus-visible, .garden-prototype a:focus-visible { outline: 2px solid #6e775c; outline-offset: 7px; }
-.garden-canvas { position: fixed; inset: 0; opacity: 0; transition: opacity 1.5s ease; background: #eeeee5; }
+.garden-canvas { position: fixed; inset: 0; opacity: 0; background: #eeeee5; }
 .garden-canvas.is-ready { opacity: 1; }
 .garden-wash { position: fixed; inset: 0; pointer-events: none; background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #eeeee552); }
 .garden-header { position: fixed; inset: 0 0 auto; z-index: 3; padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; }

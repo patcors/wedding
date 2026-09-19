@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef } from 'react';
 import type { ButterflyPerch } from './useGardenButterflies';
 import { butterflyMotion } from './butterflyMotion';
 import { BUTTERFLY_COLORS, type ButterflyColor } from './butterflyColors';
@@ -12,24 +12,34 @@ const curve = (a: Point, b: Point, c: Point, d: Point, t: number): Point => {
     y: u ** 3 * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t ** 3 * d.y };
 };
 
-export default function GardenButterfly({ paused, perch, landingAngle, color, available, onComplete }: {
-  paused: boolean; perch: ButterflyPerch; landingAngle: number; color: ButterflyColor; available: boolean; onComplete: () => void;
+export default function GardenButterfly({ paused, perch, landingAngle, color, startPerched, openingReleased, available, onComplete }: {
+  paused: boolean; perch: ButterflyPerch; landingAngle: number; color: ButterflyColor; startPerched: boolean; openingReleased: boolean; available: boolean; onComplete: () => void;
 }) {
   const sprite = useRef<HTMLDivElement>(null);
-  const settings = useRef({ paused, available });
+  const settings = useRef({ paused, available, openingReleased });
   const gradientId = useId();
   const palette = BUTTERFLY_COLORS[color];
-  useEffect(() => { settings.current = { paused, available }; }, [paused, available]);
-  useEffect(() => {
+  useEffect(() => { settings.current = { paused, available, openingReleased }; }, [paused, available, openingReleased]);
+  useLayoutEffect(() => {
     const element = sprite.current;
     if (!element) return;
     const seed = (landingAngle + 90) * .071;
     let frame = 0, previous = 0, elapsed = 0, time = 0, wingTime = seed;
-    let phase: 'waiting' | 'arriving' | 'perched' | 'leaving' = 'waiting';
+    let phase: 'waiting' | 'arriving' | 'perched' | 'leaving' = startPerched ? 'perched' : 'waiting';
+    // The opening flock waits for the shared loading-screen release signal.
     const rest = 3.5 + Math.random() * 2.5;
     const arrivalDuration = 4.2;
-    let position: Point = { x: -80, y: 100 }, start = position, destination = position;
-    let side = 1, bank = 0;
+    let position: Point = startPerched ? { x: perch.x, y: perch.y } : { x: -80, y: 100 }, start = position, destination = position;
+    let side = Math.random() > .5 ? 1 : -1, bank = startPerched ? landingAngle : 0;
+    if (startPerched) {
+      // Paint on the letters immediately, even while the garden is loading.
+      element.dataset.phase = 'perched';
+      element.style.opacity = '1';
+      element.style.transform = `translate3d(${perch.x}px, ${perch.y}px, 0)`;
+      element.style.setProperty('--butterfly-bank', `${bank}deg`);
+      element.style.setProperty('--butterfly-left-fold', '53deg');
+      element.style.setProperty('--butterfly-right-fold', '53deg');
+    }
     const depart = () => {
       phase = 'leaving'; elapsed = 0; start = position;
       destination = { x: side > 0 ? innerWidth + 90 : -90, y: innerHeight * (.1 + Math.random() * .18) };
@@ -38,7 +48,13 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, av
       frame = requestAnimationFrame(tick);
       const dt = previous ? Math.min((now - previous) / 1000, .05) : 0;
       previous = now;
-      if (settings.current.paused || document.hidden) return;
+      if (settings.current.paused || document.hidden) {
+        if (phase === 'perched') {
+          position = { x: perch.x, y: perch.y };
+          element.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
+        }
+        return;
+      }
       elapsed += dt;
       time += dt;
       const motion = butterflyMotion(time, seed, wingTime);
@@ -68,7 +84,7 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, av
         }
       } else if (phase === 'perched') {
         position = destination;
-        if (elapsed >= rest) depart();
+        if (startPerched ? settings.current.openingReleased : elapsed >= rest) depart();
       } else if (phase === 'leaving') {
         const t = Math.min(1, elapsed / 5);
         position = curve(start, { x: start.x + side * 100, y: start.y - 150 },
@@ -104,7 +120,7 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, av
     };
     frame = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(frame); element.style.opacity = '0'; };
-  }, [perch, landingAngle, onComplete]);
+  }, [perch, landingAngle, startPerched, onComplete]);
 
   return <div className="garden-butterfly-layer" aria-hidden="true">
     <div ref={sprite} className="garden-butterfly" data-perch={perch.key} data-color={color}>

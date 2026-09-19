@@ -12,12 +12,12 @@ import { GARDEN_CAMERA } from './gardenGeometry';
 import './gardenPrototype.css';
 
 const BASE = import.meta.env.BASE_URL;
-function ReleasedButterfly({ visit, paused, available, onRetire }: {
-  visit: ButterflyVisit; paused: boolean; available: boolean; onRetire: (id: number) => void;
+function ReleasedButterfly({ visit, paused, available, openingReleased, onRetire }: {
+  visit: ButterflyVisit; paused: boolean; available: boolean; openingReleased: boolean; onRetire: (id: number) => void;
 }) {
   const onComplete = useCallback(() => onRetire(visit.id), [visit.id, onRetire]);
   return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle} color={visit.color}
-    available={available} onComplete={onComplete} />;
+    startPerched={visit.startPerched} openingReleased={openingReleased} available={available} onComplete={onComplete} />;
 }
 
 const MEMORY_START = .20, MEMORY_END = .82;
@@ -29,9 +29,10 @@ const memories = [
   { file: 'IMG_0466.jpg', caption: 'Us, being us.', alt: 'A playful close-up selfie of Patrick and Amelia' },
 ];
 
-class CanvasFallback extends Component<{ children: ReactNode }, { failed: boolean }> {
+class CanvasFallback extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch() { this.props.onError(); }
   render() { return this.state.failed ? <p className="garden-fallback">The garden is taking a little rest. Your invitation is below.</p> : this.props.children; }
 }
 
@@ -45,9 +46,50 @@ export default function GardenPrototype() {
   const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
   const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
   const [ready, setReady] = useState(false);
+  const [openingReleased, setOpeningReleased] = useState(false);
+  const [prepared, setPrepared] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const onReady = useCallback(() => setReady(true), []);
+  const onReady = useCallback(() => setPrepared(true), []);
+  const onError = useCallback(() => setFailed(true), []);
+  useEffect(() => {
+    if (!prepared || failed) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    void document.fonts.ready.then(() => {
+      if (!cancelled) timer = setTimeout(() => setReady(true), 3000);
+    });
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [prepared, failed]);
+  useEffect(() => {
+    const loader = document.querySelector<HTMLElement>('[data-garden-loading]');
+    const status = document.getElementById('garden-loading-status');
+    document.documentElement.dataset.gardenState = failed ? 'error' : ready ? 'ready' : 'loading';
+    if (status) status.textContent = failed ? 'The garden couldn’t open. Your invitation is ready below.'
+      : prepared ? 'The garden is ready. One little moment…' : 'Preparing the garden';
+    if (loader) {
+      loader.inert = ready && !failed;
+      loader.setAttribute('aria-hidden', String(ready && !failed));
+      loader.setAttribute('aria-busy', String(!ready && !failed));
+    }
+  }, [ready, prepared, failed]);
+  useEffect(() => {
+    if (!ready || failed) return;
+    const loader = document.querySelector<HTMLElement>('[data-garden-loading]');
+    let frame: number;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const waitForReveal = () => {
+      // Start the perch time after the cover's fade, including reduced-motion styles.
+      if (loader && getComputedStyle(loader).visibility !== 'hidden') {
+        frame = requestAnimationFrame(waitForReveal);
+        return;
+      }
+      timer = setTimeout(() => setOpeningReleased(true), 1500);
+    };
+    frame = requestAnimationFrame(waitForReveal);
+    return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
+  }, [ready, failed]);
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)');
     const updatePreference = () => setReduced(query.matches);
@@ -62,7 +104,7 @@ export default function GardenPrototype() {
     };
   }, []);
   const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
-  const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced || !ready, sceneOnly });
+  const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready });
   const memoryIndex = Math.max(0, Math.min(memories.length - 1,
     Math.floor((progress - MEMORY_START) / (MEMORY_END - MEMORY_START) * memories.length)));
   const goToProgress = (next: number) => {
@@ -83,20 +125,20 @@ export default function GardenPrototype() {
     if (chapter === 1 && memoryIndex < memories.length - 1) scrollToMemory(memoryIndex + 1);
     else scrollToChapter(chapter === 2 ? 0 : chapter + 1);
   };
-  return <main className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`}>
-    <div className={`garden-canvas ${ready ? 'is-ready' : ''}`} aria-hidden="true">
-      <CanvasFallback>
+  return <main className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} inert={!ready || failed} aria-busy={!ready && !failed}>
+    <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
+      <CanvasFallback onError={onError}>
         <Canvas shadows style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.25]} camera={{ position: [0, GARDEN_CAMERA.height, GARDEN_CAMERA.startZ], fov: GARDEN_CAMERA.fov, near: .2, far: 220 }}
           gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}>
           <Suspense fallback={null}>
-            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} />
+            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} />
           </Suspense>
         </Canvas>
       </CanvasFallback>
     </div>
     <div className="garden-wash" aria-hidden="true" />
-    {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
-      available={butterflies.validPerches.has(visit.perch.key)} onRetire={butterflies.retire} />)}
+    {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused || !prepared || failed}
+      openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onRetire={butterflies.retire} />)}
     <header className="garden-header garden-copy">
       <button className="garden-monogram" onClick={() => scrollToChapter(0)} aria-label="Back to the beginning">P<span>&</span>A</button>
       <span className="garden-header-date">16 APRIL 2027</span>
