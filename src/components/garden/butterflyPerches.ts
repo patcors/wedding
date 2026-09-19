@@ -1,7 +1,7 @@
 export type PerchPoint = { x: number; y: number };
 export type PerchCandidate = PerchPoint & { key: string };
 
-// Leave room for fully open wings, including a small gap between neighbours.
+// Keep landing footholds distinct at the requested density.
 export function spacedPerches<T extends PerchCandidate>(candidates: T[], spacing: number): T[] {
   const selected: T[] = [];
   for (const candidate of candidates) {

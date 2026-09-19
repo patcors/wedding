@@ -16,7 +16,7 @@ function ReleasedButterfly({ visit, paused, available, onRetire }: {
   visit: ButterflyVisit; paused: boolean; available: boolean; onRetire: (id: number) => void;
 }) {
   const onComplete = useCallback(() => onRetire(visit.id), [visit.id, onRetire]);
-  return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle}
+  return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle} color={visit.color}
     available={available} onComplete={onComplete} />;
 }
 

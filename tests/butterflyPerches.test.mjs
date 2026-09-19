@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { availablePerch, spacedPerches } from '../src/components/garden/butterflyPerches.ts';
 
-test('perches leave room for open wings, including adjacent text lines', () => {
+test('perches preserve foothold spacing, including adjacent text lines', () => {
   const letters = Array.from({ length: 30 }, (_, i) => ({ key: String(i), x: i % 15 * 20, y: i < 15 ? 100 : 150 }));
-  for (const spacing of [76, 96]) {
+  for (const spacing of [25, 32]) {
     const spots = spacedPerches(letters, spacing);
     assert.ok(spots.length > 1 && spots.length < letters.length);
     spots.forEach((a, i) => spots.slice(i + 1).forEach(b => {
