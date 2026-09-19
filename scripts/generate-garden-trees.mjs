@@ -100,6 +100,9 @@ for (const [source, target, size] of [
   let texture = sharp(resolve(packageRoot, 'src/lib/assets', source)).resize(size, size);
   if (target === 'bark-color.webp' || target === 'ash-leaves.webp') {
     texture = texture.modulate({ saturation: .60, brightness: 1.10 });
+    // Retain the earlier dark palette for an immediate UI comparison.
+    await texture.clone().webp({ quality: 90, alphaQuality: 100 })
+      .toFile(resolve(output, target.replace('.webp', '-dark.webp')));
     // Bring the texture midtones towards the original pale wood/sage palette
     // while retaining darker bark grooves and the leaf silhouettes.
     texture = target === 'bark-color.webp' ? texture.linear(.65, 105) : texture.linear(.70, 55);

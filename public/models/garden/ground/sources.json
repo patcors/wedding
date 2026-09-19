@@ -1,0 +1,30 @@
+{
+  "leafy_grass": {
+    "author": "Charlotte Baglioni",
+    "url": "https://polyhaven.com/a/leafy_grass",
+    "license": "CC0",
+    "tileMetres": 2
+  },
+  "grass007": {
+    "author": "ambientCG / Lennart Demes",
+    "url": "https://ambientcg.com/view?id=Grass007",
+    "license": "CC0"
+  },
+  "rock_moss_set_01": {
+    "author": "Kless Gyzen",
+    "url": "https://polyhaven.com/a/rock_moss_set_01",
+    "license": "CC0",
+    "nodes": [
+      1,
+      3,
+      5
+    ]
+  },
+  "preparation": {
+    "mapSize": 1024,
+    "normal": "OpenGL",
+    "packed": "R=AO G=roughness B=metalness",
+    "simplifyRatio": 0.04,
+    "simplifyError": 0.025
+  }
+}

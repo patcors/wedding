@@ -20,6 +20,8 @@
 .garden-panel.is-active { opacity: 1; visibility: visible; transform: translateY(0); }
 .garden-panel a, .garden-panel button { pointer-events: auto; }
 .garden-arrival { top: 22%; left: 0; width: 100%; }
+.garden-arrival::before, .garden-celebrate::before { content: ''; position: absolute; z-index: -1; inset: -18px 17% -12px; pointer-events: none;
+  background: radial-gradient(ellipse, #eeeee5e6 12%, #eeeee5ad 40%, #eeeee53d 62%, transparent 76%); }
 .garden-eyebrow { font-size: 9px; font-weight: 400; text-transform: uppercase; letter-spacing: .28em; line-height: 1.8; }
 .garden-arrival h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300; font-size: clamp(66px, 8.8vw, 144px); line-height: 1.1; letter-spacing: -.06em; margin: 20px 0 10px; }
 .garden-arrival h1 span { font-size: .6em; font-style: italic; font-weight: 300; color: #7a826d; display: inline-block; margin: 0 .14em; }
@@ -77,6 +79,9 @@
 .garden-review button { font-size: 9px; padding: 4px 0; }
 .garden-review button[aria-pressed=true] { color: #8b6158; }
 .garden-review button:disabled { cursor: default; opacity: .6; }
+.garden-material-selector { display: flex; align-items: center; gap: 5px; font-size: 9px; }
+.garden-material-selector select { min-width: 0; max-width: 100%; padding: 5px 3px; border: 0; border-bottom: 1px solid #747d6040; border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.garden-material-selector select:focus-visible { outline: 2px solid #8b6158; outline-offset: 2px; }
 .garden-copy { transition: opacity .5s; }
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
 .garden-scroll-space { height: 560svh; pointer-events: none; }
@@ -87,7 +92,7 @@
   .garden-header-date { display: none; }
   .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
-  .garden-arrival::before, .garden-celebrate::before { content: ''; position: absolute; z-index: -1; inset: -25px 12px; background: radial-gradient(ellipse, #eeeee5df 10%, #eeeee58f 48%, transparent 73%); pointer-events: none; }
+  .garden-arrival::before, .garden-celebrate::before { inset: -12px 14px; background: radial-gradient(ellipse, #eeeee5e6 16%, #eeeee5ad 44%, #eeeee53d 66%, transparent 80%); }
   .garden-arrival h1 { font-size: clamp(60px, 16vw, 90px); line-height: .9; margin: 24px 0 20px; }
   .garden-arrival h1 span { display: block; font-size: 35px; line-height: 1.2; margin: 4px 0; }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
@@ -98,14 +103,17 @@
   .garden-chapter-number, .garden-chapter-name { display: none; }
   .garden-chapter-line { width: 7px; }
   .garden-chapters button[aria-current] .garden-chapter-line { width: 15px; }
-  .garden-bottom { left: 24px; right: 24px; bottom: 85px; }
+  .garden-bottom { left: 24px; right: 24px; bottom: 122px; }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }
   .garden-scroll-cue { font-size: 18px !important; }
-  .garden-review { bottom: 20px; gap: 13px; padding: 11px 16px; }
+  .garden-review { bottom: 16px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
+  .garden-review > button, .garden-material-selector { grid-column: span 2; }
+  .garden-material-selector { flex-direction: column; gap: 0; font-size: 8px; }
+  .garden-material-selector select { font-size: 10px; }
   .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
-  .garden-review button { font-size: 8px; }
+  .garden-review button { font-size: 8px; min-height: 32px; }
   .garden-study-label { font-size: 7px; }
   .garden-memory { top: 12%; left: 0; width: 100%; margin: 0; padding: 0 28px; flex-direction: column; gap: 10px; text-align: center; }
   .garden-album { width: 100%; max-width: 350px; }
@@ -127,6 +135,12 @@
   .garden-memory-copy > p:not(.garden-eyebrow) { display: none; }
   .garden-arrival { top: 19%; }
   .garden-review { bottom: 12px; }
+}
+@media (max-width: 700px) and (max-height: 600px) {
+  .garden-memory { top: 8%; }
+  .garden-photo-stack { height: 160px; }
+  .garden-photo-slot { top: 8px; width: min(42vw, 16svh); }
+  .garden-memory h2 { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .garden-prototype *, .garden-prototype *::before { transition: none !important; scroll-behavior: auto !important; }

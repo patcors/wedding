@@ -10,6 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "prepare:garden-ground": "node scripts/prepare-garden-ground.mjs",
     "generate:garden-trees": "node scripts/generate-garden-trees.mjs"
   },
   "dependencies": {
