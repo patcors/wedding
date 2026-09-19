@@ -4,12 +4,21 @@ import { Component, Suspense, useCallback, useEffect, useRef, useState, type Rea
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import GardenScene from './GardenScene';
+import GardenButterfly from './GardenButterfly';
+import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { GARDEN_CAMERA } from './gardenGeometry';
 import './gardenPrototype.css';
 
 const BASE = import.meta.env.BASE_URL;
+function ReleasedButterfly({ visit, paused, available, onRetire }: {
+  visit: ButterflyVisit; paused: boolean; available: boolean; onRetire: (id: number) => void;
+}) {
+  const onComplete = useCallback(() => onRetire(visit.id), [visit.id, onRetire]);
+  return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle} available={available} onComplete={onComplete} />;
+}
+
 const MEMORY_START = .20, MEMORY_END = .82;
 const memories = [
   { file: '20191122_191734.jpg', caption: 'The early days.', alt: 'Patrick and Amelia with a friend beside the harbour' },
@@ -52,6 +61,7 @@ export default function GardenPrototype() {
     };
   }, []);
   const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
+  const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced || !ready, sceneOnly });
   const memoryIndex = Math.max(0, Math.min(memories.length - 1,
     Math.floor((progress - MEMORY_START) / (MEMORY_END - MEMORY_START) * memories.length)));
   const goToProgress = (next: number) => {
@@ -84,6 +94,8 @@ export default function GardenPrototype() {
       </CanvasFallback>
     </div>
     <div className="garden-wash" aria-hidden="true" />
+    {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
+      available={butterflies.validPerches.has(visit.perch.key)} onRetire={butterflies.retire} />)}
     <header className="garden-header garden-copy">
       <button className="garden-monogram" onClick={() => scrollToChapter(0)} aria-label="Back to the beginning">P<span>&</span>A</button>
       <span className="garden-header-date">16 APRIL 2027</span>
@@ -96,7 +108,7 @@ export default function GardenPrototype() {
     <div className="garden-panels garden-copy">
       <section className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
         <p className="garden-eyebrow">Together with our favourite people</p>
-        <h1>Patrick <span>&</span> Amelia</h1>
+        <h1><b className="garden-perch">P</b>atrick <span>&</span> <b className="garden-perch">A</b>melia</h1>
         <p className="garden-subtitle">A new chapter, together.</p>
         <div className="garden-date"><span>16 . 04 . 2027</span><i /><span>Jasper’s Berry</span></div>
       </section>
@@ -142,7 +154,7 @@ export default function GardenPrototype() {
         </div>
         <div className="garden-memory-copy">
           <p className="garden-eyebrow">Our story</p>
-          <h2>A lifetime of<br /><em>little moments.</em></h2>
+          <h2><b className="garden-perch">A</b> lifetime of<br /><em>little moments.</em></h2>
           <p>And now, one more to share<br />with the people we love.</p>
           <button className="garden-text-link" onClick={() => scrollToChapter(2)}>The next chapter <span aria-hidden="true">→</span></button>
         </div>
@@ -150,7 +162,7 @@ export default function GardenPrototype() {
 
       <section className={`garden-panel garden-celebrate ${chapter === 2 ? 'is-active' : ''}`} inert={chapter !== 2 || sceneOnly} aria-hidden={chapter !== 2 || sceneOnly}>
         <p className="garden-eyebrow">We’re getting married</p>
-        <h2>Meet us<br /><em>in the garden.</em></h2>
+        <h2><b className="garden-perch">M</b>eet us<br /><em>in the garden.</em></h2>
         <p className="garden-venue">Jasper’s Berry · Berry, NSW</p>
         <p className="garden-eyebrow">Friday, 16 April 2027</p>
         <a className="garden-button" href={`${BASE}invitation/`}>Open your invitation <span aria-hidden="true">↗</span></a>
@@ -164,12 +176,21 @@ export default function GardenPrototype() {
       </button>)}
     </nav>
     <div className="garden-bottom garden-copy">
+      <div className="garden-creature-actions">
       <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
         <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">
           <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
         </svg>
         <span>Float a boat</span>
       </button>
+      <button className="garden-boat-launch" disabled={!butterflies.canRelease}
+        onClick={butterflies.release}>
+        <svg width="23" height="23" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <path d="M14 12C9 3 3 2 3 7c0 4 3 7 7 8-6 0-6 7-2 7 3 0 5-4 6-7m0-3c5-9 11-10 11-5 0 4-3 7-7 8 6 0 6 7 2 7-3 0-5-4-6-7m0-5v12m0-12-3-4m3 4 3-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span>Release a butterfly</span>
+      </button>
+      </div>
       <button className="garden-scroll-cue" onClick={nextStop}>
         {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
       </button>

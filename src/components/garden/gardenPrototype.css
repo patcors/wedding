@@ -68,6 +68,8 @@
 .garden-chapters button[aria-current] .garden-chapter-number { opacity: 1; }
 .garden-bottom { position: fixed; bottom: 86px; left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; z-index: 3; }
 .garden-place { font-size: 8px; letter-spacing: .18em; }
+.garden-creature-actions { display: flex; align-items: center; gap: 24px; }
+.garden-creature-actions button:disabled { opacity: .45; cursor: default; }
 .garden-boat-launch { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0; }
 .garden-boat-launch span { font: italic 16px 'Cormorant Garamond', Georgia, serif; }
 .garden-scroll-cue { font: italic 20px 'Cormorant Garamond', Georgia, serif !important; }
@@ -104,6 +106,7 @@
   .garden-chapter-line { width: 7px; }
   .garden-chapters button[aria-current] .garden-chapter-line { width: 15px; }
   .garden-bottom { left: 24px; right: 24px; bottom: 122px; }
+  .garden-creature-actions { flex-direction: column; align-items: flex-start; gap: 0; }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }

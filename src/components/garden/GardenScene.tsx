@@ -11,15 +11,22 @@ import GardenGround, { type GroundStyle, type RockStyle } from './GardenGround';
 import GardenRocks from './GardenRocks';
 import GardenPlants from './GardenPlants';
 import type { PlantStyle } from './gardenPlantGeometry';
-import { BOAT_MARGIN, PaperBoat, type BoatLaunch } from './PaperBoat';
+import { PaperBoat } from './PaperBoat';
+import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch } from './boatPhysics';
 
 const BASE = import.meta.env.BASE_URL;
+const boatRiver = { center: riverCenter, halfWidth: bankEdge };
 export const SKY = '#eeeee5';
 type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle };
 
 function Pool({ paused, width, launchRequest }: { paused: boolean; width: number; launchRequest: number }) {
   const camera = useThree(s => s.camera);
-  const [boats, setBoats] = useState<BoatLaunch[]>([]);
+  const [simulation] = useState(() => new BoatSimulation(boatRiver, width));
+  const [boats, setBoats] = useState<BoatBody[]>([]);
+  // Solve all contacts before individual meshes read their positions.
+  useFrame((_, dt) => {
+    if (simulation.advance(dt, width, paused)) setBoats([...simulation.bodies]);
+  }, -1);
   const nextId = useRef(0), lastRequest = useRef(launchRequest);
   const launch = useCallback((x: number, z: number) => {
     const halfWidth = Math.max(.1, bankEdge(z, width) - BOAT_MARGIN);
@@ -28,9 +35,9 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
     const boat: BoatLaunch = { id: ++nextId.current, z, lateral: THREE.MathUtils.clamp((x - riverCenter(z, width)) / halfWidth, -1, 1),
       kind: roll < .45 ? 'sailboat' : roll < .50 ? 'tugboat' : 'paper' };
     // Keep this a small passing detail even if someone taps repeatedly.
-    setBoats(previous => [...previous.slice(-3), boat]);
-  }, [width]);
-  const retire = useCallback((id: number) => setBoats(previous => previous.filter(boat => boat.id !== id)), []);
+    simulation.launch(boat, width);
+    setBoats([...simulation.bodies]);
+  }, [width, simulation]);
   useEffect(() => {
     if (launchRequest === lastRequest.current) return;
     lastRequest.current = launchRequest;
@@ -64,7 +71,7 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
   useFrame((_, dt) => { if (!paused) water.material.uniforms.time.value += Math.min(dt, .05) * .22; });
   return <>
     <primitive object={water} onClick={tapWater} />
-    {boats.map(boat => <PaperBoat key={boat.id} boat={boat} width={width} paused={paused} onRetire={retire} />)}
+    {boats.map(boat => <PaperBoat key={boat.id} boat={boat} />)}
   </>;
 }
 
