@@ -1,0 +1,23 @@
+:root {
+  --garden-safe-top: env(safe-area-inset-top, 0px);
+  --garden-safe-right: env(safe-area-inset-right, 0px);
+  --garden-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --garden-safe-left: env(safe-area-inset-left, 0px);
+}
+html[data-garden-state='loading'], html[data-garden-state='error'] { overflow: hidden; }
+.garden-loader { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box;
+  padding: calc(28px + var(--garden-safe-top)) calc(28px + var(--garden-safe-right)) calc(28px + var(--garden-safe-bottom)) calc(28px + var(--garden-safe-left));
+  background: #eeeee5; color: #384135; text-align: center; transition: opacity .65s ease, visibility .65s; }
+.garden-loader-mark { font: 300 64px/1 'Cormorant Garamond Variable', Georgia, serif; letter-spacing: -.08em; animation: garden-breathe 2.8s ease-in-out infinite; }
+.garden-loader-mark span { font-size: .65em; font-style: italic; padding: 0 .14em; }
+.garden-loader-ripple { width: 64px; height: 14px; margin: 26px 0 32px; border: 1px solid #7a826d; border-radius: 50%; animation: garden-ripple 2.8s ease-out infinite; }
+.garden-loader-status { max-width: 280px; min-height: 3em; font: 400 11px/1.7 'Montserrat Variable', sans-serif; letter-spacing: .06em; }
+.garden-loader a { color: inherit; font: 400 12px/1.5 'Montserrat Variable', sans-serif; text-underline-offset: 5px; padding: 14px; min-height: 44px; box-sizing: border-box; }
+.garden-loader a:focus-visible { outline: 2px solid #6e775c; outline-offset: 3px; }
+.garden-loader-retry { display: none; }
+html[data-garden-state='ready'] .garden-loader { opacity: 0; visibility: hidden; pointer-events: none; }
+html[data-garden-state='error'] .garden-loader-retry { display: block; }
+html[data-garden-state='error'] .garden-loader-mark, html[data-garden-state='error'] .garden-loader-ripple { animation: none; }
+@keyframes garden-breathe { 50% { opacity: .55; } }
+@keyframes garden-ripple { from { transform: scale(.65); opacity: .6; } to { transform: scale(1.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .garden-loader, .garden-loader-mark, .garden-loader-ripple { animation: none; transition: none; } }

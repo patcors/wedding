@@ -1,7 +1,7 @@
 // PROTOTYPE: a short, self-contained garden composition, not the production story.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { useTexture } from '@react-three/drei';
+import { useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -11,26 +11,44 @@ import GardenGround, { type GroundStyle, type RockStyle } from './GardenGround';
 import GardenRocks from './GardenRocks';
 import GardenPlants from './GardenPlants';
 import type { PlantStyle } from './gardenPlantGeometry';
-import { BOAT_MARGIN, PaperBoat, type BoatLaunch } from './PaperBoat';
+import { PaperBoat, createBoatResources, disposeBoatResources } from './PaperBoat';
+import { BOAT_KINDS, BOAT_MARGIN, BoatSimulation, createBoatBody, type BoatBody, type BoatLaunch } from './boatPhysics';
+import { groundTextures, waterTexture, treeModels, treeTextures } from './gardenAssets';
+import { GardenPreparation, GardenRenderer } from './GardenPreparation';
 
-const BASE = import.meta.env.BASE_URL;
+// Start every loader before React can suspend on the first tree or ground map.
+useTexture.preload(groundTextures);
+useTexture.preload(waterTexture);
+useTexture.preload(treeTextures);
+useGLTF.preload(treeModels, false);
+const boatRiver = { center: riverCenter, halfWidth: bankEdge };
 export const SKY = '#eeeee5';
-type SceneProps = { progress: number; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle };
+export type SceneProps = { progress: RefObject<number>; paused: boolean; reduced: boolean; onReady: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; mobileDevice: boolean; economy: boolean; onSlow: () => void };
 
-function Pool({ paused, width, launchRequest }: { paused: boolean; width: number; launchRequest: number }) {
+function Pool({ paused, width, launchRequest, warming, mobileDevice }: { paused: boolean; width: number; launchRequest: number; warming: boolean; mobileDevice: boolean }) {
   const camera = useThree(s => s.camera);
-  const [boats, setBoats] = useState<BoatLaunch[]>([]);
+  const resources = useMemo(createBoatResources, []);
+  useEffect(() => () => disposeBoatResources(resources), [resources]);
+  const [simulation] = useState(() => new BoatSimulation(boatRiver, width));
+  const [boats, setBoats] = useState<BoatBody[]>([]);
+  const previews = useMemo(() => BOAT_KINDS.map((kind, i) =>
+    createBoatBody({ id: -i - 1, kind, z: GARDEN_CAMERA.startZ - 6 - i * 2, lateral: 0 }, width, boatRiver)), [width]);
+  // Advance all bodies together before their meshes read the resulting poses.
+  useFrame((_, dt) => {
+    if (simulation.advance(dt, width, paused)) setBoats([...simulation.bodies]);
+  }, -1);
   const nextId = useRef(0), lastRequest = useRef(launchRequest);
   const launch = useCallback((x: number, z: number) => {
     const halfWidth = Math.max(.1, bankEdge(z, width) - BOAT_MARGIN);
     // Decide once per launch, so rerenders and animation never change the model.
     const roll = Math.random();
-    const boat: BoatLaunch = { id: ++nextId.current, z, lateral: THREE.MathUtils.clamp((x - riverCenter(z, width)) / halfWidth, -1, 1),
-      kind: roll < .45 ? 'sailboat' : roll < .50 ? 'tugboat' : 'paper' };
+    const id = ++nextId.current;
+    const boat: BoatLaunch = { id, z, lateral: THREE.MathUtils.clamp((x - riverCenter(z, width)) / halfWidth, -1, 1),
+      kind: id % 3 === 0 ? 'duck' : roll < .45 ? 'sailboat' : roll < .50 ? 'tugboat' : 'paper' };
     // Keep this a small passing detail even if someone taps repeatedly.
-    setBoats(previous => [...previous.slice(-3), boat]);
-  }, [width]);
-  const retire = useCallback((id: number) => setBoats(previous => previous.filter(boat => boat.id !== id)), []);
+    simulation.launch(boat, width);
+    setBoats([...simulation.bodies]);
+  }, [width, simulation]);
   useEffect(() => {
     if (launchRequest === lastRequest.current) return;
     lastRequest.current = launchRequest;
@@ -38,6 +56,7 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
     launch(riverCenter(z, width), z);
   }, [launchRequest, launch, camera, width]);
   const tapWater = (event: ThreeEvent<MouseEvent>) => {
+    if (warming) return;
     const { x, z } = event.point;
     // The reflecting plane extends underneath the terrain. Only exposed
     // stream water is interactive; drags and native touch scrolling are not taps.
@@ -46,11 +65,11 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
     event.stopPropagation();
     launch(x, z);
   };
-  const normals = useTexture(`${BASE}textures/garden/water-normal.jpg`);
+  const normals = useTexture(waterTexture);
   const water = useMemo(() => {
     normals.wrapS = normals.wrapT = THREE.RepeatWrapping;
     const object = new Water(new THREE.PlaneGeometry(240, 260), {
-      textureWidth: 512, textureHeight: 512,
+      textureWidth: mobileDevice ? 256 : 512, textureHeight: mobileDevice ? 256 : 512,
       waterNormals: normals, waterColor: '#b5bca6', sunColor: '#fff9e9',
       sunDirection: new THREE.Vector3(-.5, .8, -.2).normalize(),
       distortionScale: .65, fog: true,
@@ -59,16 +78,37 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
     object.position.set(0, 0, -50);
     object.material.uniforms.size.value = 5;
     object.material.uniforms.time.value = 24;
+    if (mobileDevice) {
+      const reflect = object.onBeforeRender;
+      let lastReflection = -Infinity;
+      const lastCamera = new THREE.Matrix4();
+      object.onBeforeRender = function (...args) {
+        const now = performance.now();
+        // Refresh immediately when the camera moves, otherwise cap reflections
+        // at 30fps while water and wind continue at the display's frame rate.
+        if (now - lastReflection < 1000 / 30 && lastCamera.equals(args[2].matrixWorld)) return;
+        lastReflection = now; lastCamera.copy(args[2].matrixWorld);
+        reflect.apply(this, args);
+      };
+    }
     return object;
-  }, [normals]);
+  }, [normals, mobileDevice]);
+  useEffect(() => () => { water.geometry.dispose();
+    (water.material.uniforms.mirrorSampler.value as THREE.Texture).renderTarget?.dispose();
+    water.material.dispose();}, [water]);
   useFrame((_, dt) => { if (!paused) water.material.uniforms.time.value += Math.min(dt, .05) * .22; });
   return <>
     <primitive object={water} onClick={tapWater} />
-    {boats.map(boat => <PaperBoat key={boat.id} boat={boat} width={width} paused={paused} onRetire={retire} />)}
+    {/* Keep hidden prototypes alive so Three retains their compiled programs. */}
+    <group visible={warming} name="boat-prototypes">{previews.map(boat =>
+      <PaperBoat key={boat.kind} boat={boat} preview resources={resources} />)}</group>
+    {boats.map(boat => <PaperBoat key={boat.id} boat={boat} resources={resources} />)}
   </>;
 }
 
-function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyle: RockStyle; plantStyle: PlantStyle }) {
+function BankDetails({ width, mobileDevice, economy, rockStyle, plantStyle }: { width: number; mobileDevice: boolean; economy: boolean; rockStyle: RockStyle; plantStyle: PlantStyle }) {
+  const stoneCount = mobileDevice ? 160 : 260, grassCount = mobileDevice ? 2800 : 7000, flowerCount = mobileDevice ? 600 : 1500;
+  const density = economy ? .6 : 1;
   const stones = useRef<THREE.InstancedMesh>(null);
   const grasses = useRef<THREE.InstancedMesh>(null);
   const flowers = useRef<THREE.InstancedMesh>(null);
@@ -93,7 +133,7 @@ function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyl
   const petal = useMemo(() => leafGeometry(true), []);
   useLayoutEffect(() => {
     const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color();
-    for (let i = 0; i < 260; i++) {
+    for (let i = 0; i < stoneCount; i++) {
       const z = 26 - rand() * 126, x = riverCenter(z, width) + (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
       dummy.position.set(x, groundHeight(x, z, width) - .04, z);
       dummy.rotation.set(rand(), rand() * 6, rand());
@@ -102,7 +142,7 @@ function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyl
       dummy.updateMatrix(); stones.current!.setMatrixAt(i, dummy.matrix);
       color.setHSL(.12, .08, .48 + rand() * .2); stones.current!.setColorAt(i, color);
     }
-    for (let i = 0; i < 7000; i++) {
+    for (let i = 0; i < grassCount; i++) {
       const cluster = Math.floor(i / 20), r = random(cluster * 91 + 31);
       const z = 26 - r() * 126, x = riverCenter(z, width) + (bankEdge(z, width) + .5 + r() * 4) * (cluster % 2 ? 1 : -1);
       const px = x + (rand() - .5) * .9, pz = z + (rand() - .5) * .9;
@@ -112,7 +152,7 @@ function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyl
       dummy.updateMatrix(); grasses.current!.setMatrixAt(i, dummy.matrix);
       color.setHSL(.18 + rand() * .08, .16, .30 + rand() * .20); grasses.current!.setColorAt(i, color);
     }
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < flowerCount; i++) {
       const cluster = Math.floor(i / 5), r = random(cluster * 79 + 16);
       const z = 24 - r() * 98, x = riverCenter(z, width) + (bankEdge(z, width) + .8 + r() * 2.6) * (cluster % 2 ? 1 : -1);
       const angle = i % 5 / 5 * Math.PI * 2;
@@ -126,15 +166,15 @@ function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyl
       if (ref.current!.instanceColor) ref.current!.instanceColor!.needsUpdate = true;
       ref.current!.computeBoundingSphere();
     });
-  }, [width]);
+  }, [width, stoneCount, grassCount, flowerCount]);
   return <>
-    <instancedMesh name="garden-original-rocks" visible={rockStyle === 'original'} ref={stones} args={[stone, undefined, 260]} castShadow receiveShadow>
+    <instancedMesh name="garden-original-rocks" visible={rockStyle === 'original'} ref={stones} args={[stone, undefined, stoneCount]} count={Math.floor(stoneCount * density)} castShadow={!mobileDevice} receiveShadow>
       <meshStandardMaterial color="#b4b29b" roughness={.95} />
     </instancedMesh>
-    <instancedMesh name="garden-original-grass" visible={plantStyle === 'original'} ref={grasses} args={[blade, undefined, 7000]}>
+    <instancedMesh name="garden-original-grass" visible={plantStyle === 'original'} ref={grasses} args={[blade, undefined, grassCount]} count={Math.floor(grassCount * density)}>
       <meshStandardMaterial color="#6d7954" side={THREE.DoubleSide} roughness={1} />
     </instancedMesh>
-    <instancedMesh name="garden-bank-flowers" ref={flowers} args={[petal, undefined, 1500]}>
+    <instancedMesh name="garden-bank-flowers" ref={flowers} args={[petal, undefined, flowerCount]} count={Math.floor(flowerCount * density)}>
       <meshStandardMaterial side={THREE.DoubleSide} roughness={.8} />
     </instancedMesh>
   </>;
@@ -204,20 +244,22 @@ function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
   </instancedMesh>;
 }
 
-export default function GardenScene({ progress, paused, reduced, onReady, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle }: SceneProps) {
+export default function GardenScene({ progress, paused, reduced, onReady, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, mobileDevice, economy, onSlow }: SceneProps) {
   const { camera, size } = useThree();
+  const [warming, setWarming] = useState(true);
+  const prepared = useCallback(() => setWarming(false), []);
   const mobile = size.width / size.height < .85;
   const bankWidth = mobile ? MOBILE_RIVER_WIDTH : 1;
   const current = useRef(0);
   const target = useMemo(() => new THREE.Vector3(), []);
-  useEffect(() => { onReady(); }, [onReady]);
   useLayoutEffect(() => {
     const lens = camera as THREE.PerspectiveCamera;
     lens.fov = mobile ? GARDEN_CAMERA.mobileFov : GARDEN_CAMERA.fov;
     lens.updateProjectionMatrix();
   }, [camera, mobile]);
   useFrame((_, dt) => {
-    const p = reduced ? 0 : progress;
+    if (warming) return;
+    const p = reduced ? 0 : progress.current;
     if (reduced) current.current = 0;
     else if (!paused) current.current = THREE.MathUtils.damp(current.current, p, 2, Math.min(dt, .05));
     const t = current.current;
@@ -233,16 +275,18 @@ export default function GardenScene({ progress, paused, reduced, onReady, boatLa
     <fog attach="fog" args={[SKY, mobile ? 8 : 16, mobile ? 85 : 110]} />
     <hemisphereLight args={['#fffbee', '#b0b5a0', 1.7]} />
     <directionalLight position={[-18, 24, 9]} intensity={2.3} color="#fff2d6" castShadow
-      shadow-mapSize={[1024, 1024]} shadow-camera-left={-30} shadow-camera-right={30}
+      shadow-mapSize={mobileDevice ? [512, 512] : [1024, 1024]} shadow-camera-left={-30} shadow-camera-right={30}
       shadow-camera-top={35} shadow-camera-bottom={-35} shadow-camera-far={110}
       shadow-bias={-.0003} shadow-normalBias={.07} />
-    <GardenGround width={bankWidth} style={groundStyle} />
-    <GardenTrees width={bankWidth} mobile={mobile} paused={paused || reduced} lightTrees={lightTrees} />
-    <BankDetails width={bankWidth} rockStyle={rockStyle} plantStyle={plantStyle} />
-    <GardenPlants width={bankWidth} mobile={mobile} paused={paused || reduced} visible={plantStyle === 'varied'} />
+    <GardenGround width={bankWidth} style={groundStyle} mobileDevice={mobileDevice} />
+    <GardenTrees width={bankWidth} mobile={mobile} mobileDevice={mobileDevice} paused={paused || reduced || warming} lightTrees={lightTrees} />
+    <BankDetails width={bankWidth} mobileDevice={mobileDevice} economy={economy} rockStyle={rockStyle} plantStyle={plantStyle} />
+    <GardenPlants width={bankWidth} mobile={mobileDevice} paused={paused || reduced || warming} visible={plantStyle === 'varied'} />
     <GardenRocks width={bankWidth} visible={rockStyle === 'moss'} />
-    <Pool paused={paused || reduced} width={bankWidth} launchRequest={boatLaunchRequest} />
-    <Petals paused={paused || reduced} />
-    <FallingLeaves paused={paused || reduced} width={bankWidth} />
+    <Pool paused={paused || reduced || warming} width={bankWidth} launchRequest={boatLaunchRequest} warming={warming} mobileDevice={mobileDevice} />
+    <Petals paused={paused || reduced || warming} />
+    <FallingLeaves paused={paused || reduced || warming} width={bankWidth} />
+    {warming && <GardenPreparation onPrepared={prepared} />}
+    <GardenRenderer warming={warming} mobileDevice={mobileDevice} economy={economy} active={!paused && !reduced} onReady={onReady} onSlow={onSlow} />
   </>;
 }

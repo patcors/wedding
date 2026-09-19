@@ -4,7 +4,7 @@ import { useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { riverCenter, bankEdge, groundHeight, random } from './gardenGeometry';
 
-const BASE = `${import.meta.env.BASE_URL}models/garden/`;
+import { treeModels, treeTextures } from './gardenAssets';
 type Placement = { x: number; z: number; scale: number; rotation: number; type: number; distant: boolean };
 
 function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobile, width }: {
@@ -36,13 +36,11 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
     castShadow={!placements[0]?.distant && (!leaves || !mobile)} receiveShadow />;
 }
 
-export default function GardenTrees({ width, mobile, paused, lightTrees }: {
-  width: number; mobile: boolean; paused: boolean; lightTrees: boolean;
+export default function GardenTrees({ width, mobile, mobileDevice, paused, lightTrees }: {
+  width: number; mobile: boolean; mobileDevice: boolean; paused: boolean; lightTrees: boolean;
 }) {
-  const models = useGLTF(['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb'].map(file => BASE + file));
-  const [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap] = useTexture(
-    ['bark-color.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves.webp',
-      'bark-color-dark.webp', 'ash-leaves-dark.webp'].map(file => BASE + file));
+  const models = useGLTF(treeModels, false);
+  const [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap] = useTexture(treeTextures);
   const windTime = useMemo(() => ({ value: 0 }), []);
   const materials = useMemo(() => {
     for (const texture of [barkColor, darkBarkColor, barkNormal, barkRoughness]) {
@@ -108,20 +106,20 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
       z, scale: scale * (mobile ? .88 : 1), rotation, type: i % 2 + (i >= 4 ? 2 : 0), distant: i >= 4,
     }));
     const rand = random(415);
-    const groves = Array.from({ length: mobile ? 12 : 24 }, (_, i) => ({
+    const groves = Array.from({ length: mobileDevice ? 8 : 24 }, (_, i) => ({
       x: (i % 2 ? 1 : -1) * ((mobile ? 6.5 : 17) + Math.floor(i % 8 / 2) * (mobile ? 3 : 8) + rand() * 2),
       z: -14 - Math.floor(i / 8) * 23 - rand() * 11,
       scale: 1.05 + rand() * .5, rotation: rand() * Math.PI * 2, type: 2 + i % 2, distant: true,
     }));
     return [0, 1, 2, 3].map(type => [...avenue, ...groves].filter(p => p.type === type));
-  }, [width, mobile]);
+  }, [width, mobile, mobileDevice]);
 
   return <group name="ez-tree-grove" dispose={null}>
     {models.map((model, i) => <group key={i}>
       <TreeBatch geometry={(model.nodes.branches as THREE.Mesh).geometry} material={materials.bark}
-        placements={placements[i]} leaves={false} mobile={mobile} width={width} />
+        placements={placements[i]} leaves={false} mobile={mobileDevice} width={width} />
       <TreeBatch geometry={(model.nodes.leaves as THREE.Mesh).geometry} material={materials.leaves}
-        depthMaterial={materials.depth} placements={placements[i]} leaves mobile={mobile} width={width} />
+        depthMaterial={materials.depth} placements={placements[i]} leaves mobile={mobileDevice} width={width} />
     </group>)}
   </group>;
 }

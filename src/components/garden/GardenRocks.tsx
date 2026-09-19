@@ -5,9 +5,14 @@ import { bankEdge, riverCenter, groundHeight, random } from './gardenGeometry';
 
 const ASSETS = `${import.meta.env.BASE_URL}models/garden/ground/`;
 
+const rockModel = `${ASSETS}moss-rocks.glb`;
+const rockTextures = ['color', 'normal', 'arm'].map(map => `${ASSETS}rock_moss_set_01-${map}.webp`);
+useGLTF.preload(rockModel);
+useTexture.preload(rockTextures);
+
 export default function GardenRocks({ width, visible }: { width: number; visible: boolean }) {
-  const { nodes } = useGLTF(`${ASSETS}moss-rocks.glb`);
-  const maps = useTexture(['color', 'normal', 'arm'].map(map => `${ASSETS}rock_moss_set_01-${map}.webp`));
+  const { nodes } = useGLTF(rockModel);
+  const maps = useTexture(rockTextures);
   const meshes = useRef<(THREE.InstancedMesh | null)[]>([]);
   const material = useMemo(() => {
     maps.forEach(map => { map.flipY = false; map.anisotropy = 4; map.needsUpdate = true; });

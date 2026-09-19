@@ -29,8 +29,8 @@ export function groundHeight(x: number, z: number, width = 1) {
     + Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045;
 }
 
-export function bankGeometry(side: number, width = 1) {
-  const geometry = new THREE.PlaneGeometry(54, 140, 90, 180);
+export function bankGeometry(side: number, width = 1, mobileDevice = false) {
+  const geometry = new THREE.PlaneGeometry(54, 140, mobileDevice ? 45 : 90, mobileDevice ? 90 : 180);
   const position = geometry.attributes.position;
   const uv = geometry.attributes.uv;
   const colors = [];

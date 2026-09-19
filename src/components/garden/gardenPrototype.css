@@ -1,21 +1,26 @@
 /* Throwaway visual study; intentionally scoped away from the live invitation. */
-.garden-prototype { --garden-ink: #384135; --garden-muted: #66715e; color: var(--garden-ink); font-family: 'Montserrat', sans-serif; background: #eeeee5; }
+.garden-prototype { --garden-ink: #384135; --garden-muted: #66715e; color: var(--garden-ink); font-family: 'Montserrat Variable', sans-serif; background: #eeeee5; }
 .garden-prototype * { box-sizing: border-box; }
 .garden-prototype button, .garden-prototype a { -webkit-tap-highlight-color: transparent; }
 .garden-prototype button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
 .garden-prototype a { color: inherit; text-decoration: none; }
 .garden-prototype button:focus-visible, .garden-prototype a:focus-visible { outline: 2px solid #6e775c; outline-offset: 7px; }
-.garden-canvas { position: fixed; inset: 0; opacity: 0; transition: opacity 1.5s ease; background: #eeeee5; }
+/* Scenery covers the large viewport, including the space exposed when Safari's
+   bars collapse. Only foreground content is inset around the notch/home area. */
+.garden-canvas, .garden-wash { position: fixed; inset: 0 0 auto; height: 100vh; height: 100lvh; }
+.garden-canvas { opacity: 1; background: #eeeee5; }
 .garden-canvas.is-ready { opacity: 1; }
-.garden-wash { position: fixed; inset: 0; pointer-events: none; background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #eeeee552); }
-.garden-header { position: fixed; inset: 0 0 auto; z-index: 3; padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; }
-.garden-monogram { font-family: 'Cormorant Garamond', Georgia, serif !important; font-size: 28px !important; letter-spacing: -.1em; padding: 0; }
+.garden-wash { pointer-events: none; background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #eeeee552); }
+.garden-header { --header-y: 32px; --header-x: 48px; position: fixed; inset: 0 0 auto; z-index: 3;
+  padding: calc(var(--header-y) + var(--garden-safe-top)) max(var(--header-x), var(--garden-safe-right)) var(--header-y) max(var(--header-x), var(--garden-safe-left));
+  display: flex; align-items: center; justify-content: space-between; }
+.garden-monogram { font-family: 'Cormorant Garamond Variable', Georgia, serif !important; font-size: 28px !important; letter-spacing: -.1em; padding: 0; }
 .garden-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
 .garden-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
 .garden-invitation-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid #73796770; padding-bottom: 8px; }
 .garden-invitation-link span { margin-left: 18px; }
-.garden-panels { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+.garden-panels { position: fixed; inset: var(--garden-safe-top) var(--garden-safe-right) var(--garden-safe-bottom) var(--garden-safe-left); pointer-events: none; z-index: 2; }
 .garden-panel { position: absolute; opacity: 0; visibility: hidden; transform: translateY(15px); transition: opacity .85s ease, transform 1.2s ease, visibility .85s; text-align: center; }
 .garden-panel.is-active { opacity: 1; visibility: visible; transform: translateY(0); }
 .garden-panel a, .garden-panel button { pointer-events: auto; }
@@ -23,9 +28,9 @@
 .garden-arrival::before, .garden-celebrate::before { content: ''; position: absolute; z-index: -1; inset: -18px 17% -12px; pointer-events: none;
   background: radial-gradient(ellipse, #eeeee5e6 12%, #eeeee5ad 40%, #eeeee53d 62%, transparent 76%); }
 .garden-eyebrow { font-size: 9px; font-weight: 400; text-transform: uppercase; letter-spacing: .28em; line-height: 1.8; }
-.garden-arrival h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300; font-size: clamp(66px, 8.8vw, 144px); line-height: 1.1; letter-spacing: -.06em; margin: 20px 0 10px; }
+.garden-arrival h1 { font-family: 'Cormorant Garamond Variable', Georgia, serif; font-weight: 300; font-size: clamp(66px, 8.8vw, 144px); line-height: 1.1; letter-spacing: -.06em; margin: 20px 0 10px; }
 .garden-arrival h1 span { font-size: .6em; font-style: italic; font-weight: 300; color: #7a826d; display: inline-block; margin: 0 .14em; }
-.garden-subtitle { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 25px; font-style: italic; margin: 0; color: #59634f; }
+.garden-subtitle { font-family: 'Cormorant Garamond Variable', Georgia, serif; font-size: 25px; font-style: italic; margin: 0; color: #59634f; }
 .garden-date { margin-top: 33px; display: flex; justify-content: center; align-items: center; gap: 17px; font-size: 9px; text-transform: uppercase; letter-spacing: .23em; }
 .garden-date i { width: 3px; height: 3px; border-radius: 50%; background: #7a826d; }
 .garden-memory { left: 50%; top: 17%; width: 860px; margin-left: -430px; display: flex; align-items: center; gap: 45px; text-align: left; }
@@ -36,29 +41,29 @@
 .garden-photo-slot.is-current { transform: translateX(-50%) rotate(-3deg); opacity: 1; z-index: 2; }
 .garden-photo-slot figure { grid-area: 1 / 1; min-width: 0; margin: 0; opacity: 0; transition: opacity .45s ease; }
 .garden-photo-slot figure.is-visible { opacity: 1; }
-.garden-memory img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
-.garden-memory figcaption { font: italic 17px/1.15 'Cormorant Garamond', Georgia, serif; margin-top: 10px; min-height: 36px; display: grid; place-items: center; text-align: center; }
+.garden-memory img { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
+.garden-memory figcaption { font: italic 17px/1.15 'Cormorant Garamond Variable', Georgia, serif; margin-top: 10px; min-height: 36px; display: grid; place-items: center; text-align: center; }
 .garden-photo-controls { display: flex; justify-content: center; align-items: center; gap: 8px; }
 .garden-photo-controls > button { width: 44px; height: 44px; font-size: 22px; }
 .garden-photo-dots { display: flex; }
 .garden-photo-dots button { display: grid; place-items: center; width: 30px; height: 40px; }
 .garden-photo-dots button span { width: 4px; height: 4px; border-radius: 50%; background: #7a826d; opacity: .4; transition: transform .3s, opacity .3s; }
 .garden-photo-dots button[aria-pressed=true] span { transform: scale(1.5); opacity: 1; }
-.garden-memory .garden-photo-count { font: 9px 'Montserrat', sans-serif !important; text-align: center; letter-spacing: .18em; margin: 2px 0 0 !important; }
+.garden-memory .garden-photo-count { font: 9px 'Montserrat Variable', sans-serif !important; text-align: center; letter-spacing: .18em; margin: 2px 0 0 !important; }
 .garden-photo-count span { opacity: .5; margin-left: 6px; }
 .garden-memory-copy { flex: 1; padding-bottom: 35px; position: relative; isolation: isolate; }
 .garden-memory-copy::before { content: ''; position: absolute; z-index: -1; inset: -30px -45px; background: radial-gradient(ellipse, #eeeee5eb 15%, #eeeee5a8 45%, transparent 72%); pointer-events: none; }
-.garden-panel h2 { font: 400 clamp(48px, 5vw, 76px)/.98 'Cormorant Garamond', Georgia, serif; letter-spacing: -.045em; margin: 24px 0; }
+.garden-panel h2 { font: 400 clamp(48px, 5vw, 76px)/.98 'Cormorant Garamond Variable', Georgia, serif; letter-spacing: -.045em; margin: 24px 0; }
 .garden-panel h2 em { font-weight: 300; }
-.garden-memory p:not(.garden-eyebrow) { font: 20px/1.5 'Cormorant Garamond', Georgia, serif; }
+.garden-memory p:not(.garden-eyebrow) { font: 20px/1.5 'Cormorant Garamond Variable', Georgia, serif; }
 .garden-text-link { padding: 13px 0 !important; font-size: 9px !important; text-transform: uppercase; letter-spacing: .15em; border-bottom: 1px solid #73796770 !important; }
 .garden-text-link span { padding-left: 18px; }
 .garden-celebrate { top: 19%; width: 100%; }
 .garden-celebrate h2 { font-size: clamp(70px, 7vw, 108px); }
-.garden-venue { font: italic 24px 'Cormorant Garamond', Georgia, serif; }
+.garden-venue { font: italic 24px 'Cormorant Garamond Variable', Georgia, serif; }
 .garden-button { display: inline-block; font-size: 10px; letter-spacing: .1em; padding: 18px 25px; background: #414d3d; color: #f6f3e7 !important; margin-top: 18px; }
 .garden-button span { margin-left: 25px; }
-.garden-chapters { position: fixed; right: 42px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 22px; }
+.garden-chapters { position: fixed; right: max(42px, var(--garden-safe-right)); top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 22px; }
 .garden-chapters button { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 24px; }
 .garden-chapter-number { font-size: 8px; opacity: .6; }
 .garden-chapter-line { height: 1px; width: 12px; background: #6f7864; transition: width .6s; }
@@ -66,13 +71,13 @@
 .garden-chapters button:hover .garden-chapter-name { opacity: 1; }
 .garden-chapters button[aria-current] .garden-chapter-line { width: 27px; }
 .garden-chapters button[aria-current] .garden-chapter-number { opacity: 1; }
-.garden-bottom { position: fixed; bottom: 86px; left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; z-index: 3; }
+.garden-bottom { --bottom-gap: 86px; --side-gap: 48px; position: fixed; bottom: calc(var(--bottom-gap) + var(--garden-safe-bottom)); left: max(var(--side-gap), var(--garden-safe-left)); right: max(var(--side-gap), var(--garden-safe-right)); display: flex; justify-content: space-between; align-items: center; z-index: 3; }
 .garden-place { font-size: 8px; letter-spacing: .18em; }
 .garden-boat-launch { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0; }
-.garden-boat-launch span { font: italic 16px 'Cormorant Garamond', Georgia, serif; }
-.garden-scroll-cue { font: italic 20px 'Cormorant Garamond', Georgia, serif !important; }
+.garden-boat-launch span { font: italic 16px 'Cormorant Garamond Variable', Georgia, serif; }
+.garden-scroll-cue { font: italic 20px 'Cormorant Garamond Variable', Georgia, serif !important; }
 .garden-scroll-cue span { margin-left: 13px; font-style: normal; }
-.garden-review { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; gap: 18px; align-items: center; padding: 12px 20px; border: 1px solid #fff9; background: #f7f6eee8; backdrop-filter: blur(16px); box-shadow: 0 4px 24px #3d4e3510; border-radius: 40px; white-space: nowrap; }
+.garden-review { position: fixed; bottom: calc(var(--review-bottom, 20px) + var(--garden-safe-bottom)); left: 50%; transform: translateX(-50%); z-index: 5; display: flex; gap: 18px; align-items: center; padding: 12px 20px; border: 1px solid #fff9; background: #f7f6eee8; backdrop-filter: blur(16px); box-shadow: 0 4px 24px #3d4e3510; border-radius: 40px; white-space: nowrap; }
 .garden-study-label { text-transform: uppercase; font-size: 8px; letter-spacing: .12em; color: #6e7464; }
 .garden-study-label b { margin-left: 5px; font-weight: 500; }
 .garden-review-divider { width: 1px; height: 14px; background: #747d602a; }
@@ -88,7 +93,7 @@
 .garden-fallback { padding: 120px 30px; text-align: center; font-size: 12px; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
 @media (max-width: 700px) {
-  .garden-header { padding: 24px; }
+  .garden-header { --header-y: 24px; --header-x: 24px; }
   .garden-header-date { display: none; }
   .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
@@ -98,17 +103,17 @@
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
   .garden-subtitle { font-size: 22px; }
   .garden-date { font-size: 8px; gap: 12px; margin-top: 26px; }
-  .garden-chapters { right: 4px; gap: 0; }
+  .garden-chapters { right: calc(4px + var(--garden-safe-right)); gap: 0; }
   .garden-chapters button { width: 30px; min-height: 44px; padding: 8px; }
   .garden-chapter-number, .garden-chapter-name { display: none; }
   .garden-chapter-line { width: 7px; }
   .garden-chapters button[aria-current] .garden-chapter-line { width: 15px; }
-  .garden-bottom { left: 24px; right: 24px; bottom: 122px; }
+  .garden-bottom { --side-gap: 24px; --bottom-gap: 122px; }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }
   .garden-scroll-cue { font-size: 18px !important; }
-  .garden-review { bottom: 16px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
+  .garden-review { --review-bottom: 16px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 2 * max(12px, var(--garden-safe-left), var(--garden-safe-right)))); border-radius: 22px; }
   .garden-review > button, .garden-material-selector { grid-column: span 2; }
   .garden-material-selector { flex-direction: column; gap: 0; font-size: 8px; }
   .garden-material-selector select { font-size: 10px; }
@@ -134,7 +139,7 @@
   .garden-memory { top: 11%; gap: 6px; }
   .garden-memory-copy > p:not(.garden-eyebrow) { display: none; }
   .garden-arrival { top: 19%; }
-  .garden-review { bottom: 12px; }
+  .garden-review { --review-bottom: 12px; }
 }
 @media (max-width: 700px) and (max-height: 600px) {
   .garden-memory { top: 8%; }

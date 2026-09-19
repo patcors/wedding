@@ -2,24 +2,28 @@ import { useEffect, useMemo } from 'react';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { bankGeometry } from './gardenGeometry';
+import { groundTextures } from './gardenAssets';
 
 export type GroundStyle = 'original' | 'leafy' | 'meadow';
 export type RockStyle = 'original' | 'moss';
 const BASE = import.meta.env.BASE_URL;
 const ASSETS = `${BASE}models/garden/ground/`;
 
-export default function GardenGround({ width, style }: { width: number; style: GroundStyle }) {
-  const maps = useTexture([
-    ...['color', 'normal', 'roughness'].map(map => `${BASE}textures/garden/ground-${map}.jpg`),
+const textures = [
+    ...groundTextures,
     ...['leafy_grass', 'grass007'].flatMap(name => ['color', 'normal', 'arm'].map(map => `${ASSETS}${name}-${map}.webp`)),
-  ]);
+  ];
+useTexture.preload(textures);
+
+export default function GardenGround({ width, style, mobileDevice }: { width: number; style: GroundStyle; mobileDevice: boolean }) {
+  const maps = useTexture(textures);
   const materials = useMemo(() => {
     return ['original', 'leafy', 'meadow'].map((name, i) => {
       const [color, normal, roughness] = maps.slice(i * 3, i * 3 + 3);
       for (const texture of [color, normal, roughness]) {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.setScalar(i === 0 ? 1 : 8);
-        texture.anisotropy = 4;
+        texture.anisotropy = mobileDevice ? 2 : 4;
       }
       color.colorSpace = THREE.SRGBColorSpace;
       const material = new THREE.MeshStandardMaterial({ name: `garden-ground-${name}`, map: color, normalMap: normal,
@@ -43,8 +47,8 @@ export default function GardenGround({ width, style }: { width: number; style: G
       material.customProgramCacheKey = () => `garden-ground-${i === 0 ? 'original' : 'lush'}-v1`;
       return material;
     });
-  }, [maps]);
-  const geometries = useMemo(() => [bankGeometry(-1, width), bankGeometry(1, width)], [width]);
+  }, [maps, mobileDevice]);
+  const geometries = useMemo(() => [bankGeometry(-1, width, mobileDevice), bankGeometry(1, width, mobileDevice)], [width, mobileDevice]);
   useEffect(() => () => geometries.forEach(g => g.dispose()), [geometries]);
   useEffect(() => () => materials.forEach(m => m.dispose()), [materials]);
   const material = materials[style === 'original' ? 0 : style === 'leafy' ? 1 : 2];

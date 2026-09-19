@@ -1,21 +1,45 @@
 ---
 // Isolated PROTOTYPE route: the agreed reflective garden direction for review.
 import GardenPrototype from '../components/garden/GardenPrototype';
+import '../components/garden/gardenLoader.css';
+import cormorant from '@fontsource-variable/cormorant-garamond/files/cormorant-garamond-latin-wght-normal.woff2?url';
+import cormorantItalic from '@fontsource-variable/cormorant-garamond/files/cormorant-garamond-latin-wght-italic.woff2?url';
+import montserrat from '@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2?url';
+import { groundTextures, waterTexture, treeModels, treeTextures } from '../components/garden/gardenAssets';
 const invitationHref = `${import.meta.env.BASE_URL}invitation/`;
 ---
-<html lang="en">
+<html lang="en" data-garden-state="loading">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="robots" content="noindex,nofollow" />
     <title>Patrick & Amelia — Garden study</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=swap" rel="stylesheet" />
+    {[cormorant, cormorantItalic, montserrat].map(href => <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />)}
+    {[...groundTextures, waterTexture, ...treeTextures].map(href => <link rel="preload" href={href} as="image" crossorigin="anonymous" />)}
+    {treeModels.map(href => <link rel="preload" href={href} as="fetch" crossorigin="anonymous" />)}
+    <style is:inline set:html={`
+      @font-face { font-family: 'Cormorant Garamond Variable'; font-style: normal; font-weight: 300 500; font-display: swap; src: url('${cormorant}') format('woff2'); }
+      @font-face { font-family: 'Cormorant Garamond Variable'; font-style: italic; font-weight: 300 400; font-display: swap; src: url('${cormorantItalic}') format('woff2'); }
+      @font-face { font-family: 'Montserrat Variable'; font-style: normal; font-weight: 400 500; font-display: swap; src: url('${montserrat}') format('woff2'); }
+    `} />
     <style is:global>@view-transition { navigation: auto; } html { background: #eeeee5; } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; } astro-dev-toolbar { display: none; }</style>
   </head>
   <body>
-    <GardenPrototype client:only="react" />
+    <div id="garden-loader" class="garden-loader" aria-busy="true">
+      <div class="garden-loader-mark" aria-hidden="true">P<span>&amp;</span>A</div>
+      <div class="garden-loader-ripple" aria-hidden="true"></div>
+      <p id="garden-loading-status" class="garden-loader-status" role="status">Preparing the garden</p>
+      <a href={invitationHref}>Open your invitation ↗</a>
+      <a class="garden-loader-retry" href={`${import.meta.env.BASE_URL}garden/`}>Try the garden again</a>
+    </div>
+    <div id="garden-experience" inert tabindex="-1"><GardenPrototype client:only="react" /></div>
+    <script>
+      import { initializeGardenLoading } from '../components/garden/gardenLoading';
+      initializeGardenLoading();
+    </script>
+    <noscript><style>html { overflow: auto !important; } #garden-loader, #garden-experience { display: none; }</style></noscript>
     <noscript><main style="padding:20vh 24px;text-align:center;font-family:Georgia,serif;color:#384135"><h1>Patrick &amp; Amelia</h1><p>16 April 2027 · Jasper’s Berry</p><a href={invitationHref}>Open your invitation</a></main></noscript>
   </body>
 </html>
