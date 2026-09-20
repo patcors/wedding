@@ -81,6 +81,14 @@
 .garden-review button { font-size: 9px; padding: 4px 0; }
 .garden-review button[aria-pressed=true] { color: #8b6158; }
 .garden-review button:disabled { cursor: default; opacity: .6; }
+.garden-butterfly-colours { grid-column: span 2; font-size: 9px; }
+.garden-butterfly-colours summary { cursor: pointer; padding: 8px 0; }
+.garden-butterfly-colours summary:focus-visible { outline: 2px solid #6e775c; outline-offset: 4px; }
+.garden-butterfly-palette { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 16px 8px; padding: 20px 12px; box-sizing: border-box; border: 1px solid #fff9; border-radius: 20px; background: #f7f6ee; box-shadow: 0 4px 24px #3d4e3520; }
+.garden-butterfly-palette figure { margin: 0; text-align: center; }
+.garden-butterfly-palette figcaption { white-space: normal; }
+.garden-butterfly-palette figure > div { width: 54px; height: 54px; margin: 0 auto 8px; }
+.garden-butterfly-palette .garden-butterfly-shape { transform: none; }
 .garden-material-selector { display: flex; align-items: center; gap: 5px; font-size: 9px; }
 .garden-material-selector select { min-width: 0; max-width: 100%; padding: 5px 3px; border: 0; border-bottom: 1px solid #747d6040; border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .garden-material-selector select:focus-visible { outline: 2px solid #8b6158; outline-offset: 2px; }

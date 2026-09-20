@@ -5,6 +5,8 @@ import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import GardenScene from './GardenScene';
 import GardenButterfly from './GardenButterfly';
+import ButterflyArtwork from './ButterflyArtwork';
+import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
 import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
@@ -241,6 +243,15 @@ export default function GardenPrototype() {
     <aside className="garden-review" aria-label="Proof of concept controls">
       <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
+      <details className="garden-butterfly-colours">
+        <summary>Butterfly colours</summary>
+        <div className="garden-butterfly-palette" aria-label="Butterfly colour previews">
+          {BUTTERFLY_COLOR_ORDER.map(color => <figure key={color}>
+            <div aria-hidden="true"><ButterflyArtwork color={color} /></div>
+            <figcaption>{BUTTERFLY_COLOR_LABELS[color]}</figcaption>
+          </figure>)}
+        </div>
+      </details>
       <label className="garden-material-selector">Ground
         <select aria-label="Ground material" value={groundStyle} onChange={event => setGroundStyle(event.target.value as GroundStyle)}>
           <option value="original">Original</option><option value="leafy">Leafy</option><option value="meadow">Meadow</option>
