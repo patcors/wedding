@@ -1,0 +1,19 @@
+---
+// One Personal link per Party: patrickandamelia.com/<code>.
+import GardenPage from '../components/garden/GardenPage.astro';
+import { parties, type Party } from '../data/parties';
+
+export function getStaticPaths() {
+  // Codes share the URL space with real pages and public files.
+  const RESERVED = new Set(['details', 'garden', 'info', 'dev', 'photos', 'models', 'textures', 'favicon.svg', 'favicon.ico', 'og.jpg', '_astro', '404']);
+  const seen = new Set<string>();
+  for (const { code } of parties) {
+    if (RESERVED.has(code) || seen.has(code) || !/^[a-z0-9-]+$/.test(code)) throw new Error(`Invite code "${code}" is reserved, repeated or not URL-safe`);
+    seen.add(code);
+  }
+  return parties.map(party => ({ params: { code: party.code }, props: { party } }));
+}
+
+const { party } = Astro.props as { party: Party };
+---
+<GardenPage party={party} />

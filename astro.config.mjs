@@ -1,24 +1,19 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import tailwindcss from '@tailwindcss/vite';
 import react from '@astrojs/react';
 
 // https://astro.build/config
 export default defineConfig({
-  // TODO: replace with your GitHub Pages URL.
-  // For a project page: https://<user>.github.io  + base: '/<repo>/'
-  // For a user/org root page (<user>.github.io repo): leave base undefined.
-  site: 'https://example.github.io',
-  // base: '/wedding/',
+  // Served from the custom domain on GitHub Pages, so there is no base path.
+  // Link previews need this to build absolute image URLs.
+  site: 'https://patrickandamelia.com',
 
   // Astro 7 defaults this to 'jsx', which strips whitespace between inline
-  // elements. Pinned to `true` to preserve the v6 rendering of the existing
-  // invitation pages — safe to drop once you've eyeballed them.
+  // elements (e.g. the "P & A" monogram). `true` keeps it.
   compressHTML: true,
 
-  integrations: [react()],
+  // Old addresses from before the Garden moved to the root.
+  redirects: { '/garden': '/', '/info': '/details' },
 
-  vite: {
-    plugins: [tailwindcss()],
-  },
+  integrations: [react()],
 });

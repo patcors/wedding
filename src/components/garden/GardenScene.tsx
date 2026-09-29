@@ -107,8 +107,8 @@ function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyl
       dummy.rotation.set(rand(), rand() * 6, rand());
       const s = .1 + Math.pow(rand(), 3) * .55;
       dummy.scale.set(s * 1.4, s * .5, s);
-      dummy.updateMatrix(); stones.current!.setMatrixAt(i, dummy.matrix);
-      color.setHSL(.12, .08, .48 + rand() * .2); stones.current!.setColorAt(i, color);
+      dummy.updateMatrix(); stones.current?.setMatrixAt(i, dummy.matrix);
+      color.setHSL(.12, .08, .48 + rand() * .2); stones.current?.setColorAt(i, color);
     }
     for (let i = 0; i < 7000; i++) {
       const cluster = Math.floor(i / 20), r = random(cluster * 91 + 31);
@@ -117,8 +117,8 @@ function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyl
       dummy.position.set(px, groundHeight(px, pz, width) - .02, pz);
       dummy.rotation.set((rand() - .5) * .3, rand() * 6.28, (rand() - .5) * .5);
       dummy.scale.setScalar(.25 + rand() * .48);
-      dummy.updateMatrix(); grasses.current!.setMatrixAt(i, dummy.matrix);
-      color.setHSL(.18 + rand() * .08, .16, .30 + rand() * .20); grasses.current!.setColorAt(i, color);
+      dummy.updateMatrix(); grasses.current?.setMatrixAt(i, dummy.matrix);
+      color.setHSL(.18 + rand() * .08, .16, .30 + rand() * .20); grasses.current?.setColorAt(i, color);
     }
     for (let i = 0; i < 1500; i++) {
       const cluster = Math.floor(i / 5), r = random(cluster * 79 + 16);
@@ -130,18 +130,21 @@ function BankDetails({ width, rockStyle, plantStyle }: { width: number; rockStyl
       color.set(cluster % 3 ? '#ece6cc' : '#d6a6a0'); flowers.current!.setColorAt(i, color);
     }
     [stones, grasses, flowers].forEach(ref => {
-      ref.current!.instanceMatrix.needsUpdate = true;
-      if (ref.current!.instanceColor) ref.current!.instanceColor!.needsUpdate = true;
-      ref.current!.computeBoundingSphere();
+      if (!ref.current) return;
+      ref.current.instanceMatrix.needsUpdate = true;
+      if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true;
+      ref.current.computeBoundingSphere();
     });
-  }, [width]);
+  }, [width, rockStyle, plantStyle]);
   return <>
-    <instancedMesh name="garden-original-rocks" visible={rockStyle === 'original'} ref={stones} args={[stone, undefined, 260]} castShadow receiveShadow>
+    {/* Review-only variants are left out entirely rather than hidden, so
+        guests' phones never build or shadow them. */}
+    {rockStyle === 'original' && <instancedMesh name="garden-original-rocks" ref={stones} args={[stone, undefined, 260]} castShadow receiveShadow>
       <meshStandardMaterial color="#b4b29b" roughness={.95} />
-    </instancedMesh>
-    <instancedMesh name="garden-original-grass" visible={plantStyle === 'original'} ref={grasses} args={[blade, undefined, 7000]}>
+    </instancedMesh>}
+    {plantStyle === 'original' && <instancedMesh name="garden-original-grass" ref={grasses} args={[blade, undefined, 7000]}>
       <meshStandardMaterial color="#6d7954" side={THREE.DoubleSide} roughness={1} />
-    </instancedMesh>
+    </instancedMesh>}
     <instancedMesh name="garden-bank-flowers" ref={flowers} args={[petal, undefined, 1500]}>
       <meshStandardMaterial side={THREE.DoubleSide} roughness={.8} />
     </instancedMesh>
@@ -246,8 +249,8 @@ export default function GardenScene({ progress, paused, reduced, onReady, onErro
     <GardenGround width={bankWidth} style={groundStyle} />
     <GardenTrees width={bankWidth} mobile={mobile} paused={paused || reduced} lightTrees={lightTrees} />
     <BankDetails width={bankWidth} rockStyle={rockStyle} plantStyle={plantStyle} />
-    <GardenPlants width={bankWidth} mobile={mobile} paused={paused || reduced} visible={plantStyle === 'varied'} />
-    <GardenRocks width={bankWidth} visible={rockStyle === 'moss'} />
+    {plantStyle === 'varied' && <GardenPlants width={bankWidth} mobile={mobile} paused={paused || reduced} visible />}
+    {rockStyle === 'moss' && <GardenRocks width={bankWidth} visible />}
     <Pool paused={paused || reduced} width={bankWidth} launchRequest={boatLaunchRequest} />
     <Petals paused={paused || reduced} />
     <FallingLeaves paused={paused || reduced} width={bankWidth} />

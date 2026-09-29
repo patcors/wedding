@@ -1,0 +1,31 @@
+/* Review panel (dev only). Imported from Garden.tsx under import.meta.env.DEV. */
+.garden-review { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; gap: 18px; align-items: center; padding: 12px 20px; border: 1px solid #fff9; background: #f7f6eee8; backdrop-filter: blur(16px); box-shadow: 0 4px 24px #3d4e3510; border-radius: 40px; white-space: nowrap; }
+.garden-study-label { text-transform: uppercase; font-size: 8px; letter-spacing: .12em; color: #6e7464; }
+.garden-study-label b { margin-left: 5px; font-weight: 500; }
+.garden-review-divider { width: 1px; height: 14px; background: #747d602a; }
+.garden-review button { font-size: 9px; padding: 4px 0; }
+.garden-review button[aria-pressed=true] { color: #8b6158; }
+.garden-review button:disabled { cursor: default; opacity: .6; }
+.garden-butterfly-colours { grid-column: span 2; font-size: 9px; }
+.garden-butterfly-colours summary { cursor: pointer; padding: 8px 0; }
+.garden-butterfly-colours summary:focus-visible { outline: 2px solid #6e775c; outline-offset: 4px; }
+.garden-butterfly-palette { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 16px 8px; padding: 20px 12px; box-sizing: border-box; border: 1px solid #fff9; border-radius: 20px; background: #f7f6ee; box-shadow: 0 4px 24px #3d4e3520; }
+.garden-butterfly-palette figure { margin: 0; text-align: center; }
+.garden-butterfly-palette figcaption { white-space: normal; }
+.garden-butterfly-palette figure > div { width: 54px; height: 54px; margin: 0 auto 8px; }
+.garden-butterfly-palette .garden-butterfly-shape { transform: none; }
+.garden-material-selector { display: flex; align-items: center; gap: 5px; font-size: 9px; }
+.garden-material-selector select { min-width: 0; max-width: 100%; padding: 5px 3px; border: 0; border-bottom: 1px solid #747d6040; border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.garden-material-selector select:focus-visible { outline: 2px solid #8b6158; outline-offset: 2px; }
+@media (max-width: 700px) {
+  .garden-review { bottom: 16px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
+  .garden-review > button, .garden-material-selector { grid-column: span 2; }
+  .garden-material-selector { flex-direction: column; gap: 0; font-size: 8px; }
+  .garden-material-selector select { font-size: 10px; }
+  .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
+  .garden-review button { font-size: 8px; min-height: 32px; }
+  .garden-study-label { font-size: 7px; }
+}
+@media (max-width: 700px) and (max-height: 700px) {
+  .garden-review { bottom: 12px; }
+}

@@ -57,6 +57,7 @@ const photos = {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
     <meta name="theme-color" content="#eeeee5" />
     <title>Patrick &amp; Amelia — The details</title>
     <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, the garden, where to stay." />
@@ -67,9 +68,9 @@ const photos = {
   <body>
     <main class="info">
       <header class="info-header">
-        <a class="info-monogram" href={`${BASE}garden`} aria-label="Back to the garden">P<span>&</span>A</a>
+        <a class="info-monogram" href={BASE} aria-label="Back to the garden">P<span>&</span>A</a>
         <span class="info-header-date">16 APRIL 2027</span>
-        <a class="info-rsvp-link" href={`${BASE}invitation/`}>RSVP <span aria-hidden="true">↗</span></a>
+        <a class="info-rsvp-link" href="#rsvp">RSVP <span aria-hidden="true">↗</span></a>
       </header>
 
       <section class="info-hero">
@@ -194,7 +195,6 @@ const photos = {
   html { background: #eeeee5; scroll-behavior: smooth; }
   body { margin: 0; }
   ::selection { background: #b9c2a7; color: #30382e; }
-  astro-dev-toolbar { display: none; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 

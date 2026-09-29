@@ -1,5 +1,5 @@
-// PROTOTYPE: does a bright, reflective garden work as the wedding's opening?
-// One direction requested by the user; review controls expose motion and composition.
+// The Garden: the site's landing experience. The Review panel (dev only)
+// compares visual variants; guests always get the defaults below.
 import { Component, Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -11,7 +11,7 @@ import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflie
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { GARDEN_CAMERA } from './gardenGeometry';
-import './gardenPrototype.css';
+import './garden.css';
 
 const BASE = import.meta.env.BASE_URL;
 function ReleasedButterfly({ visit, paused, available, openingReleased, onRetire }: {
@@ -35,10 +35,13 @@ class CanvasFallback extends Component<{ children: ReactNode; onError: () => voi
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   componentDidCatch() { this.props.onError(); }
-  render() { return this.state.failed ? <p className="garden-fallback">The garden is taking a little rest. Your invitation is below.</p> : this.props.children; }
+  render() { return this.state.failed ? <p className="garden-fallback">The garden is taking a little rest. The details are a tap away.</p> : this.props.children; }
 }
 
-export default function GardenPrototype() {
+const REVIEW = import.meta.env.DEV;
+if (REVIEW) void import('./gardenReview.css');
+
+export default function Garden({ greeting }: { greeting?: string }) {
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -68,7 +71,7 @@ export default function GardenPrototype() {
     const loader = document.querySelector<HTMLElement>('[data-garden-loading]');
     const status = document.getElementById('garden-loading-status');
     document.documentElement.dataset.gardenState = failed ? 'error' : ready ? 'ready' : 'loading';
-    if (status) status.textContent = failed ? 'The garden couldn’t open. Your invitation is ready below.'
+    if (status) status.textContent = failed ? 'The garden couldn’t open. The details are just below.'
       : prepared ? 'The garden is ready. One little moment…' : 'Preparing the garden';
     if (loader) {
       loader.inert = ready && !failed;
@@ -145,14 +148,14 @@ export default function GardenPrototype() {
       <button className="garden-monogram" onClick={() => scrollToChapter(0)} aria-label="Back to the beginning">P<span>&</span>A</button>
       <span className="garden-header-date">16 APRIL 2027</span>
       <div className="garden-header-links">
-        <a className="garden-invitation-link" href={`${BASE}info/`}>The details</a>
-        <a className="garden-invitation-link" href={`${BASE}invitation/`}>Your invitation <span aria-hidden="true">↗</span></a>
+        <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
+        <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
       </div>
     </header>
 
     <div className="garden-panels garden-copy">
       <section className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
-        <p className="garden-eyebrow">Together with our favourite people</p>
+        <p className="garden-eyebrow">{greeting ? `${greeting}, together with our favourite people` : 'Together with our favourite people'}</p>
         <h1><b className="garden-perch">P</b>atrick <span>&</span> <b className="garden-perch">A</b>melia</h1>
         <p className="garden-subtitle">A new chapter, together.</p>
         <div className="garden-date"><span>16 . 04 . 2027</span><i /><span>Jasper’s Berry</span></div>
@@ -210,7 +213,7 @@ export default function GardenPrototype() {
         <h2><b className="garden-perch">M</b>eet us<br /><em>in the garden.</em></h2>
         <p className="garden-venue">Jasper’s Berry · Berry, NSW</p>
         <p className="garden-eyebrow">Friday, 16 April 2027</p>
-        <a className="garden-button" href={`${BASE}invitation/`}>Open your invitation <span aria-hidden="true">↗</span></a>
+        <a className="garden-button" href={`${BASE}details/`}>The details &amp; RSVP <span aria-hidden="true">→</span></a>
       </section>
     </div>
 
@@ -240,7 +243,7 @@ export default function GardenPrototype() {
         {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
       </button>
     </div>
-    <aside className="garden-review" aria-label="Proof of concept controls">
+    {REVIEW && <aside className="garden-review" aria-label="Review panel">
       <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
       <details className="garden-butterfly-colours">
@@ -275,7 +278,7 @@ export default function GardenPrototype() {
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
       <button onClick={() => setSceneOnly(!sceneOnly)} aria-pressed={sceneOnly}>{sceneOnly ? 'Show invitation' : 'Scene only'}</button>
-    </aside>
+    </aside>}
     <div className="garden-scroll-space" />
   </main>;
 }
