@@ -1,0 +1,73 @@
+---
+// Dev-only: every Party's Personal link, for making their digital cards.
+// getStaticPaths returns nothing in a production build, so this page never
+// reaches patrickandamelia.com.
+import QRCode from 'qrcode';
+import { parties } from '../../data/parties';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { page: 'links' } }] : [];
+}
+
+const site = Astro.site!.origin;
+const cards = await Promise.all(parties.map(async party => {
+  const url = `${site}/${party.code}`;
+  const qr = await QRCode.toString(url, { type: 'svg', margin: 1, color: { dark: '#384135', light: '#0000' } });
+  return { ...party, url, qr };
+}));
+const people = parties.reduce((sum, party) => sum + party.guests.length, 0);
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Personal links · dev</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Personal links</h1>
+        <p>{parties.length} parties · {people} guests · dev only, never deployed</p>
+        <button type="button" data-copy-all={cards.map(card => `${card.greeting}\t${card.url}`).join('\n')}>Copy all as TSV</button>
+      </header>
+      <ol>
+        {cards.map(card => <li>
+          <div class="qr" set:html={card.qr} />
+          <div>
+            <h2>{card.greeting}</h2>
+            <p class="guests">{card.guests.join(' · ')}</p>
+            <a href={`/${card.code}/`}>{card.url}</a>
+            <button type="button" data-copy={card.url}>Copy</button>
+          </div>
+        </li>)}
+      </ol>
+    </main>
+    <script>
+      document.addEventListener('click', async event => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-copy], [data-copy-all]');
+        if (!button) return;
+        await navigator.clipboard.writeText(button.dataset.copy ?? button.dataset.copyAll ?? '');
+        const label = button.textContent;
+        button.textContent = 'Copied';
+        setTimeout(() => { button.textContent = label; }, 1200);
+      });
+    </script>
+    <style>
+      body { margin: 0; background: #eeeee5; color: #384135; font: 14px/1.5 system-ui, sans-serif; }
+      main { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+      header { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
+      h1 { margin: 0; font-size: 24px; }
+      header p { margin: 0; color: #66715e; }
+      ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+      li { display: flex; gap: 16px; align-items: center; padding: 14px; background: #f7f3e8; border-radius: 8px; }
+      .qr { width: 96px; flex: none; }
+      .qr :global(svg) { display: block; width: 100%; height: auto; }
+      h2 { margin: 0; font-size: 16px; }
+      .guests { margin: 2px 0 6px; color: #66715e; font-size: 12px; }
+      a { color: inherit; word-break: break-all; font-family: ui-monospace, monospace; font-size: 12px; }
+      button { font: inherit; font-size: 12px; margin-left: 8px; padding: 3px 10px; border: 1px solid #38413540; border-radius: 20px; background: none; cursor: pointer; }
+      header button { margin: 0; }
+    </style>
+  </body>
+</html>

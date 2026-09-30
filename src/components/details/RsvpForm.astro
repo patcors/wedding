@@ -1,0 +1,433 @@
+---
+// The RSVP at the foot of the Details page. The page is the same for everyone,
+// so the Party is read on the client from what their Personal link left in
+// localStorage (pa_party). Without it, this is an Open RSVP and the sender
+// types each person's name. The guest list itself is never shipped here.
+interface Props {
+  replyBy: string;   // e.g. "16 February 2027"
+  busHint: string;   // shown under "Taking the bus?"
+  email: string;     // fallback contact when sending fails
+  phone: string;
+}
+const { replyBy, busHint, email, phone } = Astro.props;
+const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
+---
+<div class="rsvp" data-rsvp data-reply-by={replyBy}>
+  <h2 class="rsvp-heading" tabindex="-1" data-rsvp-heading>We’d love to <em>know you’re coming.</em></h2>
+  <p class="rsvp-subtitle" data-rsvp-subtitle>Please reply by {replyBy}.</p>
+
+  <form class="rsvp-form" data-rsvp-form novalidate hidden>
+    <div class="rsvp-guests" data-rsvp-guests></div>
+    <button type="button" class="rsvp-add" data-rsvp-add hidden><span aria-hidden="true">+</span> Add another person</button>
+
+    <div class="rsvp-party">
+      <label class="rsvp-field">
+        <span class="rsvp-label">Email or mobile</span>
+        <input class="rsvp-input" name="contact" type="text" autocomplete="email" aria-describedby="rsvp-contact-error" data-rsvp-contact />
+      </label>
+      <p class="rsvp-error" id="rsvp-contact-error" hidden></p>
+      <label class="rsvp-field">
+        <span class="rsvp-label">A song to get you dancing <i>optional</i></span>
+        <input class="rsvp-input" name="song" type="text" autocomplete="off" />
+      </label>
+      <label class="rsvp-field">
+        <span class="rsvp-label">A note for us <i>optional</i></span>
+        <textarea class="rsvp-input" name="message" rows="2"></textarea>
+      </label>
+    </div>
+
+    <div class="rsvp-actions">
+      <button type="submit" class="rsvp-button" data-rsvp-submit>Send our reply</button>
+      <p class="rsvp-failure" role="alert" data-rsvp-failure hidden>
+        Something went wrong sending that. Please email <a href={`mailto:${email}`}>{email}</a> or text <a href={phoneHref}>{phone}</a>.
+      </p>
+    </div>
+  </form>
+
+  <div class="rsvp-thanks" data-rsvp-thanks hidden>
+    <ul class="rsvp-summary" data-rsvp-summary></ul>
+    <p class="rsvp-note" data-rsvp-reach></p>
+    <p class="rsvp-note" data-rsvp-song hidden></p>
+    <button type="button" class="rsvp-button rsvp-button-quiet" data-rsvp-change>Change our answer</button>
+  </div>
+
+  <noscript>
+    <p class="rsvp-note">To RSVP, email <a href={`mailto:${email}`}>{email}</a> or text <a href={phoneHref}>{phone}</a>.</p>
+  </noscript>
+
+  <template data-rsvp-guest-template>
+    <div class="rsvp-guest" data-guest>
+      <div class="rsvp-name" data-guest-name-field>
+        <label class="rsvp-field">
+          <span class="rsvp-label">Name</span>
+          <input class="rsvp-input" type="text" autocomplete="off" data-guest-name />
+        </label>
+        <p class="rsvp-error" data-guest-name-error hidden></p>
+        <button type="button" class="rsvp-remove" data-guest-remove hidden>Remove</button>
+      </div>
+      <fieldset class="rsvp-attend" data-guest-attend>
+        <legend class="rsvp-guest-name" data-guest-legend></legend>
+        <div class="rsvp-pills">
+          <label class="rsvp-pill"><input type="radio" value="yes" data-guest-attending /><span>Coming</span></label>
+          <label class="rsvp-pill"><input type="radio" value="no" data-guest-attending /><span>Can’t make it</span></label>
+        </div>
+        <p class="rsvp-error" data-guest-attend-error hidden></p>
+      </fieldset>
+      <div class="rsvp-extras" data-guest-extras hidden>
+        <label class="rsvp-field">
+          <span class="rsvp-label">Dietary needs <i>optional</i></span>
+          <input class="rsvp-input" type="text" autocomplete="off" data-guest-dietary />
+        </label>
+        <fieldset class="rsvp-bus">
+          <legend class="rsvp-label">Taking the bus?</legend>
+          <div class="rsvp-pills rsvp-pills-small">
+            <label class="rsvp-pill"><input type="radio" value="yes" data-guest-bus /><span>Yes</span></label>
+            <label class="rsvp-pill"><input type="radio" value="no" data-guest-bus /><span>No</span></label>
+          </div>
+          <p class="rsvp-hint">{busHint}</p>
+        </fieldset>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script>
+  import {
+    MAX_OPEN_GUESTS, OPEN_PARTY, contactProblem, describeGuest, joinNames, readParty, readSaved, storageKey, toParams,
+    type Answer, type GuestReply, type RememberedParty, type Rsvp,
+  } from './rsvp';
+
+  const ENDPOINT: string = import.meta.env.PUBLIC_RSVP_ENDPOINT ?? '';
+
+  const root = document.querySelector<HTMLElement>('[data-rsvp]')!;
+  const $ = <T extends Element = HTMLElement>(selector: string, scope: ParentNode = root) => scope.querySelector<T>(selector)!;
+
+  const heading = $('[data-rsvp-heading]');
+  const subtitle = $('[data-rsvp-subtitle]');
+  const form = $<HTMLFormElement>('[data-rsvp-form]');
+  const guestList = $('[data-rsvp-guests]');
+  const addButton = $<HTMLButtonElement>('[data-rsvp-add]');
+  const contact = $<HTMLInputElement>('[data-rsvp-contact]');
+  const contactError = $('#rsvp-contact-error');
+  const submit = $<HTMLButtonElement>('[data-rsvp-submit]');
+  const failure = $('[data-rsvp-failure]');
+  const thanks = $('[data-rsvp-thanks]');
+  const template = $<HTMLTemplateElement>('[data-rsvp-guest-template]');
+  const replyBy = root.dataset.replyBy ?? '';
+
+  const party: RememberedParty | null = (() => {
+    try { return readParty(localStorage.getItem('pa_party')); } catch { return null; }
+  })();
+  const key = storageKey(party?.code ?? '');
+  let rowId = 0;
+
+  const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement;
+  const checked = (row: HTMLElement, hook: string) =>
+    (row.querySelector<HTMLInputElement>(`[${hook}]:checked`)?.value ?? '') as Answer | '';
+  const rows = () => [...guestList.querySelectorAll<HTMLElement>('[data-guest]')];
+
+  function setHeading(text: string, emphasis: string) {
+    heading.replaceChildren(`${text} `, Object.assign(document.createElement('em'), { textContent: emphasis }));
+  }
+
+  function showError(el: HTMLElement, message: string | null, control?: HTMLElement) {
+    el.textContent = message ?? '';
+    el.hidden = !message;
+    control?.setAttribute('aria-invalid', String(Boolean(message)));
+  }
+
+  // ---- Guest rows ----------------------------------------------------------
+
+  function addRow(fixedName: string | null, answer?: GuestReply) {
+    const id = `rsvp-g${rowId++}`;
+    const row = (template.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+    const nameField = $('[data-guest-name-field]', row);
+    const nameInput = $<HTMLInputElement>('[data-guest-name]', row);
+    const nameError = $('[data-guest-name-error]', row);
+    const legend = $('[data-guest-legend]', row);
+    const attendError = $('[data-guest-attend-error]', row);
+    const extras = $('[data-guest-extras]', row);
+
+    row.querySelectorAll<HTMLInputElement>('[data-guest-attending]').forEach(r => { r.name = `${id}-attending`; });
+    row.querySelectorAll<HTMLInputElement>('[data-guest-bus]').forEach(r => { r.name = `${id}-bus`; });
+    nameError.id = `${id}-name-error`;
+    nameInput.setAttribute('aria-describedby', nameError.id);
+    attendError.id = `${id}-attend-error`;
+    $('[data-guest-attend]', row).setAttribute('aria-describedby', attendError.id);
+
+    if (fixedName !== null) {
+      row.dataset.name = fixedName;
+      nameField.remove();
+      legend.textContent = fixedName;
+    } else {
+      legend.textContent = 'Coming?';
+      legend.classList.add('rsvp-visually-hidden');
+      if (answer) nameInput.value = answer.name;
+      nameInput.addEventListener('input', () => showError(nameError, null, nameInput));
+      const remove = $<HTMLButtonElement>('[data-guest-remove]', row);
+      remove.addEventListener('click', () => {
+        const index = rows().indexOf(row);
+        row.remove();
+        syncOpenRows();
+        const target = rows()[Math.max(0, index - 1)];
+        $<HTMLInputElement>('[data-guest-name]', target).focus();
+      });
+    }
+
+    if (answer) {
+      row.querySelector<HTMLInputElement>(`[data-guest-attending][value="${answer.attending}"]`)!.checked = true;
+      $<HTMLInputElement>('[data-guest-dietary]', row).value = answer.dietary ?? '';
+      if (answer.bus) row.querySelector<HTMLInputElement>(`[data-guest-bus][value="${answer.bus}"]`)!.checked = true;
+    }
+    extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
+    row.addEventListener('change', event => {
+      if (!(event.target as HTMLElement).matches('[data-guest-attending]')) return;
+      extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
+      showError(attendError, null);
+    });
+
+    guestList.append(row);
+    return row;
+  }
+
+  /** Open RSVP only: the first row stays, the rest can go, and there's a cap. */
+  function syncOpenRows() {
+    const all = rows();
+    all.forEach((row, i) => { $<HTMLButtonElement>('[data-guest-remove]', row).hidden = i === 0; });
+    addButton.hidden = all.length >= MAX_OPEN_GUESTS;
+    submit.textContent = all.length > 1 ? 'Send our reply' : 'Send my reply';
+  }
+
+  addButton.addEventListener('click', () => {
+    const row = addRow(null);
+    syncOpenRows();
+    $<HTMLInputElement>('[data-guest-name]', row).focus();
+  });
+
+  // ---- Reading and checking the form ---------------------------------------
+
+  function collect(): Rsvp {
+    const guests = rows().map((row): GuestReply => {
+      const attending = checked(row, 'data-guest-attending') as Answer;
+      const coming = attending === 'yes';
+      return {
+        name: row.dataset.name ?? $<HTMLInputElement>('[data-guest-name]', row).value.trim(),
+        attending,
+        dietary: coming ? $<HTMLInputElement>('[data-guest-dietary]', row).value.trim() : '',
+        bus: coming ? checked(row, 'data-guest-bus') : '',
+      };
+    });
+    return {
+      submitted_at: new Date().toISOString(),
+      code: party?.code ?? '',
+      party: party?.greeting ?? OPEN_PARTY,
+      contact: contact.value.trim(),
+      song: field('song').value.trim(),
+      message: field('message').value.trim(),
+      guests,
+    };
+  }
+
+  /** Marks every problem and returns the first control to fix, or null if the form is complete. */
+  function validate(): HTMLElement | null {
+    let first: HTMLElement | null = null;
+    const flag = (control: HTMLElement) => { first ??= control; };
+    for (const row of rows()) {
+      let name = row.dataset.name;
+      if (name === undefined) {
+        const input = $<HTMLInputElement>('[data-guest-name]', row);
+        name = input.value.trim();
+        const missing = !name;
+        showError($('[data-guest-name-error]', row), missing ? 'Please add a name.' : null, input);
+        if (missing) flag(input);
+      }
+      const unanswered = !checked(row, 'data-guest-attending');
+      const who = name || 'this person';
+      showError($('[data-guest-attend-error]', row), unanswered ? `Let us know if ${who} can make it.` : null);
+      if (unanswered) flag($('[data-guest-attending]', row));
+    }
+    const problem = contactProblem(contact.value);
+    showError(contactError, problem, contact);
+    if (problem) flag(contact);
+    return first;
+  }
+
+  contact.addEventListener('input', () => showError(contactError, null, contact));
+
+  // ---- Sending --------------------------------------------------------------
+
+  async function send(rsvp: Rsvp) {
+    if (!ENDPOINT) {
+      if (!import.meta.env.DEV) throw new Error('PUBLIC_RSVP_ENDPOINT was empty at build time');
+      console.info('[rsvp] No PUBLIC_RSVP_ENDPOINT set; this would have been sent:', rsvp);
+      await new Promise(resolve => setTimeout(resolve, 700));
+      return;
+    }
+    // Apps Script doesn't send CORS headers, so the response is opaque:
+    // fetch resolving is the only success signal there is.
+    await fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', body: toParams(rsvp) });
+  }
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    failure.hidden = true;
+    const invalid = validate();
+    if (invalid) { invalid.focus(); return; }
+
+    const rsvp = collect();
+    const label = submit.textContent;
+    submit.disabled = true;
+    submit.textContent = 'Sending…';
+    try {
+      await send(rsvp);
+    } catch (error) {
+      console.error('[rsvp] Sending failed', error);
+      failure.hidden = false;
+      return;
+    } finally {
+      submit.disabled = false;
+      submit.textContent = label;
+    }
+    try { localStorage.setItem(key, JSON.stringify(rsvp)); } catch {}
+    showThanks(rsvp, true);
+  });
+
+  // ---- The two states -------------------------------------------------------
+
+  function showForm(previous: Rsvp | null) {
+    guestList.replaceChildren();
+    if (party) {
+      party.guests.forEach((name, i) => {
+        const answer = previous?.guests.find(g => g.name === name) ?? previous?.guests[i];
+        addRow(name, answer && { ...answer, name });
+      });
+      submit.textContent = party.guests.length > 1 ? 'Send our reply' : 'Send my reply';
+      setHeading(`${party.greeting}, we’d love to`, 'know you’re coming.');
+    } else {
+      (previous?.guests.length ? previous.guests.slice(0, MAX_OPEN_GUESTS) : [undefined]).forEach(g => addRow(null, g));
+      syncOpenRows();
+      setHeading('We’d love to', 'know you’re coming.');
+    }
+    contact.value = previous?.contact ?? '';
+    field('song').value = previous?.song ?? '';
+    field('message').value = previous?.message ?? '';
+    subtitle.textContent = `Please reply by ${replyBy}.`;
+    thanks.hidden = true;
+    form.hidden = false;
+  }
+
+  function showThanks(rsvp: Rsvp, justSent: boolean) {
+    const names = party?.greeting || joinNames(rsvp.guests.map(g => g.name));
+    const anyoneComing = rsvp.guests.some(g => g.attending === 'yes');
+    setHeading(`Thank you, ${names}.`, anyoneComing ? 'See you in the garden.' : 'We’ll miss you.');
+    subtitle.textContent = 'Here’s what you told us.';
+    $('[data-rsvp-summary]').replaceChildren(...rsvp.guests.map(guest => {
+      const item = document.createElement('li');
+      const [who, ...rest] = describeGuest(guest).split(': ');
+      item.append(Object.assign(document.createElement('strong'), { textContent: `${who}:` }), ` ${rest.join(': ')}`);
+      return item;
+    }));
+    $('[data-rsvp-reach]').textContent = `We’ll reach you at ${rsvp.contact}. You can change your answer any time before ${replyBy}.`;
+    const song = $('[data-rsvp-song]');
+    song.hidden = !rsvp.song;
+    song.textContent = rsvp.song ? `Your song request: ${rsvp.song}.` : '';
+    $('[data-rsvp-change]').textContent = rsvp.guests.length > 1 ? 'Change our answer' : 'Change my answer';
+    form.hidden = true;
+    thanks.hidden = false;
+    if (justSent) {
+      heading.focus({ preventScroll: true });
+      root.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
+  }
+
+  $('[data-rsvp-change]').addEventListener('click', () => {
+    let saved: Rsvp | null = null;
+    try { saved = readSaved(localStorage.getItem(key)); } catch {}
+    showForm(saved);
+    root.scrollIntoView({ block: 'start' });
+    rows()[0]?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
+  });
+
+  let saved: Rsvp | null = null;
+  try { saved = readSaved(localStorage.getItem(key)); } catch {}
+  if (saved) showThanks(saved, false);
+  else showForm(null);
+</script>
+
+<style>
+  .rsvp { scroll-margin-top: 90px; }
+  .rsvp [hidden] { display: none !important; }
+  .rsvp a { color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; }
+  .rsvp a:focus-visible { outline: 2px solid #6e775c; outline-offset: 4px; }
+
+  .rsvp-heading { font: 400 clamp(42px, 4.4vw, 66px)/1 'Cormorant Garamond', Georgia, serif; letter-spacing: -.045em; margin: 22px 0 18px; }
+  /* The script builds these children, so they carry no scope attribute. */
+  .rsvp-heading :global(em) { font-weight: 300; color: #59634f; }
+  .rsvp-heading:focus { outline: none; }
+  .rsvp-subtitle { font: italic 23px 'Cormorant Garamond', Georgia, serif; color: #59634f; margin: 0; }
+
+  .rsvp-form, .rsvp-thanks { max-width: 520px; margin: 44px auto 0; text-align: left; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  legend { padding: 0; }
+  .rsvp-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .rsvp-guests { border-bottom: 1px solid #7379672e; }
+  .rsvp-guest { position: relative; padding: 28px 0 30px; border-top: 1px solid #7379672e; }
+  .rsvp-guest-name { font: 500 27px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin-bottom: 14px; }
+  .rsvp-name { margin-bottom: 18px; }
+  .rsvp-name .rsvp-field { margin-top: 0; }
+  .rsvp-remove { position: absolute; top: 28px; right: 0; background: none; border: 0; border-bottom: 1px solid #73796770; padding: 2px 0 6px;
+    font: 500 9px 'Montserrat', sans-serif; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+
+  .rsvp-pills { display: flex; gap: 10px; }
+  .rsvp-pill { position: relative; flex: 1; }
+  .rsvp-pills-small .rsvp-pill { flex: 0 0 96px; }
+  .rsvp-pill input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+  .rsvp-pill span { display: block; text-align: center; font: 500 10px 'Montserrat', sans-serif; letter-spacing: .1em; text-transform: uppercase;
+    padding: 16px 12px; border: 1px solid #7379677a; color: var(--ink); transition: background-color .2s, color .2s, border-color .2s; }
+  .rsvp-pill input:checked + span { background: var(--deep); border-color: var(--deep); color: #f6f3e7; }
+  .rsvp-pill input:focus-visible + span { outline: 2px solid #6e775c; outline-offset: 3px; }
+  @media (hover: hover) { .rsvp-pill input:not(:checked):hover + span { border-color: var(--deep); } }
+
+  .rsvp-extras { margin-top: 6px; padding-left: 20px; border-left: 1px solid #7a826d66; }
+  .rsvp-bus { margin-top: 24px; }
+  .rsvp-bus legend { margin-bottom: 12px; }
+
+  .rsvp-field { display: block; margin-top: 24px; }
+  .rsvp-label { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .22em; line-height: 1.8; color: var(--muted); }
+  .rsvp-label i { font-style: normal; letter-spacing: .12em; margin-left: 6px; opacity: .65; }
+  .rsvp-input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px 0 8px; border: 0; border-bottom: 1px solid #7379677a;
+    border-radius: 0; background: transparent; color: var(--ink); font: 21px/1.35 'Cormorant Garamond', Georgia, serif; }
+  textarea.rsvp-input { resize: vertical; min-height: 64px; }
+  .rsvp-input:focus { outline: none; border-bottom-color: var(--deep); box-shadow: 0 1px 0 var(--deep); }
+  .rsvp-input[aria-invalid='true'] { border-bottom-color: #8b6158; }
+
+  .rsvp-error, .rsvp-hint, .rsvp-failure, .rsvp-note { font: italic 17px/1.4 'Cormorant Garamond', Georgia, serif; margin: 8px 0 0; }
+  .rsvp-error, .rsvp-failure { color: #8b6158; }
+  .rsvp-hint { color: var(--muted); font-size: 16px; }
+  .rsvp-note { color: #59634f; font-size: 19px; margin-top: 18px; }
+
+  .rsvp-add { margin-top: 24px; background: none; border: 0; border-bottom: 1px solid #73796770; padding: 4px 0 10px; cursor: pointer;
+    font: 500 9px 'Montserrat', sans-serif; letter-spacing: .15em; text-transform: uppercase; color: var(--ink); }
+  .rsvp-add span { margin-right: 8px; }
+  .rsvp-party { margin-top: 12px; }
+
+  .rsvp-actions { margin-top: 38px; text-align: center; }
+  .rsvp-button { display: inline-block; font: 500 10px 'Montserrat', sans-serif; letter-spacing: .1em; padding: 18px 30px; min-width: 210px;
+    background: var(--deep); color: #f6f3e7; border: 1px solid var(--deep); cursor: pointer; }
+  .rsvp-button:disabled { opacity: .6; cursor: progress; }
+  .rsvp-button-quiet { background: transparent; color: var(--ink); margin-top: 30px; }
+  .rsvp-button:focus-visible, .rsvp-add:focus-visible, .rsvp-remove:focus-visible { outline: 2px solid #6e775c; outline-offset: 5px; }
+  .rsvp-failure { margin-top: 16px; }
+
+  .rsvp-thanks { text-align: center; }
+  .rsvp-summary { list-style: none; margin: 0; padding: 0; text-align: left; border-bottom: 1px solid #7379672e; }
+  .rsvp-summary :global(li) { font: 21px/1.45 'Cormorant Garamond', Georgia, serif; padding: 16px 0; border-top: 1px solid #7379672e; }
+  .rsvp-summary :global(strong) { font-weight: 500; }
+
+  @media (max-width: 600px) {
+    .rsvp-form, .rsvp-thanks { margin-top: 36px; }
+    .rsvp-button { width: 100%; }
+    .rsvp-extras { padding-left: 16px; }
+  }
+</style>
