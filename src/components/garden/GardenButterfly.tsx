@@ -13,8 +13,8 @@ const curve = (a: Point, b: Point, c: Point, d: Point, t: number): Point => {
     y: u ** 3 * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t ** 3 * d.y };
 };
 
-export default function GardenButterfly({ paused, perch, landingAngle, color, startPerched, openingReleased, available, onComplete }: {
-  paused: boolean; perch: ButterflyPerch; landingAngle: number; color: ButterflyColor; startPerched: boolean; openingReleased: boolean; available: boolean; onComplete: () => void;
+export default function GardenButterfly({ paused, perch, landingAngle, color, opening, openingReleased, available, onLand, onComplete }: {
+  paused: boolean; perch: ButterflyPerch; landingAngle: number; color: ButterflyColor; opening: boolean; openingReleased: boolean; available: boolean; onLand: () => void; onComplete: () => void;
 }) {
   const sprite = useRef<HTMLDivElement>(null);
   const settings = useRef({ paused, available, openingReleased });
@@ -24,21 +24,14 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, st
     if (!element) return;
     const seed = (landingAngle + 90) * .071;
     let frame = 0, previous = 0, elapsed = 0, time = 0, wingTime = seed;
-    let phase: 'waiting' | 'arriving' | 'perched' | 'leaving' = startPerched ? 'perched' : 'waiting';
-    // The opening flock waits for the shared loading-screen release signal.
+    let phase: 'waiting' | 'arriving' | 'perched' | 'leaving' = 'waiting';
+    // The opening flock arrives quickly and in a loose stream, then waits on the
+    // letters for the shared release signal after the garden appears.
     const rest = 3.5 + Math.random() * 2.5;
-    const arrivalDuration = 4.2;
-    let position: Point = startPerched ? { x: perch.x, y: perch.y } : { x: -80, y: 100 }, start = position, destination = position;
-    let side = Math.random() > .5 ? 1 : -1, bank = startPerched ? landingAngle : 0;
-    if (startPerched) {
-      // Paint on the letters immediately, even while the garden is loading.
-      element.dataset.phase = 'perched';
-      element.style.opacity = '1';
-      element.style.transform = `translate3d(${perch.x}px, ${perch.y}px, 0)`;
-      element.style.setProperty('--butterfly-bank', `${bank}deg`);
-      element.style.setProperty('--butterfly-left-fold', '53deg');
-      element.style.setProperty('--butterfly-right-fold', '53deg');
-    }
+    const delay = opening ? Math.random() * .6 : 0;
+    const arrivalDuration = opening ? 1.5 + Math.random() * .6 : 4.2, settle = Math.min(1, arrivalDuration * .35);
+    let position: Point = { x: -80, y: 100 }, start = position, destination = position;
+    let side = Math.random() > .5 ? 1 : -1, bank = 0;
     const depart = () => {
       phase = 'leaving'; elapsed = 0; start = position;
       destination = { x: side > 0 ? innerWidth + 90 : -90, y: innerHeight * (.1 + Math.random() * .18) };
@@ -58,6 +51,7 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, st
       time += dt;
       const motion = butterflyMotion(time, seed, wingTime);
       if (phase === 'waiting') {
+        if (elapsed < delay) return;
         side = Math.random() > .5 ? 1 : -1;
         start = { x: side > 0 ? -90 : innerWidth + 90, y: innerHeight * (.12 + Math.random() * .2) };
         destination = { x: perch.x, y: perch.y };
@@ -80,10 +74,11 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, st
         position.y += motion.y * Math.sin(Math.PI * t);
         if (t === 1) {
           phase = 'perched'; elapsed = 0;
+          if (opening) onLand();
         }
       } else if (phase === 'perched') {
         position = destination;
-        if (startPerched ? settings.current.openingReleased : elapsed >= rest) depart();
+        if (opening ? settings.current.openingReleased : elapsed >= rest) depart();
       } else if (phase === 'leaving') {
         const t = Math.min(1, elapsed / 5);
         position = curve(start, { x: start.x + side * 100, y: start.y - 150 },
@@ -98,7 +93,7 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, st
         }
       }
       const resting = phase === 'perched';
-      const landing = resting ? 1 : phase === 'arriving' ? Math.max(0, (elapsed - arrivalDuration + 1) / 1) : 0;
+      const landing = resting ? 1 : phase === 'arriving' ? Math.max(0, (elapsed - arrivalDuration + settle) / settle) : 0;
       const flight = phase === 'leaving' ? Math.min(1, elapsed / .55) : 1 - Math.min(1, landing);
       // Wingbeats settle sooner than the body, without extending the approach.
       wingTime += dt * mix(1.6, motion.rate * Math.PI * 2, flight ** 2);
@@ -119,7 +114,7 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, st
     };
     frame = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(frame); element.style.opacity = '0'; };
-  }, [perch, landingAngle, startPerched, onComplete]);
+  }, [perch, landingAngle, opening, onLand, onComplete]);
 
   return <div className="garden-butterfly-layer" aria-hidden="true">
     <div ref={sprite} className="garden-butterfly" data-perch={perch.key} data-color={color}>

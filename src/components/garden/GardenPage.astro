@@ -1,15 +1,14 @@
 ---
 // The page around the Garden, shared by the generic landing page and every
 // Party's Personal link. A Party page greets them and remembers them so the
-// Details page can show their RSVP.
+// Details page can show their RSVP. The Garden renders here on the server, so
+// its opening text and cover paint before any script arrives.
 import Garden from './Garden';
-import './gardenLoader.css';
 import type { Party } from '../../data/parties';
 
 interface Props { party?: Party }
 const { party } = Astro.props;
 const BASE = import.meta.env.BASE_URL;
-const detailsHref = `${BASE}details/`;
 const title = party ? `${party.greeting}, you're invited` : 'Patrick & Amelia';
 const description = 'Patrick & Amelia · Friday 16 April 2027 · Jasper’s Berry';
 const image = new URL(`${BASE}og.jpg`, Astro.site).href;
@@ -34,22 +33,14 @@ const remembered = party && { code: party.code, greeting: party.greeting, guests
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=block" rel="stylesheet" />
     <style is:global>@view-transition { navigation: auto; } html { background: #eeeee5; } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; }</style>
     {remembered && <script is:inline define:vars={{ remembered }}>
       try { localStorage.setItem('pa_party', JSON.stringify(remembered)); } catch {}
     </script>}
   </head>
   <body>
-    <div class="garden-loader" data-garden-loading aria-busy="true">
-      <div class="garden-loader-message">
-        <div class="garden-loader-pulse" aria-hidden="true"></div>
-        <p id="garden-loading-status" role="status">Preparing the garden</p>
-        <a href={detailsHref}>Skip to the details →</a>
-      </div>
-    </div>
-    <Garden client:only="react" greeting={party?.greeting} />
-    <noscript><style>html { overflow: auto !important; } .garden-loader { display: none; }</style></noscript>
-    <noscript><main style="padding:20vh 24px;text-align:center;font-family:Georgia,serif;color:#384135"><h1>Patrick &amp; Amelia</h1><p>16 April 2027 · Jasper’s Berry</p><a href={detailsHref}>See the details</a></main></noscript>
+    <Garden client:load greeting={party?.greeting} />
+    <noscript><style>.garden-arrival-actions .garden-details-fallback { opacity: 1; visibility: visible; }</style></noscript>
   </body>
 </html>

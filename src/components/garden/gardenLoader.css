@@ -1,11 +1,19 @@
-html[data-garden-state='loading'] { overflow: hidden; }
-.garden-loader { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: #e3e7dc; color: #384135; opacity: 1; visibility: visible; transition: opacity .65s ease, visibility .65s; }
-.garden-loader-message { position: absolute; bottom: 18%; left: 24px; right: 24px; text-align: center; font: 10px/1.8 'Montserrat', sans-serif; letter-spacing: .08em; }
-.garden-loader-message p { margin: 12px 0; }
-.garden-loader-message a { color: inherit; text-decoration: none; border-bottom: 1px solid #73796770; padding: 8px 0; }
-.garden-loader-pulse { width: 36px; height: 2px; margin: auto; background: #7d9270; animation: garden-loading-pulse 1.5s ease-in-out infinite alternate; }
-@keyframes garden-loading-pulse { to { transform: scaleX(.35); opacity: .35; } }
-html[data-garden-state='ready'] .garden-loader { opacity: 0; visibility: hidden; pointer-events: none; }
-html[data-garden-state='error'] .garden-loader-pulse { display: none; }
-html[data-garden-state='error'] .garden-canvas { opacity: 0; }
-@media (prefers-reduced-motion: reduce) { .garden-loader { transition: none; } .garden-loader-pulse { animation: none; } }
+/* The cover: a plain field beneath the opening text and butterflies while the
+   scene loads. It fades to reveal the garden without moving the text. */
+html { scrollbar-gutter: stable; }
+html[data-garden-state='loading'], html[data-garden-state='error'] { overflow: hidden; }
+.garden-cover { position: fixed; inset: 0; z-index: 1; background: radial-gradient(ellipse 90% 70% at 50% 36%, #eeeee5 30%, #e4e7dc); transition: opacity .9s ease, visibility .9s; }
+.garden-prototype[data-state='ready'] .garden-cover { opacity: 0; visibility: hidden; }
+.garden-prototype[data-state='error'] .garden-canvas { opacity: 0; }
+.garden-chrome { transition: opacity .9s ease; }
+.garden-prototype:not([data-state='ready']) .garden-chrome { opacity: 0; }
+.garden-arrival-actions { position: absolute; top: 100%; left: 0; right: 0; margin-top: 26px; display: grid; place-items: start center; }
+.garden-arrival-actions a { grid-area: 1 / 1; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility .6s; }
+.garden-arrival-actions a.is-visible { opacity: 1; visibility: visible; }
+.garden-skip { font-size: 9px; text-transform: uppercase; letter-spacing: .15em; padding: 13px 0; border-bottom: 1px solid #73796770; }
+.garden-skip span { padding-left: 14px; }
+.garden-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Opacity alone is not motion: keep the crossfade when motion is reduced. */
+@media (prefers-reduced-motion: reduce) {
+  .garden-prototype .garden-cover, .garden-prototype .garden-chrome, .garden-prototype .garden-arrival-actions a { transition: opacity .9s ease, visibility .9s !important; }
+}

@@ -1,25 +1,25 @@
 // The Garden: the site's landing experience. The Review panel (dev only)
-// compares visual variants; guests always get the defaults below.
-import { Component, Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
-import { Canvas } from '@react-three/fiber';
-import * as THREE from 'three';
-import GardenScene from './GardenScene';
+// compares visual variants; guests always get the defaults below. The page
+// renders on the server so the opening text is in the HTML before any script;
+// three.js arrives later in its own chunk, behind the cover.
+import { Component, lazy, useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
 import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
-import { GARDEN_CAMERA } from './gardenGeometry';
 import './garden.css';
+import './gardenLoader.css';
 
+const GardenCanvas = lazy(() => import('./GardenCanvas'));
 const BASE = import.meta.env.BASE_URL;
-function ReleasedButterfly({ visit, paused, available, openingReleased, onRetire }: {
-  visit: ButterflyVisit; paused: boolean; available: boolean; openingReleased: boolean; onRetire: (id: number) => void;
+function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, onRetire }: {
+  visit: ButterflyVisit; paused: boolean; available: boolean; openingReleased: boolean; onLand: () => void; onRetire: (id: number) => void;
 }) {
   const onComplete = useCallback(() => onRetire(visit.id), [visit.id, onRetire]);
   return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle} color={visit.color}
-    startPerched={visit.startPerched} openingReleased={openingReleased} available={available} onComplete={onComplete} />;
+    opening={visit.opening} openingReleased={openingReleased} available={available} onLand={onLand} onComplete={onComplete} />;
 }
 
 const MEMORY_START = .20, MEMORY_END = .82;
@@ -35,8 +35,12 @@ class CanvasFallback extends Component<{ children: ReactNode; onError: () => voi
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   componentDidCatch() { this.props.onError(); }
-  render() { return this.state.failed ? <p className="garden-fallback">The garden is taking a little rest. The details are a tap away.</p> : this.props.children; }
+  // The cover stays up and offers the details instead.
+  render() { return this.state.failed ? null : this.props.children; }
 }
+
+// Guests with slow connections are offered the details after this long.
+const SKIP_AFTER = 10000;
 
 const REVIEW = import.meta.env.DEV;
 if (REVIEW) void import('./gardenReview.css');
@@ -54,43 +58,51 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [openingReleased, setOpeningReleased] = useState(false);
   const [prepared, setPrepared] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [slow, setSlow] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const cover = useRef<HTMLDivElement>(null);
   const onReady = useCallback(() => setPrepared(true), []);
   const onError = useCallback(() => setFailed(true), []);
+  useEffect(() => {
+    // A restored scroll position would open on a later chapter under the cover.
+    history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+    setMounted(true);
+    // Dev only: ?slow=8000 holds the cover for 8s from navigation, ?fail fails WebGL.
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has('fail')) setFailed(true);
+  }, []);
+  useEffect(() => {
+    if (ready || failed) return;
+    const timer = setTimeout(() => setSlow(true), SKIP_AFTER - performance.now());
+    return () => clearTimeout(timer);
+  }, [ready, failed]);
   useEffect(() => {
     if (!prepared || failed) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const hold = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('slow')) || 0 : 0;
     void document.fonts.ready.then(() => {
-      if (!cancelled) timer = setTimeout(() => setReady(true), 3000);
+      // A short settle lets texture uploads finish before the cover fades.
+      if (!cancelled) timer = setTimeout(() => setReady(true), Math.max(300, hold - performance.now()));
     });
     return () => { cancelled = true; clearTimeout(timer); };
   }, [prepared, failed]);
   useEffect(() => {
-    const loader = document.querySelector<HTMLElement>('[data-garden-loading]');
-    const status = document.getElementById('garden-loading-status');
     document.documentElement.dataset.gardenState = failed ? 'error' : ready ? 'ready' : 'loading';
-    if (status) status.textContent = failed ? 'The garden couldn’t open. The details are just below.'
-      : prepared ? 'The garden is ready. One little moment…' : 'Preparing the garden';
-    if (loader) {
-      loader.inert = ready && !failed;
-      loader.setAttribute('aria-hidden', String(ready && !failed));
-      loader.setAttribute('aria-busy', String(!ready && !failed));
-    }
-  }, [ready, prepared, failed]);
+  }, [ready, failed]);
   useEffect(() => {
     if (!ready || failed) return;
-    const loader = document.querySelector<HTMLElement>('[data-garden-loading]');
     let frame: number;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const waitForReveal = () => {
       // Start the perch time after the cover's fade, including reduced-motion styles.
-      if (loader && getComputedStyle(loader).visibility !== 'hidden') {
+      if (cover.current && getComputedStyle(cover.current).visibility !== 'hidden') {
         frame = requestAnimationFrame(waitForReveal);
         return;
       }
-      timer = setTimeout(() => setOpeningReleased(true), 1500);
+      timer = setTimeout(() => setOpeningReleased(true), 1200);
     };
     frame = requestAnimationFrame(waitForReveal);
     return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
@@ -130,21 +142,21 @@ export default function Garden({ greeting }: { greeting?: string }) {
     if (chapter === 1 && memoryIndex < memories.length - 1) scrollToMemory(memoryIndex + 1);
     else scrollToChapter(chapter === 2 ? 0 : chapter + 1);
   };
-  return <main className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} inert={!ready || failed} aria-busy={!ready && !failed}>
+  const state = failed ? 'error' : ready ? 'ready' : 'loading';
+  return <main className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
     <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
       <CanvasFallback onError={onError}>
-        <Canvas shadows style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={paused || reduced ? 'demand' : 'always'} dpr={[1, 1.25]} camera={{ position: [0, GARDEN_CAMERA.height, GARDEN_CAMERA.startZ], fov: GARDEN_CAMERA.fov, near: .2, far: 220 }}
-          gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}>
-          <Suspense fallback={null}>
-            <GardenScene progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} />
-          </Suspense>
-        </Canvas>
+        {mounted && !failed && <GardenCanvas frameloop={!ready ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} />}
       </CanvasFallback>
     </div>
     <div className="garden-wash" aria-hidden="true" />
-    {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused || !prepared || failed}
-      openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onRetire={butterflies.retire} />)}
-    <header className="garden-header garden-copy">
+    {/* Beneath the opening text and butterflies, which stay put as it fades. */}
+    <div ref={cover} className="garden-cover" inert={state === 'ready'}>
+      <p className="garden-visually-hidden" role="status">{failed ? 'The garden couldn’t open. The details are just below.' : ready ? '' : 'Preparing the garden'}</p>
+    </div>
+    {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
+      openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
+    <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
       <button className="garden-monogram" onClick={() => scrollToChapter(0)} aria-label="Back to the beginning">P<span>&</span>A</button>
       <span className="garden-header-date">16 APRIL 2027</span>
       <div className="garden-header-links">
@@ -159,6 +171,11 @@ export default function Garden({ greeting }: { greeting?: string }) {
         <h1><b className="garden-perch">P</b>atrick <span>&</span> <b className="garden-perch">A</b>melia</h1>
         <p className="garden-subtitle">A new chapter, together.</p>
         <div className="garden-date"><span>16 . 04 . 2027</span><i /><span>Jasper’s Berry</span></div>
+        {/* Out of flow, so neither link can move the text above. */}
+        <div className="garden-arrival-actions">
+          <a className={`garden-skip ${slow && state === 'loading' ? 'is-visible' : ''}`} href={`${BASE}details/`}>Skip to the details <span aria-hidden="true">→</span></a>
+          <a className={`garden-button garden-details-fallback ${failed ? 'is-visible' : ''}`} href={`${BASE}details/`}>See the details <span aria-hidden="true">→</span></a>
+        </div>
       </section>
 
       <section className={`garden-panel garden-memory ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
@@ -184,7 +201,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
               {memories.map((memory, i) => {
                 const visible = i === (memoryIndex + offset + memories.length) % memories.length;
                 return <figure key={memory.file} className={visible ? 'is-visible' : ''} aria-hidden={offset !== 0 || !visible}>
-                  <img src={`${BASE}photos/${memory.file}`} alt={offset === 0 && visible ? memory.alt : ''} decoding="async" draggable={false} />
+                  <img src={ready ? `${BASE}photos/${memory.file}` : undefined} alt={offset === 0 && visible ? memory.alt : ''} decoding="async" draggable={false} />
                   <figcaption>{memory.caption}</figcaption>
                 </figure>;
               })}
@@ -217,13 +234,13 @@ export default function Garden({ greeting }: { greeting?: string }) {
       </section>
     </div>
 
-    <nav className="garden-chapters garden-copy" aria-label="Garden chapters">
+    <nav className="garden-chapters garden-copy garden-chrome" aria-label="Garden chapters" inert={state !== 'ready'}>
       {['The beginning', 'Our story', 'The celebration'].map((name, i) => <button key={name}
         onClick={() => scrollToChapter(i)} aria-label={name} aria-current={chapter === i ? 'step' : undefined}>
         <span className="garden-chapter-number">0{i + 1}</span><span className="garden-chapter-line" /><span className="garden-chapter-name">{name}</span>
       </button>)}
     </nav>
-    <div className="garden-bottom garden-copy">
+    <div className="garden-bottom garden-copy garden-chrome" inert={state !== 'ready'}>
       <div className="garden-creature-actions">
       <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
         <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">

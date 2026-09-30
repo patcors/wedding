@@ -77,7 +77,6 @@
 .garden-copy { transition: opacity .5s; }
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
 .garden-scroll-space { height: 560svh; pointer-events: none; }
-.garden-fallback { padding: 120px 30px; text-align: center; font-size: 12px; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
 @media (max-width: 700px) {
   .garden-header { padding: 24px; }
