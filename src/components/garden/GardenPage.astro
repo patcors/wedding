@@ -47,6 +47,17 @@ const remembered = party && { code: party.code, greeting: party.greeting, guests
       })();
     </script>
     <style is:global>@view-transition { navigation: auto; } html { background: #eeeee5; } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; }</style>
+    {import.meta.env.DEV && <script is:inline>
+      // Dev only: Safari colours its status bar and toolbar from the page at
+      // load, so the Review panel's blue sky reloads the page and is applied
+      // here, along with a blue loading cover to match.
+      try {
+        if (localStorage.getItem('pa_dev_sky') === 'blue') {
+          document.documentElement.style.background = '#9dacc7';
+          document.documentElement.dataset.devSky = 'blue';
+        }
+      } catch {}
+    </script>}
     {remembered && <script is:inline define:vars={{ remembered }}>
       try { localStorage.setItem('pa_party', JSON.stringify(remembered)); } catch {}
     </script>}

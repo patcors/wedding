@@ -29,6 +29,27 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-canvas.is-ready { opacity: 1; }
 .garden-wash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #eeeee552); }
 @media (hover: none) { .garden-stage::after { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 48px; pointer-events: none; background: linear-gradient(#eeeee5, #eeeee500); } }
+/* The Review panel's blue sky, and the combo of misty sky and blue water.
+   In dev, GardenPage turns the status bar blue to match after a reload. */
+.garden-prototype[data-sky='blue'] .garden-wash { background: none; }
+.garden-prototype[data-sky='combo'] .garden-wash { background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #b2cbe652); }
+/* Phones keep only the top of the wash: nothing fades the bottom of the screen. */
+@media (hover: none) { .garden-wash, .garden-prototype[data-sky='combo'] .garden-wash { background: linear-gradient(180deg, #f5f3e952, transparent 28%); } }
+@media (hover: none) { :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue']) .garden-stage::after { background: linear-gradient(#9dacc7, #9dacc700); } }
+/* All the type turns white on a blue sky, where the dark ink doesn't read. A
+   soft blue-grey shadow keeps it off the pale horizon, and the pale glows go,
+   since they would only wash it out. Loaded in blue, the cover is blue too and
+   the type is white from the start; otherwise it waits for the reveal. */
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) { color: #fffdf7; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-header, .garden-panel, .garden-bottom) { text-shadow: 0 1px 2px #1d3a5c4d, 0 2px 22px #1d3a5c66; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-arrival h1 span, .garden-subtitle) { color: #f3f1e8; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-date i, .garden-photo-dots button span) { background: #f3f1e8; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) .garden-invitation-link { border-color: #fffdf780; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) .garden-text-link { border-color: #fffdf780 !important; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-arrival, .garden-celebrate, .garden-memory-copy)::before { display: none; }
+/* Text on its own card or panel keeps its colours. */
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-photo-slot, .garden-review) { color: var(--garden-ink); text-shadow: none; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) .garden-button { text-shadow: none; }
 .garden-header { position: absolute; inset: 0 0 auto; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
 .garden-monogram { font-family: 'Cormorant Garamond', Georgia, serif !important; font-size: 28px !important; letter-spacing: -.1em; padding: 0; }
 .garden-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }

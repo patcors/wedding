@@ -5,6 +5,8 @@ html { scrollbar-gutter: stable; }
 /* Inside the pinned stage, so it covers the whole screen including under
    Safari's toolbar (see garden.css). */
 .garden-cover { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse 90% 70% at 50% 36%, #eeeee5 30%, #e4e7dc); transition: opacity .9s ease, visibility .9s; }
+/* Dev only: the Review panel's blue sky, edged in the status bar's blue. */
+html[data-dev-sky='blue'] .garden-cover { background: radial-gradient(ellipse 90% 70% at 50% 36%, #aebbd2 30%, #9dacc7); }
 .garden-prototype[data-state='ready'] .garden-cover { opacity: 0; visibility: hidden; }
 .garden-prototype[data-state='error'] .garden-canvas { opacity: 0; }
 .garden-chrome { transition: opacity .9s ease; }
