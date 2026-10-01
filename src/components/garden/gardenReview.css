@@ -18,7 +18,7 @@
 .garden-material-selector select { min-width: 0; max-width: 100%; padding: 5px 3px; border: 0; border-bottom: 1px solid #747d6040; border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .garden-material-selector select:focus-visible { outline: 2px solid #8b6158; outline-offset: 2px; }
 @media (max-width: 700px) {
-  .garden-review { bottom: 16px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
+  .garden-review { bottom: calc(16px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
   .garden-review > button, .garden-material-selector { grid-column: span 2; }
   .garden-material-selector { flex-direction: column; gap: 0; font-size: 8px; }
   .garden-material-selector select { font-size: 10px; }

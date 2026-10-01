@@ -15,5 +15,8 @@ export default defineConfig({
   // Old addresses from before the Garden moved to the root.
   redirects: { '/garden': '/', '/info': '/details' },
 
+  // The Garden has its own dev tooling, and the toolbar sat over the scene.
+  devToolbar: { enabled: false },
+
   integrations: [react()],
 });

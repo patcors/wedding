@@ -1,8 +1,10 @@
 /* The cover: a plain field beneath the opening text and butterflies while the
    scene loads. It fades to reveal the garden without moving the text. */
 html { scrollbar-gutter: stable; }
-html[data-garden-state='loading'], html[data-garden-state='error'] { overflow: hidden; }
-.garden-cover { position: fixed; inset: 0; z-index: 1; background: radial-gradient(ellipse 90% 70% at 50% 36%, #eeeee5 30%, #e4e7dc); transition: opacity .9s ease, visibility .9s; }
+.garden-prototype[data-state='loading'], .garden-prototype[data-state='error'] { overflow: hidden; }
+/* Inside the pinned stage, so it covers the whole screen including under
+   Safari's toolbar (see garden.css). */
+.garden-cover { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse 90% 70% at 50% 36%, #eeeee5 30%, #e4e7dc); transition: opacity .9s ease, visibility .9s; }
 .garden-prototype[data-state='ready'] .garden-cover { opacity: 0; visibility: hidden; }
 .garden-prototype[data-state='error'] .garden-canvas { opacity: 0; }
 .garden-chrome { transition: opacity .9s ease; }

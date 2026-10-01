@@ -17,7 +17,7 @@ const remembered = party && { code: party.code, greeting: party.greeting, guests
 <html lang="en" data-garden-state="loading">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
     <meta name="theme-color" content="#eeeee5" />
     <title>{party ? `${party.greeting} · Patrick & Amelia` : 'Patrick & Amelia · 16 April 2027'}</title>
@@ -34,6 +34,18 @@ const remembered = party && { code: party.code, greeting: party.greeting, guests
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=block" rel="stylesheet" />
+    <script is:inline>
+      // The Garden runs its scene to the bottom of the physical screen, under
+      // Safari's toolbar (see garden.css). iOS doesn't swap screen sizes when
+      // the phone turns, so pick the side that matches the orientation.
+      (function () {
+        var set = function () {
+          var long = Math.max(screen.width, screen.height), short = Math.min(screen.width, screen.height);
+          document.documentElement.style.setProperty('--garden-screen', (innerWidth > innerHeight ? short : long) + 'px');
+        };
+        set(); addEventListener('resize', set);
+      })();
+    </script>
     <style is:global>@view-transition { navigation: auto; } html { background: #eeeee5; } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; }</style>
     {remembered && <script is:inline define:vars={{ remembered }}>
       try { localStorage.setItem('pa_party', JSON.stringify(remembered)); } catch {}

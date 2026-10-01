@@ -5,17 +5,35 @@
 .garden-prototype button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
 .garden-prototype a { color: inherit; text-decoration: none; }
 .garden-prototype button:focus-visible, .garden-prototype a:focus-visible { outline: 2px solid #6e775c; outline-offset: 7px; }
-.garden-canvas { position: fixed; inset: 0; opacity: 0; background: #eeeee5; }
+/* Safari clips fixed and sticky elements at its glass bars, but draws ordinary
+   content under the toolbar. So the page itself doesn't scroll: <main> is the
+   scroller, as tall as the screen on touch devices, and the scene is pinned
+   inside it, running under the toolbar. --garden-screen comes from
+   GardenPage. Nothing is drawn above the page, so the status bar shows the page
+   colour and the scene fades into it. GardenScene keeps the framing on the
+   part of the canvas that is on screen. No overscroll: a rubber-band bounce
+   would drag the pinned scene away from the fixed header and buttons.
+   Safari also covers a bar with an opaque colour when it finds a fixed element
+   4px in from that edge, so every fixed layer keeps --garden-edge-clear away
+   from the top and bottom. */
+:root { --garden-stage-h: 100lvh; --garden-edge-clear: 0px; }
+@media (hover: none) { :root { --garden-stage-h: max(100lvh, var(--garden-screen, 100lvh)); --garden-edge-clear: 6px; } }
+html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; overflow: hidden; }
+.garden-prototype { position: absolute; inset: 0 0 auto; height: var(--garden-stage-h); overflow-y: auto; overscroll-behavior: none; scrollbar-width: none; }
+.garden-prototype::-webkit-scrollbar { display: none; }
+.garden-stage { position: sticky; top: 0; height: var(--garden-stage-h); margin-bottom: calc(-1 * var(--garden-stage-h)); }
+.garden-canvas { position: absolute; inset: 0; opacity: 0; }
 .garden-canvas.is-ready { opacity: 1; }
-.garden-wash { position: fixed; inset: 0; pointer-events: none; background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #eeeee552); }
-.garden-header { position: fixed; inset: 0 0 auto; z-index: 3; padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; }
+.garden-wash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #eeeee552); }
+@media (hover: none) { .garden-stage::after { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 48px; pointer-events: none; background: linear-gradient(#eeeee5, #eeeee500); } }
+.garden-header { position: fixed; inset: var(--garden-edge-clear) 0 auto; z-index: 3; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
 .garden-monogram { font-family: 'Cormorant Garamond', Georgia, serif !important; font-size: 28px !important; letter-spacing: -.1em; padding: 0; }
 .garden-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
 .garden-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
 .garden-invitation-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid #73796770; padding-bottom: 8px; }
 .garden-invitation-link span { margin-left: 18px; }
-.garden-panels { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+.garden-panels { position: sticky; top: var(--garden-edge-clear); height: calc(100svh - 2 * var(--garden-edge-clear)); margin: var(--garden-edge-clear) 0 calc(var(--garden-edge-clear) - 100svh); pointer-events: none; z-index: 2; }
 .garden-panel { position: absolute; opacity: 0; visibility: hidden; transform: translateY(15px); transition: opacity .85s ease, transform 1.2s ease, visibility .85s; text-align: center; }
 .garden-panel.is-active { opacity: 1; visibility: visible; transform: translateY(0); }
 .garden-panel a, .garden-panel button { pointer-events: auto; }
@@ -66,7 +84,7 @@
 .garden-chapters button:hover .garden-chapter-name { opacity: 1; }
 .garden-chapters button[aria-current] .garden-chapter-line { width: 27px; }
 .garden-chapters button[aria-current] .garden-chapter-number { opacity: 1; }
-.garden-bottom { position: fixed; bottom: 86px; left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; z-index: 3; }
+.garden-bottom { position: fixed; bottom: 44px; left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; z-index: 3; }
 .garden-place { font-size: 8px; letter-spacing: .18em; }
 .garden-creature-actions { display: flex; align-items: center; gap: 24px; }
 .garden-creature-actions button:disabled { opacity: .45; cursor: default; }
@@ -79,7 +97,7 @@
 .garden-scroll-space { height: 560svh; pointer-events: none; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
 @media (max-width: 700px) {
-  .garden-header { padding: 24px; }
+  .garden-header { padding: calc(20px + env(safe-area-inset-top) - var(--garden-edge-clear)) 24px 24px; }
   .garden-header-date { display: none; }
   .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
@@ -94,7 +112,7 @@
   .garden-chapter-number, .garden-chapter-name { display: none; }
   .garden-chapter-line { width: 7px; }
   .garden-chapters button[aria-current] .garden-chapter-line { width: 15px; }
-  .garden-bottom { left: 24px; right: 24px; bottom: 122px; }
+  .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom)); }
   .garden-creature-actions { flex-direction: column; align-items: flex-start; gap: 0; }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-boat-launch { gap: 6px; }

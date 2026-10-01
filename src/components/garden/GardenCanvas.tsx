@@ -15,8 +15,10 @@ function ResumeLoop({ frameloop }: { frameloop: Frameloop }) {
   return null;
 }
 
+// Shadows are "percentage" (PCF) because three swaps soft PCF for it on the first
+// frame. Precompiled shaders built for soft PCF would all be rebuilt right then.
 export default function GardenCanvas({ frameloop, ...scene }: ComponentProps<typeof GardenScene> & { frameloop: Frameloop }) {
-  return <Canvas shadows style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={frameloop} dpr={[1, 1.25]} camera={{ position: [0, GARDEN_CAMERA.height, GARDEN_CAMERA.startZ], fov: GARDEN_CAMERA.fov, near: .2, far: 220 }}
+  return <Canvas shadows="percentage" style={{ touchAction: 'pan-y pinch-zoom' }} frameloop={frameloop} dpr={[1, 1.25]} camera={{ position: [0, GARDEN_CAMERA.height, GARDEN_CAMERA.startZ], fov: GARDEN_CAMERA.fov, near: .2, far: 220, manual: true }}
     gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}>
     <ResumeLoop frameloop={frameloop} />
     <Suspense fallback={null}>

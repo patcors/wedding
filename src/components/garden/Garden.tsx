@@ -44,6 +44,8 @@ const SKIP_AFTER = 10000;
 
 const REVIEW = import.meta.env.DEV;
 if (REVIEW) void import('./gardenReview.css');
+// Dev only: the monogram hides and shows the Review panel, remembered across reloads.
+const REVIEW_HIDDEN = 'pa_dev_review_hidden';
 
 export default function Garden({ greeting }: { greeting?: string }) {
   const [progress, setProgress] = useState(0);
@@ -61,18 +63,27 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [mounted, setMounted] = useState(false);
   const [slow, setSlow] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
+  const [showReview, setShowReview] = useState(REVIEW);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const cover = useRef<HTMLDivElement>(null);
+  // The Garden scrolls inside <main>, not the page (see garden.css).
+  const scroller = useRef<HTMLElement>(null);
   const onReady = useCallback(() => setPrepared(true), []);
   const onError = useCallback(() => setFailed(true), []);
   useEffect(() => {
     // A restored scroll position would open on a later chapter under the cover.
     history.scrollRestoration = 'manual';
-    window.scrollTo(0, 0);
+    scroller.current?.scrollTo(0, 0);
     setMounted(true);
     // Dev only: ?slow=8000 holds the cover for 8s from navigation, ?fail fails WebGL.
     if (import.meta.env.DEV && new URLSearchParams(location.search).has('fail')) setFailed(true);
+    if (REVIEW && localStorage.getItem(REVIEW_HIDDEN)) setShowReview(false);
   }, []);
+  const toggleReview = () => {
+    if (showReview) localStorage.setItem(REVIEW_HIDDEN, '1');
+    else localStorage.removeItem(REVIEW_HIDDEN);
+    setShowReview(!showReview);
+  };
   useEffect(() => {
     if (ready || failed) return;
     const timer = setTimeout(() => setSlow(true), SKIP_AFTER - performance.now());
@@ -110,14 +121,15 @@ export default function Garden({ greeting }: { greeting?: string }) {
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)');
     const updatePreference = () => setReduced(query.matches);
-    const update = () => setProgress(Math.min(1, window.scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight)));
+    const element = scroller.current!;
+    const update = () => setProgress(Math.min(1, element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight)));
     updatePreference(); update();
     query.addEventListener('change', updatePreference);
-    window.addEventListener('scroll', update, { passive: true });
+    element.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update);
     return () => {
       query.removeEventListener('change', updatePreference);
-      window.removeEventListener('scroll', update); window.removeEventListener('resize', update);
+      element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
     };
   }, []);
   const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
@@ -126,7 +138,8 @@ export default function Garden({ greeting }: { greeting?: string }) {
     Math.floor((progress - MEMORY_START) / (MEMORY_END - MEMORY_START) * memories.length)));
   const goToProgress = (next: number) => {
     setProgress(next);
-    window.scrollTo({ top: (document.documentElement.scrollHeight - innerHeight) * next, behavior: 'instant' });
+    const element = scroller.current!;
+    element.scrollTo({ top: (element.scrollHeight - element.clientHeight) * next, behavior: 'instant' });
   };
   const scrollToMemory = (index: number) => {
     const wrapped = (index + memories.length) % memories.length;
@@ -143,21 +156,23 @@ export default function Garden({ greeting }: { greeting?: string }) {
     else scrollToChapter(chapter === 2 ? 0 : chapter + 1);
   };
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
-  return <main className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
-    <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
-      <CanvasFallback onError={onError}>
-        {mounted && !failed && <GardenCanvas frameloop={!ready ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} />}
-      </CanvasFallback>
-    </div>
-    <div className="garden-wash" aria-hidden="true" />
-    {/* Beneath the opening text and butterflies, which stay put as it fades. */}
-    <div ref={cover} className="garden-cover" inert={state === 'ready'}>
-      <p className="garden-visually-hidden" role="status">{failed ? 'The garden couldn’t open. The details are just below.' : ready ? '' : 'Preparing the garden'}</p>
+  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
+    <div className="garden-stage">
+      <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
+        <CanvasFallback onError={onError}>
+          {mounted && !failed && <GardenCanvas frameloop={!ready ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} />}
+        </CanvasFallback>
+      </div>
+      <div className="garden-wash" aria-hidden="true" />
+      {/* Beneath the opening text and butterflies, which stay put as it fades. */}
+      <div ref={cover} className="garden-cover" inert={state === 'ready'}>
+        <p className="garden-visually-hidden" role="status">{failed ? 'The garden couldn’t open. The details are just below.' : ready ? '' : 'Preparing the garden'}</p>
+      </div>
     </div>
     {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
       openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
     <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
-      <button className="garden-monogram" onClick={() => scrollToChapter(0)} aria-label="Back to the beginning">P<span>&</span>A</button>
+      <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => scrollToChapter(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}>P<span>&</span>A</button>
       <span className="garden-header-date">16 APRIL 2027</span>
       <div className="garden-header-links">
         <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
@@ -260,7 +275,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
         {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
       </button>
     </div>
-    {REVIEW && <aside className="garden-review" aria-label="Review panel">
+    {REVIEW && showReview && <aside className="garden-review" aria-label="Review panel">
       <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
       <details className="garden-butterfly-colours">

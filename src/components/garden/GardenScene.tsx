@@ -217,15 +217,22 @@ function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
 
 export default function GardenScene({ prepare, progress, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle }: SceneProps) {
   const { camera, size } = useThree();
-  const mobile = size.width / size.height < .85;
+  // On touch screens the canvas runs on under Safari's toolbar (see
+  // garden.css), so framing is worked out for the part above it.
+  const visibleHeight = Math.min(size.height, innerHeight);
+  const mobile = size.width / visibleHeight < .85;
   const bankWidth = mobile ? MOBILE_RIVER_WIDTH : 1;
   const current = useRef(0);
   const target = useMemo(() => new THREE.Vector3(), []);
   useLayoutEffect(() => {
     const lens = camera as THREE.PerspectiveCamera;
+    // The camera is manual: the lens frames the visible area and the view
+    // offset extends the picture down over the rest of the canvas.
     lens.fov = mobile ? GARDEN_CAMERA.mobileFov : GARDEN_CAMERA.fov;
+    lens.aspect = size.width / visibleHeight;
+    lens.setViewOffset(size.width, visibleHeight, 0, 0, size.width, size.height);
     lens.updateProjectionMatrix();
-  }, [camera, mobile]);
+  }, [camera, mobile, size.width, size.height, visibleHeight]);
   useFrame((_, dt) => {
     const p = reduced ? 0 : progress;
     if (reduced) current.current = 0;

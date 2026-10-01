@@ -1,11 +1,11 @@
-import type { Camera, Scene, WebGLRenderer } from 'three';
+import type { Camera, Scene } from 'three';
 
 const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 
 // Suspense covers downloads, but not GPU compilation, texture uploads, shadow
 // maps or water reflections. Render those while the opaque loader is still up.
 export async function prepareGardenScene(
-  renderer: Pick<WebGLRenderer, 'compileAsync' | 'render'>, scene: Scene, camera: Camera,
+  renderer: { compileAsync(scene: Scene, camera: Camera): Promise<unknown>; render(scene: Scene, camera: Camera): void }, scene: Scene, camera: Camera,
   cancelled: () => boolean, frame: () => Promise<void> = nextFrame,
 ) {
   await frame();
