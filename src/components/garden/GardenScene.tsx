@@ -11,18 +11,26 @@ import GardenPreparation from './GardenPreparation';
 import GardenGround, { type GroundStyle, type RockStyle } from './GardenGround';
 import GardenRocks from './GardenRocks';
 import GardenPlants from './GardenPlants';
-import type { PlantStyle } from './gardenPlantGeometry';
-import { PaperBoat } from './PaperBoat';
-import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch } from './boatPhysics';
+import { plantSites, type PlantStyle } from './gardenPlantGeometry';
+import { BoatWakes, PaperBoat } from './PaperBoat';
+import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch, type Stem } from './boatPhysics';
 
 const BASE = import.meta.env.BASE_URL;
 const boatRiver = { center: riverCenter, halfWidth: bankEdge };
 export const SKY = '#eeeee5';
 type SceneProps = { prepare: boolean; progress: number; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle };
 
-function Pool({ paused, width, launchRequest }: { paused: boolean; width: number; launchRequest: number }) {
+// Where the planted reeds and cattails stand in open water.
+function reedStems(width: number, mobile: boolean): Stem[] {
+  return (['reed', 'cattail'] as const).flatMap(kind => plantSites(kind, width, mobile)
+    .filter(site => Math.abs(site.x - riverCenter(site.z, width)) < bankEdge(site.z, width))
+    .map(site => ({ x: site.x, z: site.z, radius: (kind === 'reed' ? .07 : .05) * site.scale })));
+}
+
+function Pool({ paused, width, mobile, reeds, launchRequest }: { paused: boolean; width: number; mobile: boolean; reeds: boolean; launchRequest: number }) {
   const camera = useThree(s => s.camera);
   const [simulation] = useState(() => new BoatSimulation(boatRiver, width));
+  useLayoutEffect(() => simulation.setStems(reeds ? reedStems(width, mobile) : [], width), [simulation, reeds, width, mobile]);
   const [boats, setBoats] = useState<BoatBody[]>([]);
   // Solve all contacts before individual meshes read their positions.
   useFrame((_, dt) => {
@@ -33,9 +41,10 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
     const halfWidth = Math.max(.1, bankEdge(z, width) - BOAT_MARGIN);
     // Decide once per launch, so rerenders and animation never change the model.
     const roll = Math.random();
-    const boat: BoatLaunch = { id: ++nextId.current, z, lateral: THREE.MathUtils.clamp((x - riverCenter(z, width)) / halfWidth, -1, 1),
-      kind: roll < .45 ? 'sailboat' : roll < .50 ? 'tugboat' : 'paper' };
-    // Keep this a small passing detail even if someone taps repeatedly.
+    const kind = roll < .3 ? 'sailboat' : roll < .6 ? 'tugboat' : roll < .9 ? 'paper' : 'duck';
+    const boat: BoatLaunch = { id: ++nextId.current, z, lateral: THREE.MathUtils.clamp((x - riverCenter(z, width)) / halfWidth, -1, 1), kind,
+      // Boats set off bow first; a duck can be dropped in facing any way.
+      ...kind === 'duck' && { yaw: Math.random() * Math.PI * 2 } };
     simulation.launch(boat, width);
     setBoats([...simulation.bodies]);
   }, [width, simulation]);
@@ -49,7 +58,9 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
     const { x, z } = event.point;
     // The reflecting plane extends underneath the terrain. Only exposed
     // stream water is interactive; drags and native touch scrolling are not taps.
-    if (event.delta > 6 || event.button !== 0 || Math.abs(x - riverCenter(z, width)) >= bankEdge(z, width) - .08
+    // A thumb wanders further than a mouse during a tap, so touch gets more slack.
+    const slack = (event.nativeEvent as PointerEvent).pointerType === 'mouse' ? 6 : 16;
+    if (event.delta > slack || event.button !== 0 || Math.abs(x - riverCenter(z, width)) >= bankEdge(z, width) - .08
       || z < camera.position.z - 65 || z > camera.position.z - 1) return;
     event.stopPropagation();
     launch(x, z);
@@ -73,6 +84,7 @@ function Pool({ paused, width, launchRequest }: { paused: boolean; width: number
   return <>
     <primitive object={water} onClick={tapWater} />
     {boats.map(boat => <PaperBoat key={boat.id} boat={boat} />)}
+    <BoatWakes boats={boats} />
   </>;
 }
 
@@ -258,7 +270,7 @@ export default function GardenScene({ prepare, progress, paused, reduced, onRead
     <BankDetails width={bankWidth} rockStyle={rockStyle} plantStyle={plantStyle} />
     {plantStyle === 'varied' && <GardenPlants width={bankWidth} mobile={mobile} paused={paused || reduced} visible />}
     {rockStyle === 'moss' && <GardenRocks width={bankWidth} visible />}
-    <Pool paused={paused || reduced} width={bankWidth} launchRequest={boatLaunchRequest} />
+    <Pool paused={paused || reduced} width={bankWidth} mobile={mobile} reeds={plantStyle === 'varied'} launchRequest={boatLaunchRequest} />
     <Petals paused={paused || reduced} />
     <FallingLeaves paused={paused || reduced} width={bankWidth} />
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />

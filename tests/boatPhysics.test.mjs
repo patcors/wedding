@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { BoatSimulation, boatContact, boatOutline, createBoatBody, resolveBoatContact } from '../src/components/garden/boatPhysics.ts';
+import { BoatSimulation, boatContact, boatOutline, createBoatBody, resolveBoatContact, stemContact } from '../src/components/garden/boatPhysics.ts';
 import { riverCenter, bankEdge, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
+import { plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
 
 const river = { center: riverCenter, halfWidth: bankEdge };
 const body = (id, kind = 'paper') => Object.assign(createBoatBody({ id, kind, lateral: 0, z: 0 }, 1, river),
@@ -32,15 +33,18 @@ test('glancing hull impact produces a turn while conserving linear momentum', ()
   assert.ok(energy(a) + energy(b) <= before);
 });
 
-test('overlapping launches separate without an explosive impulse, including paused launches', () => {
+test('every launch stays, and overlapping launches separate without an explosive impulse', () => {
   const world = new BoatSimulation(river, MOBILE_RIVER_WIDTH);
   for (let id = 1; id <= 12; id++) {
     world.launch({ id, kind: id % 3 === 0 ? 'tugboat' : 'paper', lateral: 0, z: 8 }, MOBILE_RIVER_WIDTH);
     world.advance(0, MOBILE_RIVER_WIDTH, true);
   }
-  assert.equal(world.bodies.length, 4);
+  assert.equal(world.bodies.length, 12);
+  for (const a of world.bodies) assert.ok(Math.hypot(a.vx, a.vz) < 1);
+  // A dozen hulls dropped on one spot need a moment of drifting to spread out.
+  for (let i = 0; i < 60; i++) world.advance(1 / 60, MOBILE_RIVER_WIDTH, false);
   for (const a of world.bodies) {
-    assert.ok(Math.hypot(a.vx, a.vz) < 1);
+    assert.ok(Math.hypot(a.vx, a.vz) < 2);
     for (const b of world.bodies) {
       if (a.id === b.id) continue;
       assert.ok((boatContact(a, b)?.depth ?? 0) < .01);
@@ -88,4 +92,55 @@ test('pause freezes physics and wakes; resuming does not catch up hidden time; b
   assert.ok(a.wake[1].born > 0 && a.wake[1].x !== wake.x);
   for (let i = 0; i < 480; i++) world.advance(.1, 1, false);
   assert.equal(world.bodies.length, 0);
+});
+
+const reeds = (width, mobile) => ['reed', 'cattail'].flatMap(kind => plantSites(kind, width, mobile)
+  .filter(site => Math.abs(site.x - riverCenter(site.z, width)) < bankEdge(site.z, width))
+  .map(site => ({ x: site.x, z: site.z, radius: (kind === 'reed' ? .07 : .05) * site.scale })));
+
+test('a stem inside or touching any hull pushes it away from the stem', () => {
+  for (const kind of ['paper', 'sailboat', 'tugboat', 'duck']) {
+    const a = body(1, kind);
+    for (const side of [-1, 1]) {
+      for (const x of [.05, .15, .25]) {
+        const contact = stemContact(a, { x: side * x, z: 0, radius: .07 });
+        assert.ok(contact && contact.depth > 0 && Math.sign(contact.normal.x) === -side, `${kind} ${side * x}`);
+      }
+      assert.equal(stemContact(a, { x: side * .6, z: 0, radius: .07 }), null);
+    }
+  }
+});
+
+test('a hull drifting into a stem turns aside and loses speed instead of passing through', () => {
+  const world = new BoatSimulation(river, 1);
+  const a = world.launch({ id: 1, kind: 'sailboat', lateral: 0, z: 8 }, 1);
+  const stem = { x: a.x + .1, z: a.z - 1.5, radius: .07 };
+  world.setStems([stem], 1);
+  let hit = false;
+  for (let i = 0; i < 240; i++) {
+    world.advance(1 / 60, 1, false);
+    const contact = stemContact(a, stem);
+    hit ||= !!contact;
+    assert.ok((contact?.depth ?? 0) < .03, 'stem sank into the hull');
+  }
+  assert.ok(hit && Math.abs(a.omega - a.eddy) > .01 || a.x < stem.x - .2, 'the stem changed the boat\'s course');
+});
+
+test('boats launched into the reed beds start clear of the stems and never cross them', () => {
+  for (const [width, mobile] of [[1, false], [MOBILE_RIVER_WIDTH, true]]) {
+    const stems = reeds(width, mobile);
+    const world = new BoatSimulation(river, width);
+    world.setStems(stems, width);
+    let id = 0;
+    for (const z of [8, -4, -22]) for (const lateral of [-1, 1]) world.launch({ id: ++id, kind: id % 2 ? 'sailboat' : 'paper', lateral, z }, width);
+    for (const a of world.bodies) assert.ok(stems.every(stem => !stemContact(a, stem)), `launch overlaps a stem at ${a.z}`);
+    for (let i = 0; i < 60 * 20; i++) {
+      world.advance(1 / 60, width, false);
+      if (i % 10) continue;
+      for (const a of world.bodies) {
+        assert.ok(Number.isFinite(a.x) && Math.hypot(a.vx, a.vz) < 3);
+        for (const stem of stems) assert.ok((stemContact(a, stem)?.depth ?? 0) < .05, 'hull crossed a stem');
+      }
+    }
+  }
 });

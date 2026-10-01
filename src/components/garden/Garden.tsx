@@ -171,14 +171,17 @@ export default function Garden({ greeting }: { greeting?: string }) {
     </div>
     {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
       openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
-    <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
-      <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => scrollToChapter(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}>P<span>&</span>A</button>
-      <span className="garden-header-date">16 APRIL 2027</span>
-      <div className="garden-header-links">
-        <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
-        <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
-      </div>
-    </header>
+    {/* The chrome sits in pinned layers inside the scroller, so a drag that starts on it still scrolls. */}
+    <div className="garden-chrome-layer">
+      <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
+        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => scrollToChapter(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}>P<span>&</span>A</button>
+        <span className="garden-header-date">16 APRIL 2027</span>
+        <div className="garden-header-links">
+          <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
+          <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
+        </div>
+      </header>
+    </div>
 
     <div className="garden-panels garden-copy">
       <section className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
@@ -249,31 +252,27 @@ export default function Garden({ greeting }: { greeting?: string }) {
       </section>
     </div>
 
-    <nav className="garden-chapters garden-copy garden-chrome" aria-label="Garden chapters" inert={state !== 'ready'}>
-      {['The beginning', 'Our story', 'The celebration'].map((name, i) => <button key={name}
-        onClick={() => scrollToChapter(i)} aria-label={name} aria-current={chapter === i ? 'step' : undefined}>
-        <span className="garden-chapter-number">0{i + 1}</span><span className="garden-chapter-line" /><span className="garden-chapter-name">{name}</span>
-      </button>)}
-    </nav>
-    <div className="garden-bottom garden-copy garden-chrome" inert={state !== 'ready'}>
-      <div className="garden-creature-actions">
-      <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
-        <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">
-          <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
-        </svg>
-        <span>Float a boat</span>
-      </button>
-      <button className="garden-boat-launch" disabled={!butterflies.canRelease}
-        onClick={() => butterflies.release()}>
-        <svg width="23" height="23" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-          <path d="M14 12C9 3 3 2 3 7c0 4 3 7 7 8-6 0-6 7-2 7 3 0 5-4 6-7m0-3c5-9 11-10 11-5 0 4-3 7-7 8 6 0 6 7 2 7-3 0-5-4-6-7m0-5v12m0-12-3-4m3 4 3-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span>Release a butterfly</span>
-      </button>
+    <div className="garden-chrome-layer">
+      <div className="garden-bottom garden-copy garden-chrome" inert={state !== 'ready'}>
+        <div className="garden-creature-actions">
+        <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
+          <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">
+            <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+          </svg>
+          <span>Float a boat</span>
+        </button>
+        <button className="garden-boat-launch" disabled={!butterflies.canRelease}
+          onClick={() => butterflies.release()}>
+          <svg width="23" height="23" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <path d="M14 12C9 3 3 2 3 7c0 4 3 7 7 8-6 0-6 7-2 7 3 0 5-4 6-7m0-3c5-9 11-10 11-5 0 4-3 7-7 8 6 0 6 7 2 7-3 0-5-4-6-7m0-5v12m0-12-3-4m3 4 3-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>Release a butterfly</span>
+        </button>
+        </div>
+        <button className="garden-scroll-cue" onClick={nextStop}>
+          {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
+        </button>
       </div>
-      <button className="garden-scroll-cue" onClick={nextStop}>
-        {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
-      </button>
     </div>
     {REVIEW && showReview && <aside className="garden-review" aria-label="Review panel">
       <span className="garden-study-label">Garden study <b>02</b></span>

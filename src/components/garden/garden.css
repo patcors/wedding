@@ -12,28 +12,34 @@
    GardenPage. Nothing is drawn above the page, so the status bar shows the page
    colour and the scene fades into it. GardenScene keeps the framing on the
    part of the canvas that is on screen. No overscroll: a rubber-band bounce
-   would drag the pinned scene away from the fixed header and buttons.
+   would drag the pinned scene away from the header and buttons. No double-tap
+   zoom either, which would swallow quick taps on the water. Those sit in
+   pinned layers inside <main> too: a drag that starts on a fixed element
+   scrolls the page, which doesn't move, so it would do nothing.
    Safari also covers a bar with an opaque colour when it finds a fixed element
-   4px in from that edge, so every fixed layer keeps --garden-edge-clear away
+   4px in from that edge, so every fixed and pinned layer keeps --garden-edge-clear away
    from the top and bottom. */
 :root { --garden-stage-h: 100lvh; --garden-edge-clear: 0px; }
 @media (hover: none) { :root { --garden-stage-h: max(100lvh, var(--garden-screen, 100lvh)); --garden-edge-clear: 6px; } }
 html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; overflow: hidden; }
-.garden-prototype { position: absolute; inset: 0 0 auto; height: var(--garden-stage-h); overflow-y: auto; overscroll-behavior: none; scrollbar-width: none; }
+.garden-prototype { position: absolute; inset: 0 0 auto; height: var(--garden-stage-h); overflow-y: auto; overscroll-behavior: none; scrollbar-width: none; touch-action: manipulation; }
 .garden-prototype::-webkit-scrollbar { display: none; }
 .garden-stage { position: sticky; top: 0; height: var(--garden-stage-h); margin-bottom: calc(-1 * var(--garden-stage-h)); }
 .garden-canvas { position: absolute; inset: 0; opacity: 0; }
 .garden-canvas.is-ready { opacity: 1; }
 .garden-wash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, #f5f3e952, transparent 28%, transparent 78%, #eeeee552); }
 @media (hover: none) { .garden-stage::after { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 48px; pointer-events: none; background: linear-gradient(#eeeee5, #eeeee500); } }
-.garden-header { position: fixed; inset: var(--garden-edge-clear) 0 auto; z-index: 3; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
+.garden-header { position: absolute; inset: 0 0 auto; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
 .garden-monogram { font-family: 'Cormorant Garamond', Georgia, serif !important; font-size: 28px !important; letter-spacing: -.1em; padding: 0; }
 .garden-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
 .garden-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
 .garden-invitation-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid #73796770; padding-bottom: 8px; }
 .garden-invitation-link span { margin-left: 18px; }
-.garden-panels { position: sticky; top: var(--garden-edge-clear); height: calc(100svh - 2 * var(--garden-edge-clear)); margin: var(--garden-edge-clear) 0 calc(var(--garden-edge-clear) - 100svh); pointer-events: none; z-index: 2; }
+.garden-panels, .garden-chrome-layer { position: sticky; top: var(--garden-edge-clear); height: calc(100svh - 2 * var(--garden-edge-clear)); margin: var(--garden-edge-clear) 0 calc(var(--garden-edge-clear) - 100svh); pointer-events: none; z-index: 2; }
+.garden-chrome-layer { z-index: 3; }
+/* Only the controls themselves catch taps; the water between them still takes a boat. */
+.garden-chrome-layer :is(button, a) { pointer-events: auto; }
 .garden-panel { position: absolute; opacity: 0; visibility: hidden; transform: translateY(15px); transition: opacity .85s ease, transform 1.2s ease, visibility .85s; text-align: center; }
 .garden-panel.is-active { opacity: 1; visibility: visible; transform: translateY(0); }
 .garden-panel a, .garden-panel button { pointer-events: auto; }
@@ -76,15 +82,7 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-venue { font: italic 24px 'Cormorant Garamond', Georgia, serif; }
 .garden-button { display: inline-block; font-size: 10px; letter-spacing: .1em; padding: 18px 25px; background: #414d3d; color: #f6f3e7 !important; margin-top: 18px; }
 .garden-button span { margin-left: 25px; }
-.garden-chapters { position: fixed; right: 42px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 22px; }
-.garden-chapters button { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 24px; }
-.garden-chapter-number { font-size: 8px; opacity: .6; }
-.garden-chapter-line { height: 1px; width: 12px; background: #6f7864; transition: width .6s; }
-.garden-chapter-name { position: absolute; right: 48px; font-size: 9px; white-space: nowrap; opacity: 0; transition: opacity .4s; }
-.garden-chapters button:hover .garden-chapter-name { opacity: 1; }
-.garden-chapters button[aria-current] .garden-chapter-line { width: 27px; }
-.garden-chapters button[aria-current] .garden-chapter-number { opacity: 1; }
-.garden-bottom { position: fixed; bottom: 44px; left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; z-index: 3; }
+.garden-bottom { position: absolute; bottom: calc(44px - var(--garden-edge-clear)); left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; }
 .garden-place { font-size: 8px; letter-spacing: .18em; }
 .garden-creature-actions { display: flex; align-items: center; gap: 24px; }
 .garden-creature-actions button:disabled { opacity: .45; cursor: default; }
@@ -107,12 +105,7 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
   .garden-subtitle { font-size: 22px; }
   .garden-date { font-size: 8px; gap: 12px; margin-top: 26px; }
-  .garden-chapters { right: 4px; gap: 0; }
-  .garden-chapters button { width: 30px; min-height: 44px; padding: 8px; }
-  .garden-chapter-number, .garden-chapter-name { display: none; }
-  .garden-chapter-line { width: 7px; }
-  .garden-chapters button[aria-current] .garden-chapter-line { width: 15px; }
-  .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
   .garden-creature-actions { flex-direction: column; align-items: flex-start; gap: 0; }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-boat-launch { gap: 6px; }
