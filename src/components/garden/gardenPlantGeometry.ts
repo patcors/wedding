@@ -109,22 +109,38 @@ export function plantGeometry(kind: PlantKind) {
 export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
   if (kind === 'reed' || kind === 'cattail') {
     const rand = random(kind === 'reed' ? 3107 : 4129);
-    const patches = [{ z: 7, side: -1 }, { z: -5, side: 1 }, { z: -23, side: -1 },
-      { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 }];
+    // Portrait's bend at the start (see gardenGeometry) brings the first bed
+    // nearer the camera, running up onto the bank, and keeps it from reaching
+    // as far into the river. The second runs further towards the camera along
+    // the right bank so no water shows between it and the shore.
+    const patches = [mobile ? { z: 8.6, side: -1, reach: .6 } : { z: 7, side: -1 },
+      mobile ? { z: -3.9, side: 1, length: 5.2 } : { z: -5, side: 1 },
+      { z: -23, side: -1 }, { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 }]
+      .map(patch => ({ length: 3.5, reach: 1, ...patch }));
     const reedColumns = 8, reedRows = mobile ? 8 : 12;
     const perPatch = kind === 'reed' ? reedColumns * reedRows : (mobile ? 4 : 6);
     return patches.flatMap(patch => Array.from({ length: perPatch }, (_, i) => {
       // A gently jittered grid fills the shallows with a small overlap onto
       // the bank, keeping the fringe connected where the shoreline bends.
       const z = kind === 'reed'
-        ? patch.z + ((Math.floor(i / reedColumns) + .3 + rand() * .4) / reedRows - .5) * 3.5
-        : patch.z + (rand() - .5) * 3;
-      const inland = kind === 'cattail' ? -.4 - rand() * .4
-        : -1.05 + (i % reedColumns + .3 + rand() * .4) / reedColumns * 1.825;
+        ? patch.z + ((Math.floor(i / reedColumns) + .3 + rand() * .4) / reedRows - .5) * patch.length
+        : patch.z + (rand() - .5) * patch.length * .86;
+      // How far out the bed reaches: the full 1.05, or less where it would crowd the river.
+      const out = 1.05 * patch.reach;
+      const inland = kind === 'cattail' ? -.4 - rand() * .4 * patch.reach
+        : -out + (i % reedColumns + .3 + rand() * .4) / reedColumns * (.775 + out);
       const x = riverCenter(z, width) + patch.side * (bankEdge(z, width) + inland);
       const y = inland < 0 ? -.22 : groundHeight(x, z, width) - .025;
+      // Reeds shorten towards both ends of a bed and up onto the bank, so the
+      // bed thins into the grass instead of stopping like a hedge. Portrait,
+      // seen closer, also shortens them out towards the river. Those in the
+      // water stay tall enough to clear it.
+      const along = kind === 'reed' ? 1 - Math.abs((Math.floor(i / reedColumns) + .5) / reedRows * 2 - 1) : 1;
+      const outward = mobile && kind === 'reed' && inland < 0 ? .66 + .34 * Math.min(1, (inland + out) / .6) : 1;
+      const taper = Math.min(.66 + .34 * Math.min(1, along / .6), outward)
+        * (inland > 0 ? 1 - .4 * Math.min(1, inland / .78) : 1);
       return { x, y, z, angle: rand() * Math.PI * 2,
-        scale: .8 + rand() * .3, tint: .85 + rand() * .2 };
+        scale: (.8 + rand() * .3) * taper, tint: .85 + rand() * .2 };
     }));
   }
   if (kind === 'meadow') {
@@ -138,12 +154,12 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
       // Concentrate blades on the visible inner meadow, retaining coverage
       // beneath the outer trees. Roots remain clear of the water.
       const lateral = (cell % columns + .1 + rand() * .8) / columns;
-      const inland = .65 + Math.pow(lateral, 1.6) * 52;
+      const inland = .5 + Math.pow(lateral, 1.6) * 52;
       const z = 25 - (Math.floor(cell / columns) + .15 + rand() * .7) / rows * 138;
       const x = riverCenter(z, width) + (i % 2 ? 1 : -1) * (bankEdge(z, width) + inland);
       return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
         scale: .65 + rand() * .65, tint: .8 + rand() * .3 };
-    });
+    }).filter(aboveWater);
   }
   const counts = mobile ? { grass: 1530, clover: 650, fern: 100 } : { grass: 3000, clover: 1250, fern: 220 };
   const salt = kind === 'grass' ? 731 : kind === 'clover' ? 937 : 1143;
@@ -163,5 +179,9 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
     const x = riverCenter(z, width) + side * (bankEdge(z, width) + inland);
     return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
       scale: .65 + rand() * .6, tint: .85 + rand() * .25 };
-  });
+  }).filter(aboveWater);
 }
+
+// The bank's height wobbles, so near the edge the waterline wanders inland.
+// Land plants only grow where their root is clear of it.
+const aboveWater = (site: { y: number }) => site.y > .015;

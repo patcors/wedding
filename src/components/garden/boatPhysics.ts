@@ -228,7 +228,8 @@ export class BoatSimulation {
     for (const side of [-1, 1]) {
       let deepest = 0, contact: Point | undefined;
       for (const p of boatOutline(body)) {
-        const edge = this.river.center(p.z, this.width) + side * (this.river.halfWidth(p.z, this.width) - .06);
+        // Held a little short of the bank, where the shore is still under water.
+        const edge = this.river.center(p.z, this.width) + side * (this.river.halfWidth(p.z, this.width) - .12);
         const depth = side * (p.x - edge);
         if (depth > deepest) { deepest = depth; contact = p; }
       }

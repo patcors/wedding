@@ -24,6 +24,7 @@ test('land plants stay on land while wetland plants follow the shoreline on both
           continue;
         }
         assert.equal(site.y, groundHeight(site.x, site.z, width) - .025);
+        assert.ok(site.y > 0, `${kind} roots stay out of the water`);
         // Check the clump footprint, including bends in the bank around its root.
         for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
           const x = site.x + Math.cos(angle) * radius * site.scale;
@@ -39,8 +40,10 @@ test('land plants stay on land while wetland plants follow the shoreline on both
 test('every reed patch overlaps the shoreline along its whole length', () => {
   for (const [width, mobile] of [[1, false], [.45, true]]) {
     const sites = plantSites('reed', width, mobile);
-    const patchSize = sites.length / 6;
-    for (let patch = 0; patch < 6; patch++) {
+    // Eight columns of reeds per bed.
+    const patchSize = 8 * (mobile ? 8 : 12);
+    assert.equal(sites.length, patchSize * 6);
+    for (let patch = 0; patch < sites.length / patchSize; patch++) {
       const group = sites.slice(patch * patchSize, (patch + 1) * patchSize).sort((a, b) => a.z - b.z);
       for (let band = 0; band < 4; band++) {
         const strip = group.slice(band * patchSize / 4, (band + 1) * patchSize / 4);

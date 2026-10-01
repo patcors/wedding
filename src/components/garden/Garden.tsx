@@ -57,7 +57,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [sceneOnly, setSceneOnly] = useState(false);
   const [lightTrees, setLightTrees] = useState(false);
   const [skyStyle, setSkyStyle] = useState<SkyStyle>('mist');
-  const [groundStyle, setGroundStyle] = useState<GroundStyle>('original');
+  const [groundStyle, setGroundStyle] = useState<GroundStyle>('natural');
   const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
   const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
   const [ready, setReady] = useState(false);
@@ -294,7 +294,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
       </details>
       <label className="garden-material-selector">Ground
         <select aria-label="Ground material" value={groundStyle} onChange={event => setGroundStyle(event.target.value as GroundStyle)}>
-          <option value="original">Original</option><option value="leafy">Leafy</option><option value="meadow">Meadow</option>
+          <option value="natural">Natural</option><option value="original">Original</option><option value="leafy">Leafy</option><option value="meadow">Meadow</option>
         </select>
       </label>
       <label className="garden-material-selector">Rocks

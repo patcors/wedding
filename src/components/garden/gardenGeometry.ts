@@ -12,32 +12,52 @@ export function random(seed: number) {
 }
 
 export const GARDEN_CAMERA = { fov: 48, mobileFov: 68, height: 3.2, startZ: 18, targetY: 2.5, targetZ: -28, travel: 28.5 };
-// Portrait uses the same irregular shoreline as desktop, at a smaller scale.
+// Portrait uses the same irregular shoreline as desktop, at a smaller scale,
+// plus a bend at the start (see bankSwing).
 export const MOBILE_RIVER_WIDTH = .45;
 
+// How far a bank swings out into the river, peaking at `peak` and easing off
+// over `near` units towards the camera and `far` units downstream.
+function bankSwing(z: number, amount: number, peak: number, near: number, far: number) {
+  return amount * Math.exp(-(((z - peak) / (z > peak ? near : far)) ** 2));
+}
+
+// In portrait the start of the river would run off both sides of a narrow
+// screen, so both banks come into frame in a bend: the right bank swings well
+// in, the left a little nearer the camera. The bottom of the screen stays open.
+const rightSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 2.8, 11, 2.7, 5) : 0;
+const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 2.2, 2.2) : 0;
+
 export function riverCenter(z: number, width = 1) {
-  return (Math.sin(z * .12 + .7) * 1.15 + Math.sin(z * .26 - 1.2) * .25) * width;
+  return (Math.sin(z * .12 + .7) * 1.15 + Math.sin(z * .26 - 1.2) * .25) * width
+    + (leftSwing(z, width) - rightSwing(z, width)) / 2;
 }
 
 export function bankEdge(z: number, width = 1) {
-  return (5.5 + Math.sin(z * .17) * 1.15 + Math.sin(z * .48) * .38) * width;
+  return (5.5 + Math.sin(z * .17) * 1.15 + Math.sin(z * .48) * .38) * width
+    - (leftSwing(z, width) + rightSwing(z, width)) / 2;
 }
 
 export function groundHeight(x: number, z: number, width = 1) {
   const inland = Math.abs(x - riverCenter(z, width)) - bankEdge(z, width);
+  // The ground's wobble is calmer at the water's edge, so the shore always
+  // rises out of the water a little inland of the bank, never on it, and
+  // boats held at the bank stay clear of visible land.
+  const wobble = .4 + .6 * Math.min(1, Math.max(0, inland / 1.2));
   return -.12 + Math.min(1, Math.max(0, inland / 2.4)) * .85
-    + Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045;
+    + (Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045) * wobble;
 }
 
 export function bankGeometry(side: number, width = 1) {
   const geometry = new THREE.PlaneGeometry(54, 140, 90, 180);
   const position = geometry.attributes.position;
   const uv = geometry.attributes.uv;
-  const colors = [];
+  const colors = [], inlands = [];
   const color = new THREE.Color();
   for (let i = 0; i < position.count; i++) {
     const z = position.getY(i) - 44;
     const inland = position.getX(i) + 27;
+    inlands.push(inland);
     const x = riverCenter(z, width) + (bankEdge(z, width) + inland) * side;
     const y = groundHeight(x, z, width);
     position.setXYZ(i, x, y, z);
@@ -53,6 +73,8 @@ export function bankGeometry(side: number, width = 1) {
     }
   }
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  // Distance from the water's edge, for shaders that dampen the shore.
+  geometry.setAttribute('inland', new THREE.Float32BufferAttribute(inlands, 1));
   geometry.computeVertexNormals();
   return geometry;
 }

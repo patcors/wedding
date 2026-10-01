@@ -104,9 +104,13 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
       [-8.7, -59, 1.12, 1.8], [9, -67, 1.23, 3.5],
       [-8, -85, 1.05, .2], [8, -95, 1.15, 2.2],
     ].map(([x, z, scale, rotation], i) => ({
-      x: riverCenter(z, width) + (mobile ? Math.sign(x) * (bankEdge(z, width) + 3.8 + (i % 3) * .2) : x),
+      // In portrait the first right-hand tree stands nearer the water, to
+      // balance the reed bed opposite.
+      x: riverCenter(z, width) + (mobile ? Math.sign(x) * (bankEdge(z, width) + (i === 1 ? 2.2 : 3.8 + (i % 3) * .2)) : x),
       z, scale: scale * (mobile ? .88 : 1), rotation, type: i % 2 + (i >= 4 ? 2 : 0), distant: i >= 4,
     }));
+    // Portrait also fills the open stretch of left bank between the first two trees.
+    if (mobile) avenue.push({ x: riverCenter(-7, width) - bankEdge(-7, width) - 3.6, z: -7, scale: .95, rotation: 4.4, type: 1, distant: false });
     const rand = random(415);
     // Stagger groves along both banks all the way into the mist. The inner
     // trees overlap the avenue while outer trees fill gaps between canopies.

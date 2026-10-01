@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BoatSimulation, boatContact, boatOutline, createBoatBody, resolveBoatContact, stemContact } from '../src/components/garden/boatPhysics.ts';
-import { riverCenter, bankEdge, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
+import { riverCenter, bankEdge, groundHeight, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
 import { plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
 
 const river = { center: riverCenter, halfWidth: bankEdge };
@@ -140,6 +140,20 @@ test('boats launched into the reed beds start clear of the stems and never cross
       for (const a of world.bodies) {
         assert.ok(Number.isFinite(a.x) && Math.hypot(a.vx, a.vz) < 3);
         for (const stem of stems) assert.ok((stemContact(a, stem)?.depth ?? 0) < .05, 'hull crossed a stem');
+      }
+    }
+  }
+});
+
+test('the ground where boats stop is always under water, on both compositions', () => {
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    for (let z = -110; z <= 20; z += .05) {
+      for (const side of [-1, 1]) {
+        // Hulls stop .12 short of the bank; check the ground out to the bank itself.
+        for (const inland of [-.12, -.06, 0]) {
+          const x = riverCenter(z, width) + side * (bankEdge(z, width) + inland);
+          assert.ok(groundHeight(x, z, width) < -.01, `land above water at z=${z.toFixed(2)}`);
+        }
       }
     }
   }

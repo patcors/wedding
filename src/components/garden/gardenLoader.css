@@ -1,6 +1,5 @@
 /* The cover: a plain field beneath the opening text and butterflies while the
    scene loads. It fades to reveal the garden without moving the text. */
-html { scrollbar-gutter: stable; }
 .garden-prototype[data-state='loading'], .garden-prototype[data-state='error'] { overflow: hidden; }
 /* Inside the pinned stage, so it covers the whole screen including under
    Safari's toolbar (see garden.css). */
