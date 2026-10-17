@@ -6,12 +6,13 @@
 // flying their monogram from their engagement, moored at the jetty for the
 // celebration. Amelia's is on the left, Patrick's on the right. Each small
 // masthead flies the mark of the company its sailor works for, and while
-// they're at university, the university's under it.
+// they're at university, the university's under it. As they start salsa
+// classes the catamaran turns once on the spot, everything aboard with it.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { routeAt } from './journey';
-import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, rigging, universityFlag, type Company } from './storyBoats';
+import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, rigging, salsaClock, salsaTurn, universityFlag, type Company } from './storyBoats';
 import { BIG_RIG, FLAG, HULL, LOGO_FLAG, SAIL_EASED, STORY_PALETTES, bigRig, companyFlagTexture, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
 
@@ -87,6 +88,8 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
   const flags = useRef<Partial<Record<Company, THREE.Mesh | null>>[]>(BOATS.map(() => ({})));
   const universityFlags = useRef<(THREE.Mesh | null)[]>([]);
   const time = useRef(0), last = useRef<number | null>(null), speed = useRef(0);
+  // Seconds into the salsa turn (see SALSA), or null before it.
+  const salsa = useRef<number | null>(null);
   const rest = useMemo(() => ({
     flags: models.boats.map(({ flag }) => Float32Array.from(flag.attributes.position.array)),
     university: models.boats.map(({ university }) => Float32Array.from(university.attributes.position.array)),
@@ -116,10 +119,15 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
     last.current = z;
     speed.current = THREE.MathUtils.damp(speed.current, moving, 3, step);
 
-    // Bobbing together once the crossbeams hold the hulls; each on its own before.
+    // Bobbing together once the crossbeams hold the hulls; each on its own
+    // before. The salsa turn spins the whole pair about the hulls' middle, so the
+    // rig, flags and deck go round with it; the flags' own turn below keeps
+    // to the heading, not the spin.
     const own = 1 - join.rigid;
-    pair.current.position.set(pose.x, -.02 + Math.sin(t * 1.5) * .011 * join.rigid, pose.z);
-    pair.current.rotation.set(Math.sin(t * 1.2) * .018 * join.rigid, pose.yaw, Math.sin(t * .9) * .022 * join.rigid);
+    salsa.current = salsaClock(salsa.current, p, paused ? 0 : step, reduced);
+    const dance = salsaTurn(salsa.current, pose.yaw);
+    pair.current.position.set(pose.x + dance.shift[0], -.02 + Math.sin(t * 1.5) * .011 * join.rigid + dance.rise * BOAT_SCALE, pose.z + dance.shift[1]);
+    pair.current.rotation.set(Math.sin(t * 1.2) * .018 * join.rigid, pose.yaw + dance.spin, Math.sin(t * .9) * .022 * join.rigid + dance.heel, 'YXZ');
     BOATS.forEach(({ side }, i) => {
       const boat = boats.current[i], mast = rigs.current[i], wake = wakes.current[i];
       if (!boat || !mast || !wake) return;

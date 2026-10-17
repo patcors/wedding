@@ -10,12 +10,13 @@ import University from './University';
 import SnowTrip from './SnowTrip';
 import YearMarkers from './YearMarkers';
 import DatingButterflies from './DatingButterflies';
+import EngagementPetals from './EngagementPetals';
 
 const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: Balloon, university: University, 'snow-2019': SnowTrip };
 // Scenery that isn't an egg on a milestone: the years marked along the banks,
-// and the butterflies that circle the boats as they start dating, part of the
-// boats' joining.
-const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies];
+// the butterflies that circle the boats as they start dating, part of the
+// boats' joining, and the rose petals in the catamaran's wake as they get engaged.
+const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies, EngagementPetals];
 
 export default function Eggs(props: SlotProps) {
   return <>{MILESTONES.map(milestone => {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AMELIA_LEFT_FINOCOMP, ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, routeAt, scrolledSince, stillProgress } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, boatPose, companyFlags, hullHalfBeam, joining, rigging, universityFlag } from '../src/components/garden/storyBoats.ts';
+import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, SALSA, boatPose, companyFlags, hullHalfBeam, joining, rigging, salsaClock, salsaTime, salsaTurn, universityFlag } from '../src/components/garden/storyBoats.ts';
 import { BIG_RIG, FLAG, LOGO_FLAG, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
@@ -295,3 +295,67 @@ test('the big mast flies their monogram on one flag at its masthead, larger than
   assert.ok(BIG_RIG.top - LOGO_FLAG.height > BIG_RIG.boom + .5, 'clear of the boom');
   flag.dispose();
 });
+
+// January 2026's salsa turn, played frame by frame at 60 a second as the
+// eased scroll glides from the milestone before into salsa's stop and holds.
+const salsaAt = progressAt(MILESTONES.find(m => m.id === 'salsa').month);
+const salsaStop = STOPS.find(stop => stop > salsaAt);
+function dance(from, to, { seconds = 8, reduced = false, turn = null } = {}) {
+  const frames = [];
+  for (let i = 0; i <= seconds * 60; i++) {
+    const p = to + (from - to) * Math.exp(-2 * i / 60);
+    turn = salsaClock(turn, p, 1 / 60, reduced);
+    frames.push({ p, turn, ...salsaTurn(turn) });
+  }
+  return frames;
+}
+
+test('as salsa\'s date shows the catamaran turns once on the spot while the date holds, and ends on its heading', () => {
+  const frames = dance(salsaAt - ROOM, salsaStop);
+  const first = frames.findIndex(f => f.turn !== null);
+  assert.ok(salsaTime(frames[first].p) >= SALSA.cue && salsaTime(frames[first - 1].p) < SALSA.cue, 'starts as the date shows');
+  // Started early in the date's hold, before its stop.
+  assert.ok(frames[first].p > salsaAt && frames[first].p < salsaStop && SALSA.late < .35);
+  const turning = frames.filter(f => f.turn !== null && f.turn < SALSA.seconds);
+  assert.ok(Math.abs(turning.length / 60 - SALSA.seconds) < .05, 'turns for SALSA.seconds');
+  // Once right round, a little further, and smoothly, never a jump.
+  assert.ok(Math.min(...frames.map(f => f.spin)) < -2 * Math.PI && Math.min(...frames.map(f => f.spin)) > -2 * Math.PI - .2);
+  assert.ok(Math.max(...frames.map(f => f.spin)) < .25, 'only a little prep the other way');
+  // (−2π at the end is the same heading as 0.)
+  const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+  for (let i = 1; i < frames.length; i++) assert.ok(Math.abs(wrap(frames[i].spin - frames[i - 1].spin)) < .12, `jumps at frame ${i}`);
+  // Done, back on the heading it started on, upright and level.
+  const last = frames.at(-1);
+  assert.equal(last.turn, Infinity);
+  assert.deepEqual([last.spin, last.heel, last.rise, ...last.shift], [0, 0, 0, 0, 0]);
+  // Nothing before the date.
+  assert.ok(frames.filter(f => salsaTime(f.p) < 0).every(f => f.turn === null && f.spin === 0));
+});
+
+test('the salsa turn holds while paused, is missed by a guest arriving late, plays again after going back, and never under reduced motion', () => {
+  const half = salsaClock(SALSA.seconds / 2, salsaStop, 0);
+  assert.equal(half, SALSA.seconds / 2);
+  assert.equal(salsaClock(null, salsaAt + .6 * ROOM, 1 / 60), Infinity);
+  assert.equal(salsaClock(Infinity, salsaStop, 1 / 60), Infinity);
+  assert.equal(salsaClock(Infinity, salsaAt - .1 * ROOM, 1 / 60), null);
+  assert.ok(dance(salsaAt - ROOM, salsaStop, { reduced: true }).every(f => f.spin === 0 && f.heel === 0));
+  assert.equal(salsaTurn(salsaClock(null, stillProgress(salsaStop), 0, true)).spin, 0);
+});
+
+test('turning on the spot, the catamaran stays between the banks all through salsa\'s share', () => {
+  // Each hull's pointed bow and square stern, in model units.
+  const { bow, stern, half } = { bow: -1.5, stern: 1.15, half: CATAMARAN + hullHalfBeam(1) };
+  for (const width of widths) {
+    for (let p = salsaAt; p < salsaAt + ROOM; p += ROOM / 20) {
+      const pose = boatPose(p, width), edge = bankEdge(pose.z, width);
+      for (let s = .01; s < SALSA.seconds; s += .02) {
+        const { spin, shift } = salsaTurn(s, pose.yaw), a = pose.yaw + spin;
+        for (const [u, v] of [[-CATAMARAN, bow], [CATAMARAN, bow], [-half, stern], [half, stern]]) {
+          const x = pose.x + shift[0] + (Math.cos(a) * u + Math.sin(a) * v) * BOAT_SCALE;
+          assert.ok(Math.abs(x - riverCenter(pose.z, width)) < edge, `over the bank at ${s}s, p ${p} (${width})`);
+        }
+      }
+    }
+  }
+});
+
