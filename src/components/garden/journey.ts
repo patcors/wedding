@@ -129,3 +129,23 @@ export function stillProgress(p: number) {
   }
   return still;
 }
+
+// The milestone the voyage has reached at p (its date has shown), or null
+// before the first and outside the voyage.
+export function milestoneAt(p: number) {
+  if (chapterAt(p) !== 'voyage') return null;
+  let reached: Milestone | null = null;
+  for (const milestone of MILESTONES) if (progressAt(milestone.month) <= p) reached = milestone;
+  return reached;
+}
+
+// Where the page's controls step to: the opening, each milestone halfway
+// through its date's hold, and the celebration with the boats moored.
+export const STOPS: readonly number[] = [0, ...MILESTONES.map(({ month }) => {
+  const m = monthIndex(month);
+  return (progressAt(m) + progressAt(m + 1e-3)) / 2;
+}), 1];
+// A scroll position rounds to a pixel, so a stop counts as reached within this.
+const AT_STOP = 5e-4;
+export const nextStop = (p: number) => STOPS.find(stop => stop > p + AT_STOP) ?? 1;
+export const previousStop = (p: number) => STOPS.findLast(stop => stop < p - AT_STOP) ?? 0;

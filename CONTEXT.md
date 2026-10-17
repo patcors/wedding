@@ -28,7 +28,7 @@ A Party's reply: for each Guest, whether they're coming and what they can't eat,
 ### The site
 
 **Garden**:
-The interactive 3D landing experience at the root of the site. Opens with the couple's names and the date, then walks through their photographs to the celebration.
+The interactive 3D landing experience at the root of the site. Opens with the couple's names and the date, then follows two sailboats down a river through their story, marked only by the month and year, to the celebration.
 _Avoid_: Prototype, garden study, story
 
 **Details page**:
