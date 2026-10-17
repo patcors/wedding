@@ -2,7 +2,7 @@
 // through story time, and where along the river the boats are. Boats, sky,
 // eggs and the date label all read from here. Pure, so it can be tested.
 
-export type EggId = 'balloon' | 'university' | 'snow-2019';
+export type EggId = 'balloon' | 'university' | 'coast' | 'snow-2019';
 // `room` is the milestone's share of the voyage's scroll, up to the next one
 // (1 by default). Shares follow the story, not the calendar, so a quiet year
 // doesn't become a long empty stretch.
@@ -15,7 +15,7 @@ export const AMELIA_LEFT_FINOCOMP = '2022-10';
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
   { id: 'meet', month: '2017-07', description: 'Patrick and Amelia meet at university, both starting maths degrees.', egg: 'university', room: 1.4 },
-  { id: 'coast', month: '2017-11', description: 'Their first trip away with friends, down the coast.' },
+  { id: 'coast', month: '2017-11', description: 'Their first trip away with friends, down the coast.', egg: 'coast' },
   { id: 'internship', month: '2018-11', description: 'They start their internship at FinoComp.' },
   { id: 'snow-2019', month: '2019-07', description: 'A snow trip, where Amelia breaks her wrist snowboarding.', egg: 'snow-2019' },
   { id: 'graduation', month: '2020-08', description: 'They graduate from university.' },
