@@ -12,7 +12,7 @@ test('the sixteen milestones run in order, each with a description', () => {
   assert.equal(MILESTONES.length, 16);
   for (let i = 1; i < MILESTONES.length; i++) assert.ok(monthIndex(MILESTONES[i].month) > monthIndex(MILESTONES[i - 1].month));
   for (const m of MILESTONES) assert.match(m.month, /^\d{4}-\d{2}$/), assert.ok(m.description.length > 10);
-  assert.deepEqual(MILESTONES.filter(m => m.egg).map(m => [m.month, m.egg]), [['2017-07', 'university'], ['2019-07', 'snow-2019'], ['2026-07', 'balloon']]);
+  assert.deepEqual(MILESTONES.filter(m => m.egg).map(m => [m.month, m.egg]), [['2017-07', 'university'], ['2019-07', 'snow-2019'], ['2020-08', 'graduation'], ['2026-07', 'balloon']]);
   for (const date of Object.values(DATES).slice(0, -1)) assert.ok(MILESTONES.some(m => m.month === date), date);
 });
 

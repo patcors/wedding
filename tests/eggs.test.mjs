@@ -149,3 +149,44 @@ test('the 2019 snowman stands on the bank, in view as its date holds and for a s
     assert.ok(Math.abs(Math.atan2(cx - x, cz - z) - yaw) < .3);
   }
 });
+
+const graduation = MILESTONES.find(m => m.egg === 'graduation');
+const onLand = (x, z, width) => Math.abs(x - riverCenter(z, width)) > bankEdge(z, width);
+
+test('the mortarboards are tossed straight up off the boats while the date holds and land on their own banks', async () => {
+  const { CAPS, capInAir, capLanding, capLaunch } = await import('../src/components/garden/eggs/capToss.ts');
+  const { groundHeight } = await import('../src/components/garden/gardenGeometry.ts');
+  assert.equal(graduation.month, '2020-08');
+  assert.deepEqual(CAPS.tosses.map(toss => toss.side), [-1, 1]);
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    for (const toss of CAPS.tosses) {
+      assert.ok(toss.at > 0 && toss.at < .35, 'tossed while the date holds');
+      const from = capLaunch(graduation.month, toss, width), to = capLanding(graduation.month, toss, width);
+      assert.ok(!onLand(from.x, from.z, width), 'tossed from a boat on the water');
+      assert.ok(onLand(to.x, to.z, width) && Math.sign(to.x - riverCenter(to.z, width)) === toss.side, 'lands on its own bank');
+      assert.ok(groundHeight(to.x, to.z, width) > 0, 'above the waterline');
+      // Straight up at first, well over the masthead, and down by the end of its flight.
+      const early = capInAir(from, to, CAPS.flight * .15);
+      assert.ok(early.y - from.y > 3 * Math.hypot(early.x - from.x, early.z - from.z));
+      assert.ok(Math.max(...Array.from({ length: 21 }, (_, i) => capInAir(from, to, CAPS.flight * i / 20).y)) > 2.5);
+      const down = capInAir(from, to, CAPS.flight);
+      assert.ok(down.landed && Math.abs(down.y - to.y) < 1e-9 && down.turn === 1);
+      // In view from its toss until it has lain on the bank for a while.
+      for (let t = toss.at; t <= toss.at + .6; t += .05) {
+        const { bearing } = seen(progressAt(graduation.month) + t * ROOM, width, to.x, to.z);
+        assert.ok(Math.abs(bearing) < halfView(width) - 2, `bearing ${bearing} at ${t}`);
+      }
+    }
+    // Lying clear of the 2019 snowman, still on the bank, and the year markers.
+    const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+    const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+    const others = [snowSpot(SNOW_SPOTS[2019], snow.month, width), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width))];
+    for (const toss of CAPS.tosses) {
+      const to = capLanding(graduation.month, toss, width);
+      for (const other of others) assert.ok(Math.hypot(other.x - to.x, other.z - to.z) > 2.5, 'clear of the other scenery');
+    }
+  }
+  // Reduced motion shows both down at graduation's still.
+  const still = stillProgress(progressAt(graduation.month) + ROOM * .2);
+  assert.ok(CAPS.tosses.every(toss => eggTime(graduation, still, true, CAPS.settled) > toss.at));
+});
