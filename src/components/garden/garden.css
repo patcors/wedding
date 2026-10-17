@@ -122,7 +122,9 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-header-date { display: none; }
   .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
-  .garden-arrival::before, .garden-celebrate::before { inset: -12px 14px; background: radial-gradient(ellipse, color-mix(in srgb, var(--garden-glow) 90.2%, transparent) 16%, color-mix(in srgb, var(--garden-glow) 67.8%, transparent) 44%, color-mix(in srgb, var(--garden-glow) 23.9%, transparent) 66%, transparent 80%); }
+  /* Sized to the box's sides, not its corners, so the glow fades out before
+     its edges on a narrow screen rather than ending in a hard rectangle. */
+  .garden-arrival::before, .garden-celebrate::before { inset: -90px 0 -50px; background: radial-gradient(closest-side, color-mix(in srgb, var(--garden-glow) 90.2%, transparent) 30%, color-mix(in srgb, var(--garden-glow) 67.8%, transparent) 60%, color-mix(in srgb, var(--garden-glow) 23.9%, transparent) 82%, transparent); }
   .garden-arrival h1 { font-size: clamp(60px, 16vw, 90px); line-height: .9; margin: 24px 0 20px; }
   .garden-arrival h1 span { display: block; font-size: 35px; line-height: 1.2; margin: 4px 0; }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
