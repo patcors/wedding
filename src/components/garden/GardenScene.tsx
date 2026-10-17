@@ -1,21 +1,23 @@
 // PROTOTYPE: a short, self-contained garden composition, not the production story.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { useTexture } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, riverCenter, bankEdge, groundHeight, leafGeometry, random } from './gardenGeometry';
-import GardenTrees from './GardenTrees';
+import GardenTrees, { TREE_MODELS, treeTextures } from './GardenTrees';
 import GardenPreparation from './GardenPreparation.tsx';
-import GardenGround, { type GroundStyle, type RockStyle } from './GardenGround';
-import GardenRocks from './GardenRocks';
+import GardenGround, { groundTextures, type GroundStyle, type RockStyle } from './GardenGround';
+import GardenRocks, { ROCK_MODEL, ROCK_TEXTURES } from './GardenRocks';
 import GardenPlants from './GardenPlants';
 import { plantSites, type PlantStyle } from './gardenPlantGeometry';
 import { BoatWakes, PaperBoat } from './PaperBoat';
 import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch, type Stem } from './boatPhysics';
+import { preloadGardenTextures, useGardenTextures } from './gardenTextures';
 
 const BASE = import.meta.env.BASE_URL;
+const WATER_NORMALS = [`${BASE}textures/garden/water-normal.jpg`];
 const boatRiver = { center: riverCenter, halfWidth: bankEdge };
 export const SKY = '#eeeee5';
 // Review options. 'blue' is a clear day: a soft grey-blue sky, slightly deeper
@@ -27,6 +29,32 @@ export type SkyStyle = 'mist' | 'blue' | 'combo';
 export const BLUE_SKY = { zenith: '#9dacc7', horizon: '#abbed8', water: '#1d4f8c', glint: '#eef5ff' };
 const WATER = { water: '#b5bca6', glint: '#fff9e9' };
 const COMBO_WATER = { water: '#4d86c4', glint: '#eef5ff' };
+type AssetChoices = { groundStyle: GroundStyle; rockStyle: RockStyle; lightTrees: boolean };
+// Every model and texture the scene needs, with the orientation its maps load in.
+function gardenAssets({ groundStyle, rockStyle, lightTrees }: AssetChoices) {
+  const moss = rockStyle === 'moss';
+  return {
+    models: [TREE_MODELS, ...moss ? [[ROCK_MODEL]] : []],
+    textures: [[groundTextures(groundStyle), true], [WATER_NORMALS, true], [treeTextures(lightTrees), true],
+      ...moss ? [[ROCK_TEXTURES, false]] : []] as [string[], boolean][],
+  };
+}
+// Starts every download at once. Suspending on one asset at a time would
+// leave the rest waiting behind it.
+export function preloadGardenAssets(choices: AssetChoices) {
+  const { models, textures } = gardenAssets(choices);
+  models.forEach(urls => useGLTF.preload(urls));
+  textures.forEach(([urls, flipY]) => preloadGardenTextures(urls, { flipY }));
+}
+// Holds the whole scene until everything has arrived. Otherwise React renders
+// it again each time an asset lands, rebuilding the banks and planting from
+// scratch, which stalls the butterflies while they fly in.
+function useGardenAssets(choices: AssetChoices) {
+  preloadGardenAssets(choices);
+  const { models, textures } = gardenAssets(choices);
+  models.forEach(urls => useGLTF(urls));
+  textures.forEach(([urls, flipY]) => useGardenTextures(urls, { flipY }));
+}
 type SceneProps = { prepare: boolean; progress: number; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle };
 
 // A dome that follows the camera, shaded by height above the horizon. The
@@ -96,7 +124,7 @@ function Pool({ paused, width, mobile, reeds, launchRequest, tint }: { paused: b
     event.stopPropagation();
     launch(x, z);
   };
-  const normals = useTexture(`${BASE}textures/garden/water-normal.jpg`);
+  const [normals] = useGardenTextures(WATER_NORMALS);
   const water = useMemo(() => {
     normals.wrapS = normals.wrapT = THREE.RepeatWrapping;
     const object = new Water(new THREE.PlaneGeometry(240, 260), {
@@ -263,6 +291,7 @@ function FallingLeaves({ paused, width }: { paused: boolean; width: number }) {
 }
 
 export default function GardenScene({ prepare, progress, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle }: SceneProps) {
+  useGardenAssets({ groundStyle, rockStyle, lightTrees });
   const { camera, size } = useThree();
   // On touch screens the canvas runs on under Safari's toolbar (see
   // garden.css), so framing is worked out for the part above it.

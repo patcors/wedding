@@ -1,10 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, useTexture } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { riverCenter, bankEdge, groundHeight, random } from './gardenGeometry';
+import { useGardenTextures } from './gardenTextures';
 
 const BASE = `${import.meta.env.BASE_URL}models/garden/`;
+export const TREE_MODELS = ['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb'].map(file => BASE + file);
+const LIGHT_TEXTURES = ['bark-color.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves.webp'].map(file => BASE + file);
+const DARK_TEXTURES = ['bark-color-dark.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves-dark.webp'].map(file => BASE + file);
+export const treeTextures = (light: boolean) => light ? LIGHT_TEXTURES : DARK_TEXTURES;
 type Placement = { x: number; z: number; scale: number; rotation: number; type: number; distant: boolean };
 
 function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobile, width }: {
@@ -39,29 +44,27 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
 export default function GardenTrees({ width, mobile, paused, lightTrees }: {
   width: number; mobile: boolean; paused: boolean; lightTrees: boolean;
 }) {
-  const models = useGLTF(['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb'].map(file => BASE + file));
-  const [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap] = useTexture(
-    ['bark-color.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves.webp',
-      'bark-color-dark.webp', 'ash-leaves-dark.webp'].map(file => BASE + file));
+  const models = useGLTF(TREE_MODELS);
+  // Only the palette in use downloads; the other is a Review variant. These
+  // geometry-only GLBs preserve EZ-Tree's original UVs. No exporter texture flip
+  // was baked in, so the maps load flipped, the source TextureLoader convention.
+  const [barkColor, barkNormal, barkRoughness, leafMap] = useGardenTextures(treeTextures(lightTrees));
   const windTime = useMemo(() => ({ value: 0 }), []);
-  const materials = useMemo(() => {
-    for (const texture of [barkColor, darkBarkColor, barkNormal, barkRoughness]) {
+  // Set up each palette's maps as it arrives.
+  useMemo(() => {
+    for (const texture of [barkColor, barkNormal, barkRoughness]) {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(.5, .20);
       texture.anisotropy = 4;
-      texture.needsUpdate = true;
     }
-    for (const texture of [barkColor, darkBarkColor, leafMap, darkLeafMap]) texture.colorSpace = THREE.SRGBColorSpace;
-    leafMap.anisotropy = darkLeafMap.anisotropy = 4;
-    // These geometry-only GLBs preserve EZ-Tree's original UVs. No exporter
-    // texture flip was baked in, so keep the source TextureLoader convention.
-    for (const texture of [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap]) {
-      texture.flipY = true;
-      texture.needsUpdate = true;
-    }
+    for (const texture of [barkColor, leafMap]) texture.colorSpace = THREE.SRGBColorSpace;
+    leafMap.anisotropy = 4;
+    for (const texture of [barkColor, barkNormal, barkRoughness, leafMap]) texture.needsUpdate = true;
+  }, [barkColor, barkNormal, barkRoughness, leafMap]);
+  const materials = useMemo(() => {
     const bark = new THREE.MeshStandardMaterial({ map: barkColor, normalMap: barkNormal,
-      roughnessMap: barkRoughness, normalScale: new THREE.Vector2(.65, .65), color: '#eee4d2', roughness: .95 });
-    const leaves = new THREE.MeshStandardMaterial({ map: leafMap, color: '#edf0d7',
+      roughnessMap: barkRoughness, normalScale: new THREE.Vector2(.65, .65), roughness: .95 });
+    const leaves = new THREE.MeshStandardMaterial({ map: leafMap,
       side: THREE.DoubleSide, alphaTest: .45, roughness: .95 });
     const depth = new THREE.MeshDepthMaterial({ map: leafMap, alphaTest: .45,
       side: THREE.DoubleSide, depthPacking: THREE.RGBADepthPacking });
@@ -85,14 +88,15 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
     leaves.onBeforeCompile = depth.onBeforeCompile = animate;
     leaves.customProgramCacheKey = depth.customProgramCacheKey = () => 'garden-leaf-wind-v1';
     return { bark, leaves, depth };
-  }, [barkColor, barkNormal, barkRoughness, leafMap, darkBarkColor, darkLeafMap, windTime]);
+    // Built once, so the meshes keep them; the palette's maps are set below.
+  }, [windTime]);
   useLayoutEffect(() => {
     // Reuse the same meshes, materials and wind clock; only the palette changes.
-    materials.bark.map = lightTrees ? barkColor : darkBarkColor;
+    Object.assign(materials.bark, { map: barkColor, normalMap: barkNormal, roughnessMap: barkRoughness });
     materials.bark.color.set(lightTrees ? '#eee4d2' : '#c8bea7');
-    materials.leaves.map = materials.depth.map = lightTrees ? leafMap : darkLeafMap;
+    materials.leaves.map = materials.depth.map = leafMap;
     materials.leaves.color.set(lightTrees ? '#edf0d7' : '#becba4');
-  }, [lightTrees, materials, barkColor, leafMap, darkBarkColor, darkLeafMap]);
+  }, [lightTrees, materials, barkColor, barkNormal, barkRoughness, leafMap]);
   useEffect(() => () => { materials.bark.dispose(); materials.leaves.dispose(); materials.depth.dispose(); }, [materials]);
   useFrame((_, dt) => { if (!paused) windTime.value += Math.min(dt, .05); });
 
