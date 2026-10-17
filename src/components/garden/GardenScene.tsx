@@ -7,7 +7,7 @@ import { Water } from 'three/addons/objects/Water.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, riverCenter, bankEdge, groundHeight, leafGeometry, random } from './gardenGeometry';
 import GardenTrees from './GardenTrees';
-import GardenPreparation from './GardenPreparation';
+import GardenPreparation from './GardenPreparation.tsx';
 import GardenGround, { type GroundStyle, type RockStyle } from './GardenGround';
 import GardenRocks from './GardenRocks';
 import GardenPlants from './GardenPlants';

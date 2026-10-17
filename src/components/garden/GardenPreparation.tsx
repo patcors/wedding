@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import { WebGLRenderTarget, type Camera, type Object3D } from 'three';
-import { prepareGardenScene } from './gardenPreparation';
+import { prepareGardenScene } from './gardenPreparation.ts';
 
 // Compiling and uploading freeze every frame on the page, butterflies included,
 // so this waits until the opening flock is perched on the names.
