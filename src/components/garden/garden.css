@@ -38,7 +38,9 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-canvas { position: absolute; inset: 0; opacity: 0; }
 .garden-canvas.is-ready { opacity: 1; }
 .garden-wash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, var(--garden-top-wash), transparent 28%, transparent 78%, color-mix(in srgb, var(--garden-glow) 32.2%, transparent)); }
-@media (hover: none) { .garden-stage::after { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 48px; pointer-events: none; background: linear-gradient(var(--garden-sky-top, #eeeee5), transparent); } }
+/* Safari's status bar keeps the page colour it loaded with, so the band starts
+   in that colour and passes through the sky's on its way out, with no seam at dusk. */
+@media (hover: none) { .garden-stage::after { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 48px; pointer-events: none; background: linear-gradient(#eeeee5, var(--garden-sky-top, #eeeee5) 45%, transparent); } }
 /* The Review panel's blue sky, and the combo of misty sky and blue water.
    In dev, GardenPage turns the status bar blue to match after a reload. */
 .garden-prototype[data-sky='blue'] .garden-wash { background: none; }
