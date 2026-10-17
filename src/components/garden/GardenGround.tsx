@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
-import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { bankGeometry } from './gardenGeometry';
+import { useGardenTextures } from './gardenTextures';
 
 export type GroundStyle = 'natural' | 'original' | 'leafy' | 'meadow';
 export type RockStyle = 'original' | 'moss';
@@ -15,6 +15,7 @@ const GROUND_MAPS: Record<GroundStyle, string[]> = {
   leafy: ['color', 'normal', 'arm'].map(map => `${ASSETS}leafy_grass-${map}.webp`),
   meadow: ['color', 'normal', 'arm'].map(map => `${ASSETS}grass007-${map}.webp`),
 };
+export const groundTextures = (style: GroundStyle) => GROUND_MAPS[style];
 // Bank UVs are world position / 16; turf tiles every 2.2 units.
 const UV_TO_WORLD = 16, TURF_TILE = 2.2;
 
@@ -67,7 +68,7 @@ function naturalGround(material: THREE.MeshStandardMaterial, litter: THREE.Textu
 
 export default function GardenGround({ width, style }: { width: number; style: GroundStyle }) {
   // Only the chosen style downloads; the others are review variants.
-  const [color, normal, roughness, litter] = useTexture(GROUND_MAPS[style]);
+  const [color, normal, roughness, litter] = useGardenTextures(GROUND_MAPS[style]);
   const material = useMemo(() => {
     const original = style === 'original', natural = style === 'natural';
     for (const texture of [color, normal, roughness, litter].filter(Boolean)) {
