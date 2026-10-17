@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bankEdge, groundHeight, random, riverCenter, RIVER_REACH } from './gardenGeometry.ts';
+import { bankEdge, groundHeight, random, riverCenter, voyageClearing, RIVER_REACH } from './gardenGeometry.ts';
 
 export type PlantKind = 'grass' | 'clover' | 'fern' | 'meadow' | 'reed' | 'cattail';
 export type PlantStyle = 'original' | 'varied';
@@ -152,7 +152,10 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
   }
   if (kind === 'meadow') {
     const rand = random(2081);
-    const columns = mobile ? 100 : 200;
+    // Portrait's narrow view never sees the meadow more than about 24 units
+    // inland before the fog closes in, so it plants only that far, at the
+    // same density.
+    const columns = mobile ? 62 : 200, reach = mobile ? .62 : 1;
     const rows = Math.round((mobile ? 200 : 250) * PLANTED_LENGTH / 138);
     // Jitter a continuous carpet across the whole terrain, beyond the narrow
     // shoreline colonies. Both sides retain coverage at every depth.
@@ -160,13 +163,13 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
       const cell = Math.floor(i / 2);
       // Concentrate blades on the visible inner meadow, retaining coverage
       // beneath the outer trees. Roots remain clear of the water.
-      const lateral = (cell % columns + .1 + rand() * .8) / columns;
+      const lateral = (cell % columns + .1 + rand() * .8) / columns * reach;
       const inland = .5 + Math.pow(lateral, 1.6) * 52;
       const z = 25 - (Math.floor(cell / columns) + .15 + rand() * .7) / rows * PLANTED_LENGTH;
       const x = riverCenter(z, width) + (i % 2 ? 1 : -1) * (bankEdge(z, width) + inland);
       return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
         scale: .65 + rand() * .65, tint: .8 + rand() * .3 };
-    }).filter(aboveWater);
+    }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2));
   }
   const counts = Object.fromEntries(Object.entries(mobile ? { grass: 1530, clover: 650, fern: 100 } : { grass: 3000, clover: 1250, fern: 220 })
     .map(([kind, count]) => [kind, Math.round(count * PLANTED_LENGTH / 138)])) as Record<'grass' | 'clover' | 'fern', number>;
@@ -187,7 +190,7 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
     const x = riverCenter(z, width) + side * (bankEdge(z, width) + inland);
     return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
       scale: .65 + rand() * .6, tint: .85 + rand() * .25 };
-  }).filter(aboveWater);
+  }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2));
 }
 
 // The bank's height wobbles, so near the edge the waterline wanders inland.

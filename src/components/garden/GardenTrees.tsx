@@ -2,16 +2,30 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { riverCenter, bankEdge, bendShift, groundHeight, random, riverChunks, sydneyWiden, RIVER_REACH } from './gardenGeometry';
+import { riverCenter, bankEdge, bendShift, groundHeight, random, riverChunks, sydneyWiden, voyageClearing, voyageLandmarks, islandHalfWidth, VOYAGE, RIVER_REACH } from './gardenGeometry';
+import { islandHeight } from './voyageIsland';
 import { useGardenTextures } from './gardenTextures';
 import { useRiverReach } from './useRiverReach';
 
 const BASE = `${import.meta.env.BASE_URL}models/garden/`;
-export const TREE_MODELS = ['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb'].map(file => BASE + file);
+// The four ash models, the old tree at Jasper's Berry where the boats dock, a
+// shrub, and the far branches of the two distant ashes.
+export const TREE_MODELS = ['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb', 'old-tree.glb', 'bush.glb',
+  'ash-1-far.glb', 'ash-2-far.glb'].map(file => BASE + file);
+// Stretches of river at least this far ahead of the camera, deep in the mist,
+// draw the distant ashes' far branches: the same silhouette with a third of
+// the faces. The leaves don't change.
+const FAR_BRANCHES = { desktop: 46, mobile: 34 };
+// The old tree's scale: on a phone's narrow river it stands a little smaller.
+export const OLD_TREE_SCALE = { desktop: 1.2, mobile: .9 };
+// How far the old tree's crown spreads from its trunk at desktop scale; other
+// trees keep out from under it.
+const OLD_TREE_SPREAD = 9.5;
 const LIGHT_TEXTURES = ['bark-color.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves.webp'].map(file => BASE + file);
 const DARK_TEXTURES = ['bark-color-dark.webp', 'bark-normal.webp', 'bark-roughness.webp', 'ash-leaves-dark.webp'].map(file => BASE + file);
 export const treeTextures = (light: boolean) => light ? LIGHT_TEXTURES : DARK_TEXTURES;
-type Placement = { x: number; z: number; scale: number; rotation: number; type: number; distant: boolean };
+// `y` sets the height of the ground where it isn't the banks', on the island.
+type Placement = { x: number; y?: number; z: number; scale: number; rotation: number; type: number; distant: boolean };
 
 function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobile, width }: {
   geometry: THREE.BufferGeometry; material: THREE.Material; depthMaterial?: THREE.Material;
@@ -22,7 +36,7 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
     if (!mesh.current) return;
     const dummy = new THREE.Object3D();
     placements.forEach((p, i) => {
-      dummy.position.set(p.x, groundHeight(p.x, p.z, width) - .08, p.z);
+      dummy.position.set(p.x, (p.y ?? groundHeight(p.x, p.z, width)) - .08, p.z);
       dummy.rotation.set(0, p.rotation, 0);
       dummy.scale.setScalar(p.scale);
       dummy.updateMatrix();
@@ -42,17 +56,35 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
     castShadow={!placements[0]?.distant && (!leaves || !mobile)} receiveShadow />;
 }
 
-// One stretch of river's trees of one model, hidden when out of reach.
-function TreeChunk({ model, materials, placements, mobile, width }: {
-  model: { nodes: Record<string, THREE.Object3D> }; materials: { bark: THREE.Material; leaves: THREE.Material; depth: THREE.Material };
+type TreeModel = { nodes: Record<string, THREE.Object3D> };
+const meshGeometry = (model: TreeModel, part: string) => (model.nodes[part] as THREE.Mesh).geometry;
+
+// One stretch of river's trees of one model, hidden when out of reach. With
+// `far` branches, it switches to them while the stretch is far ahead.
+function TreeChunk({ model, far, materials, placements, mobile, width }: {
+  model: TreeModel; far?: TreeModel; materials: { bark: THREE.Material; leaves: THREE.Material; depth: THREE.Material };
   placements: Placement[]; mobile: boolean; width: number;
 }) {
   const group = useRef<THREE.Group>(null);
+  const near = useRef<THREE.Group>(null), distant = useRef<THREE.Group>(null);
   useRiverReach(group, placements);
+  const front = useMemo(() => Math.max(...placements.map(p => p.z)), [placements]);
+  useFrame(({ camera }) => {
+    if (!far || !near.current || !distant.current) return;
+    const away = camera.position.z - front > (mobile ? FAR_BRANCHES.mobile : FAR_BRANCHES.desktop);
+    near.current.visible = !away;
+    distant.current.visible = away;
+  });
   return <group ref={group}>
-    <TreeBatch geometry={(model.nodes.branches as THREE.Mesh).geometry} material={materials.bark}
-      placements={placements} leaves={false} mobile={mobile} width={width} />
-    <TreeBatch geometry={(model.nodes.leaves as THREE.Mesh).geometry} material={materials.leaves}
+    <group ref={near}>
+      <TreeBatch geometry={meshGeometry(model, 'branches')} material={materials.bark}
+        placements={placements} leaves={false} mobile={mobile} width={width} />
+    </group>
+    {far && <group ref={distant} visible={false}>
+      <TreeBatch geometry={meshGeometry(far, 'branches')} material={materials.bark}
+        placements={placements} leaves={false} mobile={mobile} width={width} />
+    </group>}
+    <TreeBatch geometry={meshGeometry(model, 'leaves')} material={materials.leaves}
       depthMaterial={materials.depth} placements={placements} leaves mobile={mobile} width={width} />
   </group>;
 }
@@ -154,11 +186,50 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
         type: 2 + (i + row + lane) % 2, distant: true,
       };
     });
-    return [0, 1, 2, 3].map(type => riverChunks([...avenue, ...groves].filter(p => p.type === type)));
+    // Coming round the S-bend, the old tree must stay hidden until the river
+    // turns towards it. It stands where the river would have run on had it not
+    // bent, so a stand on the headland inside the second curve screens it from
+    // upstream: tall trees, staggered from the bank to well inland, over an
+    // understorey of shrubs that fills between their trunks.
+    const headland: Placement[] = [], shrubs: Placement[] = [];
+    const hide = random(733), squeeze = mobile ? .8 : 1;
+    for (let i = 0; i < 20; i++) {
+      const z = VOYAGE.bend.from - 11 - i * 1.1 - hide() * 1.6;
+      const inland = 2.2 + (i * 3 % 5) * 1.9 + hide() * 1.6;
+      headland.push({ x: riverCenter(z, width) + bankEdge(z, width) + inland * squeeze, z,
+        scale: (1.05 + hide() * .4) * (mobile ? .88 : 1), rotation: hide() * Math.PI * 2, type: 2 + i % 2, distant: true });
+    }
+    for (let i = 0; i < 14; i++) {
+      const z = VOYAGE.bend.from - 11 - i * 1.6 - hide() * 1.2;
+      const inland = 1.8 + (i % 3) * 1.8 + hide() * 1.2;
+      shrubs.push({ x: riverCenter(z, width) + bankEdge(z, width) + inland * squeeze, z,
+        scale: .36 + hide() * .16, rotation: hide() * Math.PI * 2, type: 5, distant: true });
+    }
+    // A few shrubs on the island's crown, low enough to keep the opening's
+    // view down the river, so it reads as land rather than a reed bed.
+    for (const [z, across, scale] of [[6.6, -.25, .18], [4.4, .2, .22], [2.6, -.1, .17], [.6, .15, .14]]) {
+      const x = riverCenter(z, width) + across * islandHalfWidth(z, width);
+      shrubs.push({ x, y: islandHeight(x, z, width), z, scale: scale * (mobile ? .75 : 1), rotation: z * 2.1, type: 5, distant: true });
+    }
+    // Keep every tree out from under the old tree's crown and off the jetty.
+    const { tree } = voyageLandmarks(width);
+    const spread = OLD_TREE_SPREAD * (mobile ? OLD_TREE_SCALE.mobile : OLD_TREE_SCALE.desktop);
+    const clear = (p: Placement) => Math.hypot(p.x - tree.x, p.z - tree.z) > spread && !voyageClearing(p.x, p.z, width, 1.5);
+    const all = [...avenue, ...groves, ...headland, ...shrubs].filter(clear);
+    return [0, 1, 2, 3, 5].map(type => riverChunks(all.filter(p => p.type === type)));
   }, [width, mobile]);
+  const oldTree = useMemo<Placement[]>(() => {
+    const { tree } = voyageLandmarks(width);
+    // Turned so its longest limb reaches inland, and the shorter ones shade
+    // the jetty without hanging out across the river.
+    return [{ ...tree, scale: mobile ? OLD_TREE_SCALE.mobile : OLD_TREE_SCALE.desktop, rotation: Math.PI, type: 4, distant: false }];
+  }, [width, mobile]);
+  const [ash1, ash2, ash1Distant, ash2Distant, old, bush, ash1Far, ash2Far] = models;
+  const far = [undefined, undefined, ash1Far, ash2Far, undefined];
 
   return <group name="ez-tree-grove" dispose={null}>
-    {models.map((model, i) => placements[i].map((chunk, j) => <TreeChunk key={`${i}-${j}-${chunk.length}`}
-      model={model} materials={materials} placements={chunk} mobile={mobile} width={width} />))}
+    {[ash1, ash2, ash1Distant, ash2Distant, bush].map((model, i) => placements[i].map((chunk, j) => <TreeChunk key={`${i}-${j}-${chunk.length}`}
+      model={model} far={far[i]} materials={materials} placements={chunk} mobile={mobile} width={width} />))}
+    <TreeChunk model={old} materials={materials} placements={oldTree} mobile={mobile} width={width} />
   </group>;
 }

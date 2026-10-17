@@ -39,3 +39,26 @@ for (const variant of [1, 2]) {
     assert.ok(triangleCounts[1] < triangleCounts[0] * .4, 'distant trees must substantially reduce geometry');
   });
 }
+
+// Triangles in each named mesh of a generated tree.
+async function meshTriangles(file) {
+  const document = await io.read(`public/models/garden/${file}.glb`);
+  return Object.fromEntries(document.getRoot().listNodes().filter(node => node.getMesh()).map(node =>
+    [node.getName(), node.getMesh().listPrimitives()[0].getIndices().getCount() / 3]));
+}
+
+for (const variant of [1, 2]) {
+  test(`ash ${variant}: far branches keep a third or less of the distant tree's faces`, async () => {
+    const [distant, far] = [await meshTriangles(`ash-${variant}-distant`), await meshTriangles(`ash-${variant}-far`)];
+    assert.deepEqual(Object.keys(far), ['branches'], 'far trees borrow the distant leaves');
+    assert.ok(far.branches > 0 && far.branches < distant.branches * .35);
+  });
+}
+
+test('the old tree and the shrub are whole trees, the old tree within a single-instance budget', async () => {
+  for (const file of ['old-tree', 'bush']) {
+    const triangles = await meshTriangles(file);
+    assert.deepEqual(Object.keys(triangles).sort(), ['branches', 'leaves']);
+    assert.ok(triangles.branches + triangles.leaves < (file === 'bush' ? 10_000 : 35_000), `${file}: ${JSON.stringify(triangles)}`);
+  }
+});

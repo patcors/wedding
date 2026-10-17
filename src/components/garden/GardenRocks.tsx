@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { bankEdge, riverCenter, groundHeight, random, riverChunks, RIVER_REACH } from './gardenGeometry';
+import { bankEdge, riverCenter, groundHeight, random, riverChunks, voyageClearing, RIVER_REACH } from './gardenGeometry';
 import { useRiverReach } from './useRiverReach';
 import { useGardenTextures } from './gardenTextures';
 
@@ -62,7 +62,8 @@ export default function GardenRocks({ width, visible }: { width: number; visible
       // Consume the original placement sequence to compare the same rock sites.
       rand(); const rotation = rand() * 6; rand();
       const scale = .1 + Math.pow(rand(), 3) * .55;
-      groups[i % 3].push({ x, z, rotation, scale, tint: .88 + rand() * .12 });
+      const tint = .88 + rand() * .12;
+      if (!voyageClearing(x, z, width, .4)) groups[i % 3].push({ x, z, rotation, scale, tint });
     }
     return groups.map(riverChunks);
   }, [width]);

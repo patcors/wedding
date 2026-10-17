@@ -40,7 +40,7 @@ const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 
 // on the `side` bank (+1 is +x) past it, where the boats dock.
 const MEET_Z = routeAtMonth(DATES.meet);
 export const VOYAGE = {
-  island: { from: 10, to: MEET_Z + 3, halfWidth: 1.3 },
+  island: { from: 10, to: MEET_Z + 3, halfWidth: 1.5 },
   meet: MEET_Z,
   sydney: { from: routeAtMonth(DATES.sydney), to: routeAtMonth(DATES.back), widen: 2.2 },
   bend: { from: -135, to: -164, swing: -12 },
@@ -74,13 +74,18 @@ export function bankEdge(z: number, width = 1) {
     - (leftSwing(z, width) + rightSwing(z, width)) / 2 + sydneyWiden(z, width);
 }
 
-// The island's half-width across the river at z, 0 outside it. It is
-// lens-shaped, with rounded tips. The island itself is built in VoyageWorld;
-// the story boats keep to the channels either side of it.
+// The island's half-width across the river at z, 0 outside it. Its upstream
+// head is blunt and rounded, it runs a little uneven along its length, and it
+// tapers off in a long tail towards where the channels rejoin. The island
+// itself is built in VoyageWorld; the story boats keep to the channels either
+// side of it.
 export function islandHalfWidth(z: number, width = 1) {
   const { from, to, halfWidth } = VOYAGE.island;
   const t = (from - z) / (from - to);
-  return t <= 0 || t >= 1 ? 0 : halfWidth * width * Math.pow(Math.sin(Math.PI * t), .6);
+  if (t <= 0 || t >= 1) return 0;
+  const head = t < .16 ? Math.sqrt(1 - (1 - t / .16) ** 2) : 1;
+  const tail = t > .45 ? Math.pow((1 + Math.cos(Math.PI * (t - .45) / .55)) / 2, .7) : 1;
+  return halfWidth * width * head * tail * (1 + Math.sin(z * .9 + 1) * .06);
 }
 
 // The middle of the channel on `side` of the island, as an x offset from the
@@ -99,6 +104,16 @@ export function voyageLandmarks(width = 1) {
     mooring: { x: bank - side * (reach + .8), z },
     tree: { x: riverCenter(tree, width) + side * (bankEdge(tree, width) + VOYAGE.tree.inland * Math.max(width, .6)), z: tree },
   };
+}
+
+// Ground kept clear of generated planting: the old tree's trunk and roots,
+// and the jetty with its landing on the bank. `margin` widens both, for
+// plants and trees with a spread.
+export function voyageClearing(x: number, z: number, width = 1, margin = 0) {
+  const { jetty, tree } = voyageLandmarks(width);
+  if (Math.hypot(x - tree.x, z - tree.z) < 2.2 + margin) return true;
+  const along = (x - jetty.x) * jetty.side;
+  return along > -jetty.reach - .4 - margin && along < 1.8 + margin && Math.abs(z - jetty.z) < .9 + margin;
 }
 
 // Instances are batched by stretch of river, and a batch is drawn only while
