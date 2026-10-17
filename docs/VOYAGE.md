@@ -38,6 +38,19 @@ Each milestone gets one subtle piece of scenery that a guest is pleased to spot.
 
 Recurring, for later: a friends' trip down the coast every November/December until 2023; Amelia's circus show every October from 2023 to 2026, which Patrick attended.
 
+**The balloon** (`eggs/Balloon.tsx`, `eggs/balloonGeometry.ts`): a teardrop envelope of twelve gores in faded terracotta, cream, ochre and dusty teal, with a terracotta crown, a deep teal skirt, a small wicker basket on four ropes and a burner that flickers now and then. About 900 triangles in three draw calls. It fades up out of the mist over the river as July 2026 shows, rises and drifts a little right over the next share and a half of scroll, floats on slowly turning through the bend, and drifts off into the haze just before the dock (gone by about p .915). Under reduced motion it rests, risen, at the July 2026 still.
+
+### Adding an egg
+
+The contract is the comment at the top of `eggs/egg.ts`; in short:
+
+- **Register:** add its id to `EggId` and set `egg` on its milestone in `journey.ts`, and map the id to a component in `eggs/index.tsx`. Each egg gets `EggProps`: its `milestone` and the `SlotProps`.
+- **Time:** `eggTime(milestone, progress, reduced, settled)` is scroll since the date first showed, in milestone shares (`scrolledSince`): negative before, running through the date's hold. Arrive at 0; linger as long as the story allows, and leave before the dock.
+- **Place:** the trees close over the river, so the only open sky is up its corridor, and portrait sees only about 17° either side of the middle. For something in the air, `inView(p, width, { distance, bearing, height, from, follow })` gives a spot relative to the camera (degrees right of the middle; `follow` below 1 lets it lag the camera's turn, as distant things do), `overRiver` keeps it over the water, clear of the trees, and `heightAt(distance, elevation)` turns degrees above the eye line into a height. Place it nearer than it looks and scale it down rather than truly far, where the canopies would hide it. Keep to the right of the top-left/top-centre, where the date label sits. Something on a bank can use a fixed world spot from `riverCenter`/`bankEdge` at `routeAtMonth(month)`.
+- **Motion:** hold idle animation while `paused` (set for reduced motion too). Under `reduced` the camera cuts to each milestone's still, where `eggTime` returns `settled`: show the egg at rest there.
+- **Budget:** one to three draw calls and well under 1,500 triangles, built once and disposed, no shadows, and `visible = false` outside its window. For comparison the scene draws about 2 million triangles a frame on desktop and 3.5 million in portrait.
+- **Light:** the sky changes from dawn to dusk. Read colours from `scene.fog` each frame rather than fixing them, as the balloon does for its haze.
+
 ## How it is built
 
 All in `src/components/garden/`.
