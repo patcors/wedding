@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# invitation sending: phone numbers and the sent log stay on this Mac
+invites/contacts.csv
+invites/sent.log
