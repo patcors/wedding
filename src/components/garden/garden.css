@@ -115,7 +115,8 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-voyage { top: 11%; }
-  .garden-voyage::before { inset: -26px calc(50% - 170px) -18px; }
+  /* No wider than the screen: past its edges it would let the page pan sideways. */
+  .garden-voyage::before { inset: -26px max(0px, 50% - 170px) -18px; }
   .garden-voyage-month { font-size: 42px; }
   .garden-voyage-year { font-size: 18px; }
   .garden-voyage .garden-text-link { margin-top: 4px; }
@@ -123,8 +124,52 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-celebrate h2 { font-size: 65px; }
   .garden-venue { font-size: 21px; }
 }
+/* Shorter phones: the boats sit at the same share of the screen's height, but
+   the copy doesn't shrink with it, so it is set smaller and higher to stay
+   above the moored boats under the title and the catamaran at the dock. */
 @media (max-width: 700px) and (max-height: 700px) {
-  .garden-arrival { top: 19%; }
+  .garden-arrival { top: 14%; }
+  .garden-arrival::before, .garden-celebrate::before { inset: -70px 0 -24px; }
+  .garden-arrival h1 { font-size: min(16vw, 9svh); margin: 14px 0 12px; }
+  .garden-arrival h1 span { font-size: 30px; margin: 2px 0; }
+  .garden-subtitle { font-size: 20px; }
+  .garden-date { margin-top: 16px; }
+  .garden-celebrate { top: 13%; }
+  /* Two lines even on the narrowest phone. */
+  .garden-celebrate h2 { font-size: min(58px, 17.5vw); margin: 16px 0; }
+  .garden-venue { font-size: 19px; margin: 12px 0; }
+  .garden-button { margin-top: 8px; padding: 15px 22px; }
+}
+/* Phones on their side: too short for the stacked copy, which ran off the
+   bottom of the screen, taking the celebration's button with it. The title
+   goes on one line and everything is set small enough to clear the boats'
+   masts. The sides keep clear of the notch. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .garden-header { padding: calc(12px + env(safe-area-inset-top) - var(--garden-edge-clear)) max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left)); }
+  .garden-monogram img { height: 28px; }
+  .garden-header-date { display: none; }
+  .garden-invitation-link { min-height: 36px; display: flex; align-items: center; }
+  .garden-arrival { top: 15%; padding: 0 max(30px, env(safe-area-inset-left), env(safe-area-inset-right)); }
+  .garden-arrival::before, .garden-celebrate::before { inset: -40px 12% -20px; background: radial-gradient(closest-side, color-mix(in srgb, var(--garden-glow) 90.2%, transparent) 30%, color-mix(in srgb, var(--garden-glow) 67.8%, transparent) 60%, color-mix(in srgb, var(--garden-glow) 23.9%, transparent) 82%, transparent); }
+  .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
+  .garden-arrival h1 { font-size: min(54px, 13svh); line-height: 1.1; margin: 8px 0 4px; }
+  .garden-arrival h1 span { display: inline-block; font-size: .6em; line-height: 1; margin: 0 .14em; }
+  .garden-subtitle { font-size: 19px; }
+  .garden-date { font-size: 8px; gap: 12px; margin-top: 12px; }
+  .garden-voyage { top: 8%; }
+  .garden-voyage::before { inset: -20px max(0px, 50% - 150px) -14px; }
+  .garden-voyage-month { font-size: 34px; }
+  .garden-voyage-year { font-size: 15px; }
+  .garden-voyage .garden-text-link { margin-top: 0; }
+  /* On one line, so the button stays above the catamaran's sail. */
+  .garden-celebrate { top: 12%; }
+  .garden-celebrate h2 { font-size: min(48px, 12svh); margin: 6px 0 8px; }
+  .garden-celebrate h2 br { display: none; }
+  .garden-celebrate h2 em { margin-left: .22em; }
+  .garden-venue { font-size: 18px; margin: 8px 0; }
+  .garden-button { margin-top: 4px; padding: 14px 22px; }
+  .garden-bottom { left: max(24px, env(safe-area-inset-left)); right: max(24px, env(safe-area-inset-right)); bottom: calc(10px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
+  .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
 }
 @media (prefers-reduced-motion: reduce) {
   .garden-prototype *, .garden-prototype *::before { transition: none !important; scroll-behavior: auto !important; }

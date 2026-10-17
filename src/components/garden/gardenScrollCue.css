@@ -25,6 +25,11 @@
   .garden-prototype .garden-scroll-cue { font-size: 23px; }
   .garden-scroll-cue-how { font-size: 8px; }
 }
+/* Phones on their side: a shorter line, so the cue stays below the boats. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .garden-prototype .garden-scroll-cue { font-size: 20px; gap: 6px; }
+  .garden-scroll-cue i { height: 24px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .garden-scroll-cue i::after { display: none; }
   .garden-scroll-cue i::before { opacity: .5; }

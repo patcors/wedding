@@ -121,7 +121,7 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
     // jetty, so it doesn't hide it. The second runs further towards the camera
     // along the right bank so no water shows between it and the shore.
     const patches = [mobile ? { z: 9.4, side: -1, reach: .6 } : { z: 8.3, side: -1, length: 2.6 },
-      mobile ? { z: -3.9, side: 1, length: 5.2 } : { z: -5, side: 1 },
+      mobile ? { z: -3.9, side: 1, length: 5.2, reach: .6 } : { z: -5, side: 1 },
       { z: -23, side: -1 }, { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 },
       ...REED_BEDS_DOWNSTREAM]
       .map(patch => ({ length: 3.5, reach: 1, ...patch }));

@@ -2,7 +2,7 @@
 // grassy mound whose shape follows islandHalfWidth, ringed by tall reeds and
 // cattails so each channel feels separate. Pure, so it can be tested.
 import * as THREE from 'three';
-import { VOYAGE, islandHalfWidth, random, riverCenter } from './gardenGeometry.ts';
+import { islandHalfWidth, islandSpan, random, riverCenter } from './gardenGeometry.ts';
 
 // How far the island's shore runs on underwater beyond its waterline, so the
 // mound rises out of the water rather than standing on it.
@@ -26,7 +26,7 @@ export function islandHeight(x: number, z: number, width = 1) {
 // A grid laid across the island from one underwater shore to the other, with
 // the same attributes as the banks so it takes the ground's material.
 export function islandGeometry(width = 1) {
-  const { from, to } = VOYAGE.island, margin = skirt(width);
+  const { from, to } = islandSpan(width), margin = skirt(width);
   const rows = Math.round((from - to + 2) * 4), columns = 28;
   const positions: number[] = [], uvs: number[] = [], colors: number[] = [], inlands: number[] = [], indices: number[] = [];
   const color = new THREE.Color();
@@ -66,7 +66,7 @@ export type IslandSite = { x: number; y: number; z: number; angle: number; scale
 // shorten towards the island's tail, so the channels open up as they rejoin.
 // Cattails stand among them in the shallows; grass and ferns cover the crown.
 export function islandPlantSites(kind: IslandPlant, width = 1, mobile = false): IslandSite[] {
-  const { from, to } = VOYAGE.island;
+  const { from, to } = islandSpan(width);
   const rand = random(kind === 'reed' ? 6211 : kind === 'cattail' ? 6337 : kind === 'grass' ? 6451 : 6577);
   const sites: IslandSite[] = [];
   const place = (x: number, z: number, inland: number, scale: number) => sites.push({
@@ -83,13 +83,16 @@ export function islandPlantSites(kind: IslandPlant, width = 1, mobile = false): 
           if (half < .04 || kind === 'cattail' && Math.sin(row * 1.3 + side * 2) < .3) continue;
           // Full height from the head to just past the middle, then lower to the tail.
           const t = (from - z) / (from - to), height = 1 - .45 * Math.max(0, (t - .55) / .45);
-          const inland = kind === 'reed' ? -.42 + rand() * .64 : -.32 + rand() * .26;
+          // Portrait's camera rides low over a narrow river, so there they
+          // keep closer to the shore, leaving each channel's boat in view.
+          const out = mobile ? .7 : 1;
+          const inland = kind === 'reed' ? (-.42 + rand() * .64) * out : (-.32 + rand() * .26) * out;
           const x = riverCenter(z, width) + side * (half - inland);
           // Shorter out in the water and up on the bank, so the screen thins at its edges.
           const edge = 1 - .25 * Math.min(1, Math.abs(inland + .05) / .4);
           // Portrait's narrow river, seen from nearer, takes shorter reeds so
           // both boats still show from the camera above.
-          const scale = (kind === 'reed' ? (1.3 + rand() * .45) * edge : .75 + rand() * .2) * height * (mobile ? .72 : 1);
+          const scale = (kind === 'reed' ? (1.3 + rand() * .45) * edge : .75 + rand() * .2) * height * (mobile ? .62 : 1);
           place(x, z, inland, scale);
         }
       }

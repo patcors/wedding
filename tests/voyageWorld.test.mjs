@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { VOYAGE, bankEdge, channelOffset, groundHeight, islandHalfWidth, launchJetties, riverCenter, voyageClearing, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
+import { VOYAGE, bankEdge, channelOffset, groundHeight, islandHalfWidth, islandSpan, launchJetties, riverCenter, voyageClearing, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
 import { islandGeometry, islandHeight, islandInland, islandPlantSites } from '../src/components/garden/voyageIsland.ts';
 import { JETTY, LAUNCH_DECK, festoonStrands, jettyGeometry, jettyLantern, launchJettyGeometry, launchLanterns, underLaunchJetty } from '../src/components/garden/voyageDock.ts';
 import { plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
@@ -39,7 +39,7 @@ test('the island rises out of the water and its reeds line its shores, clear of 
 test('the island tapers to nothing where the channels rejoin', () => {
   for (const [width] of compositions) {
     assert.equal(islandHalfWidth(VOYAGE.island.to, width), 0);
-    assert.ok(islandHalfWidth(VOYAGE.island.to + 1, width) < islandHalfWidth(VOYAGE.island.from - 3, width) * .25);
+    assert.ok(islandHalfWidth(VOYAGE.island.to + 1, width) < islandHalfWidth(islandSpan(width).from - 3, width) * .25);
     assert.ok(islandHalfWidth(VOYAGE.island.to, width) < bankEdge(VOYAGE.meet, width));
   }
 });
