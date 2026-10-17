@@ -2,7 +2,7 @@
 // compares visual variants; guests always get the defaults below. The page
 // renders on the server so the opening text is in the HTML before any script;
 // three.js arrives later in its own chunk, behind the cover.
-import { Component, lazy, useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { Component, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
@@ -10,7 +10,7 @@ import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflie
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import type { SkyStyle } from './GardenSky';
-import { ARRIVAL_END, VOYAGE_END } from './journey';
+import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -25,15 +25,65 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
     opening={visit.opening} openingReleased={openingReleased} available={available} onLand={onLand} onComplete={onComplete} />;
 }
 
-// The album shows through the Voyage's middle chapter for now.
-const MEMORY_START = ARRIVAL_END, MEMORY_END = VOYAGE_END;
-const memories = [
-  { file: '20191122_191734.jpg', caption: 'The early days.', alt: 'Patrick and Amelia with a friend beside the harbour' },
-  { file: 'IMG_5509.jpg', caption: 'And then, this.', alt: 'Patrick and Amelia smiling together on a night out' },
-  { file: 'IMG_7024.jpg', caption: 'The first trip away.', alt: 'Patrick and Amelia with hot-air balloons in the sky behind them' },
-  { file: '944d7da37c56a0522ee21fd47b54a4b0.jpg', caption: 'Dressed up, somewhere with a view.', alt: 'Patrick and Amelia dressed up together at sunset' },
-  { file: 'IMG_0466.jpg', caption: 'Us, being us.', alt: 'A playful close-up selfie of Patrick and Amelia' },
-];
+// The page's date and milestone follow the scroll eased as the scene's
+// camera eases it (JourneyProvider), so they arrive with the boats. A rolling
+// date changes at most this often, so it reads as a gentle count rather than
+// a flicker; a milestone is announced once the guest has stayed on it a moment.
+const DATE_EVERY = 400, ANNOUNCE_AFTER = 700;
+function useVoyageMoment(scroll: number, reduced: boolean) {
+  const [date, setDate] = useState<string | null>(null);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
+  const target = useRef(scroll), eased = useRef(scroll), loop = useRef<(() => void) | null>(null);
+  target.current = scroll;
+  useEffect(() => {
+    // Reduced motion: the scene cuts to each milestone's still, and so does the page.
+    if (reduced) {
+      const still = stillProgress(scroll);
+      eased.current = still; setDate(dateLabel(still)); setMilestone(milestoneAt(still));
+      return;
+    }
+    if (loop.current) return;
+    let frame = 0, last = performance.now(), shown: string | null | undefined, changed = -Infinity;
+    const tick = (now: number) => {
+      const dt = Math.min((now - last) / 1000, .05);
+      last = now;
+      // THREE.MathUtils.damp, without pulling three into the page's chunk.
+      eased.current += (target.current - eased.current) * (1 - Math.exp(-2 * dt));
+      const settled = Math.abs(target.current - eased.current) < 1e-5;
+      if (settled) eased.current = target.current;
+      const label = dateLabel(eased.current);
+      if (label !== shown && (settled || now - changed >= DATE_EVERY || label === null || shown == null)) {
+        shown = label; changed = now; setDate(label);
+      }
+      setMilestone(milestoneAt(eased.current));
+      if (settled && label === shown) { loop.current = null; return; }
+      frame = requestAnimationFrame(tick);
+    };
+    loop.current = () => cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(tick);
+  }, [scroll, reduced]);
+  useEffect(() => () => { loop.current?.(); loop.current = null; }, [reduced]);
+  // Screen readers hear the milestone once the guest settles on it.
+  const [announced, setAnnounced] = useState<Milestone | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setAnnounced(milestone), reduced ? 0 : ANNOUNCE_AFTER);
+    return () => clearTimeout(timer);
+  }, [milestone, reduced]);
+  return { date, announced };
+}
+
+// The month and year each crossfade between two layers. A change mid-fade
+// fades the layers on from where they are, so a fast scroll never jumps.
+function Crossfade({ value, className }: { value: string; className: string }) {
+  const [layers, setLayers] = useState([value, '']);
+  const [front, setFront] = useState(0);
+  if (value !== layers[front]) {
+    const back = 1 - front;
+    setLayers(back ? [layers[0], value] : [value, layers[1]]);
+    setFront(back);
+  }
+  return <span className={className}>{layers.map((text, i) => <span key={i} className={i === front ? 'is-shown' : ''}>{text}</span>)}</span>;
+}
 
 class CanvasFallback extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
@@ -72,7 +122,6 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [slow, setSlow] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const [showReview, setShowReview] = useState(REVIEW);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const cover = useRef<HTMLDivElement>(null);
   // The Garden scrolls inside <main>, not the page (see garden.css).
   const scroller = useRef<HTMLElement>(null);
@@ -158,25 +207,36 @@ export default function Garden({ greeting }: { greeting?: string }) {
   // The scroll cue goes for good once the guest has scrolled a little.
   const [explored, setExplored] = useState(false);
   useEffect(() => { if (progress > .01) setExplored(true); }, [progress]);
-  const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
+  const chapter = { arrival: 0, voyage: 1, dock: 2 }[chapterAt(progress)];
   const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready });
-  const memoryIndex = Math.max(0, Math.min(memories.length - 1,
-    Math.floor((progress - MEMORY_START) / (MEMORY_END - MEMORY_START) * memories.length)));
+  const voyage = useVoyageMoment(progress, reduced);
+  // The date stays on through the voyage panel's fade out.
+  const [lastDate, setLastDate] = useState<string | null>(null);
+  if (voyage.date && voyage.date !== lastDate) setLastDate(voyage.date);
+  const [month, year] = (voyage.date ?? lastDate ?? '').split(' ');
+  // The camera already eases between stops; native smooth scrolling would
+  // introduce a second animation and delay the content on slower devices.
   const goToProgress = (next: number) => {
     setProgress(next);
     const element = scroller.current!;
     element.scrollTo({ top: (element.scrollHeight - element.clientHeight) * next, behavior: 'instant' });
   };
-  const scrollToMemory = (index: number) => {
-    const wrapped = (index + memories.length) % memories.length;
-    goToProgress(MEMORY_START + (wrapped + .5) / memories.length * (MEMORY_END - MEMORY_START));
-  };
-  const scrollToChapter = (index: number) => {
-    // The camera already eases between chapters; native smooth scrolling would
-    // introduce a second animation and delay the content on slower devices.
-    if (index === 1) scrollToMemory(0);
-    else goToProgress(index === 0 ? 0 : 1);
-  };
+  // The arrow keys step from the opening through each milestone to the
+  // celebration and back, as the photo album's did between photographs.
+  const step = useRef(goToProgress);
+  step.current = goToProgress;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return;
+      if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review')) return;
+      const element = scroller.current!;
+      const at = element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight);
+      event.preventDefault();
+      step.current(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
   return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-sky={skyStyle === 'mist' ? undefined : skyStyle} aria-busy={state === 'loading'}>
     <div className="garden-stage">
@@ -191,12 +251,13 @@ export default function Garden({ greeting }: { greeting?: string }) {
         <p className="garden-visually-hidden" role="status">{failed ? 'The garden couldn’t open. The details are just below.' : ready ? '' : 'Preparing the garden'}</p>
       </div>
     </div>
+    <p className="garden-visually-hidden" role="status">{chapter === 1 && voyage.announced ? `${dateLabel(progressAt(voyage.announced.month))}. ${voyage.announced.description}` : ''}</p>
     {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
       openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
     {/* The chrome sits in pinned layers inside the scroller, so a drag that starts on it still scrolls. */}
     <div className="garden-chrome-layer">
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
-        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => scrollToChapter(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
+        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
         <span className="garden-header-date">16 APRIL 2027</span>
         <div className="garden-header-links">
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
@@ -218,51 +279,15 @@ export default function Garden({ greeting }: { greeting?: string }) {
         </div>
       </section>
 
-      <section className={`garden-panel garden-memory ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
-        <div className="garden-album" role="group" aria-label="Our photographs" onKeyDown={event => {
-          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-            event.preventDefault(); scrollToMemory(memoryIndex + (event.key === 'ArrowLeft' ? -1 : 1));
-          }
-        }}>
-          <div className="garden-photo-stack" onTouchStart={event => {
-            const touch = event.touches[0]; touchStart.current = { x: touch.clientX, y: touch.clientY };
-          }} onTouchEnd={event => {
-            if (!touchStart.current) return;
-            const touch = event.changedTouches[0], dx = touch.clientX - touchStart.current.x, dy = touch.clientY - touchStart.current.y;
-            if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) scrollToMemory(memoryIndex + (dx < 0 ? 1 : -1));
-            touchStart.current = null;
-          }}>
-            {/* Stable card positions keep side photos behind the centre throughout
-                a change. Only their contents crossfade, including on rapid scrolls. */}
-            {[-1, 0, 1].map(offset => <div key={offset}
-              className={`garden-photo-slot ${offset === 0 ? 'is-current' : ''}`}
-              aria-hidden={offset !== 0}
-              style={{ '--photo-offset': offset } as CSSProperties}>
-              {memories.map((memory, i) => {
-                const visible = i === (memoryIndex + offset + memories.length) % memories.length;
-                return <figure key={memory.file} className={visible ? 'is-visible' : ''} aria-hidden={offset !== 0 || !visible}>
-                  <img src={ready ? `${BASE}photos/${memory.file}` : undefined} alt={offset === 0 && visible ? memory.alt : ''} decoding="async" draggable={false} />
-                  <figcaption>{memory.caption}</figcaption>
-                </figure>;
-              })}
-            </div>)}
-          </div>
-          <div className="garden-photo-controls">
-            <button aria-label="Previous photograph" onClick={() => scrollToMemory(memoryIndex - 1)}>←</button>
-            <div className="garden-photo-dots">
-              {memories.map((memory, i) => <button key={memory.file} aria-label={`Photograph ${i + 1}: ${memory.caption}`}
-                aria-pressed={i === memoryIndex} onClick={() => scrollToMemory(i)}><span /></button>)}
-            </div>
-            <button aria-label="Next photograph" onClick={() => scrollToMemory(memoryIndex + 1)}>→</button>
-          </div>
-          <p className="garden-photo-count">0{memoryIndex + 1} <span>/ 05</span></p>
-        </div>
-        <div className="garden-memory-copy">
-          <p className="garden-eyebrow">Our story</p>
-          <h2><b className="garden-perch">A</b> lifetime of<br /><em>little moments.</em></h2>
-          <p>And now, one more to share<br />with the people we love.</p>
-          <button className="garden-text-link" onClick={() => scrollToChapter(2)}>The next chapter <span aria-hidden="true">→</span></button>
-        </div>
+      {/* Wordless but for the date: the scenery tells the story. Screen readers
+          hear each milestone instead, from the status line below. */}
+      <section className={`garden-panel garden-voyage ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
+        <h2 className="garden-visually-hidden">Our story</h2>
+        <p className="garden-voyage-date" aria-hidden="true">
+          <Crossfade className="garden-voyage-month" value={month} />
+          <Crossfade className="garden-voyage-year" value={year ?? ''} />
+        </p>
+        <button className="garden-text-link" onClick={() => goToProgress(1)}>The next chapter <span aria-hidden="true">→</span></button>
       </section>
 
       <section className={`garden-panel garden-celebrate ${chapter === 2 ? 'is-active' : ''}`} inert={chapter !== 2 || sceneOnly} aria-hidden={chapter !== 2 || sceneOnly}>
@@ -292,7 +317,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
           <span>Release a butterfly</span>
         </button>
         </div>}
-        <button className={`garden-scroll-cue ${explored ? 'is-done' : ''}`} onClick={() => scrollToChapter(1)}>
+        <button className={`garden-scroll-cue ${explored ? 'is-done' : ''}`} onClick={() => goToProgress(nextStop(progress))}>
           Wander with us
           <span className="garden-scroll-cue-how" aria-hidden="true"><span className="garden-scroll-cue-mouse">Scroll</span><span className="garden-scroll-cue-touch">Swipe up</span></span>
           <i aria-hidden="true" />
