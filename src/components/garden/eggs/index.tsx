@@ -1,5 +1,6 @@
 // Every Easter egg, by the id its milestone names in journey.ts. Adding one
-// means adding its id to EggId and the milestone, a component here, and nothing else.
+// means adding its id to EggId and to its milestone's `egg`, its component
+// here, and nothing else; egg.ts says how an egg times and places itself.
 import type { ComponentType } from 'react';
 import { MILESTONES, type EggId } from '../journey';
 import type { SlotProps } from '../JourneyProvider';
