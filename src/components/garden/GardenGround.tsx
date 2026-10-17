@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { bankGeometry } from './gardenGeometry';
+import { bankGeometry, RIVER_CHUNK, RIVER_REACH } from './gardenGeometry';
+import { useRiverReach } from './useRiverReach';
 import { useGardenTextures } from './gardenTextures';
 
 export type GroundStyle = 'natural' | 'original' | 'leafy' | 'meadow';
@@ -66,7 +67,10 @@ function naturalGround(material: THREE.MeshStandardMaterial, litter: THREE.Textu
   material.customProgramCacheKey = () => 'garden-ground-natural-v3';
 }
 
-export default function GardenGround({ width, style }: { width: number; style: GroundStyle }) {
+// The ground's material in the chosen style. Anything else built as ground,
+// such as the Voyage's island, gives its geometry the same attributes as the
+// banks (uv at world position / 16, colour, inland) and shares the look.
+export function useGroundMaterial(style: GroundStyle) {
   // Only the chosen style downloads; the others are review variants.
   const [color, normal, roughness, litter] = useGardenTextures(GROUND_MAPS[style]);
   const material = useMemo(() => {
@@ -111,8 +115,46 @@ export default function GardenGround({ width, style }: { width: number; style: G
     material.customProgramCacheKey = () => `garden-ground-${original ? 'original' : 'lush'}-v1`;
     return material;
   }, [style, color, normal, roughness, litter]);
-  const geometries = useMemo(() => [bankGeometry(-1, width), bankGeometry(1, width)], [width]);
-  useEffect(() => () => geometries.forEach(g => g.dispose()), [geometries]);
   useEffect(() => () => material.dispose(), [material]);
-  return <>{geometries.map((geometry, i) => <mesh key={i} name={`garden-bank-${i}`} geometry={geometry} material={material} receiveShadow />)}</>;
+  return material;
+}
+
+// Each bank is one long strip of ground the length of the river. It is drawn
+// a stretch at a time, sharing the strip's vertices, so only the stretches in
+// the camera's reach are drawn (and reflected in the water).
+function bankStretches(bank: THREE.BufferGeometry) {
+  const position = bank.attributes.position, index = bank.index!;
+  // PlaneGeometry's rows run along the river, two triangles per cell.
+  const rowLength = (90 + 1), cellsPerRow = 90, rows = position.count / rowLength - 1;
+  const rowsPerStretch = Math.ceil(rows * RIVER_CHUNK / (RIVER_REACH.from - RIVER_REACH.to));
+  const stretches = [];
+  for (let row = 0; row < rows; row += rowsPerStretch) {
+    const last = Math.min(rows, row + rowsPerStretch);
+    const geometry = new THREE.BufferGeometry();
+    for (const [name, attribute] of Object.entries(bank.attributes)) geometry.setAttribute(name, attribute);
+    geometry.setIndex(index);
+    geometry.setDrawRange(row * cellsPerRow * 6, (last - row) * cellsPerRow * 6);
+    // Bounds of just this stretch, for frustum culling.
+    const points = [];
+    for (let i = row * rowLength; i < (last + 1) * rowLength; i++) points.push(new THREE.Vector3().fromBufferAttribute(position, i));
+    geometry.boundingSphere = new THREE.Sphere().setFromPoints(points);
+    geometry.boundingBox = new THREE.Box3().setFromPoints(points);
+    stretches.push({ geometry, span: [{ z: points[0].z }, { z: points[points.length - 1].z }] });
+  }
+  return stretches;
+}
+
+function BankStretch({ geometry, span, material, name }: { geometry: THREE.BufferGeometry; span: { z: number }[]; material: THREE.Material; name: string }) {
+  const mesh = useRef<THREE.Mesh>(null);
+  useRiverReach(mesh, span);
+  return <mesh ref={mesh} name={name} geometry={geometry} material={material} receiveShadow />;
+}
+
+export default function GardenGround({ width, style }: { width: number; style: GroundStyle }) {
+  const material = useGroundMaterial(style);
+  const banks = useMemo(() => [bankGeometry(-1, width), bankGeometry(1, width)], [width]);
+  const stretches = useMemo(() => banks.map(bankStretches), [banks]);
+  useEffect(() => () => banks.forEach(g => g.dispose()), [banks]);
+  return <>{stretches.map((bank, i) => bank.map((stretch, j) => <BankStretch key={`${i}-${j}`} name={`garden-bank-${i}`}
+    geometry={stretch.geometry} span={stretch.span} material={material} />))}</>;
 }

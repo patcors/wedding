@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { riverCenter, bankEdge, groundHeight, leafGeometry, random, RIVER_REACH } from './gardenGeometry';
+import { riverCenter, bankEdge, groundHeight, leafGeometry, random, voyageClearing, RIVER_REACH } from './gardenGeometry';
 import { ROCK_COUNT } from './GardenRocks';
 import type { RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
@@ -42,7 +42,7 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
       const z = RIVER_REACH.from - rand() * (RIVER_REACH.from - RIVER_REACH.to), x = riverCenter(z, width) + (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
       dummy.position.set(x, groundHeight(x, z, width) - .04, z);
       dummy.rotation.set(rand(), rand() * 6, rand());
-      const s = .1 + Math.pow(rand(), 3) * .55;
+      const s = voyageClearing(x, z, width, .4) ? 0 : .1 + Math.pow(rand(), 3) * .55;
       dummy.scale.set(s * 1.4, s * .5, s);
       dummy.updateMatrix(); stones.current?.setMatrixAt(i, dummy.matrix);
       color.setHSL(.12, .08, .48 + rand() * .2); stones.current?.setColorAt(i, color);
@@ -63,7 +63,8 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
       const angle = i % 5 / 5 * Math.PI * 2;
       dummy.position.set(x, groundHeight(x, z, width) + .18 + r() * .2, z);
       dummy.rotation.set(-Math.PI / 2 + .4, angle, angle);
-      dummy.scale.setScalar(.11); dummy.updateMatrix(); flowers.current!.setMatrixAt(i, dummy.matrix);
+      // Flowers that would grow through the jetty or the old tree's trunk are left out.
+      dummy.scale.setScalar(voyageClearing(x, z, width, .2) ? 0 : .11); dummy.updateMatrix(); flowers.current!.setMatrixAt(i, dummy.matrix);
       color.set(cluster % 3 ? '#ece6cc' : '#d6a6a0'); flowers.current!.setColorAt(i, color);
     }
     [stones, grasses, flowers].forEach(ref => {
