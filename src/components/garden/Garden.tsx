@@ -9,7 +9,8 @@ import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors
 import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
-import type { SkyStyle } from './GardenSky';
+import { SKY_STYLE, type SkyStyle } from './GardenSky';
+import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
 import './garden.css';
 import './gardenScrollCue.css';
@@ -100,8 +101,9 @@ const REVIEW = import.meta.env.DEV;
 if (REVIEW) void import('./gardenReview.css');
 // Dev only: the monogram hides and shows the Review panel, remembered across reloads.
 const REVIEW_HIDDEN = 'pa_dev_review_hidden';
-// Dev only: the Review sky choice, remembered so GardenPage can colour Safari's bars to match.
+// Dev only: the Review sky and water, remembered; GardenPage reads the sky to colour Safari's bars to match.
 const REVIEW_SKY = 'pa_dev_sky';
+const REVIEW_WATER = 'pa_dev_water';
 
 export default function Garden({ greeting }: { greeting?: string }) {
   const [progress, setProgress] = useState(0);
@@ -109,7 +111,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
   const [lightTrees, setLightTrees] = useState(false);
-  const [skyStyle, setSkyStyle] = useState<SkyStyle>('mist');
+  const [skyStyle, setSkyStyle] = useState<SkyStyle>(SKY_STYLE);
   const [groundStyle, setGroundStyle] = useState<GroundStyle>('natural');
   const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
   const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
@@ -135,8 +137,10 @@ export default function Garden({ greeting }: { greeting?: string }) {
     // Dev only: ?slow=8000 holds the cover for 8s from navigation, ?fail fails WebGL.
     if (import.meta.env.DEV && new URLSearchParams(location.search).has('fail')) setFailed(true);
     if (REVIEW && localStorage.getItem(REVIEW_HIDDEN)) setShowReview(false);
-    const sky = REVIEW && localStorage.getItem(REVIEW_SKY);
-    if (sky === 'blue' || sky === 'combo') setSkyStyle(sky);
+    if (REVIEW) {
+      const water = localStorage.getItem(REVIEW_WATER);
+      setSkyStyle({ sky: localStorage.getItem(REVIEW_SKY) === 'mist' ? 'mist' : 'day', water: water && water in WATERS ? water as WaterStyle : SKY_STYLE.water });
+    }
   }, []);
   const toggleReview = () => {
     if (showReview) localStorage.setItem(REVIEW_HIDDEN, '1');
@@ -238,7 +242,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
     return () => removeEventListener('keydown', onKey);
   }, []);
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
-  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-sky={skyStyle === 'mist' ? undefined : skyStyle} aria-busy={state === 'loading'}>
+  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
@@ -347,13 +351,20 @@ export default function Garden({ greeting }: { greeting?: string }) {
         </select>
       </label>
       <label className="garden-material-selector">Sky
-        <select aria-label="Sky colour" value={skyStyle} onChange={event => {
+        <select aria-label="Sky" value={skyStyle.sky} onChange={event => {
           localStorage.setItem(REVIEW_SKY, event.target.value);
           // Safari only reads the page colour for its bars at load.
-          if (skyStyle === 'blue' || event.target.value === 'blue') location.reload();
-          else setSkyStyle(event.target.value as SkyStyle);
+          location.reload();
         }}>
-          <option value="mist">Mist</option><option value="blue">Blue</option><option value="combo">Combo</option>
+          <option value="day">Clear day</option><option value="mist">Mist (old)</option>
+        </select>
+      </label>
+      <label className="garden-material-selector">Water
+        <select aria-label="Water colour" value={skyStyle.water} onChange={event => {
+          localStorage.setItem(REVIEW_WATER, event.target.value);
+          setSkyStyle({ ...skyStyle, water: event.target.value as WaterStyle });
+        }}>
+          {(Object.keys(WATERS) as WaterStyle[]).map(water => <option key={water} value={water}>{WATERS[water].label}</option>)}
         </select>
       </label>
       <label className="garden-material-selector">Plants
