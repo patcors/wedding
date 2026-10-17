@@ -46,12 +46,14 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-date i, .garden-photo-dots button span) { background: #f3f1e8; }
 :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) .garden-invitation-link { border-color: #fffdf780; }
 :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) .garden-text-link { border-color: #fffdf780 !important; }
-:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-arrival, .garden-celebrate, .garden-memory-copy, .garden-scroll-cue)::before { display: none; }
+:is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-arrival, .garden-celebrate, .garden-memory-copy, .garden-scroll-cue, .garden-monogram)::before { display: none; }
 /* Text on its own card or panel keeps its colours. */
 :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-photo-slot, .garden-review) { color: var(--garden-ink); text-shadow: none; }
 :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) .garden-button { text-shadow: none; }
 .garden-header { position: absolute; inset: 0 0 auto; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
-.garden-monogram { padding: 0; }
+.garden-monogram { position: relative; isolation: isolate; padding: 0; }
+/* A soft pale glow keeps the logo legible over dark treetops. */
+.garden-monogram::before { content: ''; position: absolute; z-index: -1; inset: -22px -30px; pointer-events: none; background: radial-gradient(closest-side, #eeeee5b8 25%, #eeeee566 55%, #eeeee500); }
 .garden-monogram img { height: 34px; width: auto; display: block; }
 .garden-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
