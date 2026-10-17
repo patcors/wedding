@@ -3,6 +3,9 @@ dist/
 # generated types
 .astro/
 
+# invitation images (pnpm invites)
+invites/out/
+
 # dependencies
 node_modules/
 
