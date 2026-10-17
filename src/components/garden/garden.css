@@ -100,6 +100,8 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 /* The trailing letter-spacing would push the year off centre. */
 .garden-voyage-year { font-size: 21px; font-weight: 500; letter-spacing: .3em; margin-right: -.3em; line-height: 1.3; color: var(--garden-on-sky-soft, #59634f); }
 .garden-voyage .garden-text-link { margin-top: 10px; color: var(--garden-on-sky-soft, #59634f); }
+/* Dev only (Review): the year alone takes the month's place and size. */
+.garden-voyage-date[data-mode=year] .garden-voyage-year { font-size: clamp(42px, 4vw, 58px); font-style: italic; font-weight: 300; letter-spacing: 0; margin-right: 0; line-height: 1.05; color: inherit; }
 .garden-panel h2 { font: 400 clamp(48px, 5vw, 76px)/.98 'Cormorant Garamond', Georgia, serif; letter-spacing: -.045em; margin: 24px 0; }
 .garden-panel h2 em { font-weight: 300; }
 .garden-text-link { padding: 13px 0 !important; font-size: 9px !important; text-transform: uppercase; letter-spacing: .15em; border-bottom: 1px solid var(--garden-on-sky-line, #73796770) !important; }
