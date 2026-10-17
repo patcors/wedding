@@ -13,8 +13,8 @@ const mix = (a: Point, b: Point, k: number): Point => [a[0] + (b[0] - a[0]) * k,
 // Where the camera is and looks at progress p. Through the voyage it rides
 // above the river behind the boats and looks down the river past them, so it
 // turns with the river through the S-bend. Where the bend swings the boats
-// sideways it turns only as far as keeps them within about 10° of the middle
-// of the picture, inside portrait's narrow lens. Both compositions share the
+// sideways it turns only as far as keeps them near the middle of the
+// picture, inside portrait's narrow lens. Both compositions share the
 // viewpoint; only the lens differs. Over the start of the dock chapter it
 // settles on the moored catamaran, the jetty and the old tree.
 export function cameraPose(p: number, width: number): CameraPose {
@@ -22,7 +22,10 @@ export function cameraPose(p: number, width: number): CameraPose {
   const z = routeAt(p), near = z + behind, far = z - ahead, x = riverCenter(near, width);
   // Headings are sideways slopes: x travelled per unit downstream.
   const boats = (riverCenter(z, width) - x) / behind, river = (riverCenter(far, width) - x) / (behind + ahead);
-  const heading = Math.min(boats + .18, Math.max(boats - .18, river));
+  // How far the river may turn the camera off the boats: about 10°, or 6° in
+  // portrait, where 10° would put the catamaran at the edge of the bend.
+  const slack = width < 1 ? .1 : .18;
+  const heading = Math.min(boats + slack, Math.max(boats - slack, river));
   const follow: CameraPose = { position: [x, height, near], target: [x + heading * (behind + ahead), targetY, far] };
   const k = ease((p - VOYAGE_END) / (DOCKED - VOYAGE_END));
   if (k === 0) return follow;
