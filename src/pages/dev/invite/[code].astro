@@ -23,8 +23,21 @@ const COPY = {
 };
 
 // Two typefaces from Google Fonts: the site's serif, and one script per style.
+// ?script=<name> (or pnpm invites --script=<name>) swaps the script in any
+// style, sized so it looks as big as the style's own script did.
+// `stroke` thins a font by outlining it in the page colour; `scale` nudges
+// the automatic sizing when a font still looks too big or small.
 const SERIF = 'Cormorant Garamond';
-const SCRIPTS = ['Monsieur La Doulaise', 'Great Vibes'];
+const SCRIPTS: Record<string, { family?: string, stroke?: string, scale?: number }> = {
+  'Great Vibes': {},
+  'Great Vibes Thin': { family: 'Great Vibes', stroke: '.45px' },
+  'Monsieur La Doulaise': { scale: .82 }, // its lowercase is tiny next to its capitals
+  'MonteCarlo': {},
+  'Imperial Script': {},
+  'Corinthia': {},
+  'Italianno': {},
+  'Ephesis': {},
+};
 
 // Each style is a complete look. STYLE is the one pnpm invites renders.
 //   greeting: caps (small spaced capitals) | italic (serif italic) | script
@@ -46,6 +59,11 @@ const STYLES = {
   butter: {
     script: 'Monsieur La Doulaise', greeting: 'italic', names: 'serif', amp: 'italic',
     vars: { page: '#fbf4dc', ink: '#4e3324', headline: '100px', names: '104px', 'names-weight': '500', 'greeting-size': '40px' },
+  },
+  // Amelia's picks: gilded's page, butter's names and greeting (larger), a smaller Great Vibes headline.
+  combo: {
+    script: 'Great Vibes', greeting: 'italic', names: 'serif', amp: 'italic',
+    vars: { page: '#fdf9ea', ink: '#4e3324', headline: '66px', names: '104px', 'names-weight': '500', 'greeting-size': '54px' },
   },
   // Olive-brown, and the names in script too: the most romantic, least formal.
   flourish: {
@@ -69,7 +87,7 @@ const STYLES = {
     },
   },
 };
-const STYLE: keyof typeof STYLES = 'monsieur';
+const STYLE: keyof typeof STYLES = 'combo';
 
 // The photograph is cropped into a PHOTO_WIDTH × PHOTO_HEIGHT box with torn
 // top and bottom edges. In each crop, `focus` is a point in the photo (0–1
@@ -123,8 +141,9 @@ const rimMask = mask(tornPath(PHOTO_TEAR.rim, 4));
 const { party } = Astro.props as { party: Party };
 const BASE = import.meta.env.BASE_URL;
 const family = (name: string) => `family=${name.replaceAll(' ', '+')}`;
-const fonts = `https://fonts.googleapis.com/css2?${family(SERIF)}:ital,wght@0,500;0,600;1,400;1,500&${SCRIPTS.map(family).join('&')}&display=block`;
-const settings = { styles: STYLES, style: STYLE, serif: SERIF, crops: CROPS, crop: CROP, photos: `${BASE}photos/`, logo: `${BASE}logo.png` };
+const families = [...new Set(Object.entries(SCRIPTS).map(([name, script]) => script.family ?? name))];
+const fonts = `https://fonts.googleapis.com/css2?${family(SERIF)}:ital,wght@0,500;0,600;1,400;1,500&${families.map(family).join('&')}&display=block`;
+const settings = { styles: STYLES, style: STYLE, scripts: SCRIPTS, serif: SERIF, crops: CROPS, crop: CROP, photos: `${BASE}photos/`, logo: `${BASE}logo.png` };
 ---
 <html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px; --serif: '${SERIF}', Georgia, serif; --logo: url(${BASE}logo.png)`}>
   <head>
@@ -157,9 +176,14 @@ const settings = { styles: STYLES, style: STYLE, serif: SERIF, crops: CROPS, cro
         const params = new URLSearchParams(location.search);
         const style = settings.styles[params.get('style') || settings.style];
         if (!style) throw new Error(`No style called ${params.get('style')}`);
+        const scriptName = params.get('script') || style.script;
+        const script = settings.scripts[scriptName];
+        if (!script) throw new Error(`No script called ${scriptName}`);
+        const scriptFamily = script.family ?? scriptName;
         const root = document.documentElement;
-        Object.assign(root.dataset, { greeting: style.greeting, names: style.names, amp: style.amp, headline: style.headline ?? 'two', script: style.script.toLowerCase().replaceAll(' ', '-') });
-        root.style.setProperty('--script', `'${style.script}', cursive`);
+        Object.assign(root.dataset, { greeting: style.greeting, names: style.names, amp: style.amp, headline: style.headline ?? 'two', script: scriptFamily.toLowerCase().replaceAll(' ', '-') });
+        root.style.setProperty('--script', `'${scriptFamily}', cursive`);
+        root.style.setProperty('--script-stroke', script.stroke ?? '0');
         for (const [name, value] of Object.entries(style.vars)) root.style.setProperty(`--${name}`, value);
         const figure = document.querySelector('.photo');
         if (params.get('photo') === 'none') figure.remove();
@@ -180,10 +204,24 @@ const settings = { styles: STYLES, style: STYLE, serif: SERIF, crops: CROPS, cro
           });
         }
         const text = document.body.textContent;
-        const faces = [`500 1em "${settings.serif}"`, `600 1em "${settings.serif}"`, `italic 400 1em "${settings.serif}"`, `1em "${style.script}"`];
+        const ownFamily = settings.scripts[style.script].family ?? style.script;
+        const faces = [`500 1em "${settings.serif}"`, `600 1em "${settings.serif}"`, `italic 400 1em "${settings.serif}"`, `1em "${scriptFamily}"`, `1em "${ownFamily}"`];
         const loaded = await Promise.all(faces.map(face => document.fonts.load(face, text)));
         const missing = faces.filter((_, i) => !loaded[i].length);
         if (missing.length) throw new Error(`Fonts did not load: ${missing.join(', ')}`);
+        if (scriptFamily !== ownFamily) {
+          // Match how big the headline looks, not its font-size: average the
+          // ratios of lowercase height and of the headline's width.
+          const headline = document.querySelector('.headline');
+          const context = document.createElement('canvas').getContext('2d');
+          const measure = family => {
+            context.font = `100px "${family}"`;
+            return { x: context.measureText('nmeoaw').actualBoundingBoxAscent, width: context.measureText(headline.textContent).width };
+          };
+          const own = measure(ownFamily), swapped = measure(scriptFamily);
+          const ratio = Math.sqrt(own.x / swapped.x * own.width / swapped.width) * (script.scale ?? 1) / (settings.scripts[style.script].scale ?? 1);
+          root.style.setProperty('--headline', `${parseFloat(getComputedStyle(root).getPropertyValue('--headline')) * ratio}px`);
+        }
         const logo = new Image();
         logo.src = settings.logo; // drawn as a CSS mask, so it isn't in document.images
         await Promise.all([...document.images, logo].map(img => img.decode().catch(() => { throw new Error(`Image did not load: ${img.src}`); })));
@@ -226,7 +264,7 @@ const settings = { styles: STYLES, style: STYLE, serif: SERIF, crops: CROPS, cro
       [data-greeting='italic'] .greeting { font-style: italic; font-weight: 400; letter-spacing: .02em; }
       [data-greeting='script'] .greeting { font-family: var(--script); font-weight: 400; line-height: 1.1; }
 
-      .headline { margin-top: 30px; font: 400 var(--headline)/1.06 var(--script); white-space: nowrap; }
+      .headline { margin-top: 30px; font: 400 var(--headline)/1.06 var(--script); white-space: nowrap; -webkit-text-stroke: var(--script-stroke) var(--page); }
       [data-headline='one'] .headline br { display: none; }
       /* Monsieur La Doulaise sets its apostrophe wide: "You ’re". */
       [data-script='monsieur-la-doulaise'] .apostrophe { margin: 0 -.04em 0 -.32em; }
