@@ -16,7 +16,7 @@ const mix = (a: Point, b: Point, k: number): Point => [a[0] + (b[0] - a[0]) * k,
 // sideways it turns only as far as keeps them within about 10° of the middle
 // of the picture, inside portrait's narrow lens. Both compositions share the
 // viewpoint; only the lens differs. Over the start of the dock chapter it
-// settles on the jetty and the old tree, below the celebration text.
+// settles on the moored catamaran, the jetty and the old tree.
 export function cameraPose(p: number, width: number): CameraPose {
   const { behind, ahead, height, targetY } = GARDEN_CAMERA;
   const z = routeAt(p), near = z + behind, far = z - ahead, x = riverCenter(near, width);
@@ -30,13 +30,22 @@ export function cameraPose(p: number, width: number): CameraPose {
   return { position: mix(follow.position, dock.position, k), target: mix(follow.target, dock.target, k) };
 }
 
-// Upstream of the jetty, on the far side of the river, looking across at the
-// tree with the jetty and the moored catamaran in front of it.
+// The celebration's view: from upstream and a little towards the far bank,
+// over the catamaran's stern quarter, so both flags read beside the jetty and
+// the old tree stands to the right with its lights strung above the copy. The
+// camera is placed from the mooring (`across` towards the far bank, `back`
+// upstream) and looks `look` of the way from the mooring to the tree. Portrait
+// sits higher and nearer behind, so the boats lie below the copy's button and
+// the trunk frames the right edge.
+const DOCK_VIEW = {
+  desktop: { across: 2.5, back: 7.5, height: 2.7, look: .3, lookY: 2.6 },
+  mobile: { across: .4, back: 9.5, height: 4.3, look: .12, lookY: 4.3 },
+};
 export function dockView(width: number): CameraPose {
-  const { jetty, tree } = voyageLandmarks(width);
-  const z = jetty.z + 13;
+  const { jetty, mooring, tree } = voyageLandmarks(width);
+  const view = width < 1 ? DOCK_VIEW.mobile : DOCK_VIEW.desktop;
   return {
-    position: [riverCenter(z, width) - jetty.side * 1.2 * width, 3.4, z],
-    target: [(jetty.x + tree.x) / 2, 3.3, (jetty.z + tree.z) / 2],
+    position: [mooring.x - jetty.side * view.across, view.height, mooring.z + view.back],
+    target: [mooring.x + (tree.x - mooring.x) * view.look, view.lookY, mooring.z + (tree.z - mooring.z) * view.look],
   };
 }
