@@ -12,6 +12,7 @@ Vocabulary (Party, Guest, Invite code, Personal link, RSVP, Garden, Details page
 | `/<code>` | A Party's Personal link: the Garden, greeting them by name. It remembers the Party so the Details page can show their RSVP |
 | `/details` | Location, times, getting there, where to stay, questions, and the RSVP |
 | `/dev/links` | Dev only. Every Party's Personal link with a QR code, for making cards. Never built into the deployed site |
+| `/dev/invite/<code>` | Dev only. A Party's invitation image, screenshotted by `pnpm invites`. Never built into the deployed site |
 
 Parties live in `src/data/parties.ts`. Adding a Party there adds their page; the build fails if a code clashes with a page name.
 
@@ -27,13 +28,28 @@ node --test tests/*.test.mjs
 pnpm build && pnpm preview   # check the production build
 ```
 
-Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Garden's Review panel (ground, rocks, plants and tree variants, butterfly colours, pause, scene only) and `/dev/links`. Gate anything new like it behind `import.meta.env.DEV`.
+Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Garden's Review panel (ground, rocks, plants and tree variants, butterfly colours, pause, scene only), `/dev/links` and `/dev/invite/<code>`. Gate anything new like it behind `import.meta.env.DEV`.
 
 ## Editing content
 
 - Details page facts (schedule, venue, travel, where to stay, FAQs): the objects at the top of `src/pages/details.astro`. Wrap anything unconfirmed in `tbc()` and it shows a "to confirm" tag.
 - Garden photos and captions: `memories` in `src/components/garden/Garden.tsx`.
 - Link preview image: `public/og.jpg` (1200×630).
+
+## Invitations
+
+Each Party gets an iMessage with a personalised image, a message and their Personal link. The image is `/dev/invite/<code>`, a 1080×1350 page greeting the Party by name; with `pnpm dev` running:
+
+```sh
+pnpm invites                              # every Party → invites/out/<code>.png (2160×2700)
+pnpm invites curry crash                  # just these codes
+pnpm invites --no-photo                   # without the engagement photo
+pnpm invites --photo=gerringong-film-3.jpg
+pnpm invites --scale=1                    # 1080×1350
+pnpm invites --base=http://localhost:4334 # dev server on another port
+```
+
+It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, photo and sizes are at the top of `src/pages/dev/invite/[code].astro`; open the page in a browser to tweak it, with `?photo=none` or `?photo=<file>` to try the photo options. `invites/out/` is git-ignored.
 
 ## RSVP backend
 
