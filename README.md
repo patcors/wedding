@@ -51,6 +51,39 @@ pnpm invites --base=http://localhost:4334 # dev server on another port
 
 It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, photo and sizes are at the top of `src/pages/dev/invite/[code].astro`; open the page in a browser to tweak it, with `?photo=none` or `?photo=<file>` to try the photo options. `invites/out/` is git-ignored.
 
+### Sending by text from Messages
+
+`scripts/send-invites.mjs` texts each Party from this Mac's Messages app: the message in `invites/message.txt` with their greeting and Personal link filled in, then their image `invites/out/<code>.png` as an attachment. On its own it only prints what it would send; nothing goes until you add `--send` and type `send` to confirm.
+
+1. Copy `invites/contacts.example.csv` to `invites/contacts.csv` and add a `code,phone` row for every mobile. A Party with two phones gets two rows. Write numbers any Australian way (`0400 000 000`, `+61 400…`, `61400…`); numbers from overseas need their `+` code. `contacts.csv` is gitignored: **phone numbers must never be committed.**
+2. Rewrite `invites/message.txt`. `{greeting}`, `{link}` and `{code}` are filled in for each Party; any other `{…}` stops the run. `--send` refuses while the `[DRAFT…]` line is still there.
+3. Dry run, and read every message:
+
+   ```sh
+   node scripts/send-invites.mjs
+   ```
+
+   It stops on unknown codes or numbers that aren't mobiles, lists Parties with no number, and skips Parties with no image (`--no-image` sends the text alone).
+4. Test on yourself: `--to` sends the chosen Parties' messages to your number instead of theirs, and isn't logged.
+
+   ```sh
+   node scripts/send-invites.mjs --only curry --to "0400 000 000" --send
+   ```
+
+5. Send: `node scripts/send-invites.mjs --send`. `--limit 5` sends the next five; `--only curry,bridge` picks Parties.
+
+Each attempt is appended to `invites/sent.log` (gitignored). A re-run skips numbers already sent, and numbers where only the text went or Messages didn't answer, so nothing arrives twice. Failures are retried. `--resend` sends again regardless.
+
+How it sends:
+
+- Through `scripts/send-invite.applescript`, run by `osascript` with every value passed as an argument, so apostrophes and emoji in the message are safe.
+- By iMessage. If iMessage refuses a number outright and Messages has an SMS account (Text Message Forwarding from your iPhone), it retries by SMS. `--service sms` forces SMS; `--no-fallback` turns the retry off.
+- Images are first copied to `~/Pictures/Wedding invites` (`--stage-dir`), because Messages marks scripted attachments from other folders "Not Delivered". Delete that folder once everything has gone.
+- 5 seconds between recipients (`--delay`).
+- The first run asks for permission for your terminal to control Messages (System Settings → Privacy & Security → Automation).
+
+"Sent" means Messages accepted it, not that it arrived. Afterwards, look in Messages for any red "Not Delivered", usually a number not on iMessage, and resend with `--only <code> --resend --service sms`.
+
 ## RSVP backend
 
 The Details page posts each RSVP to a Google Apps Script web app, which writes it to a Google Sheet.
@@ -143,41 +176,6 @@ production build shows the "email or text us" failure message.
 Every new deployment of the Apps Script gets a **new URL**. To change the
 script and keep the same URL, use "Manage deployments → edit → Version: New
 version" on the existing deployment.
-
-## Invitations
-
-### Sending by text from Messages
-
-`scripts/send-invites.mjs` texts each Party from this Mac's Messages app: the message in `invites/message.txt` with their greeting and Personal link filled in, then their image `invites/out/<code>.png` as an attachment. On its own it only prints what it would send; nothing goes until you add `--send` and type `send` to confirm.
-
-1. Copy `invites/contacts.example.csv` to `invites/contacts.csv` and add a `code,phone` row for every mobile. A Party with two phones gets two rows. Write numbers any Australian way (`0400 000 000`, `+61 400…`, `61400…`); numbers from overseas need their `+` code. `contacts.csv` is gitignored: **phone numbers must never be committed.**
-2. Rewrite `invites/message.txt`. `{greeting}`, `{link}` and `{code}` are filled in for each Party; any other `{…}` stops the run. `--send` refuses while the `[DRAFT…]` line is still there.
-3. Dry run, and read every message:
-
-   ```sh
-   node scripts/send-invites.mjs
-   ```
-
-   It stops on unknown codes or numbers that aren't mobiles, lists Parties with no number, and skips Parties with no image (`--no-image` sends the text alone).
-4. Test on yourself: `--to` sends the chosen Parties' messages to your number instead of theirs, and isn't logged.
-
-   ```sh
-   node scripts/send-invites.mjs --only curry --to "0400 000 000" --send
-   ```
-
-5. Send: `node scripts/send-invites.mjs --send`. `--limit 5` sends the next five; `--only curry,bridge` picks Parties.
-
-Each attempt is appended to `invites/sent.log` (gitignored). A re-run skips numbers already sent, and numbers where only the text went or Messages didn't answer, so nothing arrives twice. Failures are retried. `--resend` sends again regardless.
-
-How it sends:
-
-- Through `scripts/send-invite.applescript`, run by `osascript` with every value passed as an argument, so apostrophes and emoji in the message are safe.
-- By iMessage. If iMessage refuses a number outright and Messages has an SMS account (Text Message Forwarding from your iPhone), it retries by SMS. `--service sms` forces SMS; `--no-fallback` turns the retry off.
-- Images are first copied to `~/Pictures/Wedding invites` (`--stage-dir`), because Messages marks scripted attachments from other folders "Not Delivered". Delete that folder once everything has gone.
-- 5 seconds between recipients (`--delay`).
-- The first run asks for permission for your terminal to control Messages (System Settings → Privacy & Security → Automation).
-
-"Sent" means Messages accepted it, not that it arrived. Afterwards, look in Messages for any red "Not Delivered", usually a number not on iMessage, and resend with `--only <code> --resend --service sms`.
 
 ## Deployment
 
