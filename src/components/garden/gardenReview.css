@@ -39,3 +39,6 @@
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }
 }
+/* Dev only: lift the scroll hint above the Review panel. */
+.garden-prototype:has(.garden-review) .garden-scroll-hint { bottom: 44px; }
+@media (max-width: 700px) { .garden-prototype:has(.garden-review) .garden-scroll-hint { bottom: 150px; } }

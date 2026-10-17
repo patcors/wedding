@@ -11,6 +11,7 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import type { SkyStyle } from './GardenScene';
 import './garden.css';
+import './gardenScrollHint.css';
 import './gardenLoader.css';
 
 const GardenCanvas = lazy(() => import('./GardenCanvas'));
@@ -138,6 +139,9 @@ export default function Garden({ greeting }: { greeting?: string }) {
       element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
     };
   }, []);
+  // The scroll hint goes for good once the guest has scrolled a little.
+  const [explored, setExplored] = useState(false);
+  useEffect(() => { if (progress > .01) setExplored(true); }, [progress]);
   const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
   const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready });
   const memoryIndex = Math.max(0, Math.min(memories.length - 1,
@@ -276,6 +280,9 @@ export default function Garden({ greeting }: { greeting?: string }) {
           <span>Release a butterfly</span>
         </button>
         </div>}
+        <div className={`garden-scroll-hint ${explored ? 'is-done' : ''}`} aria-hidden="true">
+          <span className="garden-scroll-hint-mouse">Scroll</span><span className="garden-scroll-hint-touch">Swipe up</span><i />
+        </div>
         <button className="garden-scroll-cue" onClick={nextStop}>
           {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
         </button>
