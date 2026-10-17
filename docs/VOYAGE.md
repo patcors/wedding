@@ -12,7 +12,7 @@ Two small sailboats travel downstream as the guest scrolls. Words are minimal: t
 - **Before they meet (before July 2017):** the river is split by a small island and thick reeds. Each boat is in its own channel and can't see the other.
 - **July 2017, they meet:** the channels rejoin and the boats travel side by side from then on.
 - **February 2021 – March 2023 (Amelia in Sydney):** the river widens and the boats drift further apart, still in sight. They come back alongside in March 2023.
-- **August 2024, they start dating:** the boats come together. Over the following months the hulls grow long and slim and deck planks are laid one by one between them, until just before their engagement they are one catamaran: two hulls and a shared deck.
+- **August 2024, they start dating:** the boats come together, and butterflies fly out of the trees to circle them (see "The dating butterflies"). Over the following months the hulls grow long and slim and deck planks are laid one by one between them, until just before their engagement they are one catamaran: two hulls and a shared deck.
 - **April 2026, they get engaged:** the two small masts give way to one. Each boat furls its sail and brings its flag down, and its mast is lowered aft along its hull. While the date holds, one tall mast rises from the middle of the deck; its sail unrolls with their P&A monogram painted on it, and both flags are run up to its masthead, A to the left and P to the right. The catamaran sails on round the bend and docks under the one sail.
 - **The wedding (April 2027):** the river makes an S-bend. Coming round it reveals a massive old tree (the old tree at Jasper's Berry) with a small jetty beneath it. The catamaran docks there.
 - **Dawn to dusk:** the whole journey runs through one day. The opening is at soft dawn, the middle is the Garden's existing misty daylight, and the dock is at dusk.
@@ -41,6 +41,25 @@ Each milestone gets one subtle piece of scenery that a guest is pleased to spot.
 Recurring, for later: a friends' trip down the coast every November/December until 2023; Amelia's circus show every October from 2023 to 2026, which Patrick attended.
 
 **The balloon** (`eggs/Balloon.tsx`, `eggs/balloonGeometry.ts`): a teardrop envelope of twelve gores in faded terracotta, cream, ochre and dusty teal, with a terracotta crown, a deep teal skirt, a small wicker basket on four ropes and a burner that flickers now and then. About 900 triangles in three draw calls. It fades up out of the mist over the river as July 2026 shows, rises and drifts a little right over the next share and a half of scroll, floats on slowly turning through the bend, and drifts off into the haze just before the dock (gone by about p .915). Under reduced motion it rests, risen, at the July 2026 still.
+
+**The year markers** (`eggs/YearMarkers.tsx`, `eggs/yearMarkerSpots.ts`, `eggs/yearMarkerGeometry.ts`): each year from 2017 to 2026 is marked once in the scenery as the boats enter it, each in its own hand-made medium, in Cormorant numerals drawn into one shared canvas atlas and weathered. Each stands a few units past the boats as its January shows (`yearTurns(year)`, `lead`), turned to face the camera then, so it is in clear view as the year turns and the boats pass it early in the year; it dissolves in out of the haze about 34 units ahead (28 in portrait) and goes once the camera has passed it, so one or two are drawn at a time, two draw calls each. Bank markers are 1.3 times larger in portrait.
+
+| Year | Medium | Where (z as the year turns) |
+| --- | --- | --- |
+| 2017 | Cream-painted arrow board nailed to an old snag | Left bank, z −4, as the voyage opens (well before July's meeting) |
+| 2018 | Carved into a pale boulder | Right bank at the water, z −29 |
+| 2019 | Painted on a terracotta-and-cream buoy, bobbing | In the river, left of the boats, z −38 (passed just before July's snow trip) |
+| 2020 | Painted across a little boathouse's doors | Left bank, z −49 |
+| 2021 | Inked on a garden marker stake among flowers | Right bank, z −59 (the left is out of a phone's picture as Sydney widens the river) |
+| 2022 | Scratched into an old pile, stacked 20/22 | In the river near the right bank, z −67 |
+| 2023 | Chalked on a slate A-board on a little landing | Left bank, z −73 |
+| 2024 | Brushed on a paper lantern hung from a crook over the water | Right bank, z −79 |
+| 2025 | Whitewashed on the riser of stone steps down to the water | Left bank, z −104 |
+| 2026 | Pokerwork on a board under a garden arch twined with flowers | Right bank, z −119 (salsa's date, before the engagement) |
+
+Tests (`tests/yearMarkers.test.mjs`) check each is in the picture with a margin on desktop and portrait as its year turns, on land or clear of the hulls, and hidden well before.
+
+**The dating butterflies** (`eggs/DatingButterflies.tsx`, `eggs/datingFlight.ts`): from August 2024's date, as the crossbeams go across, four butterflies fly out of the trees in the scene (not over the page) and circle the boats: a teal and a yellow one, Amelia's and Patrick's colours, dancing round each other on a shared circle, and a pink and a purple one further out. The companions leave about a share later and the pair drifts off up the river by 1.45 shares, before August 2025. They wear the page's artwork (`butterflyWing.ts`, shared with `ButterflyArtwork`) as two hinged wing cards and beat their wings with `butterflyMotion`; idle flight holds while paused. Under reduced motion, dating's still shows the pair resting on the bows, each on the other's boat. Eight draw calls while flying. The page's butterflies and "Release a butterfly" are unchanged.
 
 ### Adding an egg
 
@@ -71,6 +90,7 @@ All in `src/components/garden/`.
 - The story boats are kinematic: their positions are a function of progress (`storyBoats.ts`). They don't use `boatPhysics.ts`, which stays for the guest-launched "Float a boat" boats. Those keep to the channels round the island (`islandHalfWidth` is the physics' `island` shore), and bump off the little jetties at the start and the jetty at the dock (`launchJettyStems`, `jettyStems`) and, once it is tied up, the moored catamaran (`mooredStems`). In portrait the channels at the island's head are narrower than a paper boat, which can catch there; "Float a boat" launches beside the island past its head.
 - **Light:** `skyCycle.ts` runs the day (`skyAt`). `lampsAt(p)` brings the festoons and the jetty's lantern up through the second half of the dusk, so they glow as the old tree comes round the bend.
 - `Garden.tsx` maps its chapters to the journey's boundaries and `.garden-scroll-space` is 2000svh, about a screen per milestone. During the voyage the page shows only the date, high in the sky above the boats, and a quiet "The next chapter" link to the celebration. The date follows the scroll eased as the camera eases it, crossfades, and changes at most every 400ms while rolling. Screen readers hear each milestone's date and `description` from a polite status line once the guest settles on it (`milestoneAt`). The scroll cue and the ←/→ keys step through `STOPS`: the opening, each milestone halfway through its date's hold, and the celebration (`nextStop`, `previousStop`).
+- **Date label (dev only):** the Review panel's "Date" choice shows the running date as month and year (the default, and always what guests see), the year alone at the month's size, or nothing, to judge whether it is still wanted beside the year markers. Remembered in `localStorage` (`pa_dev_date_label`); logic in `dateLabelMode.ts`. Screen readers hear each milestone either way.
 - Text over the sky takes its colours from custom properties GardenSky sets on `.garden-prototype`: `--garden-sky-glow` (the pale glows behind copy), `--garden-ink-on-sky` (text, with softer tints mixed from it) and `--garden-sky-top` (the top wash and the phone status-bar band). Unset, each falls back to the misty day's colour.
 - **Reduced motion** (the operating-system setting for people who get motion sickness): instead of freezing at the opening, the camera cuts to a still view at each milestone, with no glide and no decorative animation.
 - Phones are a first-class target. Check every change at a 390 × 844 portrait size as well as desktop.
@@ -85,6 +105,6 @@ Each slot is mounted from `GardenScene.tsx`; nobody needs to edit that file. `jo
 | Boats | Patrick's yellow and Amelia's teal-trimmed sailboats under their initials, apart in Sydney, joined plank by plank into a catamaran that takes one tall mast with their monogram on its sail as they get engaged, and moors at the jetty | `VoyageBoats.tsx`, `storyBoats.ts`, `storyBoatGeometry.ts` |
 | Sky | One day from dawn under the title through misty daylight and golden light to dusk at the dock, colouring the page's copy | `GardenSky.tsx`, `skyCycle.ts` |
 | Copy | The month and year high above the boats, a quiet link to the celebration, milestone stops for the scroll cue and arrow keys, screen-reader announcements | `Garden.tsx`, `garden.css` |
-| Eggs | The hot-air balloon for July 2026 | `eggs/` |
+| Eggs | The hot-air balloon for July 2026; a marker for each year; the butterflies as they start dating | `eggs/` (`eggs/index.tsx` mounts the year markers and butterflies as `SCENERY`) |
 
 Ideas not yet built: the other eggs in the table above; the recurring coast trips and circus shows.
