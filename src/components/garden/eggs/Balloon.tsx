@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { progressAt } from '../journey';
 import { useJourney } from '../JourneyProvider';
 import { BALLOON, balloonGeometry } from './balloonGeometry';
-import { eggTime, heightAt, inView, overRiver, type EggProps } from './egg';
+import { cameraHeading, eggTime, heightAt, inView, overRiver, type EggProps } from './egg';
+import { cameraPose } from '../cameraRig';
 
 const smooth = (t: number) => THREE.MathUtils.smoothstep(t, 0, 1);
 // Its course in milestone shares since the date: it rises out of the mist
@@ -22,9 +23,11 @@ const RISE = 1.6, LEAVE = 2.4, GONE = 3.4, SETTLED = 1.4;
 // label; portrait's narrow lens keeps it nearer the middle. Elevations are
 // degrees above the eye line.
 const VIEW = {
-  desktop: { distance: 18, scale: .36, bearing: [10, 12], elevation: [1, 10, 12.5], share: .75 },
+  desktop: { distance: 18, scale: .36, bearing: [10, 12], elevation: [1, 9.5, 11], share: .75 },
   mobile: { distance: 18, scale: .34, bearing: [4, 6], elevation: [1, 11, 13.5], share: .6 },
 };
+// Lagging the camera's turn would carry it left, under the date label, so it
+// never comes nearer the middle of the picture than its first bearing.
 // It takes its own haze rather than the fog, tinted the fog's colour so it
 // follows the time of day: enough to set it in the distance, thicker as it
 // fades in out of the mist and as it fades away.
@@ -72,7 +75,11 @@ export default function Balloon({ milestone, paused, reduced, mobile, width }: E
     const bearing = view.bearing[0] + (view.bearing[1] - view.bearing[0]) * (climb * .4 + drift * .4 + leave * .2);
     // It turns with the camera only partly, so through the bend it lags a
     // little behind the trees, as something far away does.
-    const [x, , z] = overRiver(inView(clock.progress, width, { distance, bearing, from, follow: .6 }), width, view.share);
+    let [x, , z] = overRiver(inView(clock.progress, width, { distance, bearing, from, follow: .6 }), width, view.share);
+    const { position: [cx, , cz] } = cameraPose(clock.progress, width);
+    if (Math.atan2(x - cx, cz - z) - cameraHeading(clock.progress, width) < view.bearing[0] * Math.PI / 180) {
+      [x, , z] = overRiver(inView(clock.progress, width, { distance, bearing: view.bearing[0] }), width, view.share);
+    }
     group.position.set(x, heightAt(distance, elevation) + Math.sin(s * .35) * .03, z);
     // A slow turn, as balloons do, and a breath of sway.
     group.rotation.set(Math.sin(s * .5) * .025, s * .05 + 1, Math.sin(s * .41 + 1) * .03);
