@@ -5,12 +5,13 @@
 // catamaran plank by plank from when they start dating, under one tall mast
 // flying their monogram from their engagement, moored at the jetty for the
 // celebration. Amelia's is on the left, Patrick's on the right. Each small
-// masthead flies the mark of the company its sailor works for.
+// masthead flies the mark of the company its sailor works for, and while
+// they're at university, the university's under it.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { routeAt } from './journey';
-import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, rigging, type Company } from './storyBoats';
+import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, rigging, universityFlag, type Company } from './storyBoats';
 import { BIG_RIG, FLAG, HULL, LOGO_FLAG, SAIL_EASED, STORY_PALETTES, bigRig, companyFlagTexture, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
 
@@ -33,8 +34,14 @@ const COMPANIES: Company[] = ['finocomp', 'interim', 'heirwealth'];
 // plain paper until she sends their logos: name one here, or for two, add a
 // company to Company and a change to Amelia's FLAG_CHANGES in storyBoats.ts.
 const MARKS: Record<Company, string | null> = { finocomp: 'finocomp-mark.png', interim: null, heirwealth: 'heirwealth-crown.png' };
+// The university's flag carries its shield, on the same paper.
+const UNIVERSITY_MARK = 'uow-shield.png';
+const texture = (mark: string) => `${import.meta.env.BASE_URL}textures/garden/${mark}`;
 // Where the flags' halyards start, above the booms, on the small masts and the big one.
 const FLAG_FOOT = .4, LOGO_FOOT = BIG_RIG.boom + .55;
+// How far below the masthead the university's flag flies under the company's,
+// on the other side of the mast: staggered, so the two read as two flags.
+const UNDER = FLAG.height * .75;
 
 function useStoryBoatModels() {
   const models = useMemo(() => {
@@ -42,9 +49,12 @@ function useStoryBoatModels() {
     return {
       boats: BOATS.map(({ side, palette }) => ({
         hull: storyHull(palette), rig: storyRig(side),
-        flag: flagGeometry(side < 0),
+        // The company's flag flies outboard and the university's inboard,
+        // each mirrored where it flies to the left so its mark reads.
+        flag: flagGeometry(side < 0), university: flagGeometry(side > 0),
       })),
-      companies: Object.fromEntries(COMPANIES.map(company => [company, companyFlagTexture(MARKS[company] && `${import.meta.env.BASE_URL}textures/garden/${MARKS[company]}`)])) as Record<Company, THREE.CanvasTexture>,
+      companies: Object.fromEntries(COMPANIES.map(company => [company, companyFlagTexture(MARKS[company] && texture(MARKS[company]))])) as Record<Company, THREE.CanvasTexture>,
+      university: companyFlagTexture(texture(UNIVERSITY_MARK)),
       deck,
       big: { ...bigRig(), flag: logoFlagGeometry(), banner: logoFlagTexture(`${import.meta.env.BASE_URL}logo.png`) },
       wake: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, .5),
@@ -52,8 +62,9 @@ function useStoryBoatModels() {
     };
   }, []);
   useEffect(() => () => {
-    models.boats.forEach(({ hull, rig, flag }) => { hull.dispose(); rig.mast.dispose(); rig.sheet.dispose(); flag.dispose(); });
+    models.boats.forEach(({ hull, rig, flag, university }) => { hull.dispose(); rig.mast.dispose(); rig.sheet.dispose(); flag.dispose(); university.dispose(); });
     Object.values(models.companies).forEach(cloth => cloth.dispose());
+    models.university.dispose();
     Object.values(models.big).forEach(part => part.dispose());
     models.deck.dispose(); models.wake.dispose(); models.ripples.dispose();
   }, [models]);
@@ -74,9 +85,11 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
   const logoFlag = useRef<THREE.Mesh>(null);
   // Each boat's flags, one per company, on the one halyard.
   const flags = useRef<Partial<Record<Company, THREE.Mesh | null>>[]>(BOATS.map(() => ({})));
+  const universityFlags = useRef<(THREE.Mesh | null)[]>([]);
   const time = useRef(0), last = useRef<number | null>(null), speed = useRef(0);
   const rest = useMemo(() => ({
     flags: models.boats.map(({ flag }) => Float32Array.from(flag.attributes.position.array)),
+    university: models.boats.map(({ university }) => Float32Array.from(university.attributes.position.array)),
     logo: Float32Array.from(models.big.flag.attributes.position.array),
   }), [models]);
   const plank = useMemo(() => ({ matrix: new THREE.Matrix4(), position: new THREE.Vector3(), rotation: new THREE.Quaternion(), euler: new THREE.Euler(), scale: new THREE.Vector3() }), []);
@@ -96,6 +109,7 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
     if (!paused) time.current += step;
     const p = clock.progress, t = time.current;
     const pose = boatPose(p, width), { join } = pose, rig = rigging(p, reduced), flying = companyFlags(p, reduced);
+    const university = universityFlag(p, reduced);
     // How fast they're travelling, for the wakes: none while held or cut between stills.
     const z = routeAt(p);
     const moving = last.current === null || reduced || !step ? 0 : Math.min(1, Math.abs(z - last.current) / step / 3);
@@ -135,6 +149,16 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
         flag.rotation.y = (side < 0 ? Math.PI : 0) - pose.yaw - yaw;
       }
       if (company) flutter(models.boats[i].flag, rest.flags[i], FLAG.length, t, i * 2);
+      // The university's runs up the same way, inboard, and drops under the
+      // company's once there is one.
+      const cloth = universityFlags.current[i];
+      if (cloth) {
+        const under = university.under * UNDER;
+        cloth.visible = university.hoist > 0;
+        cloth.position.y = -under - (1 - university.hoist) * (HULL.mastTop - FLAG_FOOT - under);
+        cloth.rotation.y = (side > 0 ? Math.PI : 0) - pose.yaw - yaw;
+        if (cloth.visible) flutter(models.boats[i].university, rest.university[i], FLAG.length, t, i * 2 + 1);
+      }
       wake.position.z = HULL.stern.dinghy + (HULL.stern.catamaran - HULL.stern.dinghy) * join.morph - .05;
       (wake.material as THREE.MeshBasicMaterial).opacity = .55 * speed.current;
       wake.visible = speed.current > .01;
@@ -188,6 +212,9 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
         {COMPANIES.map(company => <mesh key={company} ref={el => { flags.current[i][company] = el; }} geometry={models.boats[i].flag} visible={false}>
           <meshStandardMaterial map={models.companies[company]} side={THREE.DoubleSide} roughness={1} />
         </mesh>)}
+        <mesh ref={el => { universityFlags.current[i] = el; }} geometry={models.boats[i].university} visible={false}>
+          <meshStandardMaterial map={models.university} side={THREE.DoubleSide} roughness={1} />
+        </mesh>
       </group>
       <mesh ref={el => { wakes.current[i] = el; }} geometry={models.wake} position-y={.025} scale={[1.3, 1, 2]} visible={false}>
         <meshBasicMaterial map={models.ripples} color="#f7f0d8" transparent opacity={0} depthWrite={false} />

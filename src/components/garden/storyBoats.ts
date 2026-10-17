@@ -107,6 +107,32 @@ export function companyFlags(p: number, still = false): CompanyFlag[] {
   });
 }
 
+// While they're at university, from the meeting to graduation, both boats
+// also fly the University of Wollongong's flag. It flies inboard, towards
+// the other boat and away from the sail, so it reads beside the company's
+// flag, which flies outboard. Run up to the masthead as July 2017 shows, it
+// drops a little way down the mast as November 2018 shows, to fly under
+// FinoComp's as that goes up on the other side, and comes down as August
+// 2020 shows. Spans of scroll since each date, in shares, as for
+// FLAG_CHANGES, so each stop shows it settled.
+export const UNIVERSITY_FLAG = {
+  hoist: { month: DATES.meet, span: [0, .15] },
+  under: { month: monthOf('internship'), span: [0, .1] },
+  strike: { month: monthOf('graduation'), span: [0, .15] },
+} as const;
+// How far up its halyard it is (0 down, 1 up), and how far it has dropped
+// from the masthead to its place under the company's flag (0 to 1).
+export type UniversityFlag = { hoist: number; under: number };
+// The same on both boats. A reduced-motion still shows it settled.
+export function universityFlag(p: number, still = false): UniversityFlag {
+  const at = ({ month, span: [from, to] }: { month: string; span: readonly [number, number] }) => {
+    const t = scrolledSince(month, p);
+    return still ? (t < -1e-9 ? 0 : 1) : ease((t - from) / (to - from));
+  };
+  const { hoist, under, strike } = UNIVERSITY_FLAG;
+  return { hoist: at(hoist) * (1 - at(strike)), under: at(under) };
+}
+
 export const hullHalfBeam = (morph: number) => HULL_HALF_BEAM.dinghy + (HULL_HALF_BEAM.catamaran - HULL_HALF_BEAM.dinghy) * morph;
 
 // Under the opening title each boat lies alongside the head of its own jetty

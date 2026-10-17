@@ -178,7 +178,8 @@ export function bigRig() {
 
 // The flag at each small masthead, its hoist on the mast and its fly along
 // +x: the mark of the company each works for, on paper, from their
-// internship until they get engaged.
+// internship until they get engaged, and the university's, the same size,
+// while they're there.
 export const FLAG = { length: .36, height: .26, segments: 8 } as const;
 export function flagGeometry(mirrored: boolean) {
   const geometry = new THREE.PlaneGeometry(FLAG.length, FLAG.height, FLAG.segments, 2);
@@ -216,8 +217,9 @@ function markedCloth(width: number, height: number, mark: string | null, { fill,
   return texture;
 }
 
-// A company's flag: its mark in its own colour on paper, or plain paper
-// without one. Centred, so it sits the same whichever way the flag flies.
+// A company's flag, or the university's: its mark in its own colour on
+// paper, or plain paper without one. Centred, so it sits the same whichever
+// way the flag flies.
 export const companyFlagTexture = (mark: string | null) =>
   markedCloth(192, Math.round(192 * FLAG.height / FLAG.length), mark, { fill: .82 });
 

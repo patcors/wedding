@@ -21,7 +21,7 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'internship', month: '2018-11', description: 'They start their internship at FinoComp.' },
   { id: 'snow-2019', month: '2019-07', description: 'A snow trip, where Amelia breaks her wrist snowboarding.', egg: 'snow-2019' },
   // A little longer, so the boats only start to drift apart for Sydney once
-  // the date has held.
+  // the university's flags are down.
   { id: 'graduation', month: '2020-08', description: 'They graduate from university.', room: .5 },
   // The boats drift apart, still in sight, and stay apart through Amelia's
   // two changes of work, each with room enough that her interim flag, and
