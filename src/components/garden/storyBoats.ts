@@ -28,14 +28,15 @@ const JOIN_FROM = progressAt(DATES.dating), JOIN_TO = progressAt(DATES.engaged);
 export const joining = (p: number) => clamp((p - JOIN_FROM) / (JOIN_TO - JOIN_FROM));
 
 // How far through `joining` each part of the catamaran happens: the boats close
-// in first, the crossbeams go across, then the planks are laid one by one from
-// bow to stern while the hulls grow long and slim. `rigid` is when the beams
-// hold the hulls together, so they stop bobbing on their own.
+// in first and the crossbeams go across while dating's date holds, so its stop
+// shows them going across, then the planks are laid one by one from bow to
+// stern while the hulls grow long and slim. `rigid` is when the beams hold
+// the hulls together, so they stop bobbing on their own.
 export const catamaran = (j: number) => ({
-  close: ease(j / .1),
+  close: ease(j / .07),
   morph: ease((j - .05) / .8),
-  rigid: ease((j - .06) / .14),
-  beams: Array.from({ length: DECK.beams }, (_, i) => clamp((j - .08 - i * .06) / .07)),
+  rigid: ease((j - .035) / .05),
+  beams: Array.from({ length: DECK.beams }, (_, i) => clamp((j - .035 - i * .015) / .03)),
   planks: Array.from({ length: DECK.planks }, (_, i) => clamp((j - .2) / .72 * DECK.planks - i * .95)),
 });
 

@@ -9,7 +9,7 @@ import type { ButterflyColor } from '../butterflyColors.ts';
 
 // In milestone shares since the date first shows: they arrive over `arrive`,
 // circle, and leave over `leave`, all before August 2025's snow trip (about
-// 1.4 shares on).
+// 1.14 shares on).
 type Window = { arrive: readonly [number, number]; leave: readonly [number, number] };
 // A circle round the boats, in the boats' frame (x to Patrick's side, y up,
 // −z towards the bows): `radius` across, stretched along the hulls by
@@ -25,10 +25,10 @@ export type Point = [number, number, number];
 
 const PAIR_ORBIT: Orbit = { radius: 1.45, stretch: 1.25, height: 1.25, speed: .55, phase: 2.4 };
 export const FLYERS: readonly Flyer[] = [
-  { colour: 'turquoise', partner: -1, orbit: PAIR_ORBIT, arrive: [-.1, .4], leave: [.9, 1.3], from: [-6.5, 3.2, -7], to: [3.5, 4.2, -11] },
-  { colour: 'butter', partner: 1, orbit: PAIR_ORBIT, arrive: [-.1, .4], leave: [.9, 1.3], from: [-6.5, 3.2, -7], to: [3.5, 4.2, -11] },
-  { colour: 'pink', orbit: { radius: 2, stretch: 1.1, height: .95, speed: -.42, phase: 1 }, arrive: [.05, .5], leave: [.65, 1], from: [6.5, 2.8, -5], to: [6.5, 3.8, -8] },
-  { colour: 'purple', orbit: { radius: 1.15, stretch: 1.4, height: 1.75, speed: .7, phase: 4.2 }, arrive: [.15, .55], leave: [.7, 1.05], from: [5.5, 3.5, -9], to: [-6, 3.6, -7] },
+  { colour: 'turquoise', partner: -1, orbit: PAIR_ORBIT, arrive: [-.1, .4], leave: [.8, 1.12], from: [-6.5, 3.2, -7], to: [3.5, 4.2, -11] },
+  { colour: 'butter', partner: 1, orbit: PAIR_ORBIT, arrive: [-.1, .4], leave: [.8, 1.12], from: [-6.5, 3.2, -7], to: [3.5, 4.2, -11] },
+  { colour: 'pink', orbit: { radius: 2, stretch: 1.1, height: .95, speed: -.42, phase: 1 }, arrive: [.05, .5], leave: [.5, .85], from: [6.5, 2.8, -5], to: [6.5, 3.8, -8] },
+  { colour: 'purple', orbit: { radius: 1.15, stretch: 1.4, height: 1.75, speed: .7, phase: 4.2 }, arrive: [.1, .5], leave: [.5, .88], from: [5.5, 3.5, -9], to: [-6, 3.6, -7] },
 ];
 // How far apart the pair's partners circle each other, and how fast.
 export const DANCE = { radius: .17, speed: 2.5 } as const;

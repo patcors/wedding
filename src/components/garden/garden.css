@@ -106,9 +106,10 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-copy, .garden-copy * { text-shadow: var(--garden-halo); }
 .garden-copy .garden-button, .garden-copy .garden-button * { text-shadow: none; }
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
-/* Long enough for the Voyage: 130svh a year from 2018 to 2026 (see YEAR in
-   journey.ts), and about 87svh a share. */
-.garden-scroll-space { height: 2110svh; pointer-events: none; }
+/* Long enough for the Voyage: 148svh a year from 2018 to 2026 (see YEAR in
+   journey.ts), and about 98svh a share, so 2024's busy dates each show for
+   a while. */
+.garden-scroll-space { height: 2400svh; pointer-events: none; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
 @media (max-width: 700px) {
   .garden-header { padding: calc(20px + env(safe-area-inset-top) - var(--garden-edge-clear)) 24px 24px; }
