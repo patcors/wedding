@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DAWN, DAY, DUSK, SKY_KEYS, contrast, hex, skyAt } from '../src/components/garden/skyCycle.ts';
+import { DAWN, DAY, DUSK, SKY_KEYS, contrast, duskAt, hex, lampsAt, skyAt } from '../src/components/garden/skyCycle.ts';
 import { ARRIVAL_END, DATES, DOCKED, VOYAGE_END, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 
 const looks = (p, key) => {
@@ -34,4 +34,14 @@ test('the copy stays legible on its glow all the way through, and still views sh
   }
   assert.equal(hex(skyAt(stillProgress(0)).horizon), DAWN.horizon);
   assert.equal(hex(skyAt(stillProgress(.99)).horizon), DUSK.horizon);
+});
+
+test('the lamps come up with the dusk, before the dock', () => {
+  assert.equal(lampsAt(progressAt('2026-07')), 0);
+  for (let p = .5; p < 1; p += .005) {
+    assert.ok(lampsAt(p + .005) >= lampsAt(p) - 1e-9, `dims at ${p}`);
+    if (duskAt(p) < .3) assert.equal(lampsAt(p), 0, `lit in the golden light at ${p}`);
+  }
+  assert.equal(lampsAt(VOYAGE_END), 1);
+  assert.ok(lampsAt(VOYAGE_END - .03) > .5, 'lit as the tree comes round the bend');
 });

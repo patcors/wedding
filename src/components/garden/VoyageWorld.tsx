@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { VOYAGE, voyageLandmarks } from './gardenGeometry';
-import { DOCKED, VOYAGE_END } from './journey';
+import { lampsAt } from './skyCycle';
 import { useGroundMaterial } from './GardenGround';
 import { plantMaterial } from './GardenPlants';
 import { OLD_TREE_SCALE } from './GardenTrees';
@@ -123,11 +123,10 @@ function Dock({ width, mobile }: SlotProps) {
   const glowPoints = useMemo(() => new THREE.BufferGeometry().setFromPoints(bulbs), [bulbs]);
   const wireGeometry = useMemo(() => new THREE.BufferGeometry().setAttribute('position', wire), [wire]);
   useEffect(() => () => { glowPoints.dispose(); wireGeometry.dispose(); }, [glowPoints, wireGeometry]);
-  // Dusk falls over the dock from the end of the voyage; the lights are fully
-  // on by the time the catamaran is moored.
+  // The lights come up with the sky's dusk (skyCycle.ts), so they are glowing
+  // in the old tree as it comes round the bend.
   useFrame(() => {
-    const t = THREE.MathUtils.clamp((clock.progress - VOYAGE_END) / (DOCKED - VOYAGE_END), 0, 1);
-    const on = t * t * (3 - 2 * t);
+    const on = lampsAt(clock.progress);
     materials.bulb.color.copy(UNLIT).lerp(LIT, on).multiplyScalar(1 + on * .6);
     materials.glow.opacity = on * .85;
   });

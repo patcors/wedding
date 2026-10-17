@@ -26,9 +26,10 @@ export const DUSK: SkyKey = { horizon: '#ebc9b2', zenith: '#a9a8c0', glow: '#f1d
 // Dawn holds while the title is up and lifts as the boats meet; the day holds
 // until the engagement, turns golden over the trip and the bend, and is dusk
 // by the time the dock comes into view.
+const GOLDEN_AT = progressAt('2026-07') + ROOM;
 export const SKY_KEYS: readonly (readonly [number, SkyKey])[] = [
   [0, DAWN], [ARRIVAL_END * .6, DAWN], [progressAt('2017-11'), DAY],
-  [progressAt(DATES.engaged), DAY], [progressAt('2026-07') + ROOM, GOLDEN], [VOYAGE_END, DUSK], [1, DUSK],
+  [progressAt(DATES.engaged), DAY], [GOLDEN_AT, GOLDEN], [VOYAGE_END, DUSK], [1, DUSK],
 ];
 
 export type Rgb = [number, number, number];
@@ -57,6 +58,17 @@ export function skyAt(p: number): Sky {
     sun: sun.map(v => v * scale) as Rgb,
   };
 }
+
+const smooth = (x: number) => {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
+};
+// How far the golden light has turned to dusk at p, eased as the sky eases it.
+export const duskAt = (p: number) => smooth((p - GOLDEN_AT) / (VOYAGE_END - GOLDEN_AT));
+// The festoons and the jetty's lantern come on through the second half of the
+// dusk, so they glow as the old tree comes round the bend and are fully lit
+// before the dock.
+export const lampsAt = (p: number) => smooth((duskAt(p) - .35) / .65);
 
 // WCAG contrast ratio between two sRGB colours.
 export function contrast(a: Rgb, b: Rgb) {
