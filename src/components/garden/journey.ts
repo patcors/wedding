@@ -2,7 +2,7 @@
 // through story time, and where along the river the boats are. Boats, sky,
 // eggs and the date label all read from here. Pure, so it can be tested.
 
-export type EggId = 'balloon' | 'university' | 'coast' | 'snow-2019' | 'graduation' | 'apartments' | 'snow-2025';
+export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'apartments' | 'snow-2025';
 // `room` is the scroll a milestone takes at its date, in shares (ROOM), before
 // the months roll on at its year's pace: its date's hold, and time for what
 // happens there to be seen (HOLD, just the hold, by default). Outside the
@@ -22,7 +22,7 @@ export const AMELIA_MOVED_IN = '2025-06';
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
   { id: 'meet', month: '2017-07', description: 'Patrick and Amelia meet at university, both starting maths degrees.', egg: 'university', room: 1.4 },
-  { id: 'coast', month: '2017-11', description: 'Their first trip away with friends, down the coast.', egg: 'coast', room: .5 },
+  { id: 'coast', month: '2017-11', description: 'Their first trip away with friends, down the coast.', room: .5 },
   { id: 'internship', month: '2018-11', description: 'They start their internship at FinoComp.' },
   { id: 'snow-2019', month: '2019-07', description: 'A snow trip, where Amelia breaks her wrist snowboarding.', egg: 'snow-2019' },
   // Longer, early in the year, so the mortarboards land before Sydney's river
