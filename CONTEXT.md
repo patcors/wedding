@@ -23,11 +23,7 @@ The web address on a Party's digital card, made from their Invite code. Opening 
 _Avoid_: Invitation link, magic link
 
 **RSVP**:
-A Party's reply: for each Guest, whether they're coming and what they can't eat, one email or phone number to reach the Party, plus optional notes for the couple. A Party may reply more than once; the latest reply stands.
-
-**Open RSVP**:
-An RSVP sent without a Personal link. The sender types each person's name, and the couple match it to a Party by hand.
-_Avoid_: Generic RSVP, anonymous RSVP
+A Party's reply: for each Guest, whether they're coming and what they can't eat, one email or phone number to reach the Party, plus optional notes for the couple. A Party may reply more than once; the latest reply stands. Every RSVP comes through the Party's Personal link; there is no RSVP without one.
 
 ### The site
 
@@ -49,7 +45,7 @@ _Avoid_: Debug menu, proof-of-concept controls
 - A **Party** submits zero or more **RSVPs**; the latest one is the answer
 - An **RSVP** records a response for every **Guest** in the **Party**
 - The **Garden** leads to the **Details page**, which ends with the **RSVP**
-- A visitor without a **Personal link** sees the generic **Garden** and **Details page**, and replies with an **Open RSVP**
+- A visitor without a **Personal link** sees the generic **Garden** and **Details page**, and can't RSVP: the Details page sends them back to their **Personal link**, or to the couple if they've lost it
 
 ## Flagged ambiguities
 

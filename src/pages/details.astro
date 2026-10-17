@@ -60,6 +60,9 @@ const photos = {
   dance: { src: 'gerringong-film-12.jpg', alt: 'Patrick and Amelia holding hands in a paddock at sunset' },
   embrace: { src: 'gerringong-film-3.jpg', alt: 'Amelia resting her head on Patrick’s chest in golden light' },
 };
+
+// On wide screens the schedule runs as two strands of vine side by side.
+const strandLength = Math.ceil(schedule.length / 2);
 ---
 
 <html lang="en">
@@ -78,7 +81,7 @@ const photos = {
   <body>
     <main class="info">
       <header class="info-header">
-        <a class="info-monogram" href={BASE} aria-label="Back to the garden">P<span>&</span>A</a>
+        <a class="info-monogram" href={BASE} aria-label="Back to the garden"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
         <span class="info-header-date">16 APRIL 2027</span>
         <a class="info-rsvp-link" href="#rsvp">RSVP <span aria-hidden="true">↗</span></a>
       </header>
@@ -111,8 +114,8 @@ const photos = {
       <section id="day" class="info-section info-day">
         <p class="info-eyebrow">How the day unfolds</p>
         <h2>The order <em>of things.</em></h2>
-        <ol class="info-schedule">
-          {schedule.map(item => <li>
+        <ol class="info-schedule" style={`--strand: ${strandLength}`}>
+          {schedule.map((item, i) => <li class:list={{ 'info-strand-end': i === strandLength - 1 }}>
             <svg class="info-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               <path d="M50 0 C 26 33, 26 66, 50 100" pathLength="1" vector-effect="non-scaling-stroke" />
             </svg>
@@ -127,12 +130,12 @@ const photos = {
         </ol>
       </section>
 
-      <section id="venue" class="info-section info-split">
-        <figure class="info-photo info-photo-tilt-left">
+      <div class="info-section info-trip">
+        <figure class="info-photo info-photo-tilt-left info-trip-dance">
           <img src={`${BASE}photos/${photos.dance.src}`} alt={photos.dance.alt} width="1400" height="2111" loading="lazy" />
           <figcaption>Practising the first dance.</figcaption>
         </figure>
-        <div>
+        <section id="venue" class="info-trip-venue">
           <p class="info-eyebrow">The garden</p>
           <h2>Getting <em>there.</em></h2>
           <p class="info-venue-name">{venue.name} · {venue.place}</p>
@@ -144,15 +147,12 @@ const photos = {
             </>)}
           </dl>
           <a class="info-text-link" href={venue.mapsUrl} rel="noopener">Open in maps <span aria-hidden="true">→</span></a>
-        </div>
-      </section>
-
-      <section id="stay" class="info-section info-split info-split-reverse">
-        <figure class="info-photo info-photo-tilt-right">
+        </section>
+        <figure class="info-photo info-photo-tilt-right info-trip-embrace">
           <img src={`${BASE}photos/${photos.embrace.src}`} alt={photos.embrace.alt} width="1400" height="2111" loading="lazy" />
           <figcaption>Golden hour, held onto.</figcaption>
         </figure>
-        <div>
+        <section id="stay" class="info-trip-stay">
           <p class="info-eyebrow">Make a weekend of it</p>
           <h2>Where <em>to stay.</em></h2>
           <dl class="info-list">
@@ -161,8 +161,8 @@ const photos = {
               <dd class:list={{ 'is-tbc': tbcValues.has(row.note) }}>{row.note}</dd>
             </>)}
           </dl>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <div class="info-divider" aria-hidden="true">
         <svg width="104" height="26" viewBox="0 0 104 26" fill="none">
@@ -172,9 +172,11 @@ const photos = {
         </svg>
       </div>
 
-      <section id="faq" class="info-section">
-        <p class="info-eyebrow">The practical bits</p>
-        <h2>Questions, <em>answered.</em></h2>
+      <section id="faq" class="info-section info-faq-section">
+        <div>
+          <p class="info-eyebrow">The practical bits</p>
+          <h2>Questions, <em>answered.</em></h2>
+        </div>
         <div class="info-faqs">
           {faqs.map(faq => <div class="info-faq">
             <h3>{faq.q}</h3>
@@ -191,7 +193,7 @@ const photos = {
       </section>
 
       <footer class="info-footer">
-        <span class="info-monogram">P<span>&</span>A</span>
+        <span class="info-monogram"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></span>
         <p>Friday 16 April 2027 · {venue.name}, {venue.place}</p>
       </footer>
     </main>
@@ -227,13 +229,13 @@ const photos = {
 
   .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
     padding: 26px 48px; background: linear-gradient(#eeeee5 55%, #eeeee500); }
-  .info-monogram { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; letter-spacing: -.1em; }
-  .info-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
+  .info-monogram { display: block; line-height: 0; }
+  .info-monogram img { display: block; width: auto; height: 34px; }
   .info-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
   .info-rsvp-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid #73796770; padding-bottom: 8px; }
   .info-rsvp-link span { margin-left: 14px; }
 
-  .info-hero { display: flex; align-items: center; gap: clamp(40px, 6vw, 90px); max-width: 1180px; margin: 0 auto; padding: clamp(30px, 6vh, 80px) 48px 40px; }
+  .info-hero { display: flex; align-items: center; gap: clamp(40px, 6vw, 90px); max-width: 1280px; margin: 0 auto; padding: clamp(30px, 6vh, 80px) 48px 40px; }
   .info-hero-copy { flex: 1.2; }
   .info-date-row { margin-top: 34px; display: flex; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 9px; text-transform: uppercase; letter-spacing: .23em; }
   .info-date-row i { width: 3px; height: 3px; border-radius: 50%; background: var(--leaf); }
@@ -251,13 +253,13 @@ const photos = {
   .info-nav a { padding: 6px 0 8px; border-bottom: 1px solid transparent; transition: border-color .3s; }
   .info-nav a:hover { border-color: #73796770; }
 
-  .info-section { max-width: 1180px; margin: 0 auto; padding: clamp(60px, 10vh, 120px) 48px 0; }
+  .info-section { max-width: 1280px; margin: 0 auto; padding: clamp(56px, 8vh, 96px) 48px 0; }
   .info-day { text-align: center; }
   .info-schedule { list-style: none; margin: 50px auto 0; padding: 0; max-width: 720px; text-align: left; }
   .info-schedule li { position: relative; display: grid; grid-template-columns: 1fr 1fr; }
-  .info-schedule li::before, .info-schedule li:last-child::after { content: ''; position: absolute; left: 50%; top: -2.5px;
-    width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--leaf); z-index: 1; }
-  .info-schedule li:last-child::after { top: auto; bottom: -2.5px; }
+  .info-schedule li::before, .info-schedule li:last-child::after, .info-schedule .info-strand-end::after { content: ''; position: absolute;
+    left: 50%; top: -2.5px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--leaf); z-index: 1; }
+  .info-schedule li:last-child::after, .info-schedule .info-strand-end::after { top: auto; bottom: -2.5px; }
   .info-path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .info-path path { fill: none; stroke: var(--leaf); stroke-width: 1.4; opacity: .7; }
   .info-schedule li:nth-child(even) .info-path { transform: scaleX(-1); }
@@ -275,9 +277,15 @@ const photos = {
   .info-schedule h3 { font: 500 24px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin: 8px 0 6px; }
   .info-schedule p { font: italic 17px/1.45 'Cormorant Garamond', Georgia, serif; color: var(--muted); margin: 0; }
 
-  .info-split { display: flex; align-items: center; gap: clamp(45px, 7vw, 110px); }
-  .info-split > div { flex: 1.15; }
-  .info-split-reverse { flex-direction: row-reverse; }
+  /* Getting there and Where to stay share one grid: each beside its photo,
+     or (wide screens) both photos scattered together beside two columns. */
+  .info-trip { display: grid; grid-template-columns: minmax(0, 340px) 1fr minmax(0, 340px);
+    grid-template-areas: 'dance venue venue' 'stay stay embrace'; gap: clamp(60px, 9vh, 100px) clamp(45px, 6vw, 90px); align-items: center; }
+  .info-trip .info-photo { max-width: none; }
+  .info-trip-dance { grid-area: dance; }
+  .info-trip-venue { grid-area: venue; }
+  .info-trip-embrace { grid-area: embrace; }
+  .info-trip-stay { grid-area: stay; }
   .info-venue-name { font: italic 23px 'Cormorant Garamond', Georgia, serif; color: #59634f; margin: 6px 0 4px; }
   .info-address { font-size: 11px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
   .info-list { margin: 26px 0 0; }
@@ -291,11 +299,12 @@ const photos = {
   .info-faq h3 { font: 500 23px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin: 0 0 8px; }
   .info-faq p { font: 17px/1.5 'Cormorant Garamond', Georgia, serif; color: var(--ink); margin: 0; max-width: 430px; }
 
-  .info-rsvp { text-align: center; max-width: 700px; margin: 0 auto; padding: clamp(80px, 13vh, 150px) 48px; }
+  .info-rsvp { text-align: center; max-width: 820px; margin: 0 auto; padding: clamp(70px, 10vh, 120px) 48px; }
   .info-boat { color: var(--leaf); }
 
   .info-footer { text-align: center; padding: 30px 24px 55px; }
-  .info-footer .info-monogram { font-size: 24px; }
+  .info-footer .info-monogram { display: inline-block; }
+  .info-footer .info-monogram img { height: 28px; }
   .info-footer p { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
 
   /* Gentle rise-and-fade as sections enter the viewport, and the garden path
@@ -360,6 +369,30 @@ const photos = {
     .info-photo:hover { translate: 0 -8px; box-shadow: 0 24px 60px #48513a30; }
   }
 
+  @media (min-width: 861px) {
+    .info-divider { padding-top: clamp(56px, 8vh, 100px); }
+  }
+
+  /* Wide screens: use the width rather than one long centred column. */
+  @media (min-width: 1100px) {
+    .info-schedule { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(var(--strand), auto); grid-auto-flow: column;
+      column-gap: clamp(40px, 5vw, 80px); max-width: none; margin-top: 36px; }
+    .info-stop { padding: 26px 0 26px clamp(28px, 2.6vw, 40px); }
+    .info-schedule li:nth-child(even) .info-stop { padding: 26px clamp(28px, 2.6vw, 40px) 26px 0; }
+
+    .info-trip { grid-template-columns: clamp(360px, 31vw, 440px) 1fr 1fr; grid-template-areas: 'photos venue stay';
+      column-gap: clamp(48px, 4.5vw, 72px); align-items: start; }
+    .info-trip-dance, .info-trip-embrace { grid-area: photos; width: 58%; }
+    .info-trip-dance { justify-self: start; z-index: 1; }
+    /* Percentages here are of the photo column's width. */
+    .info-trip-embrace { justify-self: end; margin-top: 55%; }
+    .info-trip h2 { font-size: clamp(42px, 3.6vw, 54px); }
+    .info-trip-venue, .info-trip-stay { padding-top: 24px; }
+
+    .info-faq-section { display: grid; grid-template-columns: minmax(260px, 1fr) 2.4fr; column-gap: clamp(48px, 5vw, 90px); align-items: start; }
+    .info-faq-section .info-faqs { margin-top: 48px; max-width: none; }
+  }
+
   @media (max-width: 860px) {
     .info-header { padding: 22px 24px; }
     .info-header-date { display: none; }
@@ -369,11 +402,12 @@ const photos = {
     .info-hero-photo { max-width: 330px; margin-top: 20px; }
     .info-nav { gap: 16px 22px; padding: 16px 20px; background: linear-gradient(#eeeee5 78%, #eeeee500); }
     .info-section { padding: 65px 28px 0; }
-    .info-split, .info-split-reverse { flex-direction: column; align-items: center; text-align: center; }
-    .info-split .info-photo { max-width: 300px; }
+    .info-trip { display: block; text-align: center; }
+    .info-trip .info-photo { max-width: 300px; margin: 0 auto 45px; }
+    .info-trip .info-trip-embrace { margin-top: 65px; }
     .info-list dd, .info-faq p { margin-inline: auto; }
     /* The vine reads poorly at phone widths; fall back to plain bordered rows. */
-    .info-path, .info-leaf, .info-schedule li::before, .info-schedule li:last-child::after { display: none; }
+    .info-path, .info-leaf, .info-schedule li::before, .info-schedule li:last-child::after, .info-schedule .info-strand-end::after { display: none; }
     .info-schedule li { display: block; }
     .info-stop, .info-schedule li:nth-child(even) .info-stop { padding: 22px 0; text-align: left; border-top: 1px solid #7379672e; }
     .info-schedule li:last-child .info-stop { border-bottom: 1px solid #7379672e; }
