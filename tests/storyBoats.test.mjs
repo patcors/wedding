@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ARRIVAL_END, DATES, DOCKED, VOYAGE_END, progressAt, routeAt } from '../src/components/garden/journey.ts';
+import { ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, VOYAGE_END, progressAt, routeAt, stillProgress } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, islandHalfWidth, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ALONGSIDE, BOAT_SCALE, CATAMARAN, boatPose, hullHalfBeam, joining } from '../src/components/garden/storyBoats.ts';
+import { ALONGSIDE, BOAT_SCALE, CATAMARAN, boatPose, hullHalfBeam, joining, rigging } from '../src/components/garden/storyBoats.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
 const widths = [1, MOBILE_RIVER_WIDTH];
@@ -44,17 +44,20 @@ test('side by side once they meet, further apart in Sydney, alongside again by M
   }
 });
 
-test('they join from dating and are one catamaran by the S-bend', () => {
+const bend = ARRIVAL_END + (4 - VOYAGE.bend.from) / 168 * (VOYAGE_END - ARRIVAL_END);
+
+test('they join from dating and are one catamaran by their engagement, well before the S-bend', () => {
   const dating = progressAt(DATES.dating);
   assert.equal(joining(dating), 0);
   const before = boatPose(dating, 1).join;
   assert.equal(before.morph, 0);
   assert.ok(before.planks.every(k => k === 0) && before.beams.every(k => k === 0));
-  const bend = ARRIVAL_END + (4 - VOYAGE.bend.from) / 168 * (VOYAGE_END - ARRIVAL_END);
-  const after = boatPose(bend, 1);
-  assert.equal(after.join.morph, 1);
-  assert.ok(after.join.planks.every(k => k === 1) && after.join.beams.every(k => k === 1));
-  assert.equal(after.gap, CATAMARAN);
+  for (const p of [progressAt(DATES.engaged), bend]) {
+    const after = boatPose(p, 1);
+    assert.equal(after.join.morph, 1);
+    assert.ok(after.join.planks.every(k => k === 1) && after.join.beams.every(k => k === 1));
+    assert.equal(after.gap, CATAMARAN);
+  }
   // Planks are laid one after another, never all at once.
   for (const p of steps()) {
     const { planks } = boatPose(p, 1).join;
@@ -90,4 +93,38 @@ test('moored off the jetty from DOCKED, the outer hull just clear of its end', (
     const end = jetty.x - jetty.side * jetty.reach;
     assert.ok(Math.abs(mooring.x - end) > outer, `clear of the jetty (${width})`);
   }
+});
+
+test('once the last plank is down, the two masts give way to one tall mast as they get engaged', () => {
+  const lastPlank = steps(20000).find(p => boatPose(p, 1).join.planks.every(k => k === 1));
+  const engaged = progressAt(DATES.engaged), balloon = progressAt('2026-07');
+  const order = ['furl', 'lower', 'raise', 'unfurl', 'hoist'];
+  let previous = rigging(0);
+  for (const p of steps(20000)) {
+    const rig = rigging(p);
+    // Nothing starts before the deck is finished, and all is done before July's balloon and the bend.
+    if (p <= lastPlank) assert.ok(order.every(step => rig[step] === 0), `rigging under way at ${p}`);
+    if (p >= balloon) assert.ok(order.every(step => rig[step] === 1), `rigging unfinished at ${p}`);
+    // Each step only goes forward, and in order: a sail is furled before its mast
+    // comes down, both masts are down before the big one rises, the big sail
+    // unfurls only once it stands, and the flags go up it last.
+    for (const step of order) assert.ok(rig[step] >= previous[step]);
+    assert.ok(rig.lower === 0 || rig.furl > .5);
+    assert.ok(rig.raise === 0 || rig.lower === 1, `both masts up at ${p}`);
+    assert.ok(rig.unfurl === 0 || rig.raise > .8);
+    assert.ok(rig.hoist === 0 || rig.unfurl > .5);
+    previous = rig;
+  }
+  assert.ok(lastPlank < engaged && balloon < bend);
+  // The big mast rises while April 2026 holds, a third of its share.
+  assert.ok(rigging(engaged).raise === 0 && rigging(engaged + .35 * ROOM).raise === 1);
+});
+
+test('reduced-motion stills show the rig settled: two masts before the engagement, one from it', () => {
+  for (const { month } of MILESTONES) {
+    const p = stillProgress(progressAt(month)), rig = rigging(p, true);
+    for (const k of Object.values(rig)) assert.ok(k === 0 || k === 1, `${month} still catches the rig mid-change`);
+    assert.equal(rig.hoist, month >= DATES.engaged ? 1 : 0);
+  }
+  assert.ok(Object.values(rigging(1, true)).every(k => k === 1) && Object.values(rigging(DOCKED)).every(k => k === 1));
 });

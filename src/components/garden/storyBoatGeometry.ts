@@ -115,9 +115,10 @@ function spar(a: Point, b: Point, radius: number) {
   return tinted(cylinder, '#d8b47d');
 }
 
-// The mainsail as in the wooden sailboat: a gently billowed ivory triangle.
-function sail(a: Point, b: Point, c: Point, fullness: number) {
-  const vertices: number[] = [], indices: number[] = [], rows: number[][] = [];
+// The mainsail as in the wooden sailboat: a gently billowed ivory triangle,
+// with uv across its foot and up its luff for anything painted on it.
+function sail(a: Point, b: Point, c: Point, fullness: number, tint = '#fff6df') {
+  const vertices: number[] = [], uvs: number[] = [], indices: number[] = [], rows: number[][] = [];
   const segments = 12;
   for (let i = 0; i <= segments; i++) {
     rows[i] = [];
@@ -129,6 +130,7 @@ function sail(a: Point, b: Point, c: Point, fullness: number) {
         a[1] * u + b[1] * w + c[1] * v,
         a[2] * u + b[2] * w + c[2] * v,
       );
+      uvs.push(v, u);
     }
   }
   for (let i = 0; i < segments; i++) {
@@ -139,9 +141,10 @@ function sail(a: Point, b: Point, c: Point, fullness: number) {
   }
   const cloth = new THREE.BufferGeometry();
   cloth.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  cloth.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   cloth.setIndex(indices);
   cloth.computeVertexNormals();
-  const result = tinted(cloth.toNonIndexed(), '#fff6df');
+  const result = tinted(cloth.toNonIndexed(), tint);
   cloth.dispose();
   return result;
 }
@@ -152,6 +155,7 @@ function sail(a: Point, b: Point, c: Point, fullness: number) {
 // than its edge.
 export function storyRig(side: number) {
   const cloth = sail([0, 1.16, .03], [0, .26, .03], [0, .26, .98], -.06 * side);
+  cloth.deleteAttribute('uv');
   const boom = spar([0, .26, .03], [0, .26, .98], .012);
   const sheet = mergeGeometries([cloth, boom]);
   const mast = spar([0, .065, 0], [0, HULL.mastTop, 0], .019);
@@ -159,6 +163,50 @@ export function storyRig(side: number) {
   return { mast, sheet };
 }
 export const SAIL_EASED = .62;
+
+// The catamaran's one tall mast, stepped in the middle of the deck once they
+// are engaged, in the pair's model units from the deck at its foot. Its sail
+// is wider and taller than the dinghies', and is run well out to port, away
+// from the jetty, so its painted face turns to the camera behind.
+export const BIG_RIG = { deck: .23, z: -.46, top: 1.92, boom: .2, head: 1.7, foot: 1.24, eased: 1.05 } as const;
+export function bigRig() {
+  const { top, boom, head, foot } = BIG_RIG;
+  // White, as the sail's ivory and the monogram come from its texture.
+  const cloth = sail([0, head, .035], [0, boom, .035], [0, boom, foot], .07, '#ffffff');
+  return { mast: spar([0, 0, 0], [0, top, 0], .026), boom: spar([0, boom, .035], [0, boom, foot], .015), cloth };
+}
+
+// The big sail's cloth with their monogram painted on it, low in the sail
+// where it is widest, so it reads at the dock. The logo is drawn in the
+// Garden's ink; the sail's uv runs across its foot and up its luff, which
+// stretch the canvas differently, so the logo is drawn to the sail's
+// proportions. `mirrored` for a sail eased to port, whose clew is on the left
+// as the camera behind sees it.
+export function sailCloth(logo: string, mirrored: boolean) {
+  const size = 512, canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#fff6df'; ctx.fillRect(0, 0, size, size);
+  const image = new Image();
+  image.onload = () => {
+    // In sail units: across the foot from the luff, and up from the boom.
+    const width = .58, height = width * image.height / image.width, from = .12, up = .15;
+    const { head, boom, foot } = BIG_RIG, across = size / foot, rise = size / (head - boom);
+    ctx.save();
+    ctx.translate((from + width / 2) * across, size - (up + height / 2) * rise);
+    if (mirrored) ctx.scale(-1, 1);
+    // Painted, not printed: a little of the cloth shows through.
+    ctx.globalAlpha = .86;
+    ctx.drawImage(image, -width / 2 * across, -height / 2 * rise, width * across, height * rise);
+    ctx.restore();
+    texture.needsUpdate = true;
+  };
+  image.src = logo;
+  return texture;
+}
 
 // A small flag from the masthead, its hoist on the mast and its fly along +x.
 export const FLAG = { length: .34, height: .22, segments: 8 } as const;

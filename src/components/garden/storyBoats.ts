@@ -1,7 +1,7 @@
 // Where Patrick's and Amelia's boats are at progress p, and how far they have
 // become a catamaran (see docs/VOYAGE.md). Pure, so it can be tested; drawn by
 // VoyageBoats.tsx with the models in storyBoatGeometry.ts.
-import { ARRIVAL_END, DATES, DOCKED, ROUTE, VOYAGE_END, progressAt, routeAt, scrolledSince } from './journey.ts';
+import { DATES, DOCKED, VOYAGE_END, progressAt, routeAt, scrolledSince } from './journey.ts';
 import { VOYAGE, bankEdge, channelOffset, riverCenter, voyageLandmarks } from './gardenGeometry.ts';
 
 // The models are built in their own units; this sizes them in the world so
@@ -21,11 +21,10 @@ const ease = (t: number) => {
   return x * x * (3 - 2 * x);
 };
 
-// routeAt is linear through the voyage, so this is its inverse there.
-const progressAtZ = (z: number) => ARRIVAL_END + (ROUTE.voyage - z) / (ROUTE.voyage - ROUTE.approach) * (VOYAGE_END - ARRIVAL_END);
-// The boats start to join when they start dating and are one catamaran by the
-// time they reach the S-bend, so they round it together.
-const JOIN_FROM = progressAt(DATES.dating), JOIN_TO = progressAtZ(VOYAGE.bend.from);
+// The boats start to join when they start dating and are one catamaran by
+// their engagement, when its two masts give way to one (see `rigging`), well
+// before the S-bend, so they round it together under the one sail.
+const JOIN_FROM = progressAt(DATES.dating), JOIN_TO = progressAt(DATES.engaged);
 export const joining = (p: number) => clamp((p - JOIN_FROM) / (JOIN_TO - JOIN_FROM));
 
 // How far through `joining` each part of the catamaran happens: the boats close
@@ -39,6 +38,22 @@ export const catamaran = (j: number) => ({
   beams: Array.from({ length: DECK.beams }, (_, i) => clamp((j - .08 - i * .06) / .07)),
   planks: Array.from({ length: DECK.planks }, (_, i) => clamp((j - .2) / .72 * DECK.planks - i * .95)),
 });
+
+// The last plank is down a little before they get engaged. Then, as April
+// 2026 shows, the two masts give way to one: each boat furls its sail and
+// strikes its flag, and its mast is lowered aft along its hull; one tall mast
+// rises from the middle of the deck while the date holds, its sail unfurls
+// with their monogram, and both flags are run up to its masthead. Each step
+// runs over these spans of scroll since the date first shows, in milestone
+// shares, and all is done before July 2026's balloon and the bend.
+export const RIG_CHANGE = { furl: [-.3, -.1], lower: [-.2, .04], raise: [.04, .34], unfurl: [.3, .58], hoist: [.5, .8] } as const;
+export type Rigging = Record<keyof typeof RIG_CHANGE, number>;
+// A reduced-motion still shows the rig settled: the two masts before the
+// engagement's date, the one from it.
+export function rigging(p: number, still = false): Rigging {
+  const s = scrolledSince(DATES.engaged, p), t = still ? (s < -1e-9 ? -Infinity : Infinity) : s;
+  return Object.fromEntries(Object.entries(RIG_CHANGE).map(([step, [from, to]]) => [step, ease((t - from) / (to - from))])) as Rigging;
+}
 
 export const hullHalfBeam = (morph: number) => HULL_HALF_BEAM.dinghy + (HULL_HALF_BEAM.catamaran - HULL_HALF_BEAM.dinghy) * morph;
 
