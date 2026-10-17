@@ -35,12 +35,15 @@ const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 
 // Where the Voyage's scenery sits along the river; z falls downstream, so each
 // stretch runs `from` its upstream end `to` its downstream end. The island
 // splits the river from just below the opening view until shortly before they
-// meet. The river widens while Amelia is in Sydney. The S-bend swings the river
+// meet; in portrait its head starts lower, beside the little jetties, since
+// the bend at the start (see bankSwing) pinches the river where it would
+// begin on desktop and its reeds would close the left channel against the
+// bank's. The river widens while Amelia is in Sydney. The S-bend swings the river
 // sideways by `swing` just before the wedding; the jetty and the old tree stand
 // on the `side` bank (+1 is +x) past it, where the boats dock.
 const MEET_Z = routeAtMonth(DATES.meet);
 export const VOYAGE = {
-  island: { from: 10, to: MEET_Z + 3, halfWidth: 1.5 },
+  island: { from: 10, mobileFrom: 7.2, to: MEET_Z + 3, halfWidth: 1.5 },
   meet: MEET_Z,
   sydney: { from: routeAtMonth(DATES.sydney), to: routeAtMonth(DATES.back), widen: 2.2 },
   bend: { from: -135, to: -164, swing: -12 },
@@ -74,13 +77,16 @@ export function bankEdge(z: number, width = 1) {
     - (leftSwing(z, width) + rightSwing(z, width)) / 2 + sydneyWiden(z, width);
 }
 
+// Where the island runs on each composition.
+export const islandSpan = (width = 1) => ({ from: width < 1 ? VOYAGE.island.mobileFrom : VOYAGE.island.from, to: VOYAGE.island.to });
+
 // The island's half-width across the river at z, 0 outside it. Its upstream
 // head is blunt and rounded, it runs a little uneven along its length, and it
 // tapers off in a long tail towards where the channels rejoin. The island
 // itself is built in VoyageWorld; the story boats keep to the channels either
 // side of it.
 export function islandHalfWidth(z: number, width = 1) {
-  const { from, to, halfWidth } = VOYAGE.island;
+  const { from, to } = islandSpan(width), { halfWidth } = VOYAGE.island;
   const t = (from - z) / (from - to);
   if (t <= 0 || t >= 1) return 0;
   const head = t < .16 ? Math.sqrt(1 - (1 - t / .16) ** 2) : 1;
