@@ -112,6 +112,18 @@ const STYLES: Record<string, { script: string, vars: Record<string, string>, [op
     date: 'caps', venue: 'one', crop: 'close',
     vars: { ...V5, ...CAPS, 'lockup-bottom': '19px' },
   },
+  // caps' tucked headline over lockup's title-case names, with more room above the photo's hands.
+  tucked: {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'dear', headline: 'mixed', names: 'serif', amp: 'script',
+    date: 'plain', venue: 'one', crop: 'roomy',
+    vars: { ...V5, 'greeting-size': 'var(--middle)', 'line-gap': '-30px', 'line2-shift': '70px' },
+  },
+  // tucked with lockup's small capitals greeting: three treatments instead of four.
+  'tucked-caps': {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'caps', headline: 'mixed', names: 'serif', amp: 'script',
+    date: 'plain', venue: 'one', crop: 'roomy',
+    vars: { ...V5, 'greeting-size': 'var(--small)', 'line-gap': '-30px', 'line2-shift': '70px' },
+  },
   // A letter: "Dear Dean & Kelly," in italic, quieter italic names, a smaller photo, more air.
   salutation: {
     script: 'Great Vibes Thin', layout: 'grouped', greeting: 'dear', headline: 'mixed', names: 'italic', amp: 'italic',
@@ -141,6 +153,7 @@ const CROPS = {
   centred: { file: 'gerringong-film-10.jpg', focus: [0.52, 0.52], at: [0.5, 0.56], zoom: 1 },
   offset: { file: 'gerringong-film-10.jpg', focus: [0.52, 0.52], at: [0.36, 0.55], zoom: 1.15 },
   close: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.49], zoom: 1.35 }, // less sky, the couple bigger
+  roomy: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.56], zoom: 1.2 }, // close, with more room above the hands
   bleed: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.5], zoom: 1.1 }, // photo-first's full-width strip
   arch: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.56], zoom: 2.9 },
 };
