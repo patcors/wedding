@@ -107,6 +107,47 @@ export function companyFlags(p: number, still = false): CompanyFlag[] {
   });
 }
 
+// January 2026, they start salsa classes: as the date shows, the catamaran
+// turns once on the spot like a dancer and sails on. The turn plays in real
+// time once the scroll reaches it, as the rubber ducks' tosses do, so it never
+// stops part way round when the guest does: it starts `cue` shares after the
+// date first shows, and a guest who arrives after `late` (a jump, or coming
+// back up the river) finds it done. It plays again once they go back before
+// the date. A little prep the other way, then once round to the right (seen
+// from above, clockwise, as a lead turns his partner), rising and heeling a
+// touch into it, then a small overshoot it settles back from, as a dancer
+// spots the finish. It turns about the hulls' middle, `pivot` forward of the
+// pair's (model units), so the bows sweep as little water as they can: in
+// portrait the river narrows through salsa's share. The camera holds steady;
+// nothing turns under reduced motion.
+export const SALSA = { cue: .03, late: .3, seconds: 3.6, prep: .2, overshoot: .12, heel: .05, rise: .03, pivot: -.175 } as const;
+export const salsaTime = (p: number) => scrolledSince(monthOf('salsa'), p);
+// Seconds into the turn at p, from `turn` the frame before and the frame's
+// `step` (0 while paused): null until it starts, Infinity once it is done or missed.
+export function salsaClock(turn: number | null, p: number, step: number, reduced = false): number | null {
+  const t = salsaTime(p);
+  if (t < 0 && (turn === null || turn >= SALSA.seconds)) return null;
+  if (reduced) return Infinity;
+  if (turn === null) return t < SALSA.cue ? null : t < SALSA.late ? 0 : Infinity;
+  return turn >= SALSA.seconds ? Infinity : turn + step;
+}
+// The catamaran's turn `s` seconds in: how far round (radians of yaw, negative
+// to the right), heeled (radians of roll) and risen (model units). At rest
+// before and after, so it ends on the heading it started on. `shift` is how
+// far the pair's middle moves (world x, z) to turn about the pivot, heading `yaw`.
+export function salsaTurn(s: number | null, yaw = 0) {
+  const u = (s ?? 0) / SALSA.seconds;
+  if (!(u > 0 && u < 1)) return { spin: 0, heel: 0, rise: 0, shift: [0, 0] as [number, number] };
+  // Up and back down between a and b, gently at both ends.
+  const swell = (a: number, b: number) => Math.sin(Math.PI * clamp((u - a) / (b - a))) ** 2;
+  const round = clamp((u - .1) / .72), turned = round ** 3 * (round * (round * 6 - 15) + 10);
+  const spin = -2 * Math.PI * turned + SALSA.prep * swell(0, .3) - SALSA.overshoot * swell(.7, 1), pivot = SALSA.pivot * BOAT_SCALE;
+  return {
+    spin, heel: SALSA.heel * swell(.1, .82), rise: SALSA.rise * swell(.1, .82),
+    shift: [pivot * (Math.sin(yaw) - Math.sin(yaw + spin)), pivot * (Math.cos(yaw) - Math.cos(yaw + spin))] as [number, number],
+  };
+}
+
 export const hullHalfBeam = (morph: number) => HULL_HALF_BEAM.dinghy + (HULL_HALF_BEAM.catamaran - HULL_HALF_BEAM.dinghy) * morph;
 
 // Under the opening title each boat lies alongside the head of its own jetty
