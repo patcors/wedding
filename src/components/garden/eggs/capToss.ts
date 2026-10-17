@@ -9,15 +9,18 @@ import { BOAT_SCALE, boatPose } from '../storyBoats.ts';
 
 // One cap a boat: Amelia's (the −x boat) and then Patrick's, each tossed `at`
 // shares after the date, while it holds, just after their UOW flags come
-// down. Each lands on its own boat's bank, `ahead` units downstream of where
-// it was tossed and `inland` of the water's edge at desktop's width
-// (portrait's is `mobileInland`). Seconds in the air, how high it goes above
-// the deck, and its size: larger than life, and larger again in portrait's
-// wider lens, so it reads lying in the grass. It comes to rest tipped
-// `tilt` towards the camera on a tussock, so its board shows.
+// down (UNIVERSITY_FLAG in storyBoats.ts). Each lands on its own boat's bank,
+// `ahead` units downstream of where it was tossed, short of 2020's boathouse,
+// and `inland` of the water's edge at desktop's width (portrait's is
+// `mobileInland`, Amelia's nearer the water so it stays in a phone's picture
+// as the camera comes up on it, Patrick's on the higher ground). Seconds in
+// the air, how high it goes above the deck, and its size: larger than life,
+// and larger again in portrait's wider lens, so it reads lying in the grass.
+// It comes to rest tipped `tilt` towards the camera on a tussock, so its
+// board shows.
 export const CAPS = {
-  tosses: [{ side: -1, at: .1, ahead: 1.8 }, { side: 1, at: .13, ahead: 4.4 }],
-  inland: .55, mobileInland: .3,
+  tosses: [{ side: -1, at: .1, ahead: 3.5, mobileInland: .3 }, { side: 1, at: .13, ahead: 3.5, mobileInland: .5 }],
+  inland: .55,
   flight: 1.9, rise: 2.6,
   scale: { desktop: 1.5, mobile: 1.9 }, tilt: .5,
   // Under reduced motion both lie on the banks at graduation's still.
@@ -39,7 +42,7 @@ export function capLaunch(month: string, toss: Toss, width: number) {
 // the ground. `yaw` turns it to face the camera as the date holds.
 export function capLanding(month: string, toss: Toss, width: number) {
   const z = capLaunch(month, toss, width).z - toss.ahead;
-  const x = riverCenter(z, width) + toss.side * (bankEdge(z, width) + (width < 1 ? CAPS.mobileInland : CAPS.inland));
+  const x = riverCenter(z, width) + toss.side * (bankEdge(z, width) + (width < 1 ? toss.mobileInland : CAPS.inland));
   const [cx, , cz] = cameraPose(progressAt(month) + .2 * ROOM, width).position;
   return { x, y: groundHeight(x, z, width) + .02, z, yaw: Math.atan2(cx - x, cz - z) };
 }

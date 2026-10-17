@@ -119,7 +119,7 @@ export function companyFlags(p: number, still = false): CompanyFlag[] {
 export const UNIVERSITY_FLAG = {
   hoist: { month: DATES.meet, span: [0, .15] },
   under: { month: monthOf('internship'), span: [0, .1] },
-  strike: { month: monthOf('graduation'), span: [0, .15] },
+  strike: { month: monthOf('graduation'), span: [0, .08] },
 } as const;
 // How far up its halyard it is (0 down, 1 up), and how far it has dropped
 // from the masthead to its place under the company's flag (0 to 1).

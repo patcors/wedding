@@ -25,9 +25,9 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'coast', month: '2017-11', description: 'Their first trip away with friends, down the coast.', egg: 'coast', room: .5 },
   { id: 'internship', month: '2018-11', description: 'They start their internship at FinoComp.' },
   { id: 'snow-2019', month: '2019-07', description: 'A snow trip, where Amelia breaks her wrist snowboarding.', egg: 'snow-2019' },
-  // A little longer, so the boats only start to drift apart for Sydney once
-  // the university's flags are down.
-  { id: 'graduation', month: '2020-08', description: 'They graduate from university.', egg: 'graduation', room: .5 },
+  // Longer, early in the year, so the mortarboards land before Sydney's river
+  // widens and the boats only start to drift apart once they have.
+  { id: 'graduation', month: '2020-08', description: 'They graduate from university.', egg: 'graduation', room: 1.1 },
   // The boats drift apart, still in sight, and stay apart through Amelia's
   // two changes of work, each with room enough that her interim flag, and
   // then her HeirWealth flag beside Patrick's FinoComp one, fly for most of a

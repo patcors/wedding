@@ -19,15 +19,15 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // a phone always sees them. 2018's stands on the left bank, across from July
 // 2017's π, which is still being passed as 2018 turns, and the buoy on the
 // right of the river, clear of the rock behind it. 2020's boathouse stands a
-// little further on, past the 2019 snowman across the river. Sydney's wide
-// river puts its left bank out of a phone's picture, so 2021 and 2023 stand
-// on the right, and 2022's pile stands mid-river between the boats while they
-// are apart.
+// way past the 2019 snowman across the river, so August's mortarboards land
+// in front of it rather than behind it. Sydney's wide river puts its left
+// bank out of a phone's picture, so 2021 and 2023 stand on the right, and
+// 2022's pile stands mid-river between the boats while they are apart.
 export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45 },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },
   { year: 2019, medium: 'buoy', side: 1, lead: 3.5, share: .8 },
-  { year: 2020, medium: 'shed', side: -1, lead: 8, inland: .55 },
+  { year: 2020, medium: 'shed', side: -1, lead: 9, inland: .55 },
   { year: 2021, medium: 'stake', side: 1, lead: 3.5, inland: .55 },
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85 },
   { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
