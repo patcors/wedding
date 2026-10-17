@@ -116,7 +116,7 @@ const STYLES: Record<string, { script: string, vars: Record<string, string>, [op
   tucked: {
     script: 'Great Vibes Thin', layout: 'grouped', greeting: 'dear', headline: 'mixed', names: 'serif', amp: 'script',
     date: 'plain', venue: 'one', crop: 'roomy',
-    vars: { ...V5, 'greeting-size': 'var(--middle)', 'line-gap': '-30px', 'line2-shift': '70px' },
+    vars: { ...V5, 'greeting-size': 'var(--middle)', 'line-gap': '-30px', 'line2-shift': '70px', rim: 'transparent' }, // no paper edge behind the tear
   },
   // tucked with lockup's small capitals greeting: three treatments instead of four.
   'tucked-caps': {
@@ -339,6 +339,8 @@ const settings = { styles: STYLES, style: STYLE, scripts: SCRIPTS, serif: SERIF,
       [data-headline='one'] .headline br { display: none; }
       /* Monsieur La Doulaise sets its apostrophe wide: "You ’re". */
       [data-script='monsieur-la-doulaise'] .apostrophe { margin: 0 -.04em 0 -.32em; }
+      /* Great Vibes leaves a gap after its apostrophe: "You’ re". */
+      [data-script='great-vibes'] .apostrophe { margin-right: -.08em; }
 
       .names { margin-top: 36px; font-size: var(--names); line-height: 1; white-space: nowrap; }
       .names em { font-style: normal; color: var(--accent); }
