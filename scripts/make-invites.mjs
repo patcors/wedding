@@ -6,6 +6,7 @@
 //   node scripts/make-invites.mjs curry crash      just these codes
 //   --no-photo                                     leave the photograph out
 //   --style=vibes                                  another look from STYLES in the page
+//   --script='Imperial Script'                     another script font from SCRIPTS in the page
 //   --crop=offset                                  another crop from CROPS in the page
 //   --scale=1                                      1080×1350 instead of 2160×2700
 //   --base=http://localhost:4334                   dev server (default :4321)
@@ -31,7 +32,7 @@ const base = option('base', 'http://localhost:4321').replace(/\/$/, '');
 const scale = Number(option('scale', '2'));
 const query = new URLSearchParams();
 if (args.includes('--no-photo')) query.set('photo', 'none');
-for (const name of ['style', 'crop']) if (option(name)) query.set(name, option(name));
+for (const name of ['style', 'script', 'crop']) if (option(name)) query.set(name, option(name));
 const codes = args.filter(arg => !arg.startsWith('--'));
 const output = resolve(root, option('out', 'invites/out'));
 
@@ -129,7 +130,7 @@ try {
     await writeFile(file, Buffer.from(data, 'base64'));
     console.log(`${party.code.padEnd(16)} ${party.greeting}`);
   }
-  console.log(`\n${chosen.length} invite${chosen.length === 1 ? '' : 's'} in ${relative(process.cwd(), output) || output} at ${WIDTH * scale}×${HEIGHT * scale}`);
+  console.log(`\n${chosen.length} invite${chosen.length === 1 ? '' : 's'} in ${relative(process.cwd(), output).startsWith('..') ? output : relative(process.cwd(), output) || output} at ${WIDTH * scale}×${HEIGHT * scale}`);
 } finally {
   socket?.close();
   if (chrome.exitCode === null) {

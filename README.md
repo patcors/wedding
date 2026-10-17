@@ -45,13 +45,14 @@ pnpm invites                              # every Party → invites/out/<code>.p
 pnpm invites curry crash                  # just these codes
 pnpm invites --no-photo                   # without the engagement photo
 pnpm invites --style=vibes                # another look from STYLES in the page
+pnpm invites --script='Imperial Script'   # another script font from SCRIPTS in the page
 pnpm invites --crop=offset                # another crop from CROPS in the page
 pnpm invites --out=/tmp/drafts            # somewhere other than invites/out
 pnpm invites --scale=1                    # 1080×1350
 pnpm invites --base=http://localhost:4334 # dev server on another port
 ```
 
-It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, styles (fonts, colours, sizes) and photo crops are at the top of `src/pages/dev/invite/[code].astro`, and `STYLE` picks the one that's rendered. Open the page in a browser to tweak it, with `?style=<name>`, `?crop=<name>` or `?photo=none`. `invites/out/` is git-ignored.
+It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, styles (fonts, colours, sizes) and photo crops are at the top of `src/pages/dev/invite/[code].astro`, and `STYLE` picks the one that's rendered. Open the page in a browser to tweak it, with `?style=<name>`, `?script=<name>`, `?crop=<name>` or `?photo=none`. `invites/out/` is git-ignored.
 
 ### Sending by text from Messages
 
