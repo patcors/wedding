@@ -12,6 +12,7 @@ import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
+import { DATE_LABEL_MODES, dateLabelMode, shownDate, type DateLabelMode } from './dateLabelMode';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -104,6 +105,8 @@ const REVIEW_HIDDEN = 'pa_dev_review_hidden';
 // Dev only: the Review sky and water, remembered; GardenPage reads the sky to colour Safari's bars to match.
 const REVIEW_SKY = 'pa_dev_sky';
 const REVIEW_WATER = 'pa_dev_water';
+// Dev only: the Review choice of date label (see dateLabelMode.ts), remembered across reloads.
+const REVIEW_DATE = 'pa_dev_date_label';
 
 export default function Garden({ greeting }: { greeting?: string }) {
   const [progress, setProgress] = useState(0);
@@ -217,7 +220,10 @@ export default function Garden({ greeting }: { greeting?: string }) {
   // The date stays on through the voyage panel's fade out.
   const [lastDate, setLastDate] = useState<string | null>(null);
   if (voyage.date && voyage.date !== lastDate) setLastDate(voyage.date);
-  const [month, year] = (voyage.date ?? lastDate ?? '').split(' ');
+  // Dev only: the Review panel's date label, month and year by default.
+  const [dateMode, setDateMode] = useState<DateLabelMode>('full');
+  useEffect(() => { if (REVIEW) setDateMode(dateLabelMode(localStorage.getItem(REVIEW_DATE))); }, []);
+  const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   // The camera already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
   const goToProgress = (next: number) => {
@@ -287,9 +293,9 @@ export default function Garden({ greeting }: { greeting?: string }) {
           hear each milestone instead, from the status line below. */}
       <section className={`garden-panel garden-voyage ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
         <h2 className="garden-visually-hidden">Our story</h2>
-        <p className="garden-voyage-date" aria-hidden="true">
-          <Crossfade className="garden-voyage-month" value={month} />
-          <Crossfade className="garden-voyage-year" value={year ?? ''} />
+        <p className="garden-voyage-date" aria-hidden="true" data-mode={dateMode === 'full' ? undefined : dateMode}>
+          {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
+          <Crossfade className="garden-voyage-year" value={year} />
         </p>
         <button className="garden-text-link" onClick={() => goToProgress(1)}>The next chapter <span aria-hidden="true">→</span></button>
       </section>
@@ -380,6 +386,15 @@ export default function Garden({ greeting }: { greeting?: string }) {
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
       <button onClick={() => setSceneOnly(!sceneOnly)} aria-pressed={sceneOnly}>{sceneOnly ? 'Show invitation' : 'Scene only'}</button>
+      <label className="garden-material-selector">Date
+        <select aria-label="Date label" value={dateMode} onChange={event => {
+          const mode = dateLabelMode(event.target.value);
+          localStorage.setItem(REVIEW_DATE, mode);
+          setDateMode(mode);
+        }}>
+          {Object.entries(DATE_LABEL_MODES).map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
+        </select>
+      </label>
     </aside>}
     <div className="garden-scroll-space" />
   </main>;
