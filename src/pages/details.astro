@@ -78,7 +78,7 @@ const photos = {
   <body>
     <main class="info">
       <header class="info-header">
-        <a class="info-monogram" href={BASE} aria-label="Back to the garden">P<span>&</span>A</a>
+        <a class="info-monogram" href={BASE} aria-label="Back to the garden"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
         <span class="info-header-date">16 APRIL 2027</span>
         <a class="info-rsvp-link" href="#rsvp">RSVP <span aria-hidden="true">↗</span></a>
       </header>
@@ -191,7 +191,7 @@ const photos = {
       </section>
 
       <footer class="info-footer">
-        <span class="info-monogram">P<span>&</span>A</span>
+        <span class="info-monogram"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></span>
         <p>Friday 16 April 2027 · {venue.name}, {venue.place}</p>
       </footer>
     </main>
@@ -227,8 +227,8 @@ const photos = {
 
   .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
     padding: 26px 48px; background: linear-gradient(#eeeee5 55%, #eeeee500); }
-  .info-monogram { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; letter-spacing: -.1em; }
-  .info-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
+  .info-monogram { display: block; line-height: 0; }
+  .info-monogram img { display: block; width: auto; height: 34px; }
   .info-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
   .info-rsvp-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid #73796770; padding-bottom: 8px; }
   .info-rsvp-link span { margin-left: 14px; }
@@ -295,7 +295,8 @@ const photos = {
   .info-boat { color: var(--leaf); }
 
   .info-footer { text-align: center; padding: 30px 24px 55px; }
-  .info-footer .info-monogram { font-size: 24px; }
+  .info-footer .info-monogram { display: inline-block; }
+  .info-footer .info-monogram img { height: 28px; }
   .info-footer p { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
 
   /* Gentle rise-and-fade as sections enter the viewport, and the garden path
