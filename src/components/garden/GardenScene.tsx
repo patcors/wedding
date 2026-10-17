@@ -1,7 +1,6 @@
 // PROTOTYPE: a short, self-contained garden composition, not the production story.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -14,6 +13,7 @@ import GardenPlants from './GardenPlants';
 import { plantSites, type PlantStyle } from './gardenPlantGeometry';
 import { BoatWakes, PaperBoat } from './PaperBoat';
 import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch, type Stem } from './boatPhysics';
+import { useGardenTextures } from './gardenTextures';
 
 const BASE = import.meta.env.BASE_URL;
 const boatRiver = { center: riverCenter, halfWidth: bankEdge };
@@ -96,7 +96,7 @@ function Pool({ paused, width, mobile, reeds, launchRequest, tint }: { paused: b
     event.stopPropagation();
     launch(x, z);
   };
-  const normals = useTexture(`${BASE}textures/garden/water-normal.jpg`);
+  const [normals] = useGardenTextures([`${BASE}textures/garden/water-normal.jpg`]);
   const water = useMemo(() => {
     normals.wrapS = normals.wrapT = THREE.RepeatWrapping;
     const object = new Water(new THREE.PlaneGeometry(240, 260), {

@@ -1,16 +1,18 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { useGLTF, useTexture } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { bankEdge, riverCenter, groundHeight, random } from './gardenGeometry';
+import { useGardenTextures } from './gardenTextures';
 
 const ASSETS = `${import.meta.env.BASE_URL}models/garden/ground/`;
 
 export default function GardenRocks({ width, visible }: { width: number; visible: boolean }) {
   const { nodes } = useGLTF(`${ASSETS}moss-rocks.glb`);
-  const maps = useTexture(['color', 'normal', 'arm'].map(map => `${ASSETS}rock_moss_set_01-${map}.webp`));
+  // glTF UVs: the maps load unflipped.
+  const maps = useGardenTextures(['color', 'normal', 'arm'].map(map => `${ASSETS}rock_moss_set_01-${map}.webp`), { flipY: false });
   const meshes = useRef<(THREE.InstancedMesh | null)[]>([]);
   const material = useMemo(() => {
-    maps.forEach(map => { map.flipY = false; map.anisotropy = 4; map.needsUpdate = true; });
+    maps.forEach(map => { map.anisotropy = 4; map.needsUpdate = true; });
     maps[0].colorSpace = THREE.SRGBColorSpace;
     return new THREE.MeshStandardMaterial({ name: 'garden-moss-rock', map: maps[0], normalMap: maps[1],
       roughnessMap: maps[2], aoMap: maps[2], aoMapIntensity: .5, roughness: 1, metalness: 0,

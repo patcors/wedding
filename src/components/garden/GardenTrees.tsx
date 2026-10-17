@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, useTexture } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { riverCenter, bankEdge, groundHeight, random } from './gardenGeometry';
+import { useGardenTextures } from './gardenTextures';
 
 const BASE = `${import.meta.env.BASE_URL}models/garden/`;
 export const TREE_MODELS = ['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb'].map(file => BASE + file);
@@ -44,8 +45,10 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
   width: number; mobile: boolean; paused: boolean; lightTrees: boolean;
 }) {
   const models = useGLTF(TREE_MODELS);
-  // Only the palette in use downloads; the other is a Review variant.
-  const [barkColor, barkNormal, barkRoughness, leafMap] = useTexture(treeTextures(lightTrees));
+  // Only the palette in use downloads; the other is a Review variant. These
+  // geometry-only GLBs preserve EZ-Tree's original UVs. No exporter texture flip
+  // was baked in, so the maps load flipped, the source TextureLoader convention.
+  const [barkColor, barkNormal, barkRoughness, leafMap] = useGardenTextures(treeTextures(lightTrees));
   const windTime = useMemo(() => ({ value: 0 }), []);
   // Set up each palette's maps as it arrives.
   useMemo(() => {
@@ -56,12 +59,7 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
     }
     for (const texture of [barkColor, leafMap]) texture.colorSpace = THREE.SRGBColorSpace;
     leafMap.anisotropy = 4;
-    // These geometry-only GLBs preserve EZ-Tree's original UVs. No exporter
-    // texture flip was baked in, so keep the source TextureLoader convention.
-    for (const texture of [barkColor, barkNormal, barkRoughness, leafMap]) {
-      texture.flipY = true;
-      texture.needsUpdate = true;
-    }
+    for (const texture of [barkColor, barkNormal, barkRoughness, leafMap]) texture.needsUpdate = true;
   }, [barkColor, barkNormal, barkRoughness, leafMap]);
   const materials = useMemo(() => {
     const bark = new THREE.MeshStandardMaterial({ map: barkColor, normalMap: barkNormal,
