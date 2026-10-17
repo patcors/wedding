@@ -55,37 +55,55 @@ export function rigging(p: number, still = false): Rigging {
   return Object.fromEntries(Object.entries(RIG_CHANGE).map(([step, [from, to]]) => [step, ease((t - from) / (to - from))])) as Rigging;
 }
 
-// The companies they work for fly as pennants under their initials. Both run
-// up FinoComp's as November 2018 shows, and keep them through Sydney, where
-// they worked on for it apart. As March 2023 shows each strikes FinoComp's and
-// runs up HeirWealth's straight away, Amelia first: she started there a couple
-// of months before Patrick. Spans of scroll since each date, in shares, all
-// while the date holds; the swaps are Amelia's then Patrick's.
+// Each small masthead flies the mark of whoever its sailor works for, and
+// nothing before their internship. Both run up FinoComp's as November 2018
+// shows and keep them into Sydney. Amelia leaves FinoComp and takes a few
+// months off, tutoring and selling haircare online (the interim flag), then
+// starts at HeirWealth in January 2023; Patrick follows as March 2023 shows,
+// so for a while hers is HeirWealth's and his still FinoComp's.
+export type Company = 'finocomp' | 'interim' | 'heirwealth';
+// When Amelia left FinoComp: a placeholder until she confirms the month.
+export const AMELIA_LEFT_FINOCOMP = '2022-10';
+export const AMELIA_JOINED_HEIRWEALTH = '2023-01';
 const monthOf = (id: string) => MILESTONES.find(m => m.id === id)!.month;
-export const PENNANT_DATES = { finocomp: monthOf('internship'), heirwealth: monthOf('heirwealth') } as const;
-export const PENNANT_CHANGE = {
-  finocomp: [0, .3],
-  heirwealth: [{ strike: [0, .1], hoist: [.1, .22] }, { strike: [.08, .18], hoist: [.18, .3] }],
-} as const;
-export type Company = 'finocomp' | 'heirwealth';
-export type Pennant = { company: Company | null; hoist: number };
-// Amelia's and Patrick's at p: which company's is up, and how far up its
-// halyard. They come down with the initials as the small sails furl for the
-// change of masts, so the big mast flies only their monogram. A
-// reduced-motion still shows each settled.
-export function pennants(p: number, still = false): Pennant[] {
-  const clock = (month: string) => {
-    const s = scrolledSince(month, p);
-    return still ? (s < -1e-9 ? -Infinity : Infinity) : s;
-  };
-  const span = (t: number, [from, to]: readonly [number, number]) => ease((t - from) / (to - from));
-  const joined = clock(PENNANT_DATES.finocomp), moved = clock(PENNANT_DATES.heirwealth), { furl } = rigging(p, still);
-  return PENNANT_CHANGE.heirwealth.map(({ strike, hoist }) => {
-    const heirwealth = span(moved, hoist), finocomp = span(joined, PENNANT_CHANGE.finocomp) * (1 - span(moved, strike));
-    // One halyard: FinoComp's is all the way down before HeirWealth's goes up it.
-    const [company, up]: [Company, number] = heirwealth > 0 ? ['heirwealth', heirwealth] : ['finocomp', finocomp];
-    const height = up * (1 - furl);
-    return height > 0 ? { company, hoist: height } : { company: null, hoist: 0 };
+type Change = { month: string; company: Company; strike: readonly [number, number]; hoist: readonly [number, number] };
+// Each boat's changes in order, Amelia's then Patrick's: the flag before is
+// struck, then this one run up the same halyard, over these spans of scroll
+// since the month first shows, in shares. Months rush through Sydney (October
+// 2022 to January 2023 is a tenth of a share), so her changes are quick,
+// each as its month shows; Patrick's waits a little into March 2023's hold.
+const internship: Change = { month: monthOf('internship'), company: 'finocomp', strike: [0, 0], hoist: [0, .3] };
+export const FLAG_CHANGES: readonly (readonly Change[])[] = [
+  [
+    internship,
+    { month: AMELIA_LEFT_FINOCOMP, company: 'interim', strike: [0, .025], hoist: [.025, .05] },
+    { month: AMELIA_JOINED_HEIRWEALTH, company: 'heirwealth', strike: [0, .02], hoist: [.02, .045] },
+  ],
+  [
+    internship,
+    { month: monthOf('heirwealth'), company: 'heirwealth', strike: [.1, .18], hoist: [.18, .3] },
+  ],
+];
+export type CompanyFlag = { company: Company | null; hoist: number };
+// Amelia's and Patrick's at p: whose flag is up, and how far up its halyard.
+// They come down as the small sails furl for the change of masts, and go
+// with the small masts. A reduced-motion still shows each change settled
+// from its month on.
+export function companyFlags(p: number, still = false): CompanyFlag[] {
+  const span = (t: number, [from, to]: readonly [number, number]) => to > from ? ease((t - from) / (to - from)) : t >= from ? 1 : 0;
+  const { furl } = rigging(p, still);
+  return FLAG_CHANGES.map(changes => {
+    const clocks = changes.map(({ month }) => {
+      const t = scrolledSince(month, p);
+      return still ? (t < -1e-9 ? -Infinity : Infinity) : t;
+    });
+    // The latest change under way, and how far through it.
+    const k = clocks.findLastIndex((t, i) => t >= changes[i].strike[0]);
+    if (k < 0) return { company: null, hoist: 0 };
+    const change = changes[k], up = span(clocks[k], change.hoist);
+    const [company, height] = up > 0 ? [change.company, up] : [changes[k - 1]?.company ?? null, 1 - span(clocks[k], change.strike)];
+    const hoist = height * (1 - furl);
+    return company && hoist > 0 ? { company, hoist } : { company: null, hoist: 0 };
   });
 }
 

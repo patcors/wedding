@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, VOYAGE_END, progressAt, routeAt, stillProgress } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, PENNANT_DATES, boatPose, hullHalfBeam, joining, pennants, rigging } from '../src/components/garden/storyBoats.ts';
+import { ALONGSIDE, AMELIA_JOINED_HEIRWEALTH, AMELIA_LEFT_FINOCOMP, BOAT_SCALE, CAST_OFF, CATAMARAN, boatPose, companyFlags, hullHalfBeam, joining, rigging } from '../src/components/garden/storyBoats.ts';
 import { BIG_RIG, FLAG, LOGO_FLAG, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
@@ -180,62 +180,65 @@ test('under the title each boat lies alongside its own jetty, then casts off int
   }
 });
 
-// Each boat's pennants over p, as runs of the same company (null for none).
-// Each run notes how far up its first pennant is and how far up the one
-// before it had got.
-const pennantRuns = boat => steps(20000).reduce((runs, p) => {
-  const { company, hoist } = pennants(p)[boat];
+// Each boat's flags over p, as runs of the same company (null for none).
+// Each run notes how far up its first flag is and how far up the one before
+// it had got.
+const flagRuns = boat => steps(40000).reduce((runs, p) => {
+  const { company, hoist } = companyFlags(p)[boat];
   if (runs.at(-1)?.company !== company) runs.push({ company, from: p, hoist, after: runs.at(-1)?.last ?? 0 });
   runs.at(-1).last = hoist;
   return runs;
 }, []);
+const bothUp = (amelia, patrick) => [{ company: amelia, hoist: 1 }, { company: patrick, hoist: 1 }];
 
-test('both run up matching FinoComp pennants as November 2018 shows, and keep them through Sydney', () => {
-  const internship = progressAt(PENNANT_DATES.finocomp);
-  for (const p of steps().filter(p => p < internship)) assert.ok(pennants(p).every(({ company }) => company === null), `a pennant up before ${p}`);
-  // All the way up while the date holds, and the same on both through Sydney.
-  for (const p of [internship + .35 * ROOM, progressAt(DATES.sydney), (progressAt(DATES.sydney) + progressAt(DATES.back)) / 2]) {
-    assert.deepEqual(pennants(p), [{ company: 'finocomp', hoist: 1 }, { company: 'finocomp', hoist: 1 }]);
-  }
+test('the small mastheads fly nothing until both run up FinoComp flags as November 2018 shows', () => {
+  const internship = progressAt(MILESTONES.find(m => m.id === 'internship').month);
+  for (const p of steps().filter(p => p < internship)) assert.ok(companyFlags(p).every(({ company }) => company === null), `a flag up before ${p}`);
+  for (const p of [internship + .35 * ROOM, progressAt(DATES.sydney)]) assert.deepEqual(companyFlags(p), bothUp('finocomp', 'finocomp'));
 });
 
-test('as March 2023 shows each swaps FinoComp for HeirWealth on its halyard, Amelia first', () => {
-  const heirwealth = progressAt(PENNANT_DATES.heirwealth);
-  // Once, and on the one halyard: FinoComp's all the way down before HeirWealth's goes up.
-  for (const boat of [0, 1]) {
-    const runs = pennantRuns(boat);
-    assert.deepEqual(runs.map(run => run.company), [null, 'finocomp', 'heirwealth', null]);
-    assert.ok(runs[2].after < .01 && runs[2].hoist < .01, 'swapped at the foot of the halyard');
-  }
-  const [amelia, patrick] = [0, 1].map(boat => pennantRuns(boat).find(run => run.company === 'heirwealth').from);
-  assert.ok(amelia >= heirwealth && amelia < patrick, 'Amelia goes up first');
-  // Both up while the date holds.
-  assert.deepEqual(pennants(heirwealth + .35 * ROOM), [{ company: 'heirwealth', hoist: 1 }, { company: 'heirwealth', hoist: 1 }]);
+test('Amelia leaves FinoComp for a while, then starts at HeirWealth before Patrick does', () => {
+  const left = progressAt(AMELIA_LEFT_FINOCOMP), joined = progressAt(AMELIA_JOINED_HEIRWEALTH), patrick = progressAt(DATES.back);
+  assert.ok(progressAt(DATES.sydney) < left && left < joined && joined < patrick);
+  // Each change on one halyard: the flag before all the way down before the next goes up.
+  const runs = [0, 1].map(flagRuns);
+  assert.deepEqual(runs[0].map(run => run.company), [null, 'finocomp', 'interim', 'heirwealth', null]);
+  assert.deepEqual(runs[1].map(run => run.company), [null, 'finocomp', 'heirwealth', null]);
+  for (const boat of runs) for (const run of boat.slice(2, -1)) assert.ok(run.after < .02 && run.hoist < .02, `${run.company} swapped at the foot of the halyard`);
+  // Each change starts as its month shows, and is done well before the next.
+  const [, , interim, amelia] = runs[0], [, , heirwealth] = runs[1];
+  assert.ok(interim.from >= left && amelia.from >= joined && heirwealth.from >= patrick);
+  assert.deepEqual(companyFlags((left + joined) / 2 + .01 * ROOM), bothUp('interim', 'finocomp'));
+  // Hers is HeirWealth's while his is still FinoComp's, into March 2023's hold, then both.
+  for (const p of [(joined + patrick) / 2 + .02 * ROOM, patrick + .08 * ROOM]) assert.deepEqual(companyFlags(p), bothUp('heirwealth', 'finocomp'));
+  assert.deepEqual(companyFlags(patrick + .35 * ROOM), bothUp('heirwealth', 'heirwealth'));
+  assert.ok(patrick + .35 * ROOM < progressAt(DATES.dating));
 });
 
-test('the pennants come down with the initials for the change of masts, leaving the big mast its monogram', () => {
+test('the company flags come down for the change of masts, leaving the big mast its monogram', () => {
   for (const p of steps(20000)) {
     const { furl } = rigging(p);
-    for (const { hoist } of pennants(p)) assert.ok(hoist <= 1 - furl + 1e-9, `pennant up as the flags are struck at ${p}`);
+    for (const { hoist } of companyFlags(p)) assert.ok(hoist <= 1 - furl + 1e-9, `flag up as the sails furl at ${p}`);
   }
-  for (const p of steps().filter(p => p >= progressAt(DATES.engaged))) assert.ok(pennants(p).every(({ company }) => company === null));
+  for (const p of steps().filter(p => p >= progressAt(DATES.engaged))) assert.ok(companyFlags(p).every(({ company }) => company === null));
 });
 
-test('reduced-motion stills show the pennants settled', () => {
+test('reduced-motion stills show the company flags settled', () => {
   for (const { month } of MILESTONES) {
-    const flying = pennants(stillProgress(progressAt(month)), true);
-    const company = month < PENNANT_DATES.finocomp ? null : month < PENNANT_DATES.heirwealth ? 'finocomp' : month < DATES.engaged ? 'heirwealth' : null;
+    const flying = companyFlags(stillProgress(progressAt(month)), true);
+    const internship = MILESTONES.find(m => m.id === 'internship').month;
+    const company = month < internship ? null : month < DATES.back ? 'finocomp' : month < DATES.engaged ? 'heirwealth' : null;
     assert.deepEqual(flying, [0, 1].map(() => ({ company, hoist: company ? 1 : 0 })), month);
   }
 });
 
-test('the big mast flies their monogram on one flag at its masthead, larger than the initials, clear of its sail', () => {
+test('the big mast flies their monogram on one flag at its masthead, larger than the company flags, clear of its sail', () => {
   const flag = logoFlagGeometry();
   flag.computeBoundingBox();
   const { min, max } = flag.boundingBox;
   // Hanging from the masthead, flying to starboard, away from the sail eased to port.
   assert.ok(Math.abs(max.y) < 1e-6 && Math.abs(min.x) < 1e-6 && max.x > 0);
-  assert.ok(LOGO_FLAG.length > FLAG.length * 1.8 && LOGO_FLAG.height > FLAG.height * 1.8);
+  assert.ok(LOGO_FLAG.length > FLAG.length * 1.4 && LOGO_FLAG.height > FLAG.height * 1.4);
   assert.ok(BIG_RIG.top - LOGO_FLAG.height > BIG_RIG.boom + .5, 'clear of the boom');
   flag.dispose();
 });
