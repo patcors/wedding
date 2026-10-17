@@ -13,8 +13,8 @@ export interface GuestReply {
 
 export interface Rsvp {
   submitted_at: string;
-  code: string;      // Invite code, or '' for an Open RSVP
-  party: string;     // the Party's greeting, or OPEN_PARTY
+  code: string;      // the Party's Invite code
+  party: string;     // the Party's greeting
   contact: string;
   song: string;
   message: string;
@@ -27,9 +27,6 @@ export interface RememberedParty {
   greeting: string;
   guests: string[];
 }
-
-export const OPEN_PARTY = 'Open RSVP';
-export const MAX_OPEN_GUESTS = 6;
 
 const isString = (value: unknown): value is string => typeof value === 'string';
 const isAnswer = (value: unknown): value is Answer => value === 'yes' || value === 'no';
@@ -54,7 +51,7 @@ export function readSaved(raw: string | null): Rsvp | null {
   return value as Rsvp;
 }
 
-export const storageKey = (code: string) => (code ? `pa_rsvp_${code}` : 'pa_rsvp_open');
+export const storageKey = (code: string) => `pa_rsvp_${code}`;
 
 /** The urlencoded body Apps Script reads as e.parameter. */
 export function toParams(rsvp: Rsvp): URLSearchParams {
@@ -77,12 +74,6 @@ export function contactProblem(contact: string): string | null {
   const digits = value.replace(/\D/g, '').length;
   const looksLikePhone = /^[\d\s()+.-]+$/.test(value) && digits >= 8 && digits <= 15;
   return looksLikeEmail || looksLikePhone ? null : 'That doesn’t look like an email or mobile number.';
-}
-
-/** "Dean", "Dean & Kelly", "Dean, Kelly & Sam". */
-export function joinNames(names: string[]): string {
-  if (names.length < 2) return names.join('');
-  return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
 }
 
 /** One Guest's answer as a sentence: "Dean: coming, vegetarian, taking the bus." */

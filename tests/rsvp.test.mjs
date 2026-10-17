@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  contactProblem, describeGuest, joinNames, readParty, readSaved, storageKey, toParams,
+  contactProblem, describeGuest, readParty, readSaved, storageKey, toParams,
 } from '../src/components/details/rsvp.ts';
 
 test('a Party is only trusted when localStorage holds a complete one', () => {
@@ -13,9 +13,9 @@ test('a Party is only trusted when localStorage holds a complete one', () => {
   assert.equal(readParty(JSON.stringify({ ...party, code: '' })), null);
 });
 
-test('each Party remembers its own RSVP, and Open RSVPs share one slot', () => {
+test('each Party remembers its own RSVP', () => {
   assert.equal(storageKey('curry'), 'pa_rsvp_curry');
-  assert.equal(storageKey(''), 'pa_rsvp_open');
+  assert.notEqual(storageKey('curry'), storageKey('bridge'));
 });
 
 test('a saved RSVP must have answered Guests and a contact', () => {
@@ -50,10 +50,4 @@ test('answers read back as one sentence per Guest', () => {
   assert.equal(describeGuest({ name: 'Sam', attending: 'yes', dietary: '', bus: 'no' }), 'Sam: coming, not taking the bus.');
   assert.equal(describeGuest({ name: 'Lou', attending: 'yes', dietary: '', bus: '' }), 'Lou: coming.');
   assert.equal(describeGuest({ name: 'Kelly', attending: 'no', dietary: 'vegan', bus: 'yes' }), 'Kelly: can’t make it.');
-});
-
-test('names join the way the Garden greets a Party', () => {
-  assert.equal(joinNames(['Paula']), 'Paula');
-  assert.equal(joinNames(['Dean', 'Kelly']), 'Dean & Kelly');
-  assert.equal(joinNames(['A', 'B', 'C']), 'A, B & C');
 });

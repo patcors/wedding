@@ -10,7 +10,7 @@ Vocabulary (Party, Guest, Invite code, Personal link, RSVP, Garden, Details page
 |---|---|
 | `/` | The Garden, for anyone without a Personal link |
 | `/<code>` | A Party's Personal link: the Garden, greeting them by name. It remembers the Party so the Details page can show their RSVP |
-| `/details` | Location, times, getting there, where to stay, questions, and the RSVP |
+| `/details` | Location, times, getting there, where to stay, questions, and the RSVP. Without a remembered Party, the RSVP points visitors to their Personal link instead of showing a form |
 | `/dev/links` | Dev only. Every Party's Personal link with a QR code, for making cards. Never built into the deployed site |
 
 Parties live in `src/data/parties.ts`. Adding a Party there adds their page; the build fails if a code clashes with a page name.
@@ -45,6 +45,8 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    ```js
    // RSVPs: one row per Guest, only the latest answer for each Invite code.
    // Log: every submission exactly as received, never edited.
+   // Every RSVP comes from a Personal link, so a post without a code is
+   // logged but never reaches RSVPs.
    const RSVP_SHEET = 'RSVPs';
    const LOG_SHEET = 'Log';
    const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus', 'contact', 'song', 'message'];
@@ -62,21 +64,27 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
        const log = sheetWithHeaders(LOG_SHEET, LOG_HEADERS);
        appendText(log, [LOG_HEADERS.map((h) => p[h] || '')]);
 
+       if (!code) return json({ ok: false, error: 'missing code' });
+
        const rsvps = sheetWithHeaders(RSVP_SHEET, RSVP_HEADERS);
-       // A Party's new reply replaces its old rows. Open RSVPs (no code) always append.
-       if (code) deleteRowsWithCode(rsvps, code);
+       // A Party's new reply replaces its old rows.
+       deleteRowsWithCode(rsvps, code);
        appendText(rsvps, guests.map((g) => [
          p.submitted_at || '', code, p.party || '',
          g.name || '', g.attending || '', g.dietary || '', g.bus || '',
          p.contact || '', p.song || '', p.message || '',
        ]));
 
-       return ContentService
-         .createTextOutput(JSON.stringify({ ok: true }))
-         .setMimeType(ContentService.MimeType.JSON);
+       return json({ ok: true });
      } finally {
        lock.releaseLock();
      }
+   }
+
+   function json(body) {
+     return ContentService
+       .createTextOutput(JSON.stringify(body))
+       .setMimeType(ContentService.MimeType.JSON);
    }
 
    function sheetWithHeaders(name, headers) {
@@ -117,7 +125,8 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    workflow by hand). The build bakes the URL in, so setting the secret alone
    changes nothing on the live site.
 
-The form posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`,
+The form only appears for a Party remembered from their Personal link, and
+posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`,
 `song`, `message`, and `guests` as a JSON string of
 `[{ name, attending, dietary, bus }]`) with `mode: "no-cors"`. The response is
 opaque, so the page treats fetch resolving as success. With no endpoint set, a
