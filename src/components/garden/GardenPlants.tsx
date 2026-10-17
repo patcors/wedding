@@ -3,13 +3,16 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { plantGeometry, plantSites, type PlantKind } from './gardenPlantGeometry';
 import { configureGrassMaterial } from './gardenGrassMaterial';
+import { riverChunks } from './gardenGeometry';
+import { useRiverReach } from './useRiverReach';
+
+type PlantSite = ReturnType<typeof plantSites>[number];
 
 function PlantBatch({ kind, width, mobile, paused, visible }: {
   kind: PlantKind; width: number; mobile: boolean; paused: boolean; visible: boolean;
 }) {
-  const mesh = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => plantGeometry(kind), [kind]);
-  const sites = useMemo(() => plantSites(kind, width, mobile), [kind, width, mobile]);
+  const chunks = useMemo(() => riverChunks(plantSites(kind, width, mobile)), [kind, width, mobile]);
   const wind = useMemo(() => ({ value: 0 }), []);
   const material = useMemo(() => {
     const result = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .95 });
@@ -28,6 +31,18 @@ function PlantBatch({ kind, width, mobile, paused, visible }: {
     if (kind === 'meadow') configureGrassMaterial(result, wind, mobile);
     return result;
   }, [kind, wind, mobile]);
+  useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
+  useFrame((_, dt) => { if (!paused && visible) wind.value += Math.min(dt, .05); });
+  return <>{chunks.map((sites, i) => <PlantChunk key={`${i}-${sites.length}`} kind={kind} sites={sites}
+    geometry={geometry} material={material} visible={visible} />)}</>;
+}
+
+function PlantChunk({ kind, sites, geometry, material, visible }: {
+  kind: PlantKind; sites: PlantSite[]; geometry: THREE.BufferGeometry; material: THREE.Material; visible: boolean;
+}) {
+  const group = useRef<THREE.Group>(null);
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  useRiverReach(group, sites);
   useLayoutEffect(() => {
     const dummy = new THREE.Object3D(), color = new THREE.Color();
     sites.forEach((site, i) => {
@@ -45,10 +60,9 @@ function PlantBatch({ kind, width, mobile, paused, visible }: {
     // Include the taller reeds' wind displacement at frustum boundaries.
     mesh.current!.boundingSphere!.radius += .4;
   }, [sites, kind]);
-  useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
-  useFrame((_, dt) => { if (!paused && visible) wind.value += Math.min(dt, .05); });
-  return <instancedMesh key={sites.length} name={`garden-plants-${kind}`} ref={mesh}
-    args={[geometry, material, sites.length]} visible={visible} receiveShadow />;
+  return <group ref={group}>
+    <instancedMesh name={`garden-plants-${kind}`} ref={mesh} args={[geometry, material, sites.length]} visible={visible} receiveShadow />
+  </group>;
 }
 
 export default function GardenPlants(props: { width: number; mobile: boolean; paused: boolean; visible: boolean }) {

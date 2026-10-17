@@ -9,7 +9,8 @@ import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors
 import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
-import type { SkyStyle } from './GardenScene';
+import type { SkyStyle } from './GardenSky';
+import { ARRIVAL_END, VOYAGE_END } from './journey';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -24,7 +25,8 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
     opening={visit.opening} openingReleased={openingReleased} available={available} onLand={onLand} onComplete={onComplete} />;
 }
 
-const MEMORY_START = .20, MEMORY_END = .82;
+// The album shows through the Voyage's middle chapter for now.
+const MEMORY_START = ARRIVAL_END, MEMORY_END = VOYAGE_END;
 const memories = [
   { file: '20191122_191734.jpg', caption: 'The early days.', alt: 'Patrick and Amelia with a friend beside the harbour' },
   { file: 'IMG_5509.jpg', caption: 'And then, this.', alt: 'Patrick and Amelia smiling together on a night out' },

@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { riverCenter, bankEdge, groundHeight, random } from './gardenGeometry';
+import { riverCenter, bankEdge, bendShift, groundHeight, random, riverChunks, sydneyWiden, RIVER_REACH } from './gardenGeometry';
 import { useGardenTextures } from './gardenTextures';
+import { useRiverReach } from './useRiverReach';
 
 const BASE = `${import.meta.env.BASE_URL}models/garden/`;
 export const TREE_MODELS = ['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb'].map(file => BASE + file);
@@ -39,6 +40,21 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
   return <instancedMesh ref={mesh} name={`ez-tree-${leaves ? 'leaves' : 'branches'}`}
     args={[geometry, material, placements.length]} customDepthMaterial={depthMaterial}
     castShadow={!placements[0]?.distant && (!leaves || !mobile)} receiveShadow />;
+}
+
+// One stretch of river's trees of one model, hidden when out of reach.
+function TreeChunk({ model, materials, placements, mobile, width }: {
+  model: { nodes: Record<string, THREE.Object3D> }; materials: { bark: THREE.Material; leaves: THREE.Material; depth: THREE.Material };
+  placements: Placement[]; mobile: boolean; width: number;
+}) {
+  const group = useRef<THREE.Group>(null);
+  useRiverReach(group, placements);
+  return <group ref={group}>
+    <TreeBatch geometry={(model.nodes.branches as THREE.Mesh).geometry} material={materials.bark}
+      placements={placements} leaves={false} mobile={mobile} width={width} />
+    <TreeBatch geometry={(model.nodes.leaves as THREE.Mesh).geometry} material={materials.leaves}
+      depthMaterial={materials.depth} placements={placements} leaves mobile={mobile} width={width} />
+  </group>;
 }
 
 export default function GardenTrees({ width, mobile, paused, lightTrees }: {
@@ -109,17 +125,25 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
       [-8, -85, 1.05, .2], [8, -95, 1.15, 2.2],
     ].map(([x, z, scale, rotation], i) => ({
       // In portrait the first right-hand tree stands nearer the water, to
-      // balance the reed bed opposite.
-      x: riverCenter(z, width) + (mobile ? Math.sign(x) * (bankEdge(z, width) + (i === 1 ? 2.2 : 3.8 + (i % 3) * .2)) : x),
+      // balance the reed bed opposite. Desktop's are placed by hand, moved
+      // only where the Voyage widens or bends the river.
+      x: mobile ? riverCenter(z, width) + Math.sign(x) * (bankEdge(z, width) + (i === 1 ? 2.2 : 3.8 + (i % 3) * .2))
+        : x + bendShift(z) + Math.sign(x) * sydneyWiden(z, width),
       z, scale: scale * (mobile ? .88 : 1), rotation, type: i % 2 + (i >= 4 ? 2 : 0), distant: i >= 4,
     }));
+    // The avenue carries on down the rest of the river, alternating banks.
+    for (let z = -105, i = 0; z > RIVER_REACH.to + 10; z -= 10 + (i * 7 % 5), i++) {
+      const side = i % 2 ? 1 : -1;
+      avenue.push({ x: riverCenter(z, width) + side * (bankEdge(z, width) + (mobile ? 3.8 : 3.2) + (i % 3) * .4), z,
+        scale: (1.05 + (i * 3 % 4) * .06) * (mobile ? .88 : 1), rotation: i * 1.7, type: 2 + i % 2, distant: true });
+    }
     // Portrait also fills the open stretch of left bank between the first two trees.
     if (mobile) avenue.push({ x: riverCenter(-7, width) - bankEdge(-7, width) - 3.6, z: -7, scale: .95, rotation: 4.4, type: 1, distant: false });
     const rand = random(415);
     // Stagger groves along both banks all the way into the mist. The inner
     // trees overlap the avenue while outer trees fill gaps between canopies.
-    const groves = Array.from({ length: mobile ? 48 : 80 }, (_, i) => {
-      const perRow = mobile ? 6 : 10;
+    const perRow = mobile ? 6 : 10, rows = Math.ceil((-16 - RIVER_REACH.to) / 12);
+    const groves = Array.from({ length: rows * perRow }, (_, i) => {
       const row = Math.floor(i / perRow);
       const lane = Math.floor(i % perRow / 2);
       const z = -16 - row * 12 - rand() * 8;
@@ -130,15 +154,11 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
         type: 2 + (i + row + lane) % 2, distant: true,
       };
     });
-    return [0, 1, 2, 3].map(type => [...avenue, ...groves].filter(p => p.type === type));
+    return [0, 1, 2, 3].map(type => riverChunks([...avenue, ...groves].filter(p => p.type === type)));
   }, [width, mobile]);
 
   return <group name="ez-tree-grove" dispose={null}>
-    {models.map((model, i) => <group key={i}>
-      <TreeBatch geometry={(model.nodes.branches as THREE.Mesh).geometry} material={materials.bark}
-        placements={placements[i]} leaves={false} mobile={mobile} width={width} />
-      <TreeBatch geometry={(model.nodes.leaves as THREE.Mesh).geometry} material={materials.leaves}
-        depthMaterial={materials.depth} placements={placements[i]} leaves mobile={mobile} width={width} />
-    </group>)}
+    {models.map((model, i) => placements[i].map((chunk, j) => <TreeChunk key={`${i}-${j}-${chunk.length}`}
+      model={model} materials={materials} placements={chunk} mobile={mobile} width={width} />))}
   </group>;
 }

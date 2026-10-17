@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { plantGeometry, plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
-import { bankEdge, groundHeight, riverCenter } from '../src/components/garden/gardenGeometry.ts';
+import { GARDEN_CAMERA, bankEdge, chunkSpan, groundHeight, inReach, riverCenter, riverChunks } from '../src/components/garden/gardenGeometry.ts';
+import { ROUTE } from '../src/components/garden/journey.ts';
 
 test('land plants stay on land while wetland plants follow the shoreline on both compositions', () => {
   for (const [width, mobile] of [[1, false], [.45, true]]) {
@@ -42,7 +43,7 @@ test('every reed patch overlaps the shoreline along its whole length', () => {
     const sites = plantSites('reed', width, mobile);
     // Eight columns of reeds per bed.
     const patchSize = 8 * (mobile ? 8 : 12);
-    assert.equal(sites.length, patchSize * 6);
+    assert.equal(sites.length, patchSize * 13);
     for (let patch = 0; patch < sites.length / patchSize; patch++) {
       const group = sites.slice(patch * patchSize, (patch + 1) * patchSize).sort((a, b) => a.z - b.z);
       for (let band = 0; band < 4; band++) {
@@ -58,15 +59,22 @@ test('every reed patch overlaps the shoreline along its whole length', () => {
 });
 
 test('instanced plant geometry remains finite and within its mobile triangle budget', () => {
-  let mobileTriangles = 0;
+  // Plants are drawn a stretch of river at a time, only while in the camera's
+  // reach, so the budget is what's drawn from any point on the route.
+  const batches = [];
   for (const kind of ['grass', 'clover', 'fern', 'meadow', 'reed', 'cattail']) {
     const geometry = plantGeometry(kind);
     for (const attribute of Object.values(geometry.attributes)) {
       assert.ok([...attribute.array].every(Number.isFinite), `${kind}: invalid attribute`);
     }
     for (const index of geometry.index.array) assert.ok(index < geometry.attributes.position.count);
-    mobileTriangles += geometry.index.count / 3 * plantSites(kind, .45, true).length;
+    for (const chunk of riverChunks(plantSites(kind, .45, true))) batches.push({ span: chunkSpan(chunk), triangles: geometry.index.count / 3 * chunk.length });
     geometry.dispose();
+  }
+  let mobileTriangles = 0;
+  for (let z = GARDEN_CAMERA.startZ; z >= ROUTE.dock; z -= .5) {
+    const drawn = batches.filter(batch => inReach(batch.span, z, GARDEN_CAMERA.mobileFar)).reduce((sum, batch) => sum + batch.triangles, 0);
+    mobileTriangles = Math.max(mobileTriangles, drawn);
   }
   assert.ok(mobileTriangles < 400_000, `mobile plants: ${mobileTriangles} triangles per pass`);
 });

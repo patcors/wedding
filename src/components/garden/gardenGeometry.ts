@@ -15,7 +15,7 @@ export function random(seed: number) {
 // The camera rides `behind` the boats and looks `ahead` of them down the river
 // (see cameraRig.ts). Nothing past the fog is drawn: `far` and `mobileFar`
 // clear the fog's far distance on each composition.
-export const GARDEN_CAMERA = { fov: 48, mobileFov: 68, height: 3.2, startZ: ROUTE.start + 12, targetY: 2.5, behind: 12, ahead: 34, far: 120, mobileFar: 95 };
+export const GARDEN_CAMERA = { fov: 48, mobileFov: 68, height: 3.2, startZ: ROUTE.start + 12, targetY: 2.5, behind: 12, ahead: 34, far: 115, mobileFar: 90 };
 // Portrait uses the same irregular shoreline as desktop, at a smaller scale,
 // plus a bend at the start (see bankSwing).
 export const MOBILE_RIVER_WIDTH = .45;
@@ -96,14 +96,15 @@ export function voyageLandmarks(width = 1) {
   const tree = VOYAGE.tree.z;
   return {
     jetty: { x: bank, z, side, reach },
-    mooring: { x: bank - side * (reach + .45), z },
+    mooring: { x: bank - side * (reach + .8), z },
     tree: { x: riverCenter(tree, width) + side * (bankEdge(tree, width) + VOYAGE.tree.inland * Math.max(width, .6)), z: tree },
   };
 }
 
-// Splits instances into stretches of river so each batch is culled on its own:
-// those behind the camera or past its far plane aren't drawn.
-export const RIVER_CHUNK = 40;
+// Instances are batched by stretch of river, and a batch is drawn only while
+// its stretch is in reach of the camera: not behind it, less a little for
+// shadows cast forward, nor past its far plane. Fog hides anything that far.
+export const RIVER_CHUNK = 20;
 export function riverChunks<T extends { z: number }>(items: T[]) {
   const chunks = new Map<number, T[]>();
   for (const item of items) {
@@ -113,6 +114,10 @@ export function riverChunks<T extends { z: number }>(items: T[]) {
   }
   return [...chunks.values()];
 }
+export const chunkSpan = (items: { z: number }[]) =>
+  items.reduce((span, { z }) => ({ near: Math.max(span.near, z), far: Math.min(span.far, z) }), { near: -Infinity, far: Infinity });
+export const inReach = (span: { near: number; far: number }, cameraZ: number, cameraFar: number) =>
+  span.far < cameraZ + 3 && span.near > cameraZ - cameraFar;
 
 export function groundHeight(x: number, z: number, width = 1) {
   const inland = Math.abs(x - riverCenter(z, width)) - bankEdge(z, width);

@@ -109,7 +109,8 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-place { font-size: 8px; letter-spacing: .18em; }
 .garden-copy { transition: opacity .5s; }
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
-.garden-scroll-space { height: 560svh; pointer-events: none; }
+/* Long enough for the Voyage: about a screen per milestone (see journey.ts). */
+.garden-scroll-space { height: 2000svh; pointer-events: none; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
 @media (max-width: 700px) {
   .garden-header { padding: calc(20px + env(safe-area-inset-top) - var(--garden-edge-clear)) 24px 24px; }
