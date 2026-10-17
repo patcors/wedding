@@ -3,15 +3,19 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
-import { riverCenter, bankEdge, RIVER_REACH } from './gardenGeometry';
+import { riverCenter, bankEdge, channelOffset, islandHalfWidth, RIVER_REACH, VOYAGE } from './gardenGeometry';
 import { plantSites } from './gardenPlantGeometry';
 import { BoatWakes, PaperBoat } from './PaperBoat';
 import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch, type Stem } from './boatPhysics';
 import { useGardenTextures } from './gardenTextures';
+import { jettyStems, underJetty } from './voyageDock';
+import { mooredStems } from './storyBoats';
+import { DOCKED } from './journey';
+import { useJourney } from './JourneyProvider';
 
 const BASE = import.meta.env.BASE_URL;
 export const WATER_NORMALS = [`${BASE}textures/garden/water-normal.jpg`];
-const boatRiver = { center: riverCenter, halfWidth: bankEdge };
+const boatRiver = { center: riverCenter, halfWidth: bankEdge, island: islandHalfWidth };
 
 // The water's colour and sun glint. GardenSky owns them and may change them
 // every frame; the water copies them in each frame.
@@ -28,10 +32,24 @@ function reedStems(width: number, mobile: boolean): Stem[] {
 export default function GardenWater({ paused, width, mobile, reeds, launchRequest, tint }: { paused: boolean; width: number; mobile: boolean; reeds: boolean; launchRequest: number; tint: WaterTint }) {
   const camera = useThree(s => s.camera);
   const [simulation] = useState(() => new BoatSimulation(boatRiver, width));
-  useLayoutEffect(() => simulation.setStems(reeds ? reedStems(width, mobile) : [], width), [simulation, reeds, width, mobile]);
+  const clock = useJourney();
+  // The reeds and the jetty always; the catamaran once it is tied up there.
+  const stems = useMemo(() => {
+    const fixed = [...reeds ? reedStems(width, mobile) : [], ...jettyStems(width)];
+    return { fixed, moored: [...fixed, ...mooredStems(width)] };
+  }, [reeds, width, mobile]);
+  const moored = useRef(false);
+  useLayoutEffect(() => {
+    moored.current = clock.progress >= DOCKED;
+    simulation.setStems(moored.current ? stems.moored : stems.fixed, width);
+  }, [simulation, stems, width, clock]);
   const [boats, setBoats] = useState<BoatBody[]>([]);
   // Solve all contacts before individual meshes read their positions.
   useFrame((_, dt) => {
+    if (clock.progress >= DOCKED !== moored.current) {
+      moored.current = !moored.current;
+      simulation.setStems(moored.current ? stems.moored : stems.fixed, width);
+    }
     if (simulation.advance(dt, width, paused)) setBoats([...simulation.bodies]);
   }, -1);
   const nextId = useRef(0), lastRequest = useRef(launchRequest);
@@ -49,8 +67,12 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
   useEffect(() => {
     if (launchRequest === lastRequest.current) return;
     lastRequest.current = launchRequest;
-    const z = camera.position.z - 10;
-    launch(riverCenter(z, width), z);
+    let z = camera.position.z - 10;
+    // Beside the island, down the middle of one channel or the other, past its
+    // head, where portrait's channels are narrower than a turning paper boat.
+    if (z < VOYAGE.island.from + 1 && z > VOYAGE.island.to) z = Math.min(z, VOYAGE.island.from - 5);
+    const side = launchRequest % 2 ? 1 : -1;
+    launch(riverCenter(z, width) + (islandHalfWidth(z, width) ? side * channelOffset(z, width) : 0), z);
   }, [launchRequest, launch, camera, width]);
   const tapWater = (event: ThreeEvent<MouseEvent>) => {
     const { x, z } = event.point;
@@ -58,7 +80,9 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
     // stream water is interactive; drags and native touch scrolling are not taps.
     // A thumb wanders further than a mouse during a tap, so touch gets more slack.
     const slack = (event.nativeEvent as PointerEvent).pointerType === 'mouse' ? 6 : 16;
-    if (event.delta > slack || event.button !== 0 || Math.abs(x - riverCenter(z, width)) >= bankEdge(z, width) - .08
+    const out = Math.abs(x - riverCenter(z, width));
+    // A tap on the island or the jetty reaches the water plane beneath it, which isn't open water.
+    if (event.delta > slack || event.button !== 0 || out >= bankEdge(z, width) - .08 || out < islandHalfWidth(z, width) || underJetty(x, z, width)
       || z < camera.position.z - 65 || z > camera.position.z - 1) return;
     event.stopPropagation();
     launch(x, z);

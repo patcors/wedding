@@ -65,6 +65,32 @@ export function jettyGeometry(width = 1) {
   return geometry;
 }
 
+// Posts around the jetty's footprint over the water, for guests' boats to bump
+// off (see boatPhysics' stems). They're set close, so the jetty's sides are
+// smooth, and slippery, so a hull pressed against it by the current slides
+// along and round the end rather than sticking there.
+export function jettyStems(width = 1) {
+  const { jetty } = voyageLandmarks(width);
+  const end = jetty.reach + .25, neck = end - JETTY.headDepth, half = JETTY.breadth / 2, head = JETTY.head / 2;
+  const outline: [number, number][] = [[0, half], [neck, half], [neck, head], [end, head], [end, -head], [neck, -head], [neck, -half], [0, -half]];
+  const stems: { x: number; z: number; radius: number; grip: number }[] = [];
+  outline.slice(1).forEach(([along, z], i) => {
+    const [fromAlong, fromZ] = outline[i], steps = Math.ceil(Math.hypot(along - fromAlong, z - fromZ) / .1);
+    for (let k = 0; k < steps; k++) {
+      const t = k / steps;
+      stems.push({ x: jetty.x - jetty.side * (fromAlong + (along - fromAlong) * t), z: jetty.z + fromZ + (z - fromZ) * t, radius: .12, grip: 0 });
+    }
+  });
+  return stems;
+}
+
+// Whether a point over the water lies under the jetty.
+export function underJetty(x: number, z: number, width = 1) {
+  const { jetty } = voyageLandmarks(width);
+  const along = (jetty.x - x) * jetty.side, end = jetty.reach + .25;
+  return along > -.2 && along < end && Math.abs(z - jetty.z) < (along > end - JETTY.headDepth ? JETTY.head : JETTY.breadth) / 2;
+}
+
 // Where the jetty's lantern hangs, from the taller post at the head's corner.
 export function jettyLantern(width = 1) {
   const { jetty } = voyageLandmarks(width);

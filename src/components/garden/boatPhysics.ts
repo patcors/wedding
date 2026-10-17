@@ -9,8 +9,15 @@ export const RIPPLE_INTERVAL = .55;
 const STEP = 1 / 120;
 type Point = { x: number; z: number };
 // A reed or cattail where it meets the water: a fixed post that hulls bump off.
-export type Stem = Point & { radius: number };
-type River = { center: (z: number, width: number) => number; halfWidth: (z: number, width: number) => number };
+// `grip` is how much it holds a hull sliding along it; reeds give a little.
+export type Stem = Point & { radius: number; grip?: number };
+// `island` is the half-width of an island in the middle of the river at z (0
+// where there is none). Boats keep to the channels either side of it.
+type River = { center: (z: number, width: number) => number; halfWidth: (z: number, width: number) => number; island?: (z: number, width: number) => number };
+// How far off the island's waterline hulls are held, at full width: its reeds
+// stand out in the water. It scales with the river: portrait is narrow at the
+// island's head.
+const ISLAND_MARGIN = .3;
 
 const sections = (values: number[][]): Point[] => [
   ...values.map(([z, x]) => ({ x: -x * .8, z: z * .8 })),
@@ -178,7 +185,8 @@ function resolveStemContact(body: BoatBody, stem: Stem, outline: Point[]) {
     impulse(body, r, n, j);
     const tangent = { x: -n.z, z: n.x };
     const slip = -dot(velocity(), tangent) / (body.inverseMass + torque(r, tangent) ** 2 * body.inverseInertia);
-    impulse(body, r, tangent, Math.max(-j * .1, Math.min(j * .1, slip)));
+    const grip = stem.grip ?? .1;
+    impulse(body, r, tangent, Math.max(-j * grip, Math.min(j * grip, slip)));
   }
   body.x += n.x * depth * .8; body.z += n.z * depth * .8;
   return true;
@@ -224,24 +232,51 @@ export class BoatSimulation {
     return this.nearbyStems(body.z).some(stem => stemContact(body, stem, outline));
   }
 
-  private bank(body: BoatBody) {
-    for (const side of [-1, 1]) {
-      let deepest = 0, contact: Point | undefined;
-      for (const p of boatOutline(body)) {
-        // Held a little short of the bank, where the shore is still under water.
-        const edge = this.river.center(p.z, this.width) + side * (this.river.halfWidth(p.z, this.width) - .12);
-        const depth = side * (p.x - edge);
-        if (depth > deepest) { deepest = depth; contact = p; }
-      }
-      if (!contact) continue;
-      const edgeAt = (z: number) => this.river.center(z, this.width) + side * this.river.halfWidth(z, this.width);
-      const slope = (edgeAt(contact.z + .01) - edgeAt(contact.z - .01)) / .02;
-      const length = Math.hypot(1, slope), n = { x: -side / length, z: side * slope / length };
-      const r = { x: contact.x - body.x, z: contact.z - body.z };
-      const speed = dot({ x: body.vx + body.omega * r.z, z: body.vz - body.omega * r.x }, n);
-      if (speed < 0) impulse(body, r, n, -1.08 * speed / (body.inverseMass + torque(r, n) ** 2 * body.inverseInertia));
-      body.x += n.x * deepest / length; body.z += n.z * deepest / length;
+  // Which side of the river's middle a hull keeps to, for the island.
+  private side(body: BoatBody) {
+    return Math.sign(body.x - this.river.center(body.z, this.width)) || (body.id % 2 ? 1 : -1);
+  }
+
+  // Pushes a hull back off a shore. `edgeAt` is the shore's line along the
+  // river, NaN where there is none; land lies on its `land` side (+1 is +x).
+  // `steepest` caps how far the shore can turn across the current, so hulls
+  // glance off the island's rounded head rather than being held against it.
+  private shore(body: BoatBody, edgeAt: (z: number) => number, land: number, margin: number, steepest = Infinity) {
+    let deepest = 0, contact: Point | undefined;
+    for (const p of boatOutline(body)) {
+      if (!Number.isFinite(edgeAt(p.z))) continue;
+      const depth = land * (p.x - edgeAt(p.z)) + margin;
+      if (depth > deepest) { deepest = depth; contact = p; }
     }
+    if (!contact) return;
+    const here = edgeAt(contact.z), up = edgeAt(contact.z + .01), down = edgeAt(contact.z - .01);
+    // At the island's ends only one side of the contact has shore.
+    const raw = Number.isFinite(up) && Number.isFinite(down) ? (up - down) / .02 : Number.isFinite(up) ? (up - here) / .01 : Number.isFinite(down) ? (here - down) / .01 : 0;
+    const slope = Math.max(-steepest, Math.min(steepest, raw));
+    const length = Math.hypot(1, slope), n = { x: -land / length, z: land * slope / length };
+    const r = { x: contact.x - body.x, z: contact.z - body.z };
+    const speed = dot({ x: body.vx + body.omega * r.z, z: body.vz - body.omega * r.x }, n);
+    if (speed < 0) impulse(body, r, n, -1.08 * speed / (body.inverseMass + torque(r, n) ** 2 * body.inverseInertia));
+    body.x += n.x * deepest / length; body.z += n.z * deepest / length;
+  }
+
+  private bank(body: BoatBody) {
+    const { center, halfWidth, island } = this.river, width = this.width;
+    // Held a little short of the bank, where the shore is still under water.
+    for (const side of [-1, 1]) this.shore(body, z => center(z, width) + side * halfWidth(z, width), side, .12);
+    if (!island) return;
+    // The island's shore on the hull's side, out where its reeds stand.
+    const side = this.side(body);
+    this.shore(body, z => island(z, width) > 0 ? center(z, width) + side * island(z, width) : NaN, -side, ISLAND_MARGIN * width, 1);
+  }
+
+  // Where the current carries a hull across the river: down the middle, or
+  // down the middle of its channel while the island is just ahead or beside it.
+  private lane(body: BoatBody, width: number) {
+    const center = this.river.center(body.z, width), island = this.river.island;
+    const ahead = island ? Math.max(island(body.z, width), island(body.z - 1.5, width)) : 0;
+    if (!ahead) return center;
+    return center + this.side(body) * (ahead + ISLAND_MARGIN * width + this.river.halfWidth(body.z, width)) / 2;
   }
 
   private solve() {
@@ -281,9 +316,9 @@ export class BoatSimulation {
       this.accumulator -= STEP;
       for (const body of this.bodies) {
         body.age += STEP;
-        const center = this.river.center(body.z, width);
+        const lane = this.lane(body, width);
         const slope = (this.river.center(body.z + .05, width) - this.river.center(body.z - .05, width)) / .1;
-        const flowX = -.82 * slope - (body.x - center) * .035 + Math.cos(body.age * .48 + body.id) * .034;
+        const flowX = -.82 * slope - (body.x - lane) * .035 + Math.cos(body.age * .48 + body.id) * .034;
         const drag = 1 - Math.exp(-.65 * STEP);
         body.vx += (flowX - body.vx) * drag;
         body.vz += (-.82 - body.vz) * drag;

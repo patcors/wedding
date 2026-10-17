@@ -92,3 +92,25 @@ export function boatPose(p: number, width: number): BoatPose {
   const turn = Math.max(-.22, Math.min(.22, -Math.atan((boatGap(q + STEP, width) - boatGap(q - STEP, width)) / run)));
   return { x, z, yaw, gap, turn, join: catamaran(joining(p)), docking: ease((p - VOYAGE_END) / (DOCKED - VOYAGE_END)) };
 }
+
+// The moored catamaran's footprint on the water, as posts round its edge for
+// guests' boats to bump off once it is tied up (see boatPhysics' stems): both
+// hulls and the deck between. Its upstream end, the sterns, is drawn back
+// slantwise from the jetty, so a boat the current carries onto it glances off
+// towards open water rather than lodging between it and the jetty. In model units.
+const MOORED_HULLS = { bow: -1.5, stern: 1.15, half: CATAMARAN + HULL_HALF_BEAM.catamaran, point: 1 };
+export function mooredStems(width: number) {
+  const { x, z, yaw } = boatPose(DOCKED, width), c = Math.cos(yaw), s = Math.sin(yaw);
+  const { bow, stern, half, point } = MOORED_HULLS;
+  const side = VOYAGE.dock.side;
+  const corners = [[-half, bow], [half, bow], [half, stern], [-half, stern], [-half, bow]].map(([u, v]) => [u, v === stern && u * side < 0 ? stern - point : v]);
+  const stems: { x: number; z: number; radius: number; grip: number }[] = [];
+  for (let i = 1; i < corners.length; i++) {
+    const [ax, az] = corners[i - 1], [bx, bz] = corners[i], steps = Math.ceil(Math.hypot(bx - ax, bz - az) * BOAT_SCALE / .1);
+    for (let k = 0; k < steps; k++) {
+      const u = (ax + (bx - ax) * k / steps) * BOAT_SCALE, v = (az + (bz - az) * k / steps) * BOAT_SCALE;
+      stems.push({ x: x + c * u + s * v, z: z - s * u + c * v, radius: .1, grip: 0 });
+    }
+  }
+  return stems;
+}
