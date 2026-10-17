@@ -149,3 +149,135 @@ test('the 2019 snowman stands on the bank, in view as its date holds and for a s
     assert.ok(Math.abs(Math.atan2(cx - x, cz - z) - yaw) < .3);
   }
 });
+
+const graduation = MILESTONES.find(m => m.egg === 'graduation');
+const onLand = (x, z, width) => Math.abs(x - riverCenter(z, width)) > bankEdge(z, width);
+
+test('the mortarboards are tossed straight up off the boats while the date holds and land on their own banks', async () => {
+  const { CAPS, capInAir, capLanding, capLaunch } = await import('../src/components/garden/eggs/capToss.ts');
+  const { groundHeight } = await import('../src/components/garden/gardenGeometry.ts');
+  assert.equal(graduation.month, '2020-08');
+  assert.deepEqual(CAPS.tosses.map(toss => toss.side), [-1, 1]);
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    for (const toss of CAPS.tosses) {
+      assert.ok(toss.at > 0 && toss.at < .35, 'tossed while the date holds');
+      const from = capLaunch(graduation.month, toss, width), to = capLanding(graduation.month, toss, width);
+      assert.ok(!onLand(from.x, from.z, width), 'tossed from a boat on the water');
+      assert.ok(onLand(to.x, to.z, width) && Math.sign(to.x - riverCenter(to.z, width)) === toss.side, 'lands on its own bank');
+      assert.ok(groundHeight(to.x, to.z, width) > 0, 'above the waterline');
+      // Straight up at first, well over the masthead, and down by the end of its flight.
+      const early = capInAir(from, to, CAPS.flight * .15);
+      assert.ok(early.y - from.y > 3 * Math.hypot(early.x - from.x, early.z - from.z));
+      assert.ok(Math.max(...Array.from({ length: 21 }, (_, i) => capInAir(from, to, CAPS.flight * i / 20).y)) > 2.5);
+      const down = capInAir(from, to, CAPS.flight);
+      assert.ok(down.landed && Math.abs(down.y - to.y) < 1e-9 && down.turn === 1);
+      // In view from its toss until it has lain on the bank for a while.
+      for (let t = toss.at; t <= toss.at + .6; t += .05) {
+        const { bearing } = seen(progressAt(graduation.month) + t * ROOM, width, to.x, to.z);
+        assert.ok(Math.abs(bearing) < halfView(width) - 2, `bearing ${bearing} at ${t}`);
+      }
+    }
+    // Lying clear of the 2019 snowman, still on the bank, and the year markers.
+    const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+    const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+    const others = [snowSpot(SNOW_SPOTS[2019], snow.month, width), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width))];
+    for (const toss of CAPS.tosses) {
+      const to = capLanding(graduation.month, toss, width);
+      for (const other of others) assert.ok(Math.hypot(other.x - to.x, other.z - to.z) > 2.5, 'clear of the other scenery');
+    }
+  }
+  // Reduced motion shows both down at graduation's still.
+  const still = stillProgress(progressAt(graduation.month) + ROOM * .2);
+  assert.ok(CAPS.tosses.every(toss => eggTime(graduation, still, true, CAPS.settled) > toss.at));
+});
+
+const apartments = MILESTONES.find(m => m.egg === 'apartments');
+
+test('the birds tell the apartments: one each, his at hers while he renovates, home again, then both at his', async () => {
+  const { AMELIA_MOVED_IN } = await import('../src/components/garden/journey.ts');
+  const { NESTS, NEST_EVENTS, PATRICK_HOME, birdPoses, fired, nestSpots, nestTriggers, perchPoint } = await import('../src/components/garden/eggs/nesting.ts');
+  assert.equal(apartments.month, '2024-05');
+  assert.equal(AMELIA_MOVED_IN, '2025-06');
+  assert.ok(MILESTONES.every(m => m.month !== AMELIA_MOVED_IN), 'moving in is not a milestone');
+  const living = MILESTONES.find(m => m.id === 'living-together');
+  assert.deepEqual([...new Set(NEST_EVENTS.map(e => e.month))], [apartments.month, living.month, PATRICK_HOME, AMELIA_MOVED_IN]);
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const spots = nestSpots(width), triggers = nestTriggers(width);
+    for (let i = 1; i < triggers.length; i++) assert.ok(triggers[i] >= triggers[i - 1], 'in order');
+    // Where each bird is once the first n events are done.
+    const after = n => birdPoses(NEST_EVENTS.map((_, i) => i < n ? 99 : null), spots);
+    const at = (pose, pair, house, spot) => Math.hypot(pose.x - perchPoint(spots[pair][house], spot).x, pose.y - perchPoint(spots[pair][house], spot).y) < 1e-9;
+    const expect = [
+      [2, 0, { amelia: 'amelia', patrick: 'patrick' }],
+      [3, 0, { amelia: 'amelia', patrick: 'amelia' }],
+      [4, 0, { amelia: 'amelia', patrick: 'patrick' }],
+      [5, 1, { amelia: 'amelia', patrick: 'patrick' }],
+      [6, 1, { amelia: 'patrick', patrick: 'patrick' }],
+    ];
+    for (const [n, pair, homes] of expect) {
+      const poses = after(n)[pair];
+      for (const owner of ['amelia', 'patrick']) {
+        assert.ok(poses[owner].shown && poses[owner].flying === 0, `${owner} perched after ${n}`);
+        assert.ok(at(poses[owner], pair, homes[owner], homes[owner] === owner ? 'home' : 'guest'), `${owner} at ${homes[owner]}'s after ${n}`);
+      }
+    }
+    // Nobody in the first pair before they fly in.
+    assert.ok(!after(1)[0].amelia.shown && !after(1)[0].patrick.shown);
+    // Mid-flight a bird is off its perches, up in the air.
+    const flying = birdPoses(NEST_EVENTS.map((_, i) => i < 2 ? 99 : i === 2 ? NESTS.flight / 2 : null), spots)[0].patrick;
+    assert.ok(flying.flying > .9 && flying.y > perchPoint(spots[0].amelia, 'guest').y);
+    // Each house stands on the bank (or on a post at its edge), clear of the year markers.
+    const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+    const markers = YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width));
+    spots.forEach((pair, k) => Object.values(pair).forEach(house => {
+      assert.ok(onLand(house.x, house.z, width) && Math.sign(house.x - riverCenter(house.z, width)) === NESTS.pairs[k].side);
+      for (const marker of markers) assert.ok(Math.hypot(marker.x - house.x, marker.z - house.z) > 5);
+    }));
+    // Both houses of the pair in the picture, and near enough to read, as each event fires.
+    NEST_EVENTS.forEach((event, i) => {
+      for (const house of Object.values(spots[event.pair])) {
+        const { bearing, distance } = seen(triggers[i], width, house.x, house.z);
+        assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at event ${i}`);
+        assert.ok(distance < (event.build && event.pair === 1 ? 31 : 26), `distance ${distance} at event ${i}`);
+      }
+    });
+    // The second pair comes up only once Patrick's bird is home.
+    const home = NEST_EVENTS.findIndex(e => e.month === PATRICK_HOME && e.moves?.patrick);
+    assert.ok(triggers[NEST_EVENTS.findIndex(e => e.pair === 1 && e.build)] >= triggers[home]);
+    // Under reduced motion each still shows its stage done: at living
+    // together's, Patrick's bird is at Amelia's and the scaffolding up.
+    const still = stillProgress(progressAt(living.month) + ROOM * .2), visit = NEST_EVENTS.findIndex(e => e.scaffold === 1);
+    assert.ok(fired(visit, triggers, still, true) && !fired(visit, triggers, still, false));
+    assert.ok(!fired(home, triggers, still, true));
+  }
+});
+
+const snowAgain = MILESTONES.find(m => m.egg === 'snow-2025');
+
+test('the 2025 snowmen stand on the bank holding hands, in view as their date holds, clear of the birdhouses', async () => {
+  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const { HOLD, SNOWMAN, holdingHandsGeometry } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+  const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
+  const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+  assert.equal(snowAgain.month, '2025-08');
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const { x, z } = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
+    assert.ok(onLand(x, z, width), 'on land');
+    for (let t = 0; t <= 1; t += .05) {
+      const { bearing } = seen(progressAt(snowAgain.month) + t * ROOM, width, x, z);
+      assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at ${t}`);
+    }
+    const others = [...nestSpots(width).flatMap(pair => Object.values(pair)), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width))];
+    for (const other of others) assert.ok(Math.hypot(other.x - x, other.z - z) > 5, 'clear of the other scenery');
+  }
+  // Each holds its hand out and down to halfway to the other, where they meet.
+  const { snowmanGeometry } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+  const [, [, shoulder]] = SNOWMAN.balls;
+  for (const side of [1, -1]) {
+    const p = snowmanGeometry({ hold: side, simple: true }).attributes.position;
+    let reach = 0;
+    for (let i = 0; i < p.count; i++) if (p.getY(i) < shoulder) reach = Math.max(reach, p.getX(i) * side);
+    assert.ok(reach > HOLD.apart / 2 - .02 && reach < HOLD.apart / 2 + .1, `reaches ${reach}`);
+  }
+  assert.ok(holdingHandsGeometry({ scarf: '#4d827f' }, { scarf: '#e3c46a' }).attributes.position.count / 3 < 1600, 'two simple snowmen');
+});

@@ -8,11 +8,15 @@ import type { EggProps } from './egg';
 import Balloon from './Balloon';
 import University from './University';
 import SnowTrip from './SnowTrip';
+import Graduation from './Graduation';
+import Birdhouses from './Birdhouses';
+import SecondSnowTrip from './SecondSnowTrip';
 import YearMarkers from './YearMarkers';
 import DatingButterflies from './DatingButterflies';
 import EngagementPetals from './EngagementPetals';
 
-const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: Balloon, university: University, 'snow-2019': SnowTrip };
+const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: Balloon, university: University, 'snow-2019': SnowTrip,
+  graduation: Graduation, apartments: Birdhouses, 'snow-2025': SecondSnowTrip };
 // Scenery that isn't an egg on a milestone: the years marked along the banks,
 // the butterflies that circle the boats as they start dating, part of the
 // boats' joining, and the rose petals in the catamaran's wake as they get engaged.

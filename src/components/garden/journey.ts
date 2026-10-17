@@ -2,7 +2,7 @@
 // through story time, and where along the river the boats are. Boats, sky,
 // eggs and the date label all read from here. Pure, so it can be tested.
 
-export type EggId = 'balloon' | 'university' | 'snow-2019';
+export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'apartments' | 'snow-2025';
 // `room` is the scroll a milestone takes at its date, in shares (ROOM), before
 // the months roll on at its year's pace: its date's hold, and time for what
 // happens there to be seen (HOLD, just the hold, by default). Outside the
@@ -13,6 +13,10 @@ export type Milestone = { id: string; month: string; description: string; egg?: 
 // When Amelia left FinoComp. Her flag changes as it shows (see FLAG_CHANGES
 // in storyBoats.ts).
 export const AMELIA_LEFT_FINOCOMP = '2022-08';
+// When Amelia moved into Patrick's apartment: a placeholder until she
+// confirms the month. Only the birdhouses read it (eggs/nesting.ts), when her
+// bird flies over to his; it isn't a milestone.
+export const AMELIA_MOVED_IN = '2025-06';
 
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
@@ -22,7 +26,7 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'snow-2019', month: '2019-07', description: 'A snow trip, where Amelia breaks her wrist snowboarding.', egg: 'snow-2019' },
   // A little longer, so the boats only start to drift apart for Sydney once
   // the university's flags are down.
-  { id: 'graduation', month: '2020-08', description: 'They graduate from university.', room: .5 },
+  { id: 'graduation', month: '2020-08', description: 'They graduate from university.', egg: 'graduation', room: .5 },
   // The boats drift apart, still in sight, and stay apart through Amelia's
   // two changes of work, each with room enough that her interim flag, and
   // then her HeirWealth flag beside Patrick's FinoComp one, fly for most of a
@@ -31,11 +35,11 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'interim', month: AMELIA_LEFT_FINOCOMP, description: 'Amelia leaves FinoComp for a few months of tutoring and selling haircare online.', room: .7 },
   { id: 'amelia-heirwealth', month: '2023-01', description: 'Amelia starts at HeirWealth.', room: 1 },
   { id: 'heirwealth', month: '2023-03', description: 'Amelia is back, and Patrick joins her at HeirWealth, so they start working together.' },
-  { id: 'apartments', month: '2024-05', description: 'They both buy apartments.' },
+  { id: 'apartments', month: '2024-05', description: 'They both buy apartments.', egg: 'apartments' },
   { id: 'living-together', month: '2024-06', description: 'They start living together.' },
   // The boats join and become one catamaran, the butterflies circling.
   { id: 'dating', month: '2024-08', description: 'They start dating.', room: .7 },
-  { id: 'snow-2025', month: '2025-08', description: 'Another snow trip.' },
+  { id: 'snow-2025', month: '2025-08', description: 'Another snow trip.', egg: 'snow-2025' },
   { id: 'salsa', month: '2026-01', description: 'They start salsa classes.', room: 1 },
   { id: 'engaged', month: '2026-04', description: 'They get engaged.', room: 1 },
   // The last stretch rounds the bend to the wedding: room enough that the
