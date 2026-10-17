@@ -19,11 +19,11 @@ Two small sailboats travel downstream as the guest scrolls. Words are minimal: t
 
 ## Easter eggs
 
-Each milestone gets one subtle piece of scenery that a guest is pleased to spot. Eggs are never explained in text. They may stay on screen longer than the true timeline as long as they *arrive* at the right moment. The proof of concept has one egg: the hot-air balloon. The others come in later iterations.
+Each milestone gets one subtle piece of scenery that a guest is pleased to spot. Eggs are never explained in text. They may stay on screen longer than the true timeline as long as they *arrive* at the right moment. Built so far: the π sculpture and rubber ducks (2017), and the hot-air balloon (2026).
 
-| Month | Milestone | Egg (later unless marked) |
+| Month | Milestone | Egg (later unless **built**) |
 | --- | --- | --- |
-| 2017-07 | Met at university, both starting maths degrees | Artistic pi sculpture on the bank |
+| 2017-07 | Met at university, both starting maths degrees | **A π sculpture on the bank; UOW's rubber ducks tossed into the river** |
 | 2017-11 | First trip away with friends, down the coast | |
 | 2018-11 | Started their internship at FinoComp | |
 | 2019-07 | Snow trip; Amelia broke her wrist snowboarding | |
@@ -36,9 +36,11 @@ Each milestone gets one subtle piece of scenery that a guest is pleased to spot.
 | 2025-08 | Snow trip | |
 | 2026-01 | Started salsa classes | |
 | 2026-04 | Got engaged | (the two masts give way to one: part of the boats) |
-| 2026-07 | Turkey and Greece trip | **POC:** a hot-air balloon rises in the distance, tied to scroll |
+| 2026-07 | Turkey and Greece trip | **A hot-air balloon rises over the river, tied to scroll** |
 
 Recurring, for later: a friends' trip down the coast every November/December until 2023; Amelia's circus show every October from 2023 to 2026, which Patrick attended.
+
+**The university** (`eggs/University.tsx`, placed and timed in `eggs/campus.ts`): a π in weathered bronze, three tapering pen-like strokes gone green where the rain sits, on a stone plinth (`eggs/piSculptureGeometry.ts`, about 1,100 triangles, one draw call, casts a shadow). It stands on the right bank at z −27, turned upstream, so it is small in the mist down the river as July 2017 shows, closest through the first year, and passed during 2018. And UOW's duck pond and its rubber duck races: while the date holds, four of the guests' rubber ducks (simplified to about 420 triangles each, one instanced draw call, plus one for the rings) are tossed one by one from behind the bank's grass a little ahead of the boats (the left bank; portrait's right, where Amelia's boat would hide them). Each arc plays out in real time once the scroll reaches it, so a duck never hangs in the air when the guest stops; it plops in with a ring on the water and drifts slowly downstream and out to its lane while the boats overtake it, gone once the camera has passed. Under reduced motion all four float just off the bank at the meeting's still.
 
 **The balloon** (`eggs/Balloon.tsx`, its course in `eggs/balloonCourse.ts`, `eggs/balloonGeometry.ts`): a teardrop envelope of twelve gores in faded terracotta, cream, ochre and dusty teal, with a terracotta crown, a deep teal skirt, a small wicker basket on four ropes and a burner that flickers now and then. About 900 triangles in three draw calls. The banks' canopies close over the river everywhere but one patch of sky at the top of the picture, over the river's next bend just left of the date label, so the balloon keeps to it: 30 ahead over the water (27 in portrait), fixed in the picture so it never drifts into the leaves. It fades in at the patch's foot as July 2026 shows and climbs straight up and out of the top over the next share and a half (gone by about p .84). Under reduced motion it rests just risen at the July 2026 still.
 
@@ -85,6 +87,6 @@ Each slot is mounted from `GardenScene.tsx`; nobody needs to edit that file. `jo
 | Boats | Patrick's yellow and Amelia's teal-trimmed sailboats under their initials, apart in Sydney, joined plank by plank into a catamaran that takes one tall mast with their monogram on its sail as they get engaged, and moors at the jetty | `VoyageBoats.tsx`, `storyBoats.ts`, `storyBoatGeometry.ts` |
 | Sky | One day from dawn under the title through misty daylight and golden light to dusk at the dock, colouring the page's copy | `GardenSky.tsx`, `skyCycle.ts` |
 | Copy | The month and year high above the boats, a quiet link to the celebration, milestone stops for the scroll cue and arrow keys, screen-reader announcements | `Garden.tsx`, `garden.css` |
-| Eggs | The hot-air balloon for July 2026 | `eggs/` |
+| Eggs | The π sculpture and rubber ducks for July 2017, the hot-air balloon for July 2026 | `eggs/` |
 
 Ideas not yet built: the other eggs in the table above; the recurring coast trips and circus shows.

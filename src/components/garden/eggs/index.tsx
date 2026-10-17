@@ -6,8 +6,9 @@ import { MILESTONES, type EggId } from '../journey';
 import type { SlotProps } from '../JourneyProvider';
 import type { EggProps } from './egg';
 import Balloon from './Balloon';
+import University from './University';
 
-const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: Balloon };
+const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: Balloon, university: University };
 
 export default function Eggs(props: SlotProps) {
   return <>{MILESTONES.map(milestone => {
