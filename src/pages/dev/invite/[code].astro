@@ -4,7 +4,7 @@
 // invites/out/<code>.png. getStaticPaths returns nothing in a production
 // build, so this page never reaches patrickandamelia.com.
 //
-// ?photo=none drops the photograph; ?photo=<file in public/photos> swaps it.
+// ?crop=<name in CROPS> picks a crop; ?photo=none leaves the photograph out.
 // (Read in the browser: a static page never sees its query string.)
 import { parties, type Party } from '../../../data/parties';
 
@@ -12,24 +12,75 @@ export function getStaticPaths() {
   return import.meta.env.DEV ? parties.map(party => ({ params: { code: party.code }, props: { party } })) : [];
 }
 
-// The words, the photograph and the image size. Colours and type sizes are
-// the CSS variables at the top of the <style>.
+// The words. Caps lines are set in caps by the CSS, so write them normally.
 const COPY = {
-  invited: 'you’re invited',
-  lead: 'to the wedding of',
-  couple: 'Patrick & Amelia',
-  date: 'Friday 16 April 2027',
-  venue: 'Jasper’s Berry · Berry NSW',
+  invited: ['You’re', 'invited'], // caps, then the script accent
+  lead: 'To the wedding of',
+  couple: ['Patrick', 'Amelia'],  // joined by a script &
+  date: '16 April 2027',
+  venue: 'Jasper’s Berry',
+  town: 'Berry, NSW',
 };
-// show: false leaves it out unless ?photo=<file> asks for one.
-const PHOTO = { show: true, file: 'gerringong-film-12.jpg', alt: 'Patrick and Amelia holding hands in a paddock at sunset', focus: '50% 58%' };
+
+// Two typefaces from Google Fonts: the site's serif, and a script for the accents.
+const SERIF = 'Cormorant Garamond';
+const SCRIPT = 'Monsieur La Doulaise';
+
+// The photograph is cropped into a PHOTO_WIDTH × PHOTO_HEIGHT box with torn
+// top and bottom edges. In each crop, `focus` is a point in the photo (0–1
+// across, 0–1 down) and `at` is where that point lands in the box; zoom 1
+// is the smallest size that fills the box. The photo never leaves a gap.
+const CROPS = {
+  centred: { file: 'gerringong-film-10.jpg', focus: [0.52, 0.52], at: [0.5, 0.56], zoom: 1 },
+  offset: { file: 'gerringong-film-10.jpg', focus: [0.52, 0.52], at: [0.36, 0.55], zoom: 1.15 },
+};
+const CROP: keyof typeof CROPS = 'centred';
+const PHOTO_ALT = 'Patrick twirling Amelia on a green hillside at golden hour';
+const PHOTO_WIDTH = 860;  // the reference is about 2:1
+const PHOTO_HEIGHT = 430;
+const PHOTO_TEAR = { depth: 52, shape: 3, photo: 7, rim: 11 }; // depth in px; change a seed for a different tear
 const WIDTH = 1080;
 const HEIGHT = 1350;
 
+// Torn paper: seeded random edges, so every invite tears the same way. The
+// photo and a strip of darker paper share the broad shape of the tear but
+// not its fibres, so a thin uneven rim of paper shows along each edge.
+function tornPath(fibreSeed: number, inset: number) {
+  const seeded = (seed: number) => () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
+  const W = PHOTO_WIDTH, H = PHOTO_HEIGHT, M = 16, depth = PHOTO_TEAR.depth;
+  const shape = seeded(PHOTO_TEAR.shape), fibre = seeded(fibreSeed);
+  const noise = (count: number, random: () => number) => {
+    const knots = Array.from({ length: count + 1 }, random);
+    return (x: number) => {
+      const t = x / W * count, i = Math.min(Math.floor(t), count - 1), f = (1 - Math.cos((t - i) * Math.PI)) / 2;
+      return knots[i] * (1 - f) + knots[i + 1] * f;
+    };
+  };
+  const edge = (y: number, sign: number) => {
+    const broad = noise(5, shape), torn = noise(26, fibre), points = [];
+    for (let x = 0; x <= W; x += 4) points.push([x, y + sign * ((broad(x) ** 2 * .7 + torn(x) * .3) * depth + fibre() * 2.5)]);
+    return points;
+  };
+  const side = (x: number, from: number, to: number) => {
+    const points = [], step = Math.sign(to - from) * 12;
+    for (let y = from; (to - y) * step > 0; y += step) points.push([x + (fibre() - .5) * 3, y]);
+    return points;
+  };
+  const top = edge(M + inset, 1), bottom = edge(H - M - inset, -1).reverse();
+  const points = [...top, ...side(W - inset / 3, M + depth, H - M - depth), ...bottom, ...side(inset / 3, H - M - depth, M + depth)];
+  return `M${points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L')}Z`;
+}
+const mask = (path: string) => `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PHOTO_WIDTH} ${PHOTO_HEIGHT}" preserveAspectRatio="none"><path d="${path}"/></svg>`)}")`;
+const photoMask = mask(tornPath(PHOTO_TEAR.photo, 10));
+const rimMask = mask(tornPath(PHOTO_TEAR.rim, 4));
+
 const { party } = Astro.props as { party: Party };
 const BASE = import.meta.env.BASE_URL;
+const fonts = `https://fonts.googleapis.com/css2?family=${SERIF.replaceAll(' ', '+')}:wght@500;600&family=${SCRIPT.replaceAll(' ', '+')}&display=block`;
+const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`500 1em "${SERIF}"`, `600 1em "${SERIF}"`, `1em "${SCRIPT}"`] };
 ---
-<html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px`}>
+<html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px; --serif: '${SERIF}', Georgia, serif; --script: '${SCRIPT}', cursive`}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content={`width=${WIDTH}`} />
@@ -37,91 +88,97 @@ const BASE = import.meta.env.BASE_URL;
     <title>{party.greeting} · invite · dev</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=block" rel="stylesheet" />
+    <link href={fonts} rel="stylesheet" />
   </head>
   <body>
-    <main class="invite" data-photo={PHOTO.show ? PHOTO.file : 'none'} data-photos={`${BASE}photos/`}>
-      <img class="logo" src={`${BASE}logo.png`} alt="P A" />
-      <h1 class="greeting"><span data-fit>{party.greeting},</span> <em>{COPY.invited}</em></h1>
-      <figure class="photo"><img alt={PHOTO.alt} style={`object-position: ${PHOTO.focus}`} /></figure>
-      <p class="lead">{COPY.lead}</p>
-      <p class="couple">{COPY.couple}</p>
+    <main class="invite">
+      <p class="small caps greeting"><span data-fit>{party.greeting}</span></p>
+      <h1 class="big caps">{COPY.invited[0]} <em>{COPY.invited[1]}</em></h1>
+      <p class="small caps">{COPY.lead}</p>
+      <p class="big caps">{COPY.couple[0]} <em>&amp;</em> {COPY.couple[1]}</p>
+      <figure class="photo" style={`width: ${PHOTO_WIDTH}px; height: ${PHOTO_HEIGHT}px; --photo-mask: ${photoMask}; --rim-mask: ${rimMask}`}>
+        <div class="rim"></div>
+        <div class="frame"><img alt={PHOTO_ALT} /></div>
+      </figure>
       <p class="date">{COPY.date}</p>
-      <p class="venue">{COPY.venue}</p>
+      <p class="small caps">{COPY.venue}</p>
+      <p class="small">{COPY.town}</p>
+      <img class="logo" src={`${BASE}logo.png`} alt="P A" />
     </main>
-    <script is:inline>
+    <script is:inline define:vars={{ settings }}>
       // make-invites.mjs waits on this before its screenshot: the photo is
-      // chosen, fonts and images are in, and a long greeting fits on one line.
+      // cropped, fonts and images are in, and the greeting fits on one line.
       window.inviteReady = (async () => {
-        const invite = document.querySelector('.invite');
-        const photo = new URLSearchParams(location.search).get('photo') || invite.dataset.photo;
-        if (photo === 'none') invite.querySelector('.photo').remove();
+        const params = new URLSearchParams(location.search);
+        const figure = document.querySelector('.photo');
+        if (params.get('photo') === 'none') figure.remove();
         else {
-          invite.classList.add('has-photo');
-          invite.querySelector('.photo img').src = invite.dataset.photos + photo;
+          const crop = settings.crops[params.get('crop') || settings.crop];
+          if (!crop) throw new Error(`No crop called ${params.get('crop')}`);
+          const img = figure.querySelector('img');
+          img.src = settings.photos + crop.file;
+          await img.decode();
+          const W = figure.offsetWidth, H = figure.offsetHeight;
+          const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight) * crop.zoom;
+          const width = img.naturalWidth * scale, height = img.naturalHeight * scale;
+          const clamp = (value, min) => Math.min(0, Math.max(min, value));
+          Object.assign(img.style, {
+            width: `${width}px`, height: `${height}px`,
+            left: `${clamp(crop.at[0] * W - crop.focus[0] * width, W - width)}px`,
+            top: `${clamp(crop.at[1] * H - crop.focus[1] * height, H - height)}px`,
+          });
         }
         const text = document.body.textContent;
-        const faces = ['300 1em "Cormorant Garamond"', 'italic 300 1em "Cormorant Garamond"', 'italic 400 1em "Cormorant Garamond"', '500 1em Montserrat'];
-        const loaded = await Promise.all(faces.map(face => document.fonts.load(face, text)));
-        const missing = faces.filter((_, i) => !loaded[i].length);
+        const loaded = await Promise.all(settings.faces.map(face => document.fonts.load(face, text)));
+        const missing = settings.faces.filter((_, i) => !loaded[i].length);
         if (missing.length) throw new Error(`Fonts did not load: ${missing.join(', ')}`);
         await Promise.all([...document.images].map(img => img.decode().catch(() => { throw new Error(`Image did not load: ${img.src}`); })));
         for (const line of document.querySelectorAll('[data-fit]')) {
           const box = line.parentElement;
           let size = parseFloat(getComputedStyle(box).fontSize);
-          while (line.offsetWidth > box.clientWidth && size > 48) box.style.fontSize = `${size -= 2}px`;
+          while (line.offsetWidth > box.clientWidth && size > 18) box.style.fontSize = `${size -= 1}px`;
           if (line.offsetWidth > box.clientWidth) line.style.whiteSpace = 'normal';
         }
       })();
     </script>
     <style is:global>
       :root {
-        --bg: #eeeee5;
-        --paper: #f7f3e8;
+        --page: #fdfcf8;
+        --rim: #ede8dc;       /* the torn paper showing around the photo */
         --ink: #384135;
-        --muted: #66715e;
-        --leaf: #7a826d;
-        --deep: #414d3d;
-        --display: 'Cormorant Garamond', Georgia, serif;
-        --label: 'Montserrat', sans-serif;
-        --logo-width: 150px;      /* logo.png is 284px wide: keep ≤ 150 for a crisp 2x render */
-        --greeting-size: 100px;   /* long greetings shrink from here to fit one line */
-        --couple-size: 136px;
-        --photo-width: 540px;
-        --photo-height: 400px;
-        --photo-tilt: -2.5deg;
+        --big: 76px;          /* YOU’RE, PATRICK, AMELIA */
+        --script-size: 120px; /* invited, & */
+        --date: 46px;
+        --small: 26px;        /* every other line */
+        --logo-width: 64px;
       }
-      html, body { margin: 0; width: var(--invite-width); height: var(--invite-height); overflow: hidden; background: var(--bg); }
-      body { display: grid; grid-template-columns: minmax(0, 1fr); padding: 44px; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+      html, body { margin: 0; width: var(--invite-width); height: var(--invite-height); overflow: hidden; background: var(--page); }
+      body { -webkit-font-smoothing: antialiased; }
       .invite {
-        position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-        padding: 64px 72px; background: var(--paper); color: var(--ink); text-align: center;
-        box-shadow: 0 1px 2px #38413514, 0 18px 40px -24px #38413540;
+        box-sizing: border-box; height: 100%; padding: 0 80px 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: var(--ink); font-family: var(--serif); font-weight: 500; text-align: center;
       }
-      .invite::before { content: ''; position: absolute; inset: 20px; border: 1px solid color-mix(in srgb, var(--leaf) 45%, transparent); pointer-events: none; }
       p, h1, figure { margin: 0; }
-      .logo { width: var(--logo-width); height: auto; margin-bottom: 60px; }
-      .greeting { font: italic 300 var(--greeting-size)/1.02 var(--display); letter-spacing: -.02em; align-self: stretch; }
+      .caps { text-transform: uppercase; }
+      .small { font-size: var(--small); line-height: 1.5; letter-spacing: .26em; margin-right: -.26em; }
+      .greeting { align-self: stretch; }
       .greeting span { display: inline-block; white-space: nowrap; }
-      .greeting em { display: block; color: var(--leaf); }
-      .lead { margin-top: 56px; font: 500 22px var(--label); text-transform: uppercase; letter-spacing: .32em; color: var(--muted); }
-      .couple { margin-top: 10px; font: 300 var(--couple-size)/1.05 var(--display); letter-spacing: -.05em; color: var(--deep); }
-      .date { margin-top: 40px; display: flex; align-items: center; gap: 22px; font: 500 24px var(--label); text-transform: uppercase; letter-spacing: .3em; }
-      .date::before, .date::after { content: ''; width: 48px; height: 1px; background: var(--leaf); }
-      .venue { margin-top: 20px; font: italic 400 38px var(--display); color: var(--muted); }
-
-      /* With the photograph everything tightens to make room. */
-      .has-photo { --logo-width: 120px; --greeting-size: 76px; --couple-size: 96px; }
-      .has-photo .logo { margin-bottom: 34px; }
-      .has-photo .lead { margin-top: 0; }
-      .has-photo .couple { margin-top: 4px; }
-      .has-photo .date { margin-top: 22px; }
-      .has-photo .venue { margin-top: 12px; }
-      .photo {
-        margin: 38px 0 44px; padding: 16px 16px 18px; background: #fffdf7; transform: rotate(var(--photo-tilt));
-        box-shadow: 0 1px 2px #38413520, 0 14px 30px -16px #38413560;
+      .big { font-size: var(--big); line-height: 1; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+      .big em {
+        font: normal 400 var(--script-size)/0 var(--script); text-transform: none; letter-spacing: 0;
+        position: relative; top: .04em; margin: 0 -.04em;
       }
-      .photo img { display: block; width: var(--photo-width); height: var(--photo-height); object-fit: cover; }
+      h1 em { margin-left: .14em; }
+      .greeting + .big { margin-top: 44px; }
+      .big + .small { margin-top: 50px; }
+      .small + .big { margin-top: 44px; }
+      .photo { position: relative; margin: 56px 0 40px; }
+      .photo > * { position: absolute; inset: 0; mask: var(--mask) center / 100% 100% no-repeat; }
+      .rim { --mask: var(--rim-mask); background: var(--rim); }
+      .frame { --mask: var(--photo-mask); overflow: hidden; }
+      .frame img { position: absolute; display: block; }
+      .date { font-variant-numeric: lining-nums; font-size: var(--date); letter-spacing: .14em; margin: 0 -.14em 22px 0; }
+      .logo { position: absolute; bottom: 64px; width: var(--logo-width); height: auto; opacity: .85; }
     </style>
   </body>
 </html>

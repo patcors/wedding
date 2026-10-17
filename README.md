@@ -44,12 +44,12 @@ Each Party gets an iMessage with a personalised image, a message and their Perso
 pnpm invites                              # every Party → invites/out/<code>.png (2160×2700)
 pnpm invites curry crash                  # just these codes
 pnpm invites --no-photo                   # without the engagement photo
-pnpm invites --photo=gerringong-film-3.jpg
+pnpm invites --crop=offset                # another crop from CROPS in the page
 pnpm invites --scale=1                    # 1080×1350
 pnpm invites --base=http://localhost:4334 # dev server on another port
 ```
 
-It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, photo and sizes are at the top of `src/pages/dev/invite/[code].astro`; open the page in a browser to tweak it, with `?photo=none` or `?photo=<file>` to try the photo options. `invites/out/` is git-ignored.
+It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, fonts, photo crops and sizes are at the top of `src/pages/dev/invite/[code].astro`; open the page in a browser to tweak it, with `?crop=<name>` or `?photo=none` to try the photo options. `invites/out/` is git-ignored.
 
 ## RSVP backend
 
