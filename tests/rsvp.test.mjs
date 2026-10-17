@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  contactProblem, describeGuest, readParty, readSaved, storageKey, toParams,
+  contactProblem, describeGuest, latestReply, lookupUrl, readLookup, readParty, readSaved, storageKey, toParams,
 } from '../src/components/details/rsvp.ts';
 
 test('a Party is only trusted when localStorage holds a complete one', () => {
@@ -35,6 +35,35 @@ test('an RSVP saved before the bus had stops still loads, with the bus unanswere
   assert.deepEqual(readSaved(JSON.stringify(old)).guests, [{ name: 'Dean', attending: 'yes', dietary: 'vegan', busTo: '', busFrom: '' }]);
 });
 
+
+test('the Sheet is asked for one Party by code', () => {
+  assert.equal(lookupUrl('https://script.google.com/macros/s/X/exec', 'curry'), 'https://script.google.com/macros/s/X/exec?code=curry');
+  assert.equal(lookupUrl('https://example.com/exec?v=2', 'two words'), 'https://example.com/exec?v=2&code=two%20words');
+});
+
+test('a lookup only counts when it holds this Party’s complete reply', () => {
+  assert.deepEqual(readLookup({ ok: true, rsvp: saved }, 'curry'), saved);
+  assert.equal(readLookup({ ok: true, rsvp: null }, 'curry'), null);
+  assert.equal(readLookup({ ok: true, rsvp: saved }, 'bridge'), null);
+  assert.equal(readLookup({ ok: false, rsvp: saved }, 'curry'), null);
+  assert.equal(readLookup({ ok: true, rsvp: { ...saved, contact: undefined } }, 'curry'), null);
+  assert.equal(readLookup(null, 'curry'), null);
+});
+
+test('the reply sent last wins, and this device keeps ties and unreadable times', () => {
+  const at = (submitted_at) => ({ ...saved, submitted_at });
+  const local = at('2026-10-17T01:00:00.000Z');
+  const later = at('2026-10-17T02:00:00.000Z');
+  assert.equal(latestReply(local, later), later);
+  assert.equal(latestReply(later, local), later);
+  assert.equal(latestReply(local, at(local.submitted_at)), local);
+  assert.equal(latestReply(local, at('')), local);
+  const unreadable = at('');
+  assert.equal(latestReply(unreadable, later), unreadable);
+  assert.equal(latestReply(null, later), later);
+  assert.equal(latestReply(local, null), local);
+  assert.equal(latestReply(null, null), null);
+});
 
 test('the body carries every field, with guests as a JSON string', () => {
   const guests = [{ name: 'Dean', attending: 'yes', dietary: 'vegetarian', busTo: 'Wollongong', busFrom: 'Berry' }];

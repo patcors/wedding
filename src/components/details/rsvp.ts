@@ -80,6 +80,27 @@ export const readSaved = (raw: string | null): Rsvp | null => toRsvp(parse(raw))
 
 export const storageKey = (code: string) => `pa_rsvp_${code}`;
 
+/** Where to ask the Sheet for a Party's reply (the Apps Script's doGet). */
+export const lookupUrl = (endpoint: string, code: string) =>
+  `${endpoint}${endpoint.includes('?') ? '&' : '?'}code=${encodeURIComponent(code)}`;
+
+/** The reply in a doGet response, `{ ok: true, rsvp: {...} | null }`, if it's this Party's. */
+export function readLookup(body: unknown, code: string): Rsvp | null {
+  const value = body as { ok?: unknown; rsvp?: unknown } | null;
+  if (!value || value.ok !== true) return null;
+  const rsvp = toRsvp(value.rsvp);
+  return rsvp && rsvp.code === code ? rsvp : null;
+}
+
+/** Whichever reply was sent last. Ties, and times that can't be read, keep this device's copy. */
+export function latestReply(local: Rsvp | null, remote: Rsvp | null): Rsvp | null {
+  if (!remote) return local;
+  if (!local) return remote;
+  const remoteTime = Date.parse(remote.submitted_at);
+  const localTime = Date.parse(local.submitted_at);
+  return remoteTime > localTime ? remote : local;
+}
+
 /** The urlencoded body Apps Script reads as e.parameter. */
 export function toParams(rsvp: Rsvp): URLSearchParams {
   return new URLSearchParams({

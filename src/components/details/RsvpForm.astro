@@ -24,6 +24,8 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     <p class="rsvp-note">Can’t find it? Email <a href={`mailto:${email}`}>{email}</a> or text <a href={phoneHref}>{phone}</a> and we’ll sort it out.</p>
   </div>
 
+  <p class="rsvp-note rsvp-loading" data-rsvp-loading hidden>Looking for your reply…</p>
+
   <form class="rsvp-form" data-rsvp-form novalidate hidden>
     <div class="rsvp-guests" data-rsvp-guests></div>
 
@@ -99,7 +101,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
 <script>
   import {
-    contactProblem, describeGuest, readParty, readSaved, storageKey, toParams,
+    contactProblem, describeGuest, latestReply, lookupUrl, readLookup, readParty, readSaved, storageKey, toParams,
     type Answer, type GuestReply, type RememberedParty, type Rsvp,
   } from './rsvp';
 
@@ -112,6 +114,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
   const subtitle = $('[data-rsvp-subtitle]');
   const form = $<HTMLFormElement>('[data-rsvp-form]');
   const noLink = $('[data-rsvp-no-link]');
+  const loading = $('[data-rsvp-loading]');
   const guestList = $('[data-rsvp-guests]');
   const contact = $<HTMLInputElement>('[data-rsvp-contact]');
   const contactError = $('#rsvp-contact-error');
@@ -254,6 +257,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     field('song').value = previous?.song ?? '';
     field('message').value = previous?.message ?? '';
     subtitle.textContent = `Please reply by ${replyBy}.`;
+    loading.hidden = true;
     thanks.hidden = true;
     form.hidden = false;
   }
@@ -273,6 +277,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     song.hidden = !rsvp.song;
     song.textContent = rsvp.song ? `Your song request: ${rsvp.song}.` : '';
     $('[data-rsvp-change]').textContent = rsvp.guests.length > 1 ? 'Change our answer' : 'Change my answer';
+    loading.hidden = true;
     form.hidden = true;
     thanks.hidden = false;
     if (justSent) {
@@ -283,13 +288,31 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
   // ---- Starting up ----------------------------------------------------------
 
-  /** The Party's latest reply. Only what this device sent, for now; a lookup
-      of the Party's rows in the Sheet would slot in here. */
+  /** The last reply this device sent or saw. */
   function savedReply(party: RememberedParty): Rsvp | null {
     try { return readSaved(localStorage.getItem(storageKey(party.code))); } catch { return null; }
   }
 
+  function saveReply(party: RememberedParty, rsvp: Rsvp) {
+    try { localStorage.setItem(storageKey(party.code), JSON.stringify(rsvp)); } catch {}
+  }
+
+  /** The Party's reply as the Sheet has it, from whichever device sent it.
+      Null when there's none, or the Sheet can't be reached in time. */
+  async function sheetReply(party: RememberedParty): Promise<Rsvp | null> {
+    try {
+      const response = await fetch(lookupUrl(ENDPOINT, party.code), { signal: AbortSignal.timeout(5000) });
+      return response.ok ? readLookup(await response.json(), party.code) : null;
+    } catch {
+      return null;
+    }
+  }
+
   function start(party: RememberedParty) {
+    // Once the guest sends or starts changing a reply here, a Sheet answer
+    // arriving late must not replace it.
+    let settled = false;
+
     form.addEventListener('submit', async event => {
       event.preventDefault();
       failure.hidden = true;
@@ -302,6 +325,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
       submit.textContent = 'Sending…';
       try {
         await send(rsvp);
+        settled = true;
       } catch (error) {
         console.error('[rsvp] Sending failed', error);
         failure.hidden = false;
@@ -310,19 +334,38 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
         submit.disabled = false;
         submit.textContent = label;
       }
-      try { localStorage.setItem(storageKey(party.code), JSON.stringify(rsvp)); } catch {}
+      saveReply(party, rsvp);
       showThanks(party, rsvp, true);
     });
 
     $('[data-rsvp-change]').addEventListener('click', () => {
+      settled = true;
       showForm(party, savedReply(party));
       root.scrollIntoView({ block: 'start' });
       rows()[0]?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
     });
 
+    // Show this device's copy straight away, then check the Sheet for a newer one.
     const saved = savedReply(party);
     if (saved) showThanks(party, saved, false);
-    else showForm(party, null);
+    if (!ENDPOINT) {
+      if (!saved) showForm(party, null);
+      return;
+    }
+    if (!saved) {
+      setHeading(`${party.greeting}, we’d love to`, 'know you’re coming.');
+      loading.hidden = false;
+    }
+    sheetReply(party).then(remote => {
+      if (settled) return;
+      const latest = latestReply(savedReply(party), remote);
+      if (latest && latest === remote) {
+        saveReply(party, remote);
+        showThanks(party, remote, false);
+      } else if (!saved) {
+        showForm(party, null);
+      }
+    });
   }
 
   if (party) start(party);
@@ -343,6 +386,12 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
   .rsvp-form, .rsvp-thanks { max-width: 520px; margin: 44px auto 0; text-align: left; }
   .rsvp-no-link { max-width: 460px; margin: 30px auto 0; }
+  .rsvp-loading { margin-top: 44px; color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) {
+    /* Quick lookups finish before this shows at all. */
+    .rsvp-loading { animation: rsvp-appear .5s .4s both; }
+  }
+  @keyframes rsvp-appear { from { opacity: 0; } }
   fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   legend { padding: 0; }
 
