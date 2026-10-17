@@ -30,8 +30,8 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2020, medium: 'shed', side: -1, lead: 8, inland: .55 },
   { year: 2021, medium: 'stake', side: 1, lead: 3.5, inland: .55 },
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85 },
-  { year: 2023, medium: 'slate', side: 1, lead: 8, inland: .9 },
-  { year: 2024, medium: 'lantern', side: 1, lead: 6.5, inland: .2 },
+  { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
+  { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
   { year: 2025, medium: 'steps', side: -1, lead: 3.5, inland: .15 },
   { year: 2026, medium: 'arch', side: 1, lead: 4, inland: .6 },
 ];
