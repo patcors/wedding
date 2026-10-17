@@ -34,12 +34,12 @@ export function cameraPose(p: number, width: number): CameraPose {
 }
 
 // The celebration's view: from upstream and a little towards the far bank,
-// over the catamaran's stern quarter, so both flags read beside the jetty and
-// the old tree stands to the right with its lights strung above the copy. The
-// camera is placed from the mooring (`across` towards the far bank, `back`
-// upstream) and looks `look` of the way from the mooring to the tree. Portrait
-// sits higher and nearer behind, so the boats lie below the copy's button and
-// the trunk frames the right edge.
+// over the catamaran's stern quarter, so the sail and its monogram's flag
+// read beside the jetty and the old tree stands to the right with its lights
+// strung above the copy. The camera is placed from the mooring (`across`
+// towards the far bank, `back` upstream) and looks `look` of the way from the
+// mooring to the tree. Portrait sits higher and nearer behind, so the boats
+// lie below the copy's button and the trunk frames the right edge.
 const DOCK_VIEW = {
   desktop: { across: 2.5, back: 7.5, height: 2.7, look: .3, lookY: 2.6 },
   mobile: { across: .4, back: 9.5, height: 4.3, look: .12, lookY: 4.3 },

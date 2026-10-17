@@ -9,7 +9,7 @@
 import { ARRIVAL_END, DATES, ROOM, VOYAGE_END, progressAt } from './journey.ts';
 
 // Colours are sRGB hex. `horizon` is the background, fog and bottom of the
-// dome, `zenith` its top. `glow` is the wash behind the page's copy and `ink`
+// dome, `zenith` its top. `glow` is the halo round the page's copy and `ink`
 // the copy itself (see --garden-sky-glow and --garden-ink-on-sky).
 // `sun` is the direction the sunlight comes from, at the old sun's distance.
 // `waterLight` is the light on the river's own colour (a WaterStyle), so every

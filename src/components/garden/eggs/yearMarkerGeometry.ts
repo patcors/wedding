@@ -344,7 +344,7 @@ const MODELS: Record<YearMarker['medium'], { face: Face; build: Build }> = {
 };
 
 // One canvas holding every year's lettering. Drawn again once Cormorant has
-// loaded, as the flags' initials are.
+// loaded, so the numerals are never left in the fallback serif.
 export function yearAtlas() {
   const canvas = document.createElement('canvas');
   canvas.width = CELL * COLS; canvas.height = CELL * ROWS;

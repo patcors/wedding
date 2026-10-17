@@ -67,7 +67,7 @@ function useSunFollowsVoyage(sun: RefObject<THREE.DirectionalLight | null>, offs
   });
 }
 
-// The page's copy sits on soft glows that take the sky's colour, in ink that
+// The page's copy is haloed in the sky's own colour (garden.css), in ink that
 // suits it. While scrolling, a colour is written only once it has moved enough
 // to see, so the page isn't restyled every frame; once it slows, the exact
 // colour catches up. Until then, and if the scene goes, the page keeps the
