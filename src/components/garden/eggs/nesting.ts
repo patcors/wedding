@@ -29,7 +29,7 @@ export type Owner = 'amelia' | 'patrick';
 // turned to face the camera then. Larger than life, and larger again in
 // portrait's wider lens, so the birds read.
 export const NESTS = {
-  pairs: [{ side: -1, last: PATRICK_HOME, lead: 2.5 }, { side: 1, last: AMELIA_MOVED_IN, lead: 3.5 }],
+  pairs: [{ side: -1, last: PATRICK_HOME, lead: 4.5 }, { side: 1, last: AMELIA_MOVED_IN, lead: 3.5 }],
   desktop: { inland: 1.1, apart: .8, scale: 1.5 },
   mobile: { inland: .6, apart: .52, scale: 1.9 },
   // The second pair comes up out of the haze this far from the camera.
