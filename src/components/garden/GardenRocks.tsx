@@ -5,11 +5,13 @@ import { bankEdge, riverCenter, groundHeight, random } from './gardenGeometry';
 import { useGardenTextures } from './gardenTextures';
 
 const ASSETS = `${import.meta.env.BASE_URL}models/garden/ground/`;
+export const ROCK_MODEL = `${ASSETS}moss-rocks.glb`;
+// glTF UVs: the maps load unflipped.
+export const ROCK_TEXTURES = ['color', 'normal', 'arm'].map(map => `${ASSETS}rock_moss_set_01-${map}.webp`);
 
 export default function GardenRocks({ width, visible }: { width: number; visible: boolean }) {
-  const { nodes } = useGLTF(`${ASSETS}moss-rocks.glb`);
-  // glTF UVs: the maps load unflipped.
-  const maps = useGardenTextures(['color', 'normal', 'arm'].map(map => `${ASSETS}rock_moss_set_01-${map}.webp`), { flipY: false });
+  const { nodes } = useGLTF(ROCK_MODEL);
+  const maps = useGardenTextures(ROCK_TEXTURES, { flipY: false });
   const meshes = useRef<(THREE.InstancedMesh | null)[]>([]);
   const material = useMemo(() => {
     maps.forEach(map => { map.anisotropy = 4; map.needsUpdate = true; });

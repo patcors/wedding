@@ -15,6 +15,7 @@ const GROUND_MAPS: Record<GroundStyle, string[]> = {
   leafy: ['color', 'normal', 'arm'].map(map => `${ASSETS}leafy_grass-${map}.webp`),
   meadow: ['color', 'normal', 'arm'].map(map => `${ASSETS}grass007-${map}.webp`),
 };
+export const groundTextures = (style: GroundStyle) => GROUND_MAPS[style];
 // Bank UVs are world position / 16; turf tiles every 2.2 units.
 const UV_TO_WORLD = 16, TURF_TILE = 2.2;
 

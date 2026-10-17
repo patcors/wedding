@@ -38,3 +38,7 @@ const FlippedTextureLoader = textureLoader(true), TextureLoader = textureLoader(
 export function useGardenTextures(urls: string[], { flipY = true } = {}) {
   return useLoader(flipY ? FlippedTextureLoader : TextureLoader, urls) as THREE.Texture[];
 }
+// Starts the same download without suspending.
+export function preloadGardenTextures(urls: string[], { flipY = true } = {}) {
+  useLoader.preload(flipY ? FlippedTextureLoader : TextureLoader, urls);
+}
