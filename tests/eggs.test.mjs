@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
-import { MILESTONES, ROOM, progressAt, stillProgress } from '../src/components/garden/journey.ts';
+import { MILESTONES, ROOM, VOYAGE_END, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { cameraHeading, eggTime, heightAt, inView, overRiver } from '../src/components/garden/eggs/egg.ts';
 
@@ -42,4 +42,22 @@ test('overRiver keeps a point over the water', () => {
   assert.equal(overRiver([middle + 50, 3, z], 1, .5)[0], middle + reach);
   assert.equal(overRiver([middle - 50, 3, z], 1, .5)[0], middle - reach);
   assert.equal(overRiver([middle + .1, 3, z], 1, .5)[0], middle + .1);
+});
+
+test('the balloon climbs straight up over the river, left of the date label, and is gone well before the dock', async () => {
+  const { BALLOON_TIMES, balloonSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const at = progressAt(trip.month);
+  for (const [mobile, width] of [[false, 1], [true, MOBILE_RIVER_WIDTH]]) {
+    let last = -Infinity;
+    for (let t = 0; t <= BALLOON_TIMES.climb; t += .1) {
+      const p = at + t * ROOM, { position: [x, y, z] } = balloonSpot(p, t, mobile, width);
+      assert.ok(Math.abs(x - riverCenter(z, width)) < bankEdge(z, width), `over the water at ${t}`);
+      assert.ok(y >= last, `rising at ${t}`);
+      last = y;
+      const [cx, , cz] = cameraPose(p, width).position;
+      const bearing = degrees(Math.atan2(x - cx, cz - z) - cameraHeading(p, width));
+      assert.ok(bearing < -7.5 && bearing > -12, `bearing ${bearing} at ${t}`);
+    }
+  }
+  assert.ok(at + BALLOON_TIMES.gone * ROOM < VOYAGE_END - .05);
 });
