@@ -1,7 +1,7 @@
 /* The Garden: layout and chrome around the 3D scene. */
 .garden-prototype { --garden-ink: #384135; --garden-muted: #66715e; color: var(--garden-on-sky); font-family: 'Montserrat', sans-serif; background: var(--garden-page, #eeeee5);
-  /* The sky (GardenSky) runs dawn to dusk and sets --garden-sky-glow, the soft
-     glow behind text, --garden-ink-on-sky, the text over the sky, and
+  /* The sky (GardenSky) runs dawn to dusk and sets --garden-sky-glow, the halo
+     round the copy, --garden-ink-on-sky, the text over the sky, and
      --garden-sky-top, the sky at the top of the screen. Until it does, these
      and --garden-page, the page and status bar's colour, are the dawn's, from
      GardenPage. Elsewhere they fall back to the misty day's. The softer tints
@@ -10,7 +10,17 @@
   --garden-glow: var(--garden-sky-glow, #eeeee5); --garden-on-sky: var(--garden-ink-on-sky, var(--garden-ink));
   --garden-top-wash: color-mix(in srgb, var(--garden-sky-top, #f5f3e9) 32.2%, transparent);
   --garden-on-sky-soft: color-mix(in srgb, var(--garden-ink-on-sky) 70%, transparent);
-  --garden-on-sky-line: color-mix(in srgb, var(--garden-ink-on-sky) 44%, transparent); }
+  --garden-on-sky-line: color-mix(in srgb, var(--garden-ink-on-sky) 44%, transparent);
+  /* The copy is kept legible over bright sky and dark trees by a halo of the
+     sky's glow hugging each letter, rather than a wash behind the copy, which
+     read as a cloud over the blue and a pale oval over the trees at dusk and
+     covered the scene behind it. Solid near the strokes (each shadow is
+     repeated to build it up) and softer further out, scaled to the type but
+     within a few pixels. */
+  --garden-halo-near: 0 0 clamp(2px, .06em, 5px) var(--garden-glow);
+  --garden-halo-far: 0 0 clamp(5px, .16em, 12px) var(--garden-glow);
+  --garden-halo: 0 0 1px var(--garden-glow), var(--garden-halo-near), var(--garden-halo-near), var(--garden-halo-near), var(--garden-halo-near),
+    var(--garden-halo-far), var(--garden-halo-far), var(--garden-halo-far), 0 0 clamp(12px, .35em, 26px) color-mix(in srgb, var(--garden-glow) 60%, transparent); }
 .garden-prototype * { box-sizing: border-box; }
 .garden-prototype button, .garden-prototype a { -webkit-tap-highlight-color: transparent; }
 .garden-prototype button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
@@ -46,9 +56,8 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 @media (hover: none) { .garden-wash { background: linear-gradient(180deg, var(--garden-top-wash), transparent 28%); } }
 .garden-header { position: absolute; inset: 0 0 auto; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
 .garden-monogram { position: relative; isolation: isolate; padding: 0; }
-/* A soft pale glow keeps the logo legible over dark treetops. */
-.garden-monogram::before { content: ''; position: absolute; z-index: -1; inset: -22px -30px; pointer-events: none; background: radial-gradient(closest-side, color-mix(in srgb, var(--garden-glow) 72.2%, transparent) 25%, color-mix(in srgb, var(--garden-glow) 40%, transparent) 55%, transparent); }
-.garden-monogram img { height: 34px; width: auto; display: block; }
+/* The same halo keeps the logo legible over dark treetops, following its strokes. */
+.garden-monogram img { height: 34px; width: auto; display: block; filter: drop-shadow(0 0 1px var(--garden-glow)) drop-shadow(0 0 5px color-mix(in srgb, var(--garden-glow) 80%, transparent)); }
 .garden-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
 .garden-invitation-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid var(--garden-on-sky-line, #73796770); padding-bottom: 8px; }
@@ -61,8 +70,6 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-panel.is-active { opacity: 1; visibility: visible; transform: translateY(0); }
 .garden-panel a, .garden-panel button { pointer-events: auto; }
 .garden-arrival { top: 22%; left: 0; width: 100%; }
-.garden-arrival::before, .garden-celebrate::before { content: ''; position: absolute; z-index: -1; inset: -18px 17% -12px; pointer-events: none;
-  background: radial-gradient(ellipse, color-mix(in srgb, var(--garden-glow) 90.2%, transparent) 12%, color-mix(in srgb, var(--garden-glow) 67.8%, transparent) 40%, color-mix(in srgb, var(--garden-glow) 23.9%, transparent) 62%, transparent 76%); }
 .garden-eyebrow { font-size: 9px; font-weight: 400; text-transform: uppercase; letter-spacing: .28em; line-height: 1.8; }
 .garden-arrival h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300; font-size: clamp(66px, 8.8vw, 144px); line-height: 1.1; letter-spacing: -.06em; margin: 20px 0 10px; }
 .garden-arrival h1 span { font-size: .6em; font-style: italic; font-weight: 300; color: var(--garden-on-sky-soft, #7a826d); display: inline-block; margin: 0 .14em; }
@@ -71,9 +78,7 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-date i { width: 3px; height: 3px; border-radius: 50%; background: var(--garden-on-sky-soft, #7a826d); }
 /* The voyage's date sits high in the sky, where the photographs were, well
    above the boats low in the river. Month over year, each crossfading. */
-.garden-voyage { top: 13%; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; isolation: isolate; }
-.garden-voyage::before { content: ''; position: absolute; z-index: -1; inset: -34px calc(50% - 210px) -22px; pointer-events: none;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--garden-glow) 88%, transparent) 35%, color-mix(in srgb, var(--garden-glow) 55%, transparent) 65%, transparent); }
+.garden-voyage { top: 13%; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
 .garden-voyage-date { margin: 0; display: flex; flex-direction: column; align-items: center; font-family: 'Cormorant Garamond', Georgia, serif; }
 .garden-voyage-date > span { display: grid; justify-items: center; }
 .garden-voyage-date > span > span { grid-area: 1 / 1; white-space: nowrap; opacity: 0; transition: opacity .6s ease; }
@@ -96,6 +101,10 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-bottom { position: absolute; bottom: calc(44px - var(--garden-edge-clear)); left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; }
 .garden-place { font-size: 8px; letter-spacing: .18em; }
 .garden-copy { transition: opacity .5s; }
+/* On every element, so the halo's em lengths follow each one's own type size
+   (an inherited text-shadow keeps its parent's lengths). */
+.garden-copy, .garden-copy * { text-shadow: var(--garden-halo); }
+.garden-copy .garden-button, .garden-copy .garden-button * { text-shadow: none; }
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
 /* Long enough for the Voyage: about a screen per milestone (see journey.ts),
    88svh a share, as before the two job-change milestones were added. */
@@ -107,9 +116,6 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-header-date { display: none; }
   .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
-  /* Sized to the box's sides, not its corners, so the glow fades out before
-     its edges on a narrow screen rather than ending in a hard rectangle. */
-  .garden-arrival::before, .garden-celebrate::before { inset: -90px 0 -50px; background: radial-gradient(closest-side, color-mix(in srgb, var(--garden-glow) 90.2%, transparent) 30%, color-mix(in srgb, var(--garden-glow) 67.8%, transparent) 60%, color-mix(in srgb, var(--garden-glow) 23.9%, transparent) 82%, transparent); }
   .garden-arrival h1 { font-size: clamp(60px, 16vw, 90px); line-height: .9; margin: 24px 0 20px; }
   .garden-arrival h1 span { display: block; font-size: 35px; line-height: 1.2; margin: 4px 0; }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
@@ -118,8 +124,6 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-voyage { top: 11%; }
-  /* No wider than the screen: past its edges it would let the page pan sideways. */
-  .garden-voyage::before { inset: -26px max(0px, 50% - 170px) -18px; }
   .garden-voyage-month { font-size: 42px; }
   .garden-voyage-year { font-size: 18px; }
   .garden-voyage .garden-text-link { margin-top: 4px; }
@@ -132,7 +136,6 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
    above the moored boats under the title and the catamaran at the dock. */
 @media (max-width: 700px) and (max-height: 700px) {
   .garden-arrival { top: 14%; }
-  .garden-arrival::before, .garden-celebrate::before { inset: -70px 0 -24px; }
   .garden-arrival h1 { font-size: min(16vw, 9svh); margin: 14px 0 12px; }
   .garden-arrival h1 span { font-size: 30px; margin: 2px 0; }
   .garden-subtitle { font-size: 20px; }
@@ -153,14 +156,12 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-header-date { display: none; }
   .garden-invitation-link { min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 15%; padding: 0 max(30px, env(safe-area-inset-left), env(safe-area-inset-right)); }
-  .garden-arrival::before, .garden-celebrate::before { inset: -40px 12% -20px; background: radial-gradient(closest-side, color-mix(in srgb, var(--garden-glow) 90.2%, transparent) 30%, color-mix(in srgb, var(--garden-glow) 67.8%, transparent) 60%, color-mix(in srgb, var(--garden-glow) 23.9%, transparent) 82%, transparent); }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
   .garden-arrival h1 { font-size: min(54px, 13svh); line-height: 1.1; margin: 8px 0 4px; }
   .garden-arrival h1 span { display: inline-block; font-size: .6em; line-height: 1; margin: 0 .14em; }
   .garden-subtitle { font-size: 19px; }
   .garden-date { font-size: 8px; gap: 12px; margin-top: 12px; }
   .garden-voyage { top: 8%; }
-  .garden-voyage::before { inset: -20px max(0px, 50% - 150px) -14px; }
   .garden-voyage-month { font-size: 34px; }
   .garden-voyage-year { font-size: 15px; }
   .garden-voyage .garden-text-link { margin-top: 0; }
