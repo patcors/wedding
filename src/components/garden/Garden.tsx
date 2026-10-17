@@ -60,6 +60,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [groundStyle, setGroundStyle] = useState<GroundStyle>('natural');
   const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
   const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
+  const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [openingReleased, setOpeningReleased] = useState(false);
   const [prepared, setPrepared] = useState(false);
@@ -97,32 +98,45 @@ export default function Garden({ greeting }: { greeting?: string }) {
   }, [ready, failed]);
   useEffect(() => {
     if (!prepared || failed) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false, frame = 0;
     const hold = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('slow')) || 0 : 0;
     void document.fonts.ready.then(() => {
-      // A short settle lets texture uploads finish before the cover fades.
-      if (!cancelled) timer = setTimeout(() => setReady(true), Math.max(300, hold - performance.now()));
+      if (cancelled) return;
+      // The scene starts moving behind the cover first. Its first live frames
+      // can be slow on phones, and a fade started then jumps in partway, so
+      // wait for a few smooth frames (a second at most) before it begins.
+      setRunning(true);
+      const start = performance.now();
+      let previous = 0, smooth = 0;
+      const wait = (now: number) => {
+        smooth = previous && now - previous < 50 ? smooth + 1 : 0;
+        previous = now;
+        if ((smooth >= 3 || now - start > 1000) && now >= hold) setReady(true);
+        else frame = requestAnimationFrame(wait);
+      };
+      frame = requestAnimationFrame(wait);
     });
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
   }, [prepared, failed]);
   useEffect(() => {
     document.documentElement.dataset.gardenState = failed ? 'error' : ready ? 'ready' : 'loading';
   }, [ready, failed]);
   useEffect(() => {
     if (!ready || failed) return;
-    let frame: number;
+    const element = cover.current!;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const waitForReveal = () => {
-      // Start the perch time after the cover's fade, including reduced-motion styles.
-      if (cover.current && getComputedStyle(cover.current).visibility !== 'hidden') {
-        frame = requestAnimationFrame(waitForReveal);
-        return;
-      }
+    // Start the perch time after the cover's fade, including reduced-motion
+    // styles. Listening, rather than checking its style every frame, saves a
+    // style recalculation per frame while the butterflies move.
+    const revealed = (event: TransitionEvent) => {
+      if (event.target !== element || event.propertyName !== 'opacity') return;
+      clearTimeout(timer);
       timer = setTimeout(() => setOpeningReleased(true), 1200);
     };
-    frame = requestAnimationFrame(waitForReveal);
-    return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
+    element.addEventListener('transitionend', revealed);
+    // In case the fade never reports finishing.
+    timer = setTimeout(() => setOpeningReleased(true), 4000);
+    return () => { element.removeEventListener('transitionend', revealed); clearTimeout(timer); };
   }, [ready, failed]);
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)');
@@ -166,7 +180,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!ready ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
