@@ -11,7 +11,7 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import type { SkyStyle } from './GardenScene';
 import './garden.css';
-import './gardenScrollHint.css';
+import './gardenScrollCue.css';
 import './gardenLoader.css';
 
 const GardenCanvas = lazy(() => import('./GardenCanvas'));
@@ -139,7 +139,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
       element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
     };
   }, []);
-  // The scroll hint goes for good once the guest has scrolled a little.
+  // The scroll cue goes for good once the guest has scrolled a little.
   const [explored, setExplored] = useState(false);
   useEffect(() => { if (progress > .01) setExplored(true); }, [progress]);
   const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
@@ -160,10 +160,6 @@ export default function Garden({ greeting }: { greeting?: string }) {
     // introduce a second animation and delay the content on slower devices.
     if (index === 1) scrollToMemory(0);
     else goToProgress(index === 0 ? 0 : 1);
-  };
-  const nextStop = () => {
-    if (chapter === 1 && memoryIndex < memories.length - 1) scrollToMemory(memoryIndex + 1);
-    else scrollToChapter(chapter === 2 ? 0 : chapter + 1);
   };
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
   return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-sky={skyStyle === 'mist' ? undefined : skyStyle} aria-busy={state === 'loading'}>
@@ -280,11 +276,10 @@ export default function Garden({ greeting }: { greeting?: string }) {
           <span>Release a butterfly</span>
         </button>
         </div>}
-        <div className={`garden-scroll-hint ${explored ? 'is-done' : ''}`} aria-hidden="true">
-          <span className="garden-scroll-hint-mouse">Scroll</span><span className="garden-scroll-hint-touch">Swipe up</span><i />
-        </div>
-        <button className="garden-scroll-cue" onClick={nextStop}>
-          {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
+        <button className={`garden-scroll-cue ${explored ? 'is-done' : ''}`} onClick={() => scrollToChapter(1)}>
+          Wander with us
+          <span className="garden-scroll-cue-how" aria-hidden="true"><span className="garden-scroll-cue-mouse">Scroll</span><span className="garden-scroll-cue-touch">Swipe up</span></span>
+          <i aria-hidden="true" />
         </button>
       </div>
     </div>

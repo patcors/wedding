@@ -1,0 +1,33 @@
+/* The scroll cue: once the scene is revealed, "Wander with us" at the foot of
+   the screen says how to move on, over a line with a mark running down it.
+   Touch screens say "Swipe up", with the line above, running upward like the
+   finger. A pale glow keeps it legible over the bright water. Clicking it opens
+   the photographs. It goes for good once the guest scrolls a little. */
+.garden-prototype .garden-scroll-cue { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 6px 18px;
+  font: italic 25px/1 'Cormorant Garamond', Georgia, serif; white-space: nowrap; transition: opacity .5s ease, visibility .5s; }
+.garden-scroll-cue::before { content: ''; position: absolute; z-index: -1; inset: -28px -48px -16px; pointer-events: none; background: radial-gradient(closest-side, #eeeee5eb 30%, #eeeee5b3 58%, #eeeee500); }
+/* The trailing letter-spacing would push the word off centre. */
+.garden-scroll-cue-how { font: 500 9px 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: .3em; margin-right: -.3em; }
+.garden-scroll-cue-touch { display: none; }
+.garden-scroll-cue i { position: relative; width: 1px; height: 40px; margin-top: 3px; overflow: hidden; }
+.garden-scroll-cue i::before, .garden-scroll-cue i::after { content: ''; position: absolute; left: 0; width: 1px; background: currentColor; }
+.garden-scroll-cue i::before { top: 0; bottom: 0; opacity: .25; }
+.garden-scroll-cue i::after { top: 0; height: 40%; animation: garden-scroll-cue 2.4s cubic-bezier(.65, 0, .35, 1) infinite; }
+@keyframes garden-scroll-cue { from { transform: translateY(-100%); } to { transform: translateY(250%); } }
+.garden-scroll-cue.is-done { opacity: 0; visibility: hidden; }
+@media (hover: none) {
+  .garden-scroll-cue i { order: -1; margin: 0 0 3px; }
+  .garden-scroll-cue-mouse { display: none; }
+  .garden-scroll-cue-touch { display: inline; }
+  .garden-scroll-cue i::after { animation-direction: reverse; }
+}
+@media (max-width: 700px) {
+  .garden-prototype .garden-scroll-cue { font-size: 23px; }
+  .garden-scroll-cue-how { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .garden-scroll-cue i::after { display: none; }
+  .garden-scroll-cue i::before { opacity: .5; }
+  /* Opacity alone is not motion: keep the fade. */
+  .garden-prototype .garden-scroll-cue { transition: opacity .5s ease, visibility .5s !important; }
+}
