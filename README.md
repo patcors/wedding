@@ -49,7 +49,7 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    // logged but never reaches RSVPs.
    const RSVP_SHEET = 'RSVPs';
    const LOG_SHEET = 'Log';
-   const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus', 'contact', 'song', 'message'];
+   const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus_to', 'bus_from', 'contact', 'song', 'message'];
    const LOG_HEADERS = ['submitted_at', 'code', 'party', 'contact', 'song', 'message', 'guests'];
 
    function doPost(e) {
@@ -71,7 +71,7 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
        deleteRowsWithCode(rsvps, code);
        appendText(rsvps, guests.map((g) => [
          p.submitted_at || '', code, p.party || '',
-         g.name || '', g.attending || '', g.dietary || '', g.bus || '',
+         g.name || '', g.attending || '', g.dietary || '', g.busTo || '', g.busFrom || '',
          p.contact || '', p.song || '', p.message || '',
        ]));
 
@@ -87,10 +87,12 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
        .setMimeType(ContentService.MimeType.JSON);
    }
 
+   // Rewrites the header row every time, so it follows the columns above.
    function sheetWithHeaders(name, headers) {
      const book = SpreadsheetApp.getActiveSpreadsheet();
      const sheet = book.getSheetByName(name) || book.insertSheet(name);
      if (sheet.getLastRow() === 0) appendText(sheet, [headers]);
+     else sheet.getRange(1, 1, 1, headers.length).setNumberFormat('@').setValues([headers]);
      return sheet;
    }
 
@@ -128,10 +130,18 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
 The form only appears for a Party remembered from their Personal link, and
 posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`,
 `song`, `message`, and `guests` as a JSON string of
-`[{ name, attending, dietary, bus }]`) with `mode: "no-cors"`. The response is
+`[{ name, attending, dietary, busTo, busFrom }]`) with `mode: "no-cors"`. The response is
 opaque, so the page treats fetch resolving as success. With no endpoint set, a
 dev server logs the payload to the console and shows the thank-you. A
 production build shows the "email or text us" failure message.
+
+`busTo` (where a Guest gets on to come to the venue) and `busFrom` (where they
+get off on the way home) are `''` when the Guest isn't coming or didn't
+answer, `none`, or a stop from `BUS_STOPS` in `src/components/details/rsvp.ts`.
+The script keeps the RSVPs header row in step with `RSVP_HEADERS`, but rows
+already in the sheet keep the columns they were written with. After changing
+columns (as when `bus` became `bus_to` and `bus_from`), delete the old test
+rows from the RSVPs tab.
 
 Every new deployment of the Apps Script gets a **new URL**. To change the
 script and keep the same URL, use "Manage deployments → edit → Version: New

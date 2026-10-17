@@ -4,9 +4,11 @@
 // localStorage (pa_party). Every RSVP belongs to a Party, so without one the
 // visitor is pointed back to their Personal link (or to us) instead of a form.
 // The guest list itself is never shipped here.
+import { BUS_STOPS } from './rsvp';
+
 interface Props {
   replyBy: string;   // e.g. "16 February 2027"
-  busHint: string;   // shown under "Taking the bus?"
+  busHint: string;   // shown under the bus questions
   email: string;     // fallback contact: no Personal link, or sending fails
   phone: string;
 }
@@ -76,13 +78,20 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
           <input class="rsvp-input" type="text" autocomplete="off" data-guest-dietary />
         </label>
         <fieldset class="rsvp-bus">
-          <legend class="rsvp-label">Taking the bus?</legend>
-          <div class="rsvp-pills rsvp-pills-small">
-            <label class="rsvp-pill"><input type="radio" value="yes" data-guest-bus /><span>Yes</span></label>
-            <label class="rsvp-pill"><input type="radio" value="no" data-guest-bus /><span>No</span></label>
+          <legend class="rsvp-label">Bus to the venue? <i>where you’ll get on</i></legend>
+          <div class="rsvp-pills rsvp-pills-bus">
+            <label class="rsvp-pill"><input type="radio" value="none" data-guest-bus-to /><span>No thanks</span></label>
+            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-to /><span>{stop}</span></label>)}
           </div>
-          <p class="rsvp-hint">{busHint}</p>
         </fieldset>
+        <fieldset class="rsvp-bus">
+          <legend class="rsvp-label">Bus home? <i>where you’ll get off</i></legend>
+          <div class="rsvp-pills rsvp-pills-bus">
+            <label class="rsvp-pill"><input type="radio" value="none" data-guest-bus-from /><span>No thanks</span></label>
+            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-from /><span>{stop}</span></label>)}
+          </div>
+        </fieldset>
+        <p class="rsvp-hint">{busHint}</p>
       </div>
     </div>
   </template>
@@ -118,8 +127,11 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
   let rowId = 0;
 
   const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement;
-  const checked = (row: HTMLElement, hook: string) =>
-    (row.querySelector<HTMLInputElement>(`[${hook}]:checked`)?.value ?? '') as Answer | '';
+  const checked = (row: HTMLElement, hook: string) => row.querySelector<HTMLInputElement>(`[${hook}]:checked`)?.value ?? '';
+  const check = (row: HTMLElement, hook: string, value: string) => {
+    const input = row.querySelector<HTMLInputElement>(`[${hook}][value="${CSS.escape(value)}"]`);
+    if (input) input.checked = true;  // a stop that's since been removed stays unanswered
+  };
   const rows = () => [...guestList.querySelectorAll<HTMLElement>('[data-guest]')];
 
   function setHeading(text: string, emphasis: string) {
@@ -141,7 +153,8 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     const extras = $('[data-guest-extras]', row);
 
     row.querySelectorAll<HTMLInputElement>('[data-guest-attending]').forEach(r => { r.name = `${id}-attending`; });
-    row.querySelectorAll<HTMLInputElement>('[data-guest-bus]').forEach(r => { r.name = `${id}-bus`; });
+    row.querySelectorAll<HTMLInputElement>('[data-guest-bus-to]').forEach(r => { r.name = `${id}-bus-to`; });
+    row.querySelectorAll<HTMLInputElement>('[data-guest-bus-from]').forEach(r => { r.name = `${id}-bus-from`; });
     attendError.id = `${id}-attend-error`;
     $('[data-guest-attend]', row).setAttribute('aria-describedby', attendError.id);
 
@@ -149,9 +162,10 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     $('[data-guest-legend]', row).textContent = name;
 
     if (answer) {
-      row.querySelector<HTMLInputElement>(`[data-guest-attending][value="${answer.attending}"]`)!.checked = true;
-      $<HTMLInputElement>('[data-guest-dietary]', row).value = answer.dietary ?? '';
-      if (answer.bus) row.querySelector<HTMLInputElement>(`[data-guest-bus][value="${answer.bus}"]`)!.checked = true;
+      check(row, 'data-guest-attending', answer.attending);
+      $<HTMLInputElement>('[data-guest-dietary]', row).value = answer.dietary;
+      if (answer.busTo) check(row, 'data-guest-bus-to', answer.busTo);
+      if (answer.busFrom) check(row, 'data-guest-bus-from', answer.busFrom);
     }
     extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
     row.addEventListener('change', event => {
@@ -174,7 +188,8 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
         name: row.dataset.name!,
         attending,
         dietary: coming ? $<HTMLInputElement>('[data-guest-dietary]', row).value.trim() : '',
-        bus: coming ? checked(row, 'data-guest-bus') : '',
+        busTo: coming ? checked(row, 'data-guest-bus-to') : '',
+        busFrom: coming ? checked(row, 'data-guest-bus-from') : '',
       };
     });
     return {
@@ -337,7 +352,8 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
   .rsvp-pills { display: flex; gap: 10px; }
   .rsvp-pill { position: relative; flex: 1; }
-  .rsvp-pills-small .rsvp-pill { flex: 0 0 96px; }
+  .rsvp-pills-bus { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .rsvp-pills-bus .rsvp-pill span { padding: 14px 6px; }
   .rsvp-pill input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
   .rsvp-pill span { display: block; text-align: center; font: 500 10px 'Montserrat', sans-serif; letter-spacing: .1em; text-transform: uppercase;
     padding: 16px 12px; border: 1px solid #7379677a; color: var(--ink); transition: background-color .2s, color .2s, border-color .2s; }
@@ -347,6 +363,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
   .rsvp-extras { margin-top: 6px; padding-left: 20px; border-left: 1px solid #7a826d66; }
   .rsvp-bus { margin-top: 24px; }
+  .rsvp-bus + .rsvp-hint { margin-top: 12px; }
   .rsvp-bus legend { margin-bottom: 12px; }
 
   .rsvp-field { display: block; margin-top: 24px; }
@@ -382,5 +399,8 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     .rsvp-form, .rsvp-thanks { margin-top: 36px; }
     .rsvp-button { width: 100%; }
     .rsvp-extras { padding-left: 16px; }
+  }
+  @media (max-width: 480px) {
+    .rsvp-pills-bus { grid-template-columns: 1fr 1fr; }
   }
 </style>
