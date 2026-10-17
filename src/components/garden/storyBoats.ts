@@ -28,14 +28,15 @@ const JOIN_FROM = progressAt(DATES.dating), JOIN_TO = progressAt(DATES.engaged);
 export const joining = (p: number) => clamp((p - JOIN_FROM) / (JOIN_TO - JOIN_FROM));
 
 // How far through `joining` each part of the catamaran happens: the boats close
-// in first, the crossbeams go across, then the planks are laid one by one from
-// bow to stern while the hulls grow long and slim. `rigid` is when the beams
-// hold the hulls together, so they stop bobbing on their own.
+// in first and the crossbeams go across while dating's date holds, so its stop
+// shows them going across, then the planks are laid one by one from bow to
+// stern while the hulls grow long and slim. `rigid` is when the beams hold
+// the hulls together, so they stop bobbing on their own.
 export const catamaran = (j: number) => ({
-  close: ease(j / .1),
+  close: ease(j / .07),
   morph: ease((j - .05) / .8),
-  rigid: ease((j - .06) / .14),
-  beams: Array.from({ length: DECK.beams }, (_, i) => clamp((j - .08 - i * .06) / .07)),
+  rigid: ease((j - .035) / .05),
+  beams: Array.from({ length: DECK.beams }, (_, i) => clamp((j - .035 - i * .015) / .03)),
   planks: Array.from({ length: DECK.planks }, (_, i) => clamp((j - .2) / .72 * DECK.planks - i * .95)),
 });
 
@@ -118,7 +119,7 @@ export function companyFlags(p: number, still = false): CompanyFlag[] {
 export const UNIVERSITY_FLAG = {
   hoist: { month: DATES.meet, span: [0, .15] },
   under: { month: monthOf('internship'), span: [0, .1] },
-  strike: { month: monthOf('graduation'), span: [0, .15] },
+  strike: { month: monthOf('graduation'), span: [0, .08] },
 } as const;
 // How far up its halyard it is (0 down, 1 up), and how far it has dropped
 // from the masthead to its place under the company's flag (0 to 1).

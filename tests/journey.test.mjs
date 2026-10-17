@@ -75,8 +75,15 @@ test('inside a year, clustered milestones still get time for their dates to be r
   // Amelia's months between jobs, and her months at HeirWealth before
   // Patrick, each get about a share, though the months round them rush.
   assert.ok(share(at('interim')) > 1 && share(at('amelia-heirwealth')) > 1);
-  // The meeting, and the dating, get more than an ordinary milestone's hold.
-  assert.ok(share(at('meet')) > 1.2 && share(at('dating')) > 1.2);
+  // The meeting gets more than an ordinary milestone's hold, and so does the
+  // dating, whose date holds while the crossbeams go across.
+  assert.ok(share(at('meet')) > 1.2 && share(at('dating')) > 1.1);
+  assert.equal(dateLabel(progressAt(DATES.dating) + .4 * ROOM), 'August 2024');
+  // 2024's three dates each show for a while, though the year is no longer
+  // than any other, and July, when Patrick's bird flies home, for a moment.
+  const shows = month => (progressAt(monthIndex(month) + 1) - progressAt(month)) / ROOM;
+  for (const month of ['2024-05', '2024-06', '2024-08']) assert.ok(shows(month) > .42, `${month} shows for ${shows(month)}`);
+  assert.ok(shows('2024-07') > .15);
   // The last stretch, round the bend, gets the most.
   assert.ok(MILESTONES.slice(0, -1).every((_, i) => (VOYAGE_END - progressAt(MILESTONES.at(-1).month)) / ROOM > share(i)));
 });

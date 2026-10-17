@@ -12,8 +12,9 @@ export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number };
 // Where each snow trip's flurry falls. July 2019's is on the right bank, a
 // little ahead of the boats as its date shows, in view on both compositions
 // and clear of the boats in portrait. August 2025's is on the left, across
-// the river from the second pair of birdhouses.
-export const SNOW_SPOTS = { 2019: { ahead: 9, side: 1 }, 2025: { ahead: 9, side: -1 } } as const satisfies Record<number, SnowSpot>;
+// the river from the second pair of birdhouses, and a little nearer, so in a
+// phone's narrow river it stands well short of 2026's arch.
+export const SNOW_SPOTS = { 2019: { ahead: 9, side: 1 }, 2025: { ahead: 6.5, side: -1 } } as const satisfies Record<number, SnowSpot>;
 
 // Its course in milestone shares since the date (see eggTime): the flurry
 // thickens from 0 to `full`, hides the bank while what it leaves behind

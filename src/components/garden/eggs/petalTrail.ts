@@ -17,7 +17,7 @@ import { BOAT_SCALE, CATAMARAN, HULL_HALF_BEAM, RIG_CHANGE, boatPose, rigging } 
 // motion. Sizes are a petal's length in world units, larger than life so
 // they read on a phone.
 export const PETALS = {
-  wake: { count: 84, from: .02, to: .8 },
+  wake: { count: 84, from: .02, to: .76 },
   sail: { count: 14 },
   life: .45, sink: .35,
   settled: 14,
