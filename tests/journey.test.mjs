@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  ARRIVAL_END, CHAPTERS, DATES, DOCKED, MILESTONES, ROOM, ROUTE, VOYAGE_END, chapterAt, dateLabel, monthIndex,
+  ARRIVAL_END, CHAPTERS, DATES, DOCKED, EVEN_YEARS, MILESTONES, ROOM, ROUTE, VOYAGE_END, YEAR, chapterAt, dateLabel, monthIndex,
   progressAt, routeAt, routeAtMonth, scrolledSince, since, stillProgress, storyMonth,
 } from '../src/components/garden/journey.ts';
 import { VOYAGE, bankEdge, channelOffset, groundHeight, islandHalfWidth, riverCenter, voyageLandmarks, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
@@ -53,20 +53,32 @@ test('progressAt inverts storyMonth', () => {
   assert.equal(progressAt('2030-01'), VOYAGE_END);
 });
 
-test('scroll is shared out by story, not by calendar', () => {
-  const share = i => progressAt(MILESTONES[i + 1].month) - progressAt(MILESTONES[i].month);
+test('every year from 2018 to 2026 gets the same scroll, however its milestones fall', () => {
+  const january = year => progressAt(`${year}-01`);
+  for (let year = EVEN_YEARS[0]; year < EVEN_YEARS[1]; year++) assert.ok(Math.abs(january(year + 1) - january(year) - YEAR * ROOM) < 1e-9, `${year}`);
+  // About a screen and a half a year, and the whole voyage about as long as before.
+  assert.ok(YEAR > 1.3 && YEAR < 1.7);
+  assert.ok(ROOM > .039 && ROOM < .043);
+  // The run-in, from the opening through the meeting to 2018, and the run from
+  // 2026 round the bend, keep lengths of their own.
+  assert.ok(january(2018) - ARRIVAL_END > 2 * YEAR * ROOM);
+  assert.ok(VOYAGE_END - january(2026) > 3 * YEAR * ROOM);
+});
+
+test('inside a year, clustered milestones still get time for their dates to be read', () => {
+  const share = i => (progressAt(MILESTONES[i + 1].month) - progressAt(MILESTONES[i].month)) / ROOM;
   const at = id => MILESTONES.findIndex(m => m.id === id);
-  // A one-month gap and a year-long gap get comparable room.
-  assert.ok(share(at('apartments')) / share(at('coast')) > .6);
-  // The meeting and the joining get more room than an ordinary milestone.
-  assert.ok(share(at('meet')) > share(at('coast')) * 1.2);
-  assert.ok(share(at('dating')) > share(at('coast')) * 1.2);
+  // Each date holds for at least a third of a share, so even 2024's May, June
+  // and August each show for a while.
+  for (let i = 0; i < MILESTONES.length - 1; i++) assert.ok(share(i) > .35, MILESTONES[i].id);
+  for (const m of MILESTONES) assert.equal(dateLabel(progressAt(m.month) + .34 * ROOM), dateLabel(progressAt(m.month)), m.id);
   // Amelia's months between jobs, and her months at HeirWealth before
-  // Patrick, each get a whole share, though Sydney rushes through the months.
-  assert.ok(Math.abs(share(at('interim')) - ROOM) < 1e-9 && Math.abs(share(at('amelia-heirwealth')) - ROOM) < 1e-9);
+  // Patrick, each get about a share, though the months round them rush.
+  assert.ok(share(at('interim')) > 1 && share(at('amelia-heirwealth')) > 1);
+  // The meeting, and the dating, get more than an ordinary milestone's hold.
+  assert.ok(share(at('meet')) > 1.2 && share(at('dating')) > 1.2);
   // The last stretch, round the bend, gets the most.
-  assert.ok(MILESTONES.slice(0, -1).every((_, i) => (VOYAGE_END - progressAt(MILESTONES.at(-1).month)) > share(i)));
-  assert.ok(Math.abs(share(at('coast')) - ROOM) < 1e-9);
+  assert.ok(MILESTONES.slice(0, -1).every((_, i) => (VOYAGE_END - progressAt(MILESTONES.at(-1).month)) / ROOM > share(i)));
 });
 
 test('the date label shows during the voyage, holding on each milestone', () => {
@@ -113,7 +125,7 @@ test('reduced motion stills sit on the opening, each milestone reached, or the d
   for (const m of MILESTONES) {
     const at = progressAt(m.month);
     assert.equal(stillProgress(at), at);
-    assert.equal(stillProgress(at + ROOM * .5), at);
+    assert.equal(stillProgress(at + ROOM * .3), at);
   }
 });
 

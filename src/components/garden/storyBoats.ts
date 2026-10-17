@@ -61,7 +61,7 @@ export function rigging(p: number, still = false): Rigging {
 // months off, tutoring and selling haircare online (the interim flag), then
 // starts at HeirWealth in January 2023; Patrick follows as March 2023 shows,
 // so for a while hers is HeirWealth's and his still FinoComp's. Each change
-// is a milestone (journey.ts), so it has a share of scroll to be seen;
+// is a milestone (journey.ts) with room for its flag to be seen;
 // AMELIA_LEFT_FINOCOMP there sets when she left.
 export type Company = 'finocomp' | 'interim' | 'heirwealth';
 const monthOf = (id: string) => MILESTONES.find(m => m.id === id)!.month;
@@ -132,10 +132,11 @@ export function boatGap(p: number, width: number) {
   // sight, and back alongside as March 2023 does, so the reduced-motion stills
   // on those dates show both. They stay apart through Amelia's changes of
   // flag, so each boat's reads on its own, though not so far out that the
-  // year markers on the banks pass behind the flags at the milestones' stops.
-  // Story months rush between dates, so this goes by scroll.
+  // year markers on the banks pass behind the flags at the milestones' stops,
+  // and never less than twice as far apart as alongside, where a phone's
+  // river runs narrow. Story months rush between dates, so this goes by scroll.
   const away = Math.max(0, ease((scrolledSince(DATES.sydney, p) + .8) / .85) - ease((scrolledSince(DATES.back, p) + .7) / .7));
-  gap += (bankEdge(z, width) * .4 / BOAT_SCALE - gap) * away;
+  gap += (Math.max(ALONGSIDE * 2, bankEdge(z, width) * .4 / BOAT_SCALE) - gap) * away;
   return gap + (CATAMARAN - gap) * catamaran(joining(p)).close;
 }
 

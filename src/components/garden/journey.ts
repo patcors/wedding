@@ -3,9 +3,11 @@
 // eggs and the date label all read from here. Pure, so it can be tested.
 
 export type EggId = 'balloon' | 'university' | 'snow-2019';
-// `room` is the milestone's share of the voyage's scroll, up to the next one
-// (1 by default). Shares follow the story, not the calendar, so a quiet year
-// doesn't become a long empty stretch.
+// `room` is the scroll a milestone takes at its date, in shares (ROOM), before
+// the months roll on at its year's pace: its date's hold, and time for what
+// happens there to be seen (HOLD, just the hold, by default). Outside the
+// evenly spaced years the months have no pace of their own, so there a
+// milestone's room runs up to the next date (see YEAR).
 export type Milestone = { id: string; month: string; description: string; egg?: EggId; room?: number };
 
 // When Amelia left FinoComp. Her flag changes as it shows (see FLAG_CHANGES
@@ -15,24 +17,27 @@ export const AMELIA_LEFT_FINOCOMP = '2022-08';
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
   { id: 'meet', month: '2017-07', description: 'Patrick and Amelia meet at university, both starting maths degrees.', egg: 'university', room: 1.4 },
-  { id: 'coast', month: '2017-11', description: 'Their first trip away with friends, down the coast.' },
+  { id: 'coast', month: '2017-11', description: 'Their first trip away with friends, down the coast.', room: .5 },
   { id: 'internship', month: '2018-11', description: 'They start their internship at FinoComp.' },
   { id: 'snow-2019', month: '2019-07', description: 'A snow trip, where Amelia breaks her wrist snowboarding.', egg: 'snow-2019' },
-  { id: 'graduation', month: '2020-08', description: 'They graduate from university.' },
+  // A little longer, so the boats only start to drift apart for Sydney once
+  // the date has held.
+  { id: 'graduation', month: '2020-08', description: 'They graduate from university.', room: .5 },
   // The boats drift apart, still in sight, and stay apart through Amelia's
-  // two changes of work, each with a share of its own so her interim flag,
-  // and then her HeirWealth flag beside Patrick's FinoComp one, can be seen.
+  // two changes of work, each with room enough that her interim flag, and
+  // then her HeirWealth flag beside Patrick's FinoComp one, fly for most of a
+  // share before the next change.
   { id: 'sydney', month: '2021-02', description: 'Amelia moves to Sydney for two years.' },
-  { id: 'interim', month: AMELIA_LEFT_FINOCOMP, description: 'Amelia leaves FinoComp for a few months of tutoring and selling haircare online.' },
-  { id: 'amelia-heirwealth', month: '2023-01', description: 'Amelia starts at HeirWealth.' },
+  { id: 'interim', month: AMELIA_LEFT_FINOCOMP, description: 'Amelia leaves FinoComp for a few months of tutoring and selling haircare online.', room: .7 },
+  { id: 'amelia-heirwealth', month: '2023-01', description: 'Amelia starts at HeirWealth.', room: 1 },
   { id: 'heirwealth', month: '2023-03', description: 'Amelia is back, and Patrick joins her at HeirWealth, so they start working together.' },
-  { id: 'apartments', month: '2024-05', description: 'They both buy apartments.', room: .8 },
-  { id: 'living-together', month: '2024-06', description: 'They start living together.', room: .8 },
-  // The boats join and become one catamaran.
-  { id: 'dating', month: '2024-08', description: 'They start dating.', room: 1.6 },
+  { id: 'apartments', month: '2024-05', description: 'They both buy apartments.' },
+  { id: 'living-together', month: '2024-06', description: 'They start living together.' },
+  // The boats join and become one catamaran, the butterflies circling.
+  { id: 'dating', month: '2024-08', description: 'They start dating.', room: .7 },
   { id: 'snow-2025', month: '2025-08', description: 'Another snow trip.' },
-  { id: 'salsa', month: '2026-01', description: 'They start salsa classes.' },
-  { id: 'engaged', month: '2026-04', description: 'They get engaged.' },
+  { id: 'salsa', month: '2026-01', description: 'They start salsa classes.', room: 1 },
+  { id: 'engaged', month: '2026-04', description: 'They get engaged.', room: 1 },
   // The last stretch rounds the bend to the wedding: room enough that the
   // trip's date shows before the bend starts.
   { id: 'turkey-greece', month: '2026-07', description: 'A trip to Turkey and Greece.', egg: 'balloon', room: 3.4 },
@@ -57,21 +62,46 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 
 // The voyage opens in the separate channels, half a year before they meet.
 const VOYAGE_START = '2017-01', START_ROOM = 1.4;
-// Each milestone's date holds for this much of its share, so the label can be
-// read, before rolling on month by month. The wedding holds as the bend ends.
+// Each year from 2018 to 2025 gets the same scroll, YEAR shares, so the
+// Januaries from 2018 to 2026, and with them the year markers, are evenly
+// spaced however the milestones fall. Inside a year, each milestone takes its room at its date and the
+// rest of the year is spread evenly over its twelve months, so a busy year's
+// months rush and a quiet year's roll by steadily. The run-in (the opening,
+// the channels, the meeting) and the run from 2026 to the wedding (the
+// engagement, the trip, the bend) keep their own lengths: there the months
+// take no scroll of their own and each milestone's room runs up to the next.
+export const EVEN_YEARS = [2018, 2026] as const;
+export const YEAR = 1.5;
+// Each milestone's date holds for HOLD of a share, so the label can be read,
+// or for that much of its room where its room is longer (the meeting, the
+// trip), before rolling on month by month. The wedding holds as the bend ends.
 const HOLD = .35, WEDDING_HOLD = .5;
-const TOTAL_ROOM = START_ROOM + MILESTONES.reduce((sum, m) => sum + (m.room ?? 1), 0) + WEDDING_HOLD;
-// Scroll progress in one ordinary milestone's share.
+const roomOf = (milestone: Milestone) => milestone.room ?? HOLD;
+const holdOf = (milestone: Milestone) => HOLD * Math.max(1, roomOf(milestone));
+const yearOf = (m: number) => 2017 + Math.floor(m / 12);
+const evenYear = (year: number) => year >= EVEN_YEARS[0] && year < EVEN_YEARS[1];
+// Scroll for each month of a year, in shares, besides its milestones' rooms.
+const pace = (year: number) => evenYear(year)
+  ? (YEAR - MILESTONES.filter(m => yearOf(monthIndex(m.month)) === year).reduce((sum, m) => sum + roomOf(m), 0)) / 12
+  : 0;
+const TOTAL_ROOM = START_ROOM + (EVEN_YEARS[1] - EVEN_YEARS[0]) * YEAR + WEDDING_HOLD
+  + MILESTONES.filter(m => !evenYear(yearOf(monthIndex(m.month)))).reduce((sum, m) => sum + roomOf(m), 0);
+// Scroll progress in one share: a milestone's room of HOLD is a third of it.
 export const ROOM = (VOYAGE_END - ARRIVAL_END) / TOTAL_ROOM;
 
+// Story time at the start of the voyage, on each January of the even years,
+// and at each milestone's date and the end of its hold; straight lines between.
 type Anchor = { p: number; m: number };
 const ANCHORS: Anchor[] = (() => {
   const anchors = [{ p: ARRIVAL_END, m: monthIndex(VOYAGE_START) }];
   let p = ARRIVAL_END + START_ROOM * ROOM;
-  for (const milestone of MILESTONES) {
-    const m = monthIndex(milestone.month), room = (milestone.room ?? 1) * ROOM;
-    anchors.push({ p, m }, { p: p + HOLD * room, m });
-    p += room;
+  for (let m = monthIndex(MILESTONES[0].month); m < monthIndex(DATES.wedding); m++) {
+    const milestone = MILESTONES.find(({ month }) => monthIndex(month) === m);
+    if (milestone) {
+      anchors.push({ p, m }, { p: p + holdOf(milestone) * ROOM, m });
+      p += roomOf(milestone) * ROOM;
+    } else if (m % 12 === 0 && evenYear(yearOf(m))) anchors.push({ p, m });
+    p += pace(yearOf(m)) * ROOM;
   }
   anchors.push({ p, m: monthIndex(DATES.wedding) }, { p: VOYAGE_END, m: monthIndex(DATES.wedding) });
   return anchors;
