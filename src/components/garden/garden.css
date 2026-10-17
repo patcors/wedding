@@ -51,8 +51,8 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) :is(.garden-photo-slot, .garden-review) { color: var(--garden-ink); text-shadow: none; }
 :is(html[data-dev-sky='blue'] .garden-prototype, .garden-prototype[data-sky='blue'][data-state='ready']) .garden-button { text-shadow: none; }
 .garden-header { position: absolute; inset: 0 0 auto; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
-.garden-monogram { font-family: 'Cormorant Garamond', Georgia, serif !important; font-size: 28px !important; letter-spacing: -.1em; padding: 0; }
-.garden-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
+.garden-monogram { padding: 0; }
+.garden-monogram img { height: 34px; width: auto; display: block; }
 .garden-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
 .garden-invitation-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid #73796770; padding-bottom: 8px; }
@@ -105,11 +105,8 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-button span { margin-left: 25px; }
 .garden-bottom { position: absolute; bottom: calc(44px - var(--garden-edge-clear)); left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; }
 .garden-place { font-size: 8px; letter-spacing: .18em; }
-.garden-creature-actions { display: flex; align-items: center; gap: 24px; }
-.garden-creature-actions button:disabled { opacity: .45; cursor: default; }
-.garden-boat-launch { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0; }
-.garden-boat-launch span { font: italic 16px 'Cormorant Garamond', Georgia, serif; }
-.garden-scroll-cue { font: italic 20px 'Cormorant Garamond', Georgia, serif !important; }
+/* On the right even when it is the only control. */
+.garden-scroll-cue { margin-left: auto; font: italic 20px 'Cormorant Garamond', Georgia, serif !important; }
 .garden-scroll-cue span { margin-left: 13px; font-style: normal; }
 .garden-copy { transition: opacity .5s; }
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
@@ -127,10 +124,7 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-subtitle { font-size: 22px; }
   .garden-date { font-size: 8px; gap: 12px; margin-top: 26px; }
   .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
-  .garden-creature-actions { flex-direction: column; align-items: flex-start; gap: 0; }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
-  .garden-boat-launch { gap: 6px; }
-  .garden-boat-launch span { font-size: 14px; }
   .garden-scroll-cue { font-size: 18px !important; }
   .garden-memory { top: 12%; left: 0; width: 100%; margin: 0; padding: 0 28px; flex-direction: column; gap: 10px; text-align: center; }
   .garden-album { width: 100%; max-width: 350px; }

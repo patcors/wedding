@@ -29,3 +29,16 @@
 @media (max-width: 700px) and (max-height: 700px) {
   .garden-review { bottom: 12px; }
 }
+/* Dev only: test buttons for a boat and a butterfly, beside the scroll cue. */
+.garden-creature-actions { display: flex; align-items: center; gap: 24px; }
+.garden-creature-actions button:disabled { opacity: .45; cursor: default; }
+.garden-boat-launch { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0; }
+.garden-boat-launch span { font: italic 16px 'Cormorant Garamond', Georgia, serif; }
+@media (max-width: 700px) {
+  .garden-creature-actions { flex-direction: column; align-items: flex-start; gap: 0; }
+  .garden-boat-launch { gap: 6px; }
+  .garden-boat-launch span { font-size: 14px; }
+}
+/* Dev only: lift the scroll hint above the Review panel. */
+.garden-prototype:has(.garden-review) .garden-scroll-hint { bottom: 44px; }
+@media (max-width: 700px) { .garden-prototype:has(.garden-review) .garden-scroll-hint { bottom: 150px; } }

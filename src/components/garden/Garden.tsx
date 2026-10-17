@@ -11,6 +11,7 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import type { SkyStyle } from './GardenScene';
 import './garden.css';
+import './gardenScrollHint.css';
 import './gardenLoader.css';
 
 const GardenCanvas = lazy(() => import('./GardenCanvas'));
@@ -152,6 +153,9 @@ export default function Garden({ greeting }: { greeting?: string }) {
       element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
     };
   }, []);
+  // The scroll hint goes for good once the guest has scrolled a little.
+  const [explored, setExplored] = useState(false);
+  useEffect(() => { if (progress > .01) setExplored(true); }, [progress]);
   const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
   const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready });
   const memoryIndex = Math.max(0, Math.min(memories.length - 1,
@@ -194,7 +198,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
     {/* The chrome sits in pinned layers inside the scroller, so a drag that starts on it still scrolls. */}
     <div className="garden-chrome-layer">
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
-        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => scrollToChapter(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}>P<span>&</span>A</button>
+        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => scrollToChapter(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
         <span className="garden-header-date">16 APRIL 2027</span>
         <div className="garden-header-links">
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
@@ -274,7 +278,8 @@ export default function Garden({ greeting }: { greeting?: string }) {
 
     <div className="garden-chrome-layer">
       <div className="garden-bottom garden-copy garden-chrome" inert={state !== 'ready'}>
-        <div className="garden-creature-actions">
+        {/* Dev only: test buttons. Guests tap the water for a boat. */}
+        {REVIEW && <div className="garden-creature-actions">
         <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
           <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">
             <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
@@ -288,6 +293,9 @@ export default function Garden({ greeting }: { greeting?: string }) {
           </svg>
           <span>Release a butterfly</span>
         </button>
+        </div>}
+        <div className={`garden-scroll-hint ${explored ? 'is-done' : ''}`} aria-hidden="true">
+          <span className="garden-scroll-hint-mouse">Scroll</span><span className="garden-scroll-hint-touch">Swipe up</span><i />
         </div>
         <button className="garden-scroll-cue" onClick={nextStop}>
           {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>

@@ -1,0 +1,127 @@
+---
+// Dev-only: one Party's invitation image, sent by iMessage beside their
+// Personal link. scripts/make-invites.mjs screenshots this page into
+// invites/out/<code>.png. getStaticPaths returns nothing in a production
+// build, so this page never reaches patrickandamelia.com.
+//
+// ?photo=none drops the photograph; ?photo=<file in public/photos> swaps it.
+// (Read in the browser: a static page never sees its query string.)
+import { parties, type Party } from '../../../data/parties';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? parties.map(party => ({ params: { code: party.code }, props: { party } })) : [];
+}
+
+// The words, the photograph and the image size. Colours and type sizes are
+// the CSS variables at the top of the <style>.
+const COPY = {
+  invited: 'you’re invited',
+  lead: 'to the wedding of',
+  couple: 'Patrick & Amelia',
+  date: 'Friday 16 April 2027',
+  venue: 'Jasper’s Berry · Berry NSW',
+};
+// show: false leaves it out unless ?photo=<file> asks for one.
+const PHOTO = { show: true, file: 'gerringong-film-12.jpg', alt: 'Patrick and Amelia holding hands in a paddock at sunset', focus: '50% 58%' };
+const WIDTH = 1080;
+const HEIGHT = 1350;
+
+const { party } = Astro.props as { party: Party };
+const BASE = import.meta.env.BASE_URL;
+---
+<html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px`}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content={`width=${WIDTH}`} />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>{party.greeting} · invite · dev</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=block" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="invite" data-photo={PHOTO.show ? PHOTO.file : 'none'} data-photos={`${BASE}photos/`}>
+      <img class="logo" src={`${BASE}logo.png`} alt="P A" />
+      <h1 class="greeting"><span data-fit>{party.greeting},</span> <em>{COPY.invited}</em></h1>
+      <figure class="photo"><img alt={PHOTO.alt} style={`object-position: ${PHOTO.focus}`} /></figure>
+      <p class="lead">{COPY.lead}</p>
+      <p class="couple">{COPY.couple}</p>
+      <p class="date">{COPY.date}</p>
+      <p class="venue">{COPY.venue}</p>
+    </main>
+    <script is:inline>
+      // make-invites.mjs waits on this before its screenshot: the photo is
+      // chosen, fonts and images are in, and a long greeting fits on one line.
+      window.inviteReady = (async () => {
+        const invite = document.querySelector('.invite');
+        const photo = new URLSearchParams(location.search).get('photo') || invite.dataset.photo;
+        if (photo === 'none') invite.querySelector('.photo').remove();
+        else {
+          invite.classList.add('has-photo');
+          invite.querySelector('.photo img').src = invite.dataset.photos + photo;
+        }
+        const text = document.body.textContent;
+        const faces = ['300 1em "Cormorant Garamond"', 'italic 300 1em "Cormorant Garamond"', 'italic 400 1em "Cormorant Garamond"', '500 1em Montserrat'];
+        const loaded = await Promise.all(faces.map(face => document.fonts.load(face, text)));
+        const missing = faces.filter((_, i) => !loaded[i].length);
+        if (missing.length) throw new Error(`Fonts did not load: ${missing.join(', ')}`);
+        await Promise.all([...document.images].map(img => img.decode().catch(() => { throw new Error(`Image did not load: ${img.src}`); })));
+        for (const line of document.querySelectorAll('[data-fit]')) {
+          const box = line.parentElement;
+          let size = parseFloat(getComputedStyle(box).fontSize);
+          while (line.offsetWidth > box.clientWidth && size > 48) box.style.fontSize = `${size -= 2}px`;
+          if (line.offsetWidth > box.clientWidth) line.style.whiteSpace = 'normal';
+        }
+      })();
+    </script>
+    <style is:global>
+      :root {
+        --bg: #eeeee5;
+        --paper: #f7f3e8;
+        --ink: #384135;
+        --muted: #66715e;
+        --leaf: #7a826d;
+        --deep: #414d3d;
+        --display: 'Cormorant Garamond', Georgia, serif;
+        --label: 'Montserrat', sans-serif;
+        --logo-width: 150px;      /* logo.png is 284px wide: keep ≤ 150 for a crisp 2x render */
+        --greeting-size: 100px;   /* long greetings shrink from here to fit one line */
+        --couple-size: 136px;
+        --photo-width: 540px;
+        --photo-height: 400px;
+        --photo-tilt: -2.5deg;
+      }
+      html, body { margin: 0; width: var(--invite-width); height: var(--invite-height); overflow: hidden; background: var(--bg); }
+      body { display: grid; grid-template-columns: minmax(0, 1fr); padding: 44px; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+      .invite {
+        position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 64px 72px; background: var(--paper); color: var(--ink); text-align: center;
+        box-shadow: 0 1px 2px #38413514, 0 18px 40px -24px #38413540;
+      }
+      .invite::before { content: ''; position: absolute; inset: 20px; border: 1px solid color-mix(in srgb, var(--leaf) 45%, transparent); pointer-events: none; }
+      p, h1, figure { margin: 0; }
+      .logo { width: var(--logo-width); height: auto; margin-bottom: 60px; }
+      .greeting { font: italic 300 var(--greeting-size)/1.02 var(--display); letter-spacing: -.02em; align-self: stretch; }
+      .greeting span { display: inline-block; white-space: nowrap; }
+      .greeting em { display: block; color: var(--leaf); }
+      .lead { margin-top: 56px; font: 500 22px var(--label); text-transform: uppercase; letter-spacing: .32em; color: var(--muted); }
+      .couple { margin-top: 10px; font: 300 var(--couple-size)/1.05 var(--display); letter-spacing: -.05em; color: var(--deep); }
+      .date { margin-top: 40px; display: flex; align-items: center; gap: 22px; font: 500 24px var(--label); text-transform: uppercase; letter-spacing: .3em; }
+      .date::before, .date::after { content: ''; width: 48px; height: 1px; background: var(--leaf); }
+      .venue { margin-top: 20px; font: italic 400 38px var(--display); color: var(--muted); }
+
+      /* With the photograph everything tightens to make room. */
+      .has-photo { --logo-width: 120px; --greeting-size: 76px; --couple-size: 96px; }
+      .has-photo .logo { margin-bottom: 34px; }
+      .has-photo .lead { margin-top: 0; }
+      .has-photo .couple { margin-top: 4px; }
+      .has-photo .date { margin-top: 22px; }
+      .has-photo .venue { margin-top: 12px; }
+      .photo {
+        margin: 38px 0 44px; padding: 16px 16px 18px; background: #fffdf7; transform: rotate(var(--photo-tilt));
+        box-shadow: 0 1px 2px #38413520, 0 14px 30px -16px #38413560;
+      }
+      .photo img { display: block; width: var(--photo-width); height: var(--photo-height); object-fit: cover; }
+    </style>
+  </body>
+</html>

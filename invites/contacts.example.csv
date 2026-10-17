@@ -1,0 +1,7 @@
+code,phone,name
+# Copy to invites/contacts.csv (gitignored) and add one row per mobile.
+# A Party with two phones gets two rows. Any Australian format works.
+# The name column is only for you; the sender ignores it.
+curry,0400 000 000,Dean
+curry,+61 400 000 001,Kelly
+bridge,0400000002,Paula
