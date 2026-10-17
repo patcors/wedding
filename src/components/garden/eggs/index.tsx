@@ -7,10 +7,13 @@ import type { SlotProps } from '../JourneyProvider';
 import type { EggProps } from './egg';
 import Balloon from './Balloon';
 import YearMarkers from './YearMarkers';
+import DatingButterflies from './DatingButterflies';
 
 const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: Balloon };
-// Scenery that isn't an egg on a milestone: the years marked along the banks.
-const SCENERY: ComponentType<SlotProps>[] = [YearMarkers];
+// Scenery that isn't an egg on a milestone: the years marked along the banks,
+// and the butterflies that circle the boats as they start dating, part of the
+// boats' joining.
+const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies];
 
 export default function Eggs(props: SlotProps) {
   return <>{MILESTONES.map(milestone => {
