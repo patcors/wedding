@@ -3,14 +3,15 @@
 // from boatPhysics. Two wooden sailboats, in separate channels before they
 // meet, side by side after, apart while Amelia is in Sydney, then joined into a
 // catamaran plank by plank from when they start dating, under one tall mast
-// with their monogram on its sail from their engagement, moored at the jetty
-// for the celebration. Amelia's is on the left, Patrick's on the right.
+// flying their monogram from their engagement, moored at the jetty for the
+// celebration. Amelia's is on the left, Patrick's on the right. Each small
+// mast flies the pennant of the company they work for under its initial.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { routeAt } from './journey';
-import { BOAT_SCALE, CATAMARAN, DECK, boatPose, rigging } from './storyBoats';
-import { BIG_RIG, FLAG, HULL, SAIL_EASED, STORY_PALETTES, bigRig, flagGeometry, flagTexture, sailCloth, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
+import { BOAT_SCALE, CATAMARAN, DECK, boatPose, pennants, rigging, type Company } from './storyBoats';
+import { BIG_RIG, FLAG, HULL, LOGO_FLAG, PENNANT, SAIL_EASED, STORY_PALETTES, bigRig, flagGeometry, flagTexture, flutter, logoFlagGeometry, logoFlagTexture, pennantGeometry, pennantTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
 
 const ease = (t: number) => {
@@ -26,6 +27,9 @@ const BEAM_Z = [-.56, .56], PLANK_Z = (i: number) => -.66 + i * .12;
 const DECK_COLOURS = ['#c99f65', '#d3ad76', '#bd9058', '#cfa66c'];
 // How far aft each small mast is lowered, to lie along its hull.
 const LOWERED = 1.48;
+const COMPANIES: Company[] = ['finocomp', 'heirwealth'];
+// Where a pennant's halyard starts, above the boom, and the logo flag's on the big mast.
+const PENNANT_FOOT = .4, LOGO_FOOT = BIG_RIG.boom + .55;
 
 function useStoryBoatModels() {
   const models = useMemo(() => {
@@ -33,16 +37,18 @@ function useStoryBoatModels() {
     return {
       boats: BOATS.map(({ side, palette, letter }) => ({
         hull: storyHull(palette), rig: storyRig(side),
-        flag: flagGeometry(side < 0), cloth: flagTexture(letter, palette),
+        flag: flagGeometry(side < 0), cloth: flagTexture(letter, palette), pennant: pennantGeometry(),
       })),
+      pennants: Object.fromEntries(COMPANIES.map(company => [company, pennantTexture(company, `${import.meta.env.BASE_URL}textures/garden/heirwealth-crown.png`)])) as Record<Company, THREE.CanvasTexture>,
       deck,
-      big: { ...bigRig(), sail: sailCloth(`${import.meta.env.BASE_URL}logo.png`, true) },
+      big: { ...bigRig(), flag: logoFlagGeometry(), banner: logoFlagTexture(`${import.meta.env.BASE_URL}logo.png`) },
       wake: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, .5),
       ripples: wakeTexture(),
     };
   }, []);
   useEffect(() => () => {
-    models.boats.forEach(({ hull, rig, flag, cloth }) => { hull.dispose(); rig.mast.dispose(); rig.sheet.dispose(); flag.dispose(); cloth.dispose(); });
+    models.boats.forEach(({ hull, rig, flag, cloth, pennant }) => { hull.dispose(); rig.mast.dispose(); rig.sheet.dispose(); flag.dispose(); cloth.dispose(); pennant.dispose(); });
+    Object.values(models.pennants).forEach(cloth => cloth.dispose());
     Object.values(models.big).forEach(part => part.dispose());
     models.deck.dispose(); models.wake.dispose(); models.ripples.dispose();
   }, [models]);
@@ -61,9 +67,15 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
   const wakes = useRef<(THREE.Mesh | null)[]>([]);
   const deck = useRef<THREE.InstancedMesh>(null);
   const big = useRef<THREE.Group>(null), bigSail = useRef<THREE.Group>(null), bigCloth = useRef<THREE.Mesh>(null);
-  const bigFlags = useRef<(THREE.Mesh | null)[]>([]);
+  const logoFlag = useRef<THREE.Mesh>(null);
+  // Each boat's pennants, one per company, on the one halyard.
+  const pennantMeshes = useRef<Partial<Record<Company, THREE.Mesh | null>>[]>(BOATS.map(() => ({})));
   const time = useRef(0), last = useRef<number | null>(null), speed = useRef(0);
-  const flagRest = useMemo(() => models.boats.map(({ flag }) => Float32Array.from(flag.attributes.position.array)), [models]);
+  const rest = useMemo(() => ({
+    flags: models.boats.map(({ flag }) => Float32Array.from(flag.attributes.position.array)),
+    pennants: models.boats.map(({ pennant }) => Float32Array.from(pennant.attributes.position.array)),
+    logo: Float32Array.from(models.big.flag.attributes.position.array),
+  }), [models]);
   const plank = useMemo(() => ({ matrix: new THREE.Matrix4(), position: new THREE.Vector3(), rotation: new THREE.Quaternion(), euler: new THREE.Euler(), scale: new THREE.Vector3() }), []);
 
   // r3f sets the geometry after making the mesh, so the morph influences need setting up.
@@ -80,7 +92,7 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
     const step = Math.min(dt, .05);
     if (!paused) time.current += step;
     const p = clock.progress, t = time.current;
-    const pose = boatPose(p, width), { join } = pose, rig = rigging(p, reduced);
+    const pose = boatPose(p, width), { join } = pose, rig = rigging(p, reduced), flying = pennants(p, reduced);
     // How fast they're travelling, for the wakes: none while held or cut between stills.
     const z = routeAt(p);
     const moving = last.current === null || reduced || !step ? 0 : Math.min(1, Math.abs(z - last.current) / step / 3);
@@ -113,21 +125,19 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
       // The flags fly outwards whichever way the boats turn, so both initials
       // face the camera: Amelia's to the left, Patrick's to the right.
       flag.rotation.y = (side < 0 ? Math.PI : 0) - pose.yaw - yaw;
-      const bigFlag = bigFlags.current[i];
-      if (bigFlag) {
-        // Run up the big mast from the boom to its masthead, flying either side.
-        bigFlag.position.y = BIG_RIG.top - HULL.mastTop - (1 - rig.hoist) * (BIG_RIG.top - BIG_RIG.boom - .45);
-        bigFlag.visible = rig.hoist > 0;
-        bigFlag.rotation.y = (side < 0 ? Math.PI : 0) - pose.yaw;
+      flutter(flag.geometry, rest.flags[i], FLAG.length, t, i * 2);
+      // The company's pennant runs up its halyard to just under the initial,
+      // flying inwards, towards the other boat, clear of its own sail (eased
+      // outwards), so the two matching pennants point at each other.
+      const { company, hoist } = flying[i];
+      for (const name of COMPANIES) {
+        const pennant = pennantMeshes.current[i][name];
+        if (!pennant) continue;
+        pennant.visible = company === name;
+        pennant.position.y = -(1 - hoist) * (PENNANT.top - PENNANT_FOOT);
+        pennant.rotation.y = (side < 0 ? 0 : Math.PI) - pose.yaw - yaw;
       }
-      const cloth = flag.geometry.attributes.position as THREE.BufferAttribute, rest = flagRest[i];
-      for (let v = 0; v < cloth.count; v++) {
-        const u = rest[v * 3] / FLAG.length;
-        cloth.setZ(v, Math.sin(u * 5 - t * 5.5 + i * 2) * .028 * u + Math.sin(u * 3 - t * 3.1) * .01 * u);
-        cloth.setY(v, rest[v * 3 + 1] - u * u * .015);
-      }
-      cloth.needsUpdate = true;
-      flag.geometry.computeVertexNormals();
+      if (company) flutter(models.boats[i].pennant, rest.pennants[i], PENNANT.length, t * 1.1, i * 2 + 1, .8);
       wake.position.z = HULL.stern.dinghy + (HULL.stern.catamaran - HULL.stern.dinghy) * join.morph - .05;
       (wake.material as THREE.MeshBasicMaterial).opacity = .55 * speed.current;
       wake.visible = speed.current > .01;
@@ -140,6 +150,14 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
       big.current.scale.set(1, Math.max(rig.raise, 1e-3), 1);
       bigSail.current.rotation.y = -BIG_RIG.eased * (1 - .25 * pose.docking);
       bigCloth.current.scale.z = Math.max(rig.unfurl, .03);
+    }
+    // Then their monogram is run up from above the boom to the masthead,
+    // flying to starboard, clear of the sail, gently as it's larger.
+    if (logoFlag.current) {
+      logoFlag.current.visible = rig.hoist > 0;
+      logoFlag.current.position.y = BIG_RIG.top - .01 - (1 - rig.hoist) * (BIG_RIG.top - LOGO_FOOT);
+      logoFlag.current.rotation.y = -pose.yaw;
+      if (rig.hoist > 0) flutter(models.big.flag, rest.logo, LOGO_FLAG.length, t * .8, 1, 1.3);
     }
 
     // Crossbeams first, then the planks one by one, each lowered into place.
@@ -173,6 +191,9 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
         <mesh ref={el => { flags.current[i] = el; }} geometry={models.boats[i].flag}>
           <meshStandardMaterial map={models.boats[i].cloth} side={THREE.DoubleSide} roughness={1} />
         </mesh>
+        {COMPANIES.map(company => <mesh key={company} ref={el => { pennantMeshes.current[i][company] = el; }} geometry={models.boats[i].pennant} visible={false}>
+          <meshStandardMaterial map={models.pennants[company]} alphaTest={.5} side={THREE.DoubleSide} roughness={1} />
+        </mesh>)}
       </group>
       <mesh ref={el => { wakes.current[i] = el; }} geometry={models.wake} position-y={.025} scale={[1.3, 1, 2]} visible={false}>
         <meshBasicMaterial map={models.ripples} color="#f7f0d8" transparent opacity={0} depthWrite={false} />
@@ -187,12 +208,12 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
           <meshStandardMaterial vertexColors roughness={1} />
         </mesh>
         <mesh ref={bigCloth} geometry={models.big.cloth} castShadow>
-          <meshStandardMaterial map={models.big.sail} vertexColors side={THREE.DoubleSide} roughness={1} />
+          <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1} />
         </mesh>
       </group>
-      {BOATS.map(({ name }, i) => <mesh key={name} ref={el => { bigFlags.current[i] = el; }} geometry={models.boats[i].flag} visible={false}>
-        <meshStandardMaterial map={models.boats[i].cloth} side={THREE.DoubleSide} roughness={1} />
-      </mesh>)}
+      <mesh ref={logoFlag} geometry={models.big.flag} visible={false}>
+        <meshStandardMaterial map={models.big.banner} alphaTest={.5} side={THREE.DoubleSide} roughness={1} />
+      </mesh>
     </group>
     <instancedMesh ref={deck} args={[models.deck, undefined, DECK.beams + DECK.planks]} castShadow frustumCulled={false}>
       <meshStandardMaterial roughness={1} />

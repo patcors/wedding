@@ -5,6 +5,7 @@
 // morph target the GPU blends.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import type { Company } from './storyBoats';
 
 type Point = [number, number, number];
 export type StoryPalette = {
@@ -167,45 +168,13 @@ export const SAIL_EASED = .62;
 // The catamaran's one tall mast, stepped in the middle of the deck once they
 // are engaged, in the pair's model units from the deck at its foot. Its sail
 // is wider and taller than the dinghies', and is run well out to port, away
-// from the jetty, so its painted face turns to the camera behind.
+// from the jetty, so its face turns to the camera behind.
 export const BIG_RIG = { deck: .23, z: -.46, top: 1.92, boom: .2, head: 1.7, foot: 1.24, eased: 1.05 } as const;
 export function bigRig() {
   const { top, boom, head, foot } = BIG_RIG;
-  // White, as the sail's ivory and the monogram come from its texture.
-  const cloth = sail([0, head, .035], [0, boom, .035], [0, boom, foot], .07, '#ffffff');
+  // Plain ivory: their monogram flies from the masthead instead (logoFlag).
+  const cloth = sail([0, head, .035], [0, boom, .035], [0, boom, foot], .07);
   return { mast: spar([0, 0, 0], [0, top, 0], .026), boom: spar([0, boom, .035], [0, boom, foot], .015), cloth };
-}
-
-// The big sail's cloth with their monogram painted on it, low in the sail
-// where it is widest, so it reads at the dock. The logo is drawn in the
-// Garden's ink; the sail's uv runs across its foot and up its luff, which
-// stretch the canvas differently, so the logo is drawn to the sail's
-// proportions. `mirrored` for a sail eased to port, whose clew is on the left
-// as the camera behind sees it.
-export function sailCloth(logo: string, mirrored: boolean) {
-  const size = 512, canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
-  const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#fff6df'; ctx.fillRect(0, 0, size, size);
-  const image = new Image();
-  image.onload = () => {
-    // In sail units: across the foot from the luff, and up from the boom.
-    const width = .58, height = width * image.height / image.width, from = .12, up = .15;
-    const { head, boom, foot } = BIG_RIG, across = size / foot, rise = size / (head - boom);
-    ctx.save();
-    ctx.translate((from + width / 2) * across, size - (up + height / 2) * rise);
-    if (mirrored) ctx.scale(-1, 1);
-    // Painted, not printed: a little of the cloth shows through.
-    ctx.globalAlpha = .86;
-    ctx.drawImage(image, -width / 2 * across, -height / 2 * rise, width * across, height * rise);
-    ctx.restore();
-    texture.needsUpdate = true;
-  };
-  image.src = logo;
-  return texture;
 }
 
 // A small flag from the masthead, its hoist on the mast and its fly along +x.
@@ -241,6 +210,110 @@ export function flagTexture(letter: string, palette: StoryPalette) {
   draw();
   document.fonts?.load(font).then(draw, () => {});
   return texture;
+}
+
+// A canvas to paint a cloth on, as a texture that's updated when it changes.
+function canvasCloth(width: number, height: number) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return { ctx: canvas.getContext('2d')!, texture };
+}
+
+// The flag the big mast flies from its masthead once they are engaged: their
+// monogram on a paper-coloured swallowtail, larger than the initials' flags so
+// it reads at the dock on a phone. In the big mast's units, hoist on the mast
+// at its top (y 0) and fly along +x, to starboard, clear of the sail.
+export const LOGO_FLAG = { length: .7, height: .46, segments: 10, notch: .2 } as const;
+export function logoFlagGeometry() {
+  const geometry = new THREE.PlaneGeometry(LOGO_FLAG.length, LOGO_FLAG.height, LOGO_FLAG.segments, 3);
+  geometry.translate(LOGO_FLAG.length / 2, -LOGO_FLAG.height / 2, 0);
+  return geometry;
+}
+export function logoFlagTexture(logo: string) {
+  const width = 384, height = Math.round(width * LOGO_FLAG.height / LOGO_FLAG.length);
+  const { ctx, texture } = canvasCloth(width, height);
+  const notch = LOGO_FLAG.notch * width;
+  ctx.fillStyle = '#f7f3e8';
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(width, 0); ctx.lineTo(width - notch, height / 2); ctx.lineTo(width, height); ctx.lineTo(0, height);
+  ctx.fill();
+  // A darker heading along the hoist, where it's sewn to the halyard.
+  ctx.fillStyle = '#e4dcc6'; ctx.fillRect(0, 0, width * .04, height);
+  const image = new Image();
+  image.onload = () => {
+    // Centred between the heading and the notch, as large as fits.
+    const from = width * .07, to = width - notch - width * .02;
+    const w = Math.min(to - from, height * .84 * image.width / image.height), h = w * image.height / image.width;
+    ctx.drawImage(image, (from + to - w) / 2, (height - h) / 2, w, h);
+    texture.needsUpdate = true;
+  };
+  image.src = logo;
+  return texture;
+}
+
+// The company pennants each small mast flies under its initial: a tapering
+// pennant in the company's colour with its mark in paper at the hoist, so on
+// a phone it reads as a shape and a colour even where the mark barely does.
+// Hoist on the mast, fly along +x.
+export const PENNANT = { length: .32, height: .17, segments: 6, top: HULL.mastTop - FLAG.height - .035 } as const;
+export function pennantGeometry() {
+  const geometry = new THREE.PlaneGeometry(PENNANT.length, PENNANT.height, PENNANT.segments, 1);
+  geometry.translate(PENNANT.length / 2, PENNANT.top - PENNANT.height / 2, 0);
+  return geometry;
+}
+const PAPER = '#f7f3e8';
+export function pennantTexture(company: Company, crown: string) {
+  const width = 128, height = 68, mark = { x: 24, y: height / 2 };
+  const { ctx, texture } = canvasCloth(width, height);
+  // Cut off short of a point at the fly, so it keeps some body when small.
+  const cloth = () => {
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(width, height * .41); ctx.lineTo(width, height * .59); ctx.lineTo(0, height);
+  };
+  cloth();
+  if (company === 'finocomp') {
+    // FinoComp's orange running to amber, as its mark does.
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, '#e27a16'); gradient.addColorStop(1, '#f0b938');
+    ctx.fillStyle = gradient; ctx.fill();
+    // Only the power symbol from its logo: a ring broken at the top, and the bar through the gap.
+    const r = 13;
+    ctx.strokeStyle = PAPER; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(mark.x, mark.y + 1, r, -Math.PI / 2 + .7, Math.PI * 1.5 - .7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mark.x, mark.y - r - 2); ctx.lineTo(mark.x, mark.y + 1); ctx.stroke();
+    return texture;
+  }
+  ctx.fillStyle = '#783593'; ctx.fill();
+  // HeirWealth's crown, purple on transparency, painted in paper.
+  const image = new Image();
+  image.onload = () => {
+    const size = 34, tint = document.createElement('canvas');
+    tint.width = tint.height = size * 2;
+    const t = tint.getContext('2d')!;
+    t.drawImage(image, 0, 0, size * 2, size * 2);
+    t.globalCompositeOperation = 'source-in';
+    t.fillStyle = PAPER; t.fillRect(0, 0, size * 2, size * 2);
+    ctx.drawImage(tint, mark.x - size / 2, mark.y - size / 2, size, size);
+    texture.needsUpdate = true;
+  };
+  image.src = crown;
+  return texture;
+}
+
+// Waves a flag's cloth about its rest shape, more towards the fly, and lets
+// the fly droop a little. `rest` is its positions as built.
+export function flutter(geometry: THREE.BufferGeometry, rest: Float32Array, length: number, t: number, phase: number, size = 1) {
+  const cloth = geometry.attributes.position as THREE.BufferAttribute;
+  for (let v = 0; v < cloth.count; v++) {
+    const u = rest[v * 3] / length;
+    cloth.setZ(v, (Math.sin(u * 5 - t * 5.5 + phase) * .028 * u + Math.sin(u * 3 - t * 3.1) * .01 * u) * size);
+    cloth.setY(v, rest[v * 3 + 1] - u * u * .015 * size);
+  }
+  cloth.needsUpdate = true;
+  geometry.computeVertexNormals();
 }
 
 // The V of ripples spreading behind a stern, faded towards its tail.

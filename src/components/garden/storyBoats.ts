@@ -1,7 +1,7 @@
 // Where Patrick's and Amelia's boats are at progress p, and how far they have
 // become a catamaran (see docs/VOYAGE.md). Pure, so it can be tested; drawn by
 // VoyageBoats.tsx with the models in storyBoatGeometry.ts.
-import { ARRIVAL_END, DATES, DOCKED, ROUTE, VOYAGE_END, progressAt, routeAt, scrolledSince } from './journey.ts';
+import { ARRIVAL_END, DATES, DOCKED, MILESTONES, ROUTE, VOYAGE_END, progressAt, routeAt, scrolledSince } from './journey.ts';
 import { VOYAGE, bankEdge, channelOffset, launchJetties, riverCenter, voyageLandmarks } from './gardenGeometry.ts';
 
 // The models are built in their own units; this sizes them in the world so
@@ -42,8 +42,8 @@ export const catamaran = (j: number) => ({
 // The last plank is down a little before they get engaged. Then, as April
 // 2026 shows, the two masts give way to one: each boat furls its sail and
 // strikes its flag, and its mast is lowered aft along its hull; one tall mast
-// rises from the middle of the deck while the date holds, its sail unfurls
-// with their monogram, and both flags are run up to its masthead. Each step
+// rises from the middle of the deck while the date holds, its plain sail
+// unfurls, and their monogram's flag is run up to its masthead. Each step
 // runs over these spans of scroll since the date first shows, in milestone
 // shares, and all is done before July 2026's balloon and the bend.
 export const RIG_CHANGE = { furl: [-.3, -.1], lower: [-.2, .04], raise: [.04, .34], unfurl: [.3, .58], hoist: [.5, .8] } as const;
@@ -53,6 +53,40 @@ export type Rigging = Record<keyof typeof RIG_CHANGE, number>;
 export function rigging(p: number, still = false): Rigging {
   const s = scrolledSince(DATES.engaged, p), t = still ? (s < -1e-9 ? -Infinity : Infinity) : s;
   return Object.fromEntries(Object.entries(RIG_CHANGE).map(([step, [from, to]]) => [step, ease((t - from) / (to - from))])) as Rigging;
+}
+
+// The companies they work for fly as pennants under their initials. Both run
+// up FinoComp's as November 2018 shows, and keep them through Sydney, where
+// they worked on for it apart. As March 2023 shows each strikes FinoComp's and
+// runs up HeirWealth's straight away, Amelia first: she started there a couple
+// of months before Patrick. Spans of scroll since each date, in shares, all
+// while the date holds; the swaps are Amelia's then Patrick's.
+const monthOf = (id: string) => MILESTONES.find(m => m.id === id)!.month;
+export const PENNANT_DATES = { finocomp: monthOf('internship'), heirwealth: monthOf('heirwealth') } as const;
+export const PENNANT_CHANGE = {
+  finocomp: [0, .3],
+  heirwealth: [{ strike: [0, .1], hoist: [.1, .22] }, { strike: [.08, .18], hoist: [.18, .3] }],
+} as const;
+export type Company = 'finocomp' | 'heirwealth';
+export type Pennant = { company: Company | null; hoist: number };
+// Amelia's and Patrick's at p: which company's is up, and how far up its
+// halyard. They come down with the initials as the small sails furl for the
+// change of masts, so the big mast flies only their monogram. A
+// reduced-motion still shows each settled.
+export function pennants(p: number, still = false): Pennant[] {
+  const clock = (month: string) => {
+    const s = scrolledSince(month, p);
+    return still ? (s < -1e-9 ? -Infinity : Infinity) : s;
+  };
+  const span = (t: number, [from, to]: readonly [number, number]) => ease((t - from) / (to - from));
+  const joined = clock(PENNANT_DATES.finocomp), moved = clock(PENNANT_DATES.heirwealth), { furl } = rigging(p, still);
+  return PENNANT_CHANGE.heirwealth.map(({ strike, hoist }) => {
+    const heirwealth = span(moved, hoist), finocomp = span(joined, PENNANT_CHANGE.finocomp) * (1 - span(moved, strike));
+    // One halyard: FinoComp's is all the way down before HeirWealth's goes up it.
+    const [company, up]: [Company, number] = heirwealth > 0 ? ['heirwealth', heirwealth] : ['finocomp', finocomp];
+    const height = up * (1 - furl);
+    return height > 0 ? { company, hoist: height } : { company: null, hoist: 0 };
+  });
 }
 
 export const hullHalfBeam = (morph: number) => HULL_HALF_BEAM.dinghy + (HULL_HALF_BEAM.catamaran - HULL_HALF_BEAM.dinghy) * morph;
