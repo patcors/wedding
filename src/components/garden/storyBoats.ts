@@ -60,28 +60,28 @@ export function rigging(p: number, still = false): Rigging {
 // shows and keep them into Sydney. Amelia leaves FinoComp and takes a few
 // months off, tutoring and selling haircare online (the interim flag), then
 // starts at HeirWealth in January 2023; Patrick follows as March 2023 shows,
-// so for a while hers is HeirWealth's and his still FinoComp's.
+// so for a while hers is HeirWealth's and his still FinoComp's. Each change
+// is a milestone (journey.ts), so it has a share of scroll to be seen;
+// AMELIA_LEFT_FINOCOMP there sets when she left.
 export type Company = 'finocomp' | 'interim' | 'heirwealth';
-// When Amelia left FinoComp: a placeholder until she confirms the month.
-export const AMELIA_LEFT_FINOCOMP = '2022-10';
-export const AMELIA_JOINED_HEIRWEALTH = '2023-01';
 const monthOf = (id: string) => MILESTONES.find(m => m.id === id)!.month;
 type Change = { month: string; company: Company; strike: readonly [number, number]; hoist: readonly [number, number] };
 // Each boat's changes in order, Amelia's then Patrick's: the flag before is
 // struck, then this one run up the same halyard, over these spans of scroll
-// since the month first shows, in shares. Months rush through Sydney (October
-// 2022 to January 2023 is a tenth of a share), so her changes are quick,
-// each as its month shows; Patrick's waits a little into March 2023's hold.
-const internship: Change = { month: monthOf('internship'), company: 'finocomp', strike: [0, 0], hoist: [0, .3] };
+// since the month first shows, in shares: each is done early in its date's
+// hold, as the camera glides into the milestone's stop (STOPS), so the stop
+// shows the new flag flying.
+const internship: Change = { month: monthOf('internship'), company: 'finocomp', strike: [0, 0], hoist: [0, .15] };
+const SWAP = { strike: [0, .07], hoist: [.07, .15] } as const;
 export const FLAG_CHANGES: readonly (readonly Change[])[] = [
   [
     internship,
-    { month: AMELIA_LEFT_FINOCOMP, company: 'interim', strike: [0, .025], hoist: [.025, .05] },
-    { month: AMELIA_JOINED_HEIRWEALTH, company: 'heirwealth', strike: [0, .02], hoist: [.02, .045] },
+    { month: monthOf('interim'), company: 'interim', ...SWAP },
+    { month: monthOf('amelia-heirwealth'), company: 'heirwealth', ...SWAP },
   ],
   [
     internship,
-    { month: monthOf('heirwealth'), company: 'heirwealth', strike: [.1, .18], hoist: [.18, .3] },
+    { month: monthOf('heirwealth'), company: 'heirwealth', ...SWAP },
   ],
 ];
 export type CompanyFlag = { company: Company | null; hoist: number };
@@ -130,9 +130,12 @@ export function boatGap(p: number, width: number) {
   let gap = apart + (ALONGSIDE - apart) * met;
   // Drifting apart into Sydney's wider river as its date arrives, still in
   // sight, and back alongside as March 2023 does, so the reduced-motion stills
-  // on those dates show both. Story months rush between dates, so this goes by scroll.
-  const away = Math.max(0, ease((scrolledSince(DATES.sydney, p) + .8) / .85) - ease((scrolledSince(DATES.back, p) + 1) / 1));
-  gap += (bankEdge(z, width) * .5 / BOAT_SCALE - gap) * away;
+  // on those dates show both. They stay apart through Amelia's changes of
+  // flag, so each boat's reads on its own, though not so far out that the
+  // year markers on the banks pass behind the flags at the milestones' stops.
+  // Story months rush between dates, so this goes by scroll.
+  const away = Math.max(0, ease((scrolledSince(DATES.sydney, p) + .8) / .85) - ease((scrolledSince(DATES.back, p) + .7) / .7));
+  gap += (bankEdge(z, width) * .4 / BOAT_SCALE - gap) * away;
   return gap + (CATAMARAN - gap) * catamaran(joining(p)).close;
 }
 

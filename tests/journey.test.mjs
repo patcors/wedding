@@ -8,8 +8,8 @@ import { VOYAGE, bankEdge, channelOffset, groundHeight, islandHalfWidth, riverCe
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
 
-test('the fourteen milestones run in order, each with a description', () => {
-  assert.equal(MILESTONES.length, 14);
+test('the sixteen milestones run in order, each with a description', () => {
+  assert.equal(MILESTONES.length, 16);
   for (let i = 1; i < MILESTONES.length; i++) assert.ok(monthIndex(MILESTONES[i].month) > monthIndex(MILESTONES[i - 1].month));
   for (const m of MILESTONES) assert.match(m.month, /^\d{4}-\d{2}$/), assert.ok(m.description.length > 10);
   assert.deepEqual(MILESTONES.filter(m => m.egg).map(m => [m.month, m.egg]), [['2017-07', 'university'], ['2019-07', 'snow-2019'], ['2026-07', 'balloon']]);
@@ -61,6 +61,9 @@ test('scroll is shared out by story, not by calendar', () => {
   // The meeting and the joining get more room than an ordinary milestone.
   assert.ok(share(at('meet')) > share(at('coast')) * 1.2);
   assert.ok(share(at('dating')) > share(at('coast')) * 1.2);
+  // Amelia's months between jobs, and her months at HeirWealth before
+  // Patrick, each get a whole share, though Sydney rushes through the months.
+  assert.ok(Math.abs(share(at('interim')) - ROOM) < 1e-9 && Math.abs(share(at('amelia-heirwealth')) - ROOM) < 1e-9);
   // The last stretch, round the bend, gets the most.
   assert.ok(MILESTONES.slice(0, -1).every((_, i) => (VOYAGE_END - progressAt(MILESTONES.at(-1).month)) > share(i)));
   assert.ok(Math.abs(share(at('coast')) - ROOM) < 1e-9);

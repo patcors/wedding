@@ -3,15 +3,16 @@
 // Pure, so it can be tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
-import { ROOM, progressAt } from '../journey.ts';
+import { ROOM, progressAt, routeAtMonth } from '../journey.ts';
 
-// Where on the bank: `z` along the river, the `side` bank (+1 is +x) and how
-// far `inland` from the water's edge at desktop's width (portrait's is 60%).
-export type SnowSpot = { z: number; side: 1 | -1; inland?: number };
+// Where on the bank: `ahead`, how far past where the boats are as the date
+// shows, the `side` bank (+1 is +x) and how far `inland` from the water's
+// edge at desktop's width (portrait's is 60%).
+export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number };
 // Where each snow trip's flurry falls. July 2019's is on the right bank, a
 // little ahead of the boats as its date shows, in view on both compositions
 // and clear of the boats in portrait.
-export const SNOW_SPOTS = { 2019: { z: -48, side: 1 } } as const satisfies Record<number, SnowSpot>;
+export const SNOW_SPOTS = { 2019: { ahead: 9, side: 1 } } as const satisfies Record<number, SnowSpot>;
 
 // Its course in milestone shares since the date (see eggTime): the flurry
 // thickens from 0 to `full`, hides the bank while what it leaves behind
@@ -28,7 +29,8 @@ export const gustAt = (t: number) => -1 + 2 * smooth(t / FLURRY.gone);
 
 // The spot in the world: on the ground, turned to face the boats' approach
 // as the date holds.
-export function snowSpot({ z, side, inland = 1 }: SnowSpot, month: string, width: number) {
+export function snowSpot({ ahead, side, inland = 1 }: SnowSpot, month: string, width: number) {
+  const z = routeAtMonth(month) - ahead;
   const x = riverCenter(z, width) + side * (bankEdge(z, width) + inland * (width < 1 ? .6 : 1));
   const [cx, , cz] = cameraPose(progressAt(month) + .2 * ROOM, width).position;
   return { x, y: groundHeight(x, z, width), z, yaw: Math.atan2(cx - x, cz - z) };

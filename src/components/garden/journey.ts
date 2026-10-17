@@ -8,6 +8,10 @@ export type EggId = 'balloon' | 'university' | 'snow-2019';
 // doesn't become a long empty stretch.
 export type Milestone = { id: string; month: string; description: string; egg?: EggId; room?: number };
 
+// When Amelia left FinoComp: a placeholder until she confirms the month. Her
+// flag changes as it shows (see FLAG_CHANGES in storyBoats.ts).
+export const AMELIA_LEFT_FINOCOMP = '2022-10';
+
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
   { id: 'meet', month: '2017-07', description: 'Patrick and Amelia meet at university, both starting maths degrees.', egg: 'university', room: 1.4 },
@@ -15,9 +19,13 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'internship', month: '2018-11', description: 'They start their internship at FinoComp.' },
   { id: 'snow-2019', month: '2019-07', description: 'A snow trip, where Amelia breaks her wrist snowboarding.', egg: 'snow-2019' },
   { id: 'graduation', month: '2020-08', description: 'They graduate from university.' },
-  // Room for the boats to drift apart, still in sight.
-  { id: 'sydney', month: '2021-02', description: 'Amelia moves to Sydney for two years.', room: 1.3 },
-  { id: 'heirwealth', month: '2023-03', description: 'Amelia is back, and they start working together at HeirWealth.' },
+  // The boats drift apart, still in sight, and stay apart through Amelia's
+  // two changes of work, each with a share of its own so her interim flag,
+  // and then her HeirWealth flag beside Patrick's FinoComp one, can be seen.
+  { id: 'sydney', month: '2021-02', description: 'Amelia moves to Sydney for two years.' },
+  { id: 'interim', month: AMELIA_LEFT_FINOCOMP, description: 'Amelia leaves FinoComp for a few months of tutoring and selling haircare online.' },
+  { id: 'amelia-heirwealth', month: '2023-01', description: 'Amelia starts at HeirWealth.' },
+  { id: 'heirwealth', month: '2023-03', description: 'Amelia is back, and Patrick joins her at HeirWealth, so they start working together.' },
   { id: 'apartments', month: '2024-05', description: 'They both buy apartments.', room: .8 },
   { id: 'living-together', month: '2024-06', description: 'They start living together.', room: .8 },
   // The boats join and become one catamaran.
@@ -25,11 +33,12 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'snow-2025', month: '2025-08', description: 'Another snow trip.' },
   { id: 'salsa', month: '2026-01', description: 'They start salsa classes.' },
   { id: 'engaged', month: '2026-04', description: 'They get engaged.' },
-  // The last stretch rounds the bend to the wedding.
-  { id: 'turkey-greece', month: '2026-07', description: 'A trip to Turkey and Greece.', egg: 'balloon', room: 3 },
+  // The last stretch rounds the bend to the wedding: room enough that the
+  // trip's date shows before the bend starts.
+  { id: 'turkey-greece', month: '2026-07', description: 'A trip to Turkey and Greece.', egg: 'balloon', room: 3.4 },
 ];
 
-export const DATES = { meet: '2017-07', sydney: '2021-02', back: '2023-03', dating: '2024-08', engaged: '2026-04', wedding: '2027-04' } as const;
+export const DATES = { meet: '2017-07', sydney: '2021-02', leftFinoComp: AMELIA_LEFT_FINOCOMP, joinedHeirWealth: '2023-01', back: '2023-03', dating: '2024-08', engaged: '2026-04', wedding: '2027-04' } as const;
 
 // Scroll progress p runs 0 to 1: the opening title, the voyage, then the
 // celebration with the catamaran docked. The boats glide into the jetty over

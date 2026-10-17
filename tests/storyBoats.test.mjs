@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, VOYAGE_END, progressAt, routeAt, stillProgress } from '../src/components/garden/journey.ts';
+import { AMELIA_LEFT_FINOCOMP, ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, routeAt, scrolledSince, stillProgress } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ALONGSIDE, AMELIA_JOINED_HEIRWEALTH, AMELIA_LEFT_FINOCOMP, BOAT_SCALE, CAST_OFF, CATAMARAN, boatPose, companyFlags, hullHalfBeam, joining, rigging } from '../src/components/garden/storyBoats.ts';
+import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, boatPose, companyFlags, hullHalfBeam, joining, rigging } from '../src/components/garden/storyBoats.ts';
 import { BIG_RIG, FLAG, LOGO_FLAG, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
@@ -197,22 +197,38 @@ test('the small mastheads fly nothing until both run up FinoComp flags as Novemb
   for (const p of [internship + .35 * ROOM, progressAt(DATES.sydney)]) assert.deepEqual(companyFlags(p), bothUp('finocomp', 'finocomp'));
 });
 
-test('Amelia leaves FinoComp for a while, then starts at HeirWealth before Patrick does', () => {
-  const left = progressAt(AMELIA_LEFT_FINOCOMP), joined = progressAt(AMELIA_JOINED_HEIRWEALTH), patrick = progressAt(DATES.back);
+test('Amelia leaves FinoComp for a while, then starts at HeirWealth before Patrick does, each change a milestone of its own', () => {
+  assert.equal(DATES.leftFinoComp, AMELIA_LEFT_FINOCOMP);
+  const left = progressAt(DATES.leftFinoComp), joined = progressAt(DATES.joinedHeirWealth), patrick = progressAt(DATES.back);
   assert.ok(progressAt(DATES.sydney) < left && left < joined && joined < patrick);
+  for (const month of [DATES.leftFinoComp, DATES.joinedHeirWealth]) assert.ok(MILESTONES.some(m => m.month === month), month);
   // Each change on one halyard: the flag before all the way down before the next goes up.
   const runs = [0, 1].map(flagRuns);
   assert.deepEqual(runs[0].map(run => run.company), [null, 'finocomp', 'interim', 'heirwealth', null]);
   assert.deepEqual(runs[1].map(run => run.company), [null, 'finocomp', 'heirwealth', null]);
   for (const boat of runs) for (const run of boat.slice(2, -1)) assert.ok(run.after < .02 && run.hoist < .02, `${run.company} swapped at the foot of the halyard`);
-  // Each change starts as its month shows, and is done well before the next.
+  // Each change starts as its month shows and is done while its date holds.
   const [, , interim, amelia] = runs[0], [, , heirwealth] = runs[1];
   assert.ok(interim.from >= left && amelia.from >= joined && heirwealth.from >= patrick);
-  assert.deepEqual(companyFlags((left + joined) / 2 + .01 * ROOM), bothUp('interim', 'finocomp'));
-  // Hers is HeirWealth's while his is still FinoComp's, into March 2023's hold, then both.
-  for (const p of [(joined + patrick) / 2 + .02 * ROOM, patrick + .08 * ROOM]) assert.deepEqual(companyFlags(p), bothUp('heirwealth', 'finocomp'));
+  // Long enough to be seen: the interim flag, then hers HeirWealth's beside
+  // his FinoComp, each fly fully up for most of a share.
+  const fullyUp = (from, to, amelia, patrick) => steps(40000).filter(p => p >= from && p < to)
+    .filter(p => JSON.stringify(companyFlags(p)) === JSON.stringify(bothUp(amelia, patrick))).length / 40000 / ROOM;
+  assert.ok(fullyUp(left, joined, 'interim', 'finocomp') > .6);
+  assert.ok(fullyUp(joined, patrick + .35 * ROOM, 'heirwealth', 'finocomp') > .7);
+  assert.deepEqual(companyFlags(left + .35 * ROOM), bothUp('interim', 'finocomp'));
+  for (const p of [joined + .35 * ROOM, patrick - .01 * ROOM]) assert.deepEqual(companyFlags(p), bothUp('heirwealth', 'finocomp'));
   assert.deepEqual(companyFlags(patrick + .35 * ROOM), bothUp('heirwealth', 'heirwealth'));
+  // Each change is done by its milestone's stop, where the arrow keys and the scroll cue land.
+  const stopAt = id => STOPS[MILESTONES.findIndex(m => m.id === id) + 1];
+  assert.deepEqual(companyFlags(stopAt('internship')), bothUp('finocomp', 'finocomp'));
+  assert.deepEqual(companyFlags(stopAt('interim')), bothUp('interim', 'finocomp'));
+  assert.deepEqual(companyFlags(stopAt('amelia-heirwealth')), bothUp('heirwealth', 'finocomp'));
+  assert.deepEqual(companyFlags(stopAt('heirwealth')), bothUp('heirwealth', 'heirwealth'));
   assert.ok(patrick + .35 * ROOM < progressAt(DATES.dating));
+  // The boats are well apart in Sydney's river through both, so each boat's flag reads on its own.
+  for (const p of [left + .35 * ROOM, joined + .35 * ROOM]) for (const width of widths) assert.ok(boatPose(p, width).gap > ALONGSIDE * 1.8, `apart at ${p} (${width})`);
+  assert.ok(scrolledSince(DATES.back, joined + .35 * ROOM) < -.6);
 });
 
 test('the company flags come down for the change of masts, leaving the big mast its monogram', () => {
@@ -228,7 +244,9 @@ test('reduced-motion stills show the company flags settled', () => {
     const flying = companyFlags(stillProgress(progressAt(month)), true);
     const internship = MILESTONES.find(m => m.id === 'internship').month;
     const company = month < internship ? null : month < DATES.back ? 'finocomp' : month < DATES.engaged ? 'heirwealth' : null;
-    assert.deepEqual(flying, [0, 1].map(() => ({ company, hoist: company ? 1 : 0 })), month);
+    // Amelia's own changes have stills of their own, Patrick's flag unchanged.
+    const hers = month === DATES.leftFinoComp ? 'interim' : month === DATES.joinedHeirWealth ? 'heirwealth' : company;
+    assert.deepEqual(flying, [hers, company].map(company => ({ company, hoist: company ? 1 : 0 })), month);
   }
 });
 

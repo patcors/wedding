@@ -57,11 +57,14 @@ test('markers on the banks stand on land and those in the river keep clear of th
   }
 });
 
-test('markers stand apart along the river, and the 2022/2023 pair on opposite sides', () => {
-  const spots = YEAR_MARKERS.map(m => yearMarkerSpot(m, 1));
-  for (let i = 1; i < spots.length; i++) assert.ok(spots[i - 1].z - spots[i].z > 3, `${YEAR_MARKERS[i].year} apart`);
-  const [y22, y23] = [2022, 2023].map(year => YEAR_MARKERS.find(m => m.year === year));
-  assert.notEqual(y22.side, y23.side);
+test('markers stand apart along the river, further still when on the same bank', () => {
+  for (const [width] of LAYOUTS) {
+    const spots = YEAR_MARKERS.map(m => yearMarkerSpot(m, width));
+    for (let i = 1; i < spots.length; i++) assert.ok(spots[i - 1].z - spots[i].z > 5, `${YEAR_MARKERS[i].year} apart`);
+    // Two on the same bank are further apart still, so each reads on its own.
+    const bank = m => 'inland' in m && m.side;
+    for (let i = 1; i < spots.length; i++) if (bank(YEAR_MARKERS[i]) === bank(YEAR_MARKERS[i - 1])) assert.ok(spots[i - 1].z - spots[i].z > 10, `${YEAR_MARKERS[i].year} crowds ${YEAR_MARKERS[i - 1].year}`);
+  }
 });
 
 test('a marker dissolves in a little way ahead and is gone once passed', () => {

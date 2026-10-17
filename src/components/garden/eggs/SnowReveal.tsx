@@ -5,7 +5,7 @@
 // is at its thickest, and fade in under it, so the guest never sees them
 // coming; they stay until the camera has passed. An egg is then a line:
 //
-//   <SnowReveal {...props} spot={{ z: -48, side: 1 }}><Snowman sling /></SnowReveal>
+//   <SnowReveal {...props} spot={{ ahead: 9, side: 1 }}><Snowman sling /></SnowReveal>
 //
 // `scale` sizes it all, the flurry, the patch and the children; portrait's is
 // a little smaller. Costs two draw calls (the flakes and the settled
