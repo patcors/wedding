@@ -114,3 +114,38 @@ test('the ducks plop in while the meeting\'s date holds, keep to the water and d
     });
   }
 });
+
+const snow = MILESTONES.find(m => m.egg === 'snow-2019');
+
+test('a flurry builds as the date shows, hides the bank while the snowman appears, and clears while the date holds', async () => {
+  const { FLURRY, flurryAt, revealed } = await import('../src/components/garden/eggs/flurry.ts');
+  assert.equal(snow.month, '2019-07');
+  assert.equal(flurryAt(0), 0);
+  assert.equal(flurryAt(FLURRY.full), 1);
+  assert.equal(flurryAt(FLURRY.clear), 1);
+  assert.equal(flurryAt(FLURRY.gone), 0);
+  // Nothing to see coming: it appears only once the flurry is at its thickest.
+  for (let t = -1; t < FLURRY.reveal; t += .01) assert.ok(!revealed(t), `hidden at ${t}`);
+  for (let t = FLURRY.reveal; t <= FLURRY.clear; t += .01) assert.equal(flurryAt(t), 1);
+  // Revealed within the date's hold, and the air clear within the share.
+  assert.ok(FLURRY.clear < .35 && FLURRY.gone < 1);
+  // Reduced motion rests after it, with the snowman out and the air clear.
+  const still = stillProgress(progressAt(snow.month) + ROOM * .2);
+  const t = eggTime(snow, still, true, 1);
+  assert.ok(revealed(t) && flurryAt(t) === 0);
+});
+
+test('the 2019 snowman stands on the bank, in view as its date holds and for a share after', async () => {
+  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const { x, z, yaw } = snowSpot(SNOW_SPOTS[2019], snow.month, width);
+    assert.ok(Math.abs(x - riverCenter(z, width)) > bankEdge(z, width), 'on land');
+    for (let t = 0; t <= 1; t += .05) {
+      const p = progressAt(snow.month) + t * ROOM, { bearing } = seen(p, width, x, z);
+      assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at ${t}`);
+    }
+    // Turned to face the boats coming down the river.
+    const [cx, , cz] = cameraPose(progressAt(snow.month), width).position;
+    assert.ok(Math.abs(Math.atan2(cx - x, cz - z) - yaw) < .3);
+  }
+});
