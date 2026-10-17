@@ -4,8 +4,9 @@
 // invites/out/<code>.png. getStaticPaths returns nothing in a production
 // build, so this page never reaches patrickandamelia.com.
 //
-// ?crop=<name in CROPS> picks a crop; ?photo=none leaves the photograph out.
-// (Read in the browser: a static page never sees its query string.)
+// ?style=<name in STYLES> tries another look, ?crop=<name in CROPS> another
+// crop, and ?photo=none leaves the photograph out. (Read in the browser: a
+// static page never sees its query string.)
 import { parties, type Party } from '../../../data/parties';
 
 export function getStaticPaths() {
@@ -14,17 +15,61 @@ export function getStaticPaths() {
 
 // The words. Caps lines are set in caps by the CSS, so write them normally.
 const COPY = {
-  invited: ['You’re', 'invited'], // caps, then the script accent
-  lead: 'To the wedding of',
-  couple: ['Patrick', 'Amelia'],  // joined by a script &
+  headline: ['You’re invited', 'to the wedding of'], // two lines, unless a style sets headline: 'one'
+  couple: ['Patrick', 'Amelia'],
   date: '16 April 2027',
   venue: 'Jasper’s Berry',
   town: 'Berry, NSW',
 };
 
-// Two typefaces from Google Fonts: the site's serif, and a script for the accents.
+// Two typefaces from Google Fonts: the site's serif, and one script per style.
 const SERIF = 'Cormorant Garamond';
-const SCRIPT = 'Monsieur La Doulaise';
+const SCRIPTS = ['Monsieur La Doulaise', 'Great Vibes'];
+
+// Each style is a complete look. STYLE is the one pnpm invites renders.
+//   greeting: caps (small spaced capitals) | italic (serif italic) | script
+//   names:    caps (spaced capitals) | serif (large title case) | script
+//   amp:      script | italic (serif italic) | serif
+//   headline: two (default) | one line
+// vars override the CSS variables at the top of the <style>.
+const STYLES = {
+  // v2's structure in cream and espresso. Identical to vibes except the script.
+  monsieur: {
+    script: 'Monsieur La Doulaise', greeting: 'caps', names: 'caps', amp: 'script',
+    vars: { page: '#fdfbf3', ink: '#2e211a', headline: '108px', names: '74px' },
+  },
+  vibes: {
+    script: 'Great Vibes', greeting: 'caps', names: 'caps', amp: 'script',
+    vars: { page: '#fdfbf3', ink: '#2e211a', headline: '84px', names: '74px', 'amp-size': '1.3em', 'amp-space': '.1em' },
+  },
+  // Buttery page, warm chocolate, names in large title-case serif with an italic &.
+  butter: {
+    script: 'Monsieur La Doulaise', greeting: 'italic', names: 'serif', amp: 'italic',
+    vars: { page: '#fbf4dc', ink: '#4e3324', headline: '100px', names: '104px', 'names-weight': '500', 'greeting-size': '40px' },
+  },
+  // Olive-brown, and the names in script too: the most romantic, least formal.
+  flourish: {
+    script: 'Great Vibes', greeting: 'caps', names: 'script', amp: 'script', headline: 'one',
+    vars: { page: '#fcf9ec', ink: '#453c2a', headline: '60px', names: '128px', 'greeting-spacing': '.4em' },
+  },
+  // Light caps with wide spacing, the greeting in script, & and date in muted gold.
+  gilded: {
+    script: 'Monsieur La Doulaise', greeting: 'script', names: 'caps', amp: 'script',
+    vars: {
+      page: '#fdf9ea', ink: '#36251a', accent: '#a07f45', headline: '100px', names: '60px',
+      'names-weight': '500', 'names-spacing': '.2em', 'greeting-size': '64px',
+    },
+  },
+  // A big script headline over small spaced caps, a plain serif &, sage date.
+  sage: {
+    script: 'Great Vibes', greeting: 'caps', names: 'caps', amp: 'serif',
+    vars: {
+      page: '#fbf6e2', ink: '#503a2c', accent: '#76825f', headline: '96px', names: '50px',
+      'names-spacing': '.3em', 'greeting-spacing': '.36em',
+    },
+  },
+};
+const STYLE: keyof typeof STYLES = 'monsieur';
 
 // The photograph is cropped into a PHOTO_WIDTH × PHOTO_HEIGHT box with torn
 // top and bottom edges. In each crop, `focus` is a point in the photo (0–1
@@ -77,10 +122,11 @@ const rimMask = mask(tornPath(PHOTO_TEAR.rim, 4));
 
 const { party } = Astro.props as { party: Party };
 const BASE = import.meta.env.BASE_URL;
-const fonts = `https://fonts.googleapis.com/css2?family=${SERIF.replaceAll(' ', '+')}:wght@500;600&family=${SCRIPT.replaceAll(' ', '+')}&display=block`;
-const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`500 1em "${SERIF}"`, `600 1em "${SERIF}"`, `1em "${SCRIPT}"`] };
+const family = (name: string) => `family=${name.replaceAll(' ', '+')}`;
+const fonts = `https://fonts.googleapis.com/css2?${family(SERIF)}:ital,wght@0,500;0,600;1,400;1,500&${SCRIPTS.map(family).join('&')}&display=block`;
+const settings = { styles: STYLES, style: STYLE, serif: SERIF, crops: CROPS, crop: CROP, photos: `${BASE}photos/`, logo: `${BASE}logo.png` };
 ---
-<html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px; --serif: '${SERIF}', Georgia, serif; --script: '${SCRIPT}', cursive`}>
+<html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px; --serif: '${SERIF}', Georgia, serif; --logo: url(${BASE}logo.png)`}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content={`width=${WIDTH}`} />
@@ -92,24 +138,29 @@ const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`
   </head>
   <body>
     <main class="invite">
-      <p class="small caps greeting"><span data-fit>{party.greeting}</span></p>
-      <h1 class="big caps">{COPY.invited[0]} <em>{COPY.invited[1]}</em></h1>
-      <p class="small caps">{COPY.lead}</p>
-      <p class="big caps">{COPY.couple[0]} <em>&amp;</em> {COPY.couple[1]}</p>
+      <p class="greeting"><span data-fit>{party.greeting}</span></p>
+      <h1 class="headline">{COPY.headline.map((line, i) => <>{i > 0 && <> <br /></>}{line.split('’').map((part, j) => <>{j > 0 && <span class="apostrophe">’</span>}{part}</>)}</>)}</h1>
+      <p class="names"><span>{COPY.couple[0]}</span> <em>&amp;</em> <span>{COPY.couple[1]}</span></p>
       <figure class="photo" style={`width: ${PHOTO_WIDTH}px; height: ${PHOTO_HEIGHT}px; --photo-mask: ${photoMask}; --rim-mask: ${rimMask}`}>
         <div class="rim"></div>
         <div class="frame"><img alt={PHOTO_ALT} /></div>
       </figure>
       <p class="date">{COPY.date}</p>
-      <p class="small caps">{COPY.venue}</p>
-      <p class="small">{COPY.town}</p>
-      <img class="logo" src={`${BASE}logo.png`} alt="P A" />
+      <p class="venue">{COPY.venue}</p>
+      <p class="town">{COPY.town}</p>
+      <div class="logo" role="img" aria-label="P A"></div>
     </main>
     <script is:inline define:vars={{ settings }}>
       // make-invites.mjs waits on this before its screenshot: the photo is
       // cropped, fonts and images are in, and the greeting fits on one line.
       window.inviteReady = (async () => {
         const params = new URLSearchParams(location.search);
+        const style = settings.styles[params.get('style') || settings.style];
+        if (!style) throw new Error(`No style called ${params.get('style')}`);
+        const root = document.documentElement;
+        Object.assign(root.dataset, { greeting: style.greeting, names: style.names, amp: style.amp, headline: style.headline ?? 'two', script: style.script.toLowerCase().replaceAll(' ', '-') });
+        root.style.setProperty('--script', `'${style.script}', cursive`);
+        for (const [name, value] of Object.entries(style.vars)) root.style.setProperty(`--${name}`, value);
         const figure = document.querySelector('.photo');
         if (params.get('photo') === 'none') figure.remove();
         else {
@@ -129,10 +180,13 @@ const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`
           });
         }
         const text = document.body.textContent;
-        const loaded = await Promise.all(settings.faces.map(face => document.fonts.load(face, text)));
-        const missing = settings.faces.filter((_, i) => !loaded[i].length);
+        const faces = [`500 1em "${settings.serif}"`, `600 1em "${settings.serif}"`, `italic 400 1em "${settings.serif}"`, `1em "${style.script}"`];
+        const loaded = await Promise.all(faces.map(face => document.fonts.load(face, text)));
+        const missing = faces.filter((_, i) => !loaded[i].length);
         if (missing.length) throw new Error(`Fonts did not load: ${missing.join(', ')}`);
-        await Promise.all([...document.images].map(img => img.decode().catch(() => { throw new Error(`Image did not load: ${img.src}`); })));
+        const logo = new Image();
+        logo.src = settings.logo; // drawn as a CSS mask, so it isn't in document.images
+        await Promise.all([...document.images, logo].map(img => img.decode().catch(() => { throw new Error(`Image did not load: ${img.src}`); })));
         for (const line of document.querySelectorAll('[data-fit]')) {
           const box = line.parentElement;
           let size = parseFloat(getComputedStyle(box).fontSize);
@@ -143,42 +197,60 @@ const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`
     </script>
     <style is:global>
       :root {
-        --page: #fdfcf8;
-        --rim: #ede8dc;       /* the torn paper showing around the photo */
-        --ink: #384135;
-        --big: 76px;          /* YOU’RE, PATRICK, AMELIA */
-        --script-size: 120px; /* invited, & */
+        --page: #fdfbf3;
+        --ink: #2e211a;
+        --accent: var(--ink);   /* the & and the date */
+        --rim: color-mix(in srgb, var(--page) 88%, var(--ink)); /* torn paper around the photo */
+        --greeting-size: 26px;
+        --greeting-spacing: .3em;
+        --headline: 92px;       /* the script headline */
+        --names: 74px;
+        --names-weight: 600;
+        --names-spacing: .03em;
+        --amp-size: 1.45em;     /* relative to the names */
         --date: 46px;
-        --small: 26px;        /* every other line */
-        --logo-width: 64px;
+        --small: 26px;          /* venue and town */
+        --logo-width: 72px;
       }
       html, body { margin: 0; width: var(--invite-width); height: var(--invite-height); overflow: hidden; background: var(--page); }
       body { -webkit-font-smoothing: antialiased; }
       .invite {
-        box-sizing: border-box; height: 100%; padding: 0 80px 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        box-sizing: border-box; height: 100%; padding: 0 80px 130px; display: flex; flex-direction: column; align-items: center; justify-content: center;
         color: var(--ink); font-family: var(--serif); font-weight: 500; text-align: center;
       }
       p, h1, figure { margin: 0; }
-      .caps { text-transform: uppercase; }
-      .small { font-size: var(--small); line-height: 1.5; letter-spacing: .26em; margin-right: -.26em; }
-      .greeting { align-self: stretch; }
+
+      .greeting { align-self: stretch; font-size: var(--greeting-size); line-height: 1.3; }
       .greeting span { display: inline-block; white-space: nowrap; }
-      .big { font-size: var(--big); line-height: 1; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
-      .big em {
-        font: normal 400 var(--script-size)/0 var(--script); text-transform: none; letter-spacing: 0;
-        position: relative; top: .04em; margin: 0 -.04em;
-      }
-      h1 em { margin-left: .14em; }
-      .greeting + .big { margin-top: 44px; }
-      .big + .small { margin-top: 50px; }
-      .small + .big { margin-top: 44px; }
-      .photo { position: relative; margin: 56px 0 40px; }
+      [data-greeting='caps'] .greeting { text-transform: uppercase; letter-spacing: var(--greeting-spacing); margin-right: calc(-1 * var(--greeting-spacing)); }
+      [data-greeting='italic'] .greeting { font-style: italic; font-weight: 400; letter-spacing: .02em; }
+      [data-greeting='script'] .greeting { font-family: var(--script); font-weight: 400; line-height: 1.1; }
+
+      .headline { margin-top: 30px; font: 400 var(--headline)/1.06 var(--script); white-space: nowrap; }
+      [data-headline='one'] .headline br { display: none; }
+      /* Monsieur La Doulaise sets its apostrophe wide: "You ’re". */
+      [data-script='monsieur-la-doulaise'] .apostrophe { margin: 0 -.04em 0 -.32em; }
+
+      .names { margin-top: 36px; font-size: var(--names); line-height: 1; white-space: nowrap; }
+      .names em { font-style: normal; color: var(--accent); }
+      [data-names='caps'] .names { text-transform: uppercase; font-weight: var(--names-weight); letter-spacing: var(--names-spacing); margin-right: calc(-1 * var(--names-spacing)); }
+      [data-names='serif'] .names { font-weight: var(--names-weight); letter-spacing: -.01em; }
+      [data-names='script'] .names { font-family: var(--script); font-weight: 400; line-height: 1.1; }
+      [data-amp='script'] .names em { font: 400 var(--amp-size)/0 var(--script); letter-spacing: 0; position: relative; top: .04em; margin: 0 var(--amp-space, .02em); }
+      [data-names='script'] .names em { font-size: 1em; }
+      [data-amp='italic'] .names em { font-style: italic; font-weight: 400; }
+      [data-amp='serif'] .names em { font-weight: 500; }
+
+      .photo { position: relative; margin: 46px 0 34px; }
       .photo > * { position: absolute; inset: 0; mask: var(--mask) center / 100% 100% no-repeat; }
       .rim { --mask: var(--rim-mask); background: var(--rim); }
       .frame { --mask: var(--photo-mask); overflow: hidden; }
       .frame img { position: absolute; display: block; }
-      .date { font-variant-numeric: lining-nums; font-size: var(--date); letter-spacing: .14em; margin: 0 -.14em 22px 0; }
-      .logo { position: absolute; bottom: 64px; width: var(--logo-width); height: auto; opacity: .85; }
+      .date { font-variant-numeric: lining-nums; font-size: var(--date); letter-spacing: .14em; margin: 0 -.14em 22px 0; color: var(--accent); }
+      .venue, .town { font-size: var(--small); line-height: 1.5; letter-spacing: .26em; margin-right: -.26em; }
+      .venue { text-transform: uppercase; }
+      /* logo.png recoloured to the text colour: the PNG is only a mask. */
+      .logo { position: absolute; bottom: 60px; width: var(--logo-width); aspect-ratio: 284 / 192; background: var(--ink); mask: var(--logo) center / contain no-repeat; }
     </style>
   </body>
 </html>

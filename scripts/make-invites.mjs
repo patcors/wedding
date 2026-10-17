@@ -5,14 +5,16 @@
 //   node scripts/make-invites.mjs                  every Party
 //   node scripts/make-invites.mjs curry crash      just these codes
 //   --no-photo                                     leave the photograph out
+//   --style=vibes                                  another look from STYLES in the page
 //   --crop=offset                                  another crop from CROPS in the page
 //   --scale=1                                      1080×1350 instead of 2160×2700
 //   --base=http://localhost:4334                   dev server (default :4321)
+//   --out=/tmp/drafts                              write somewhere other than invites/out
 //
 // Chrome is found at the usual macOS/Linux paths, or set CHROME=/path/to/chrome.
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn, execFileSync } from 'node:child_process';
@@ -21,7 +23,7 @@ import { parties } from '../src/data/parties.ts';
 const WIDTH = 1080;
 const HEIGHT = 1350;
 const root = fileURLToPath(new URL('../', import.meta.url));
-const output = resolve(root, 'invites/out');
+
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => args.find(arg => arg.startsWith(`--${name}=`))?.split('=').slice(1).join('=') ?? fallback;
@@ -29,8 +31,9 @@ const base = option('base', 'http://localhost:4321').replace(/\/$/, '');
 const scale = Number(option('scale', '2'));
 const query = new URLSearchParams();
 if (args.includes('--no-photo')) query.set('photo', 'none');
-if (option('crop')) query.set('crop', option('crop'));
+for (const name of ['style', 'crop']) if (option(name)) query.set(name, option(name));
 const codes = args.filter(arg => !arg.startsWith('--'));
+const output = resolve(root, option('out', 'invites/out'));
 
 const unknown = codes.filter(code => !parties.some(party => party.code === code));
 if (unknown.length) {
@@ -107,19 +110,26 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: scale, mobile: false }, sessionId);
 
   await mkdir(output, { recursive: true });
-  for (const party of chosen) {
-    const url = `${base}/dev/invite/${party.code}/${query.size ? `?${query}` : ''}`;
+  const render = async url => {
     const loaded = once('Page.loadEventFired', sessionId);
     await send('Page.navigate', { url }, sessionId);
     await within(loaded, `${url} to load`);
-    const ready = await within(send('Runtime.evaluate', { expression: 'window.inviteReady', awaitPromise: true }, sessionId), `${party.code}'s fonts and photo`);
-    if (ready.exceptionDetails) throw new Error(`${party.code}: ${ready.exceptionDetails.exception?.description ?? ready.exceptionDetails.text}`);
-    const { data } = await send('Page.captureScreenshot', { format: 'png' }, sessionId);
+    const ready = await within(send('Runtime.evaluate', { expression: 'window.inviteReady', awaitPromise: true }, sessionId), `${url}'s fonts and photo`);
+    if (ready.exceptionDetails) throw new Error(`${url}: ${ready.exceptionDetails.exception?.description ?? ready.exceptionDetails.text}`);
+    return send('Page.captureScreenshot', { format: 'png' }, sessionId);
+  };
+  for (const party of chosen) {
+    const url = `${base}/dev/invite/${party.code}/${query.size ? `?${query}` : ''}`;
+    // Saving the page while this runs makes the dev server reload it mid-render: try once more.
+    const { data } = await render(url).catch(error => {
+      if (!/navigated|destroyed/i.test(error.message)) throw error;
+      return render(url);
+    });
     const file = resolve(output, `${party.code}.png`);
     await writeFile(file, Buffer.from(data, 'base64'));
     console.log(`${party.code.padEnd(16)} ${party.greeting}`);
   }
-  console.log(`\n${chosen.length} invite${chosen.length === 1 ? '' : 's'} in invites/out/ at ${WIDTH * scale}×${HEIGHT * scale}`);
+  console.log(`\n${chosen.length} invite${chosen.length === 1 ? '' : 's'} in ${relative(process.cwd(), output) || output} at ${WIDTH * scale}×${HEIGHT * scale}`);
 } finally {
   socket?.close();
   if (chrome.exitCode === null) {
