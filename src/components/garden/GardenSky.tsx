@@ -1,5 +1,5 @@
 // The sky and light: background, fog, sky dome, sun and the water's tint. The
-// Voyage runs dawn to dusk through one day (skyCycle.ts), following
+// Voyage runs dawn to dusk through one clear day (skyCycle.ts), following
 // useJourney().progress, and the page's copy glows in the sky's colours.
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -8,17 +8,12 @@ import { riverCenter } from './gardenGeometry';
 import { routeAt } from './journey';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import type { WaterTint } from './GardenWater';
-import { DAY, hex, skyAt, type Rgb, type Sky } from './skyCycle';
+import { MIST_KEYS, SKY_KEYS, hex, skyAt, waterIn, type Rgb, type Sky, type WaterStyle } from './skyCycle';
 
-export const SKY = DAY.horizon;
-// Review options. 'blue' is a clear day: a soft grey-blue sky, slightly deeper
-// overhead, over deep blue water. The fog takes the horizon colour so distant
-// trees still melt into the sky, and the page colours in CSS and GardenPage use
-// the zenith so Safari's bars join it. It stays a clear day all the way. 'combo'
-// keeps the misty sky, dawn to dusk, and takes only blue water.
-export type SkyStyle = 'mist' | 'blue' | 'combo';
-export const BLUE_SKY = { zenith: '#9dacc7', horizon: '#abbed8', water: '#1d4f8c', glint: '#eef5ff' };
-const COMBO_WATER = { water: '#4d86c4', glint: '#eef5ff' };
+// Review options: the clear day, or the Garden's old misty one to compare,
+// over any of the rivers in WATERS. The clear day is the site's.
+export type SkyStyle = { sky: 'day' | 'mist'; water: WaterStyle };
+export const SKY_STYLE: SkyStyle = { sky: 'day', water: 'deep' };
 
 const set = (color: THREE.Color, [r, g, b]: Rgb) => color.setRGB(r, g, b, THREE.SRGBColorSpace);
 
@@ -72,21 +67,22 @@ function useSunFollowsVoyage(sun: RefObject<THREE.DirectionalLight | null>, offs
   });
 }
 
-// The page's copy sits on pale glows that take the sky's colour, in ink that
+// The page's copy sits on soft glows that take the sky's colour, in ink that
 // suits it. While scrolling, a colour is written only once it has moved enough
 // to see, so the page isn't restyled every frame; once it slows, the exact
-// colour catches up. Blue leaves the CSS fallbacks.
+// colour catches up. Until then, and if the scene goes, the page keeps the
+// opening's colours GardenPage set.
 const CSS_PROPS = { glow: '--garden-sky-glow', ink: '--garden-ink-on-sky', zenith: '--garden-sky-top' } as const;
-function usePageColors(enabled: boolean) {
+function usePageColors() {
   const canvas = useThree(state => state.gl.domElement);
   const page = useMemo(() => canvas.closest<HTMLElement>('.garden-prototype'), [canvas]);
   const written = useMemo(() => new Map<string, { color: Rgb; hex: string; at: number }>(), []);
   useEffect(() => () => {
     for (const prop of Object.values(CSS_PROPS)) page?.style.removeProperty(prop);
     written.clear();
-  }, [page, enabled, written]);
+  }, [page, written]);
   return (sky: Sky, now: number) => {
-    if (!enabled || !page) return;
+    if (!page) return;
     for (const [name, prop] of Object.entries(CSS_PROPS) as [keyof typeof CSS_PROPS, string][]) {
       const color = sky[name], value = hex(color), last = written.get(prop);
       if (last && (last.hex === value || Math.max(...color.map((v, i) => Math.abs(v - last.color[i]))) < 3 / 255 && now - last.at < .25)) continue;
@@ -96,28 +92,32 @@ function usePageColors(enabled: boolean) {
   };
 }
 
+// The fog's start, from a clear day's (haze 0), which keeps the middle
+// distance crisp, to the old mist's (1); the far end always fades.
+const FOG = { clear: { desktop: 38, mobile: 22 }, mist: { desktop: 16, mobile: 8 }, far: { desktop: 110, mobile: 85 } };
+
 export default function GardenSky({ mobile, width, skyStyle, waterTint }: SlotProps & { skyStyle: SkyStyle; waterTint: WaterTint }) {
-  const clear = skyStyle === 'blue';
+  const keys = skyStyle.sky === 'mist' ? MIST_KEYS : SKY_KEYS;
   const clock = useJourney();
   const sun = useRef<THREE.DirectionalLight>(null);
   const hemisphere = useRef<THREE.HemisphereLight>(null);
   const background = useRef<THREE.Color>(null);
   const fog = useRef<THREE.Fog>(null);
-  const dome = useMemo(() => ({ zenith: new THREE.Color(BLUE_SKY.zenith), horizon: new THREE.Color(BLUE_SKY.horizon) }), []);
-  const sunOffset = useMemo(() => new THREE.Vector3(...DAY.sun), []);
+  const opening = useMemo(() => skyAt(0, keys), [keys]);
+  const dome = useMemo(() => ({ zenith: new THREE.Color(), horizon: new THREE.Color() }), []);
+  const sunOffset = useMemo(() => new THREE.Vector3(...opening.sun), [opening]);
   useSunFollowsVoyage(sun, sunOffset, width);
-  const writePage = usePageColors(!clear);
+  const writePage = usePageColors();
+  const device = mobile ? 'mobile' : 'desktop';
   useFrame(({ clock: time }) => {
-    if (clear) {
-      waterTint.water.set(BLUE_SKY.water);
-      waterTint.glint.set(BLUE_SKY.glint);
-      return;
-    }
-    const sky = skyAt(clock.progress);
+    const sky = skyAt(clock.progress, keys);
     set(dome.horizon, sky.horizon);
     set(dome.zenith, sky.zenith);
     if (background.current) background.current.copy(dome.horizon);
-    fog.current?.color.copy(dome.horizon);
+    if (fog.current) {
+      fog.current.color.copy(dome.horizon);
+      fog.current.near = FOG.clear[device] + (FOG.mist[device] - FOG.clear[device]) * sky.haze;
+    }
     const light = hemisphere.current;
     if (light) {
       set(light.color, sky.hemiSky);
@@ -129,23 +129,16 @@ export default function GardenSky({ mobile, width, skyStyle, waterTint }: SlotPr
       sun.current.intensity = sky.sunIntensity;
     }
     sunOffset.set(...sky.sun);
-    if (skyStyle === 'combo') {
-      waterTint.water.set(COMBO_WATER.water);
-      waterTint.glint.set(COMBO_WATER.glint);
-    } else {
-      set(waterTint.water, sky.water);
-      set(waterTint.glint, sky.glint);
-    }
+    set(waterTint.water, waterIn(sky, skyStyle.water));
+    set(waterTint.glint, sky.glint);
     writePage(sky, time.elapsedTime);
   });
   return <>
-    <color ref={background} attach="background" args={[clear ? BLUE_SKY.horizon : SKY]} />
+    <color ref={background} attach="background" args={[hex(opening.horizon)]} />
     <SkyDome colors={dome} />
-    {/* A clear day keeps the middle distance crisp; the far end still fades. */}
-    <fog ref={fog} attach="fog" args={[clear ? BLUE_SKY.horizon : SKY, clear ? (mobile ? 22 : 38) : (mobile ? 8 : 16), mobile ? 85 : 110]} />
-    {/* Under a blue sky the sun is warmer and stronger, and shade turns cool. */}
-    <hemisphereLight ref={hemisphere} key={skyStyle} args={clear ? ['#d3e3fb', '#8d9a68', 1.45] : [DAY.hemiSky, DAY.hemiGround, DAY.hemi]} />
-    <directionalLight ref={sun} position={DAY.sun} intensity={clear ? 2.9 : DAY.sunIntensity} color={clear ? '#ffeac7' : DAY.sunColor} castShadow
+    <fog ref={fog} attach="fog" args={[hex(opening.horizon), FOG.clear[device], FOG.far[device]]} />
+    <hemisphereLight ref={hemisphere} args={[hex(opening.hemiSky), hex(opening.hemiGround), opening.hemi]} />
+    <directionalLight ref={sun} position={opening.sun} intensity={opening.sunIntensity} color={hex(opening.sunColor)} castShadow
       shadow-mapSize={[SHADOW.map, SHADOW.map]} shadow-camera-left={SHADOW.left} shadow-camera-right={SHADOW.right}
       shadow-camera-top={SHADOW.top} shadow-camera-bottom={SHADOW.bottom} shadow-camera-far={110}
       shadow-bias={-.0003} shadow-normalBias={.07} />
