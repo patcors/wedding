@@ -5,12 +5,11 @@
 // morph target the GPU blends.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { Company } from './storyBoats';
 
 type Point = [number, number, number];
 export type StoryPalette = {
   topsides: string; bottom: string; stripe: string; transom: string;
-  rim: string; wall: string; floor: string; flag: string; letter: string;
+  rim: string; wall: string; floor: string;
 };
 
 // Muted to sit with the Garden's paper and ink: Amelia's is the natural wood
@@ -18,11 +17,11 @@ export type StoryPalette = {
 export const STORY_PALETTES = {
   amelia: {
     topsides: '#d3ad76', bottom: '#ac824f', stripe: '#86aaa1', transom: '#86aaa1',
-    rim: '#9dbcb3', wall: '#bd9058', floor: '#c99f65', flag: '#6f978e', letter: '#f7f3e8',
+    rim: '#9dbcb3', wall: '#bd9058', floor: '#c99f65',
   },
   patrick: {
     topsides: '#e6d193', bottom: '#c8b273', stripe: '#f4ecd6', transom: '#e0c87f',
-    rim: '#efe2b0', wall: '#d6bf7c', floor: '#dcc688', flag: '#e2c770', letter: '#384135',
+    rim: '#efe2b0', wall: '#d6bf7c', floor: '#dcc688',
   },
 } satisfies Record<string, StoryPalette>;
 
@@ -177,8 +176,10 @@ export function bigRig() {
   return { mast: spar([0, 0, 0], [0, top, 0], .026), boom: spar([0, boom, .035], [0, boom, foot], .015), cloth };
 }
 
-// A small flag from the masthead, its hoist on the mast and its fly along +x.
-export const FLAG = { length: .34, height: .22, segments: 8 } as const;
+// The flag at each small masthead, its hoist on the mast and its fly along
+// +x: the mark of the company each works for, on paper, from their
+// internship until they get engaged.
+export const FLAG = { length: .36, height: .26, segments: 8 } as const;
 export function flagGeometry(mirrored: boolean) {
   const geometry = new THREE.PlaneGeometry(FLAG.length, FLAG.height, FLAG.segments, 2);
   geometry.translate(FLAG.length / 2, HULL.mastTop - FLAG.height / 2 - .01, 0);
@@ -190,118 +191,49 @@ export function flagGeometry(mirrored: boolean) {
   return geometry;
 }
 
-// The flag's cloth with its initial: Cormorant, the Garden's display face,
-// once it has loaded.
-export function flagTexture(letter: string, palette: StoryPalette) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128; canvas.height = 84;
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
-  const font = '600 76px "Cormorant Garamond", Georgia, serif';
-  const draw = () => {
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = palette.flag; ctx.fillRect(0, 0, 128, 84);
-    ctx.fillStyle = palette.letter; ctx.font = font;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(letter, 60, 47);
-    texture.needsUpdate = true;
-  };
-  draw();
-  document.fonts?.load(font).then(draw, () => {});
-  return texture;
-}
-
-// A canvas to paint a cloth on, as a texture that's updated when it changes.
-function canvasCloth(width: number, height: number) {
+// Paper cloth with a mark (an image on transparency) as large as fits
+// `fill` of its height, centred between `from` and the fly. `heading` adds
+// a darker strip along the hoist, where it's sewn to the halyard, for a flag
+// whose hoist is always on the canvas's left.
+function markedCloth(width: number, height: number, mark: string | null, { fill, from = 0, heading = false }: { fill: number; from?: number; heading?: boolean }) {
   const canvas = document.createElement('canvas');
   canvas.width = width; canvas.height = height;
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
-  return { ctx: canvas.getContext('2d')!, texture };
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#f7f3e8'; ctx.fillRect(0, 0, width, height);
+  if (heading) { ctx.fillStyle = '#e4dcc6'; ctx.fillRect(0, 0, width * .04, height); }
+  if (!mark) return texture;
+  const image = new Image();
+  image.onload = () => {
+    const left = width * from, right = width * (1 - from / 3);
+    const w = Math.min(right - left, height * fill * image.width / image.height), h = w * image.height / image.width;
+    ctx.drawImage(image, (left + right - w) / 2, (height - h) / 2, w, h);
+    texture.needsUpdate = true;
+  };
+  image.src = mark;
+  return texture;
 }
 
+// A company's flag: its mark in its own colour on paper, or plain paper
+// without one. Centred, so it sits the same whichever way the flag flies.
+export const companyFlagTexture = (mark: string | null) =>
+  markedCloth(192, Math.round(192 * FLAG.height / FLAG.length), mark, { fill: .82 });
+
 // The flag the big mast flies from its masthead once they are engaged: their
-// monogram on a paper-coloured swallowtail, larger than the initials' flags so
-// it reads at the dock on a phone. In the big mast's units, hoist on the mast
-// at its top (y 0) and fly along +x, to starboard, clear of the sail.
-export const LOGO_FLAG = { length: .7, height: .46, segments: 10, notch: .2 } as const;
+// monogram on paper, larger than the small masts' flags so it reads at the
+// dock on a phone, and short enough to stay clear of the copy beside it on
+// desktop. In the big mast's units, hoist on the mast at its top (y 0) and
+// fly along +x, to starboard, clear of the sail.
+export const LOGO_FLAG = { length: .52, height: .38, segments: 10 } as const;
 export function logoFlagGeometry() {
   const geometry = new THREE.PlaneGeometry(LOGO_FLAG.length, LOGO_FLAG.height, LOGO_FLAG.segments, 3);
   geometry.translate(LOGO_FLAG.length / 2, -LOGO_FLAG.height / 2, 0);
   return geometry;
 }
-export function logoFlagTexture(logo: string) {
-  const width = 384, height = Math.round(width * LOGO_FLAG.height / LOGO_FLAG.length);
-  const { ctx, texture } = canvasCloth(width, height);
-  const notch = LOGO_FLAG.notch * width;
-  ctx.fillStyle = '#f7f3e8';
-  ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(width, 0); ctx.lineTo(width - notch, height / 2); ctx.lineTo(width, height); ctx.lineTo(0, height);
-  ctx.fill();
-  // A darker heading along the hoist, where it's sewn to the halyard.
-  ctx.fillStyle = '#e4dcc6'; ctx.fillRect(0, 0, width * .04, height);
-  const image = new Image();
-  image.onload = () => {
-    // Centred between the heading and the notch, as large as fits.
-    const from = width * .07, to = width - notch - width * .02;
-    const w = Math.min(to - from, height * .84 * image.width / image.height), h = w * image.height / image.width;
-    ctx.drawImage(image, (from + to - w) / 2, (height - h) / 2, w, h);
-    texture.needsUpdate = true;
-  };
-  image.src = logo;
-  return texture;
-}
-
-// The company pennants each small mast flies under its initial: a tapering
-// pennant in the company's colour with its mark in paper at the hoist, so on
-// a phone it reads as a shape and a colour even where the mark barely does.
-// Hoist on the mast, fly along +x.
-export const PENNANT = { length: .32, height: .17, segments: 6, top: HULL.mastTop - FLAG.height - .035 } as const;
-export function pennantGeometry() {
-  const geometry = new THREE.PlaneGeometry(PENNANT.length, PENNANT.height, PENNANT.segments, 1);
-  geometry.translate(PENNANT.length / 2, PENNANT.top - PENNANT.height / 2, 0);
-  return geometry;
-}
-const PAPER = '#f7f3e8';
-export function pennantTexture(company: Company, crown: string) {
-  const width = 128, height = 68, mark = { x: 24, y: height / 2 };
-  const { ctx, texture } = canvasCloth(width, height);
-  // Cut off short of a point at the fly, so it keeps some body when small.
-  const cloth = () => {
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(width, height * .41); ctx.lineTo(width, height * .59); ctx.lineTo(0, height);
-  };
-  cloth();
-  if (company === 'finocomp') {
-    // FinoComp's orange running to amber, as its mark does.
-    const gradient = ctx.createLinearGradient(0, 0, width, 0);
-    gradient.addColorStop(0, '#e27a16'); gradient.addColorStop(1, '#f0b938');
-    ctx.fillStyle = gradient; ctx.fill();
-    // Only the power symbol from its logo: a ring broken at the top, and the bar through the gap.
-    const r = 13;
-    ctx.strokeStyle = PAPER; ctx.lineWidth = 5; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(mark.x, mark.y + 1, r, -Math.PI / 2 + .7, Math.PI * 1.5 - .7); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(mark.x, mark.y - r - 2); ctx.lineTo(mark.x, mark.y + 1); ctx.stroke();
-    return texture;
-  }
-  ctx.fillStyle = '#783593'; ctx.fill();
-  // HeirWealth's crown, purple on transparency, painted in paper.
-  const image = new Image();
-  image.onload = () => {
-    const size = 34, tint = document.createElement('canvas');
-    tint.width = tint.height = size * 2;
-    const t = tint.getContext('2d')!;
-    t.drawImage(image, 0, 0, size * 2, size * 2);
-    t.globalCompositeOperation = 'source-in';
-    t.fillStyle = PAPER; t.fillRect(0, 0, size * 2, size * 2);
-    ctx.drawImage(tint, mark.x - size / 2, mark.y - size / 2, size, size);
-    texture.needsUpdate = true;
-  };
-  image.src = crown;
-  return texture;
-}
+export const logoFlagTexture = (logo: string) =>
+  markedCloth(384, Math.round(384 * LOGO_FLAG.height / LOGO_FLAG.length), logo, { fill: .84, from: .07, heading: true });
 
 // Waves a flag's cloth about its rest shape, more towards the fly, and lets
 // the fly droop a little. `rest` is its positions as built.
