@@ -27,7 +27,7 @@ node --test tests/*.test.mjs
 pnpm build && pnpm preview   # check the production build
 ```
 
-Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Garden's Review panel (ground, rocks, plants and tree variants, butterfly colours, pause, scene only) and `/dev/links`. Gate anything new like it behind `import.meta.env.DEV`.
+Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Garden's Review panel (ground, rocks, plants and tree variants, butterfly colours, pause, scene only), its Float a boat and Release a butterfly buttons, and `/dev/links`. Gate anything new like it behind `import.meta.env.DEV`.
 
 ## Editing content
 

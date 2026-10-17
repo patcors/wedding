@@ -260,7 +260,8 @@ export default function Garden({ greeting }: { greeting?: string }) {
 
     <div className="garden-chrome-layer">
       <div className="garden-bottom garden-copy garden-chrome" inert={state !== 'ready'}>
-        <div className="garden-creature-actions">
+        {/* Dev only: test buttons. Guests tap the water for a boat. */}
+        {REVIEW && <div className="garden-creature-actions">
         <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
           <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">
             <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
@@ -274,7 +275,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
           </svg>
           <span>Release a butterfly</span>
         </button>
-        </div>
+        </div>}
         <button className="garden-scroll-cue" onClick={nextStop}>
           {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
         </button>
