@@ -2,7 +2,7 @@
 // through story time, and where along the river the boats are. Boats, sky,
 // eggs and the date label all read from here. Pure, so it can be tested.
 
-export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'apartments';
+export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'apartments' | 'snow-2025';
 // `room` is the milestone's share of the voyage's scroll, up to the next one
 // (1 by default). Shares follow the story, not the calendar, so a quiet year
 // doesn't become a long empty stretch.
@@ -34,7 +34,7 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'living-together', month: '2024-06', description: 'They start living together.', room: .8 },
   // The boats join and become one catamaran.
   { id: 'dating', month: '2024-08', description: 'They start dating.', room: 1.6 },
-  { id: 'snow-2025', month: '2025-08', description: 'Another snow trip.' },
+  { id: 'snow-2025', month: '2025-08', description: 'Another snow trip.', egg: 'snow-2025' },
   { id: 'salsa', month: '2026-01', description: 'They start salsa classes.' },
   { id: 'engaged', month: '2026-04', description: 'They get engaged.' },
   // The last stretch rounds the bend to the wedding: room enough that the

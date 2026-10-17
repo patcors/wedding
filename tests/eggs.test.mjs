@@ -251,3 +251,33 @@ test('the birds tell the apartments: one each, his at hers while he renovates, h
     assert.ok(!fired(home, triggers, still, true));
   }
 });
+
+const snowAgain = MILESTONES.find(m => m.egg === 'snow-2025');
+
+test('the 2025 snowmen stand on the bank holding hands, in view as their date holds, clear of the birdhouses', async () => {
+  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const { HOLD, SNOWMAN, holdingHandsGeometry } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+  const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
+  const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+  assert.equal(snowAgain.month, '2025-08');
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const { x, z } = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
+    assert.ok(onLand(x, z, width), 'on land');
+    for (let t = 0; t <= 1; t += .05) {
+      const { bearing } = seen(progressAt(snowAgain.month) + t * ROOM, width, x, z);
+      assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at ${t}`);
+    }
+    const others = [...nestSpots(width).flatMap(pair => Object.values(pair)), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width))];
+    for (const other of others) assert.ok(Math.hypot(other.x - x, other.z - z) > 5, 'clear of the other scenery');
+  }
+  // Each holds its hand out and down to halfway to the other, where they meet.
+  const { snowmanGeometry } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+  const [, [, shoulder]] = SNOWMAN.balls;
+  for (const side of [1, -1]) {
+    const p = snowmanGeometry({ hold: side, simple: true }).attributes.position;
+    let reach = 0;
+    for (let i = 0; i < p.count; i++) if (p.getY(i) < shoulder) reach = Math.max(reach, p.getX(i) * side);
+    assert.ok(reach > HOLD.apart / 2 - .02 && reach < HOLD.apart / 2 + .1, `reaches ${reach}`);
+  }
+  assert.ok(holdingHandsGeometry({ scarf: '#4d827f' }, { scarf: '#e3c46a' }).attributes.position.count / 3 < 1600, 'two simple snowmen');
+});
