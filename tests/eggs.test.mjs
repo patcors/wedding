@@ -190,3 +190,64 @@ test('the mortarboards are tossed straight up off the boats while the date holds
   const still = stillProgress(progressAt(graduation.month) + ROOM * .2);
   assert.ok(CAPS.tosses.every(toss => eggTime(graduation, still, true, CAPS.settled) > toss.at));
 });
+
+const apartments = MILESTONES.find(m => m.egg === 'apartments');
+
+test('the birds tell the apartments: one each, his at hers while he renovates, home again, then both at his', async () => {
+  const { AMELIA_MOVED_IN } = await import('../src/components/garden/journey.ts');
+  const { NESTS, NEST_EVENTS, PATRICK_HOME, birdPoses, fired, nestSpots, nestTriggers, perchPoint } = await import('../src/components/garden/eggs/nesting.ts');
+  assert.equal(apartments.month, '2024-05');
+  assert.equal(AMELIA_MOVED_IN, '2025-06');
+  assert.ok(MILESTONES.every(m => m.month !== AMELIA_MOVED_IN), 'moving in is not a milestone');
+  const living = MILESTONES.find(m => m.id === 'living-together');
+  assert.deepEqual([...new Set(NEST_EVENTS.map(e => e.month))], [apartments.month, living.month, PATRICK_HOME, AMELIA_MOVED_IN]);
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const spots = nestSpots(width), triggers = nestTriggers(width);
+    for (let i = 1; i < triggers.length; i++) assert.ok(triggers[i] >= triggers[i - 1], 'in order');
+    // Where each bird is once the first n events are done.
+    const after = n => birdPoses(NEST_EVENTS.map((_, i) => i < n ? 99 : null), spots);
+    const at = (pose, pair, house, spot) => Math.hypot(pose.x - perchPoint(spots[pair][house], spot).x, pose.y - perchPoint(spots[pair][house], spot).y) < 1e-9;
+    const expect = [
+      [2, 0, { amelia: 'amelia', patrick: 'patrick' }],
+      [3, 0, { amelia: 'amelia', patrick: 'amelia' }],
+      [4, 0, { amelia: 'amelia', patrick: 'patrick' }],
+      [5, 1, { amelia: 'amelia', patrick: 'patrick' }],
+      [6, 1, { amelia: 'patrick', patrick: 'patrick' }],
+    ];
+    for (const [n, pair, homes] of expect) {
+      const poses = after(n)[pair];
+      for (const owner of ['amelia', 'patrick']) {
+        assert.ok(poses[owner].shown && poses[owner].flying === 0, `${owner} perched after ${n}`);
+        assert.ok(at(poses[owner], pair, homes[owner], homes[owner] === owner ? 'home' : 'guest'), `${owner} at ${homes[owner]}'s after ${n}`);
+      }
+    }
+    // Nobody in the first pair before they fly in.
+    assert.ok(!after(1)[0].amelia.shown && !after(1)[0].patrick.shown);
+    // Mid-flight a bird is off its perches, up in the air.
+    const flying = birdPoses(NEST_EVENTS.map((_, i) => i < 2 ? 99 : i === 2 ? NESTS.flight / 2 : null), spots)[0].patrick;
+    assert.ok(flying.flying > .9 && flying.y > perchPoint(spots[0].amelia, 'guest').y);
+    // Each house stands on the bank (or on a post at its edge), clear of the year markers.
+    const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+    const markers = YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width));
+    spots.forEach((pair, k) => Object.values(pair).forEach(house => {
+      assert.ok(onLand(house.x, house.z, width) && Math.sign(house.x - riverCenter(house.z, width)) === NESTS.pairs[k].side);
+      for (const marker of markers) assert.ok(Math.hypot(marker.x - house.x, marker.z - house.z) > 5);
+    }));
+    // Both houses of the pair in the picture, and near enough to read, as each event fires.
+    NEST_EVENTS.forEach((event, i) => {
+      for (const house of Object.values(spots[event.pair])) {
+        const { bearing, distance } = seen(triggers[i], width, house.x, house.z);
+        assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at event ${i}`);
+        assert.ok(distance < (event.build && event.pair === 1 ? 31 : 26), `distance ${distance} at event ${i}`);
+      }
+    });
+    // The second pair comes up only once Patrick's bird is home.
+    const home = NEST_EVENTS.findIndex(e => e.month === PATRICK_HOME && e.moves?.patrick);
+    assert.ok(triggers[NEST_EVENTS.findIndex(e => e.pair === 1 && e.build)] >= triggers[home]);
+    // Under reduced motion each still shows its stage done: at living
+    // together's, Patrick's bird is at Amelia's and the scaffolding up.
+    const still = stillProgress(progressAt(living.month) + ROOM * .2), visit = NEST_EVENTS.findIndex(e => e.scaffold === 1);
+    assert.ok(fired(visit, triggers, still, true) && !fired(visit, triggers, still, false));
+    assert.ok(!fired(home, triggers, still, true));
+  }
+});

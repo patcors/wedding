@@ -2,7 +2,7 @@
 // through story time, and where along the river the boats are. Boats, sky,
 // eggs and the date label all read from here. Pure, so it can be tested.
 
-export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation';
+export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'apartments';
 // `room` is the milestone's share of the voyage's scroll, up to the next one
 // (1 by default). Shares follow the story, not the calendar, so a quiet year
 // doesn't become a long empty stretch.
@@ -11,6 +11,10 @@ export type Milestone = { id: string; month: string; description: string; egg?: 
 // When Amelia left FinoComp: a placeholder until she confirms the month. Her
 // flag changes as it shows (see FLAG_CHANGES in storyBoats.ts).
 export const AMELIA_LEFT_FINOCOMP = '2022-10';
+// When Amelia moved into Patrick's apartment: a placeholder until she
+// confirms the month. Only the birdhouses read it (eggs/nesting.ts), when her
+// bird flies over to his; it isn't a milestone.
+export const AMELIA_MOVED_IN = '2025-06';
 
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
@@ -26,7 +30,7 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'interim', month: AMELIA_LEFT_FINOCOMP, description: 'Amelia leaves FinoComp for a few months of tutoring and selling haircare online.' },
   { id: 'amelia-heirwealth', month: '2023-01', description: 'Amelia starts at HeirWealth.' },
   { id: 'heirwealth', month: '2023-03', description: 'Amelia is back, and Patrick joins her at HeirWealth, so they start working together.' },
-  { id: 'apartments', month: '2024-05', description: 'They both buy apartments.', room: .8 },
+  { id: 'apartments', month: '2024-05', description: 'They both buy apartments.', egg: 'apartments', room: .8 },
   { id: 'living-together', month: '2024-06', description: 'They start living together.', room: .8 },
   // The boats join and become one catamaran.
   { id: 'dating', month: '2024-08', description: 'They start dating.', room: 1.6 },
