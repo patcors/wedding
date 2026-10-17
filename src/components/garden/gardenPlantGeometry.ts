@@ -117,9 +117,10 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
     const rand = random(kind === 'reed' ? 3107 : 4129);
     // Portrait's bend at the start (see gardenGeometry) brings the first bed
     // nearer the camera, running up onto the bank, and keeps it from reaching
-    // as far into the river. The second runs further towards the camera along
-    // the right bank so no water shows between it and the shore.
-    const patches = [mobile ? { z: 8.6, side: -1, reach: .6 } : { z: 7, side: -1 },
+    // as far into the river. The first stops just upstream of Amelia's little
+    // jetty, so it doesn't hide it. The second runs further towards the camera
+    // along the right bank so no water shows between it and the shore.
+    const patches = [mobile ? { z: 9.4, side: -1, reach: .6 } : { z: 8.3, side: -1, length: 2.6 },
       mobile ? { z: -3.9, side: 1, length: 5.2 } : { z: -5, side: 1 },
       { z: -23, side: -1 }, { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 },
       ...REED_BEDS_DOWNSTREAM]

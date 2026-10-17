@@ -1,8 +1,8 @@
 // Where Patrick's and Amelia's boats are at progress p, and how far they have
 // become a catamaran (see docs/VOYAGE.md). Pure, so it can be tested; drawn by
 // VoyageBoats.tsx with the models in storyBoatGeometry.ts.
-import { DATES, DOCKED, VOYAGE_END, progressAt, routeAt, scrolledSince } from './journey.ts';
-import { VOYAGE, bankEdge, channelOffset, riverCenter, voyageLandmarks } from './gardenGeometry.ts';
+import { ARRIVAL_END, DATES, DOCKED, ROUTE, VOYAGE_END, progressAt, routeAt, scrolledSince } from './journey.ts';
+import { VOYAGE, bankEdge, channelOffset, launchJetties, riverCenter, voyageLandmarks } from './gardenGeometry.ts';
 
 // The models are built in their own units; this sizes them in the world so
 // they read as the protagonists on a portrait phone, where the camera's lens
@@ -57,11 +57,23 @@ export function rigging(p: number, still = false): Rigging {
 
 export const hullHalfBeam = (morph: number) => HULL_HALF_BEAM.dinghy + (HULL_HALF_BEAM.catamaran - HULL_HALF_BEAM.dinghy) * morph;
 
+// Under the opening title each boat lies alongside the head of its own jetty
+// (see launchJetties), held by its lines, its sail sheeted in. As the guest
+// starts to scroll they cast off and pull out into their channels by the end
+// of the opening. `berth` is half the distance between the hulls' centres
+// there, in model units: each hull just clear of its jetty's head.
+export const CAST_OFF = { from: .004, to: ARRIVAL_END * .85 } as const;
+export const castingOff = (p: number) => ease((p - CAST_OFF.from) / (CAST_OFF.to - CAST_OFF.from));
+export const berth = (width: number) => Math.min(...launchJetties(width).map(jetty =>
+  Math.abs(jetty.x - riverCenter(ROUTE.start, width)) - jetty.reach - .1)) / BOAT_SCALE - HULL_HALF_BEAM.dinghy;
+
 // Half the distance between the hulls' centres at p, in model units.
 export function boatGap(p: number, width: number) {
   const z = routeAt(p);
-  // Each in its own channel beside the island, closing in once it ends.
-  const apart = channelOffset(z, width) / BOAT_SCALE;
+  // Each in its own channel beside the island, closing in once it ends; at
+  // its jetty before that.
+  const channel = channelOffset(z, width) / BOAT_SCALE;
+  const apart = berth(width) + (channel - berth(width)) * castingOff(p);
   const met = ease((VOYAGE.island.to - z) / (VOYAGE.island.to - VOYAGE.meet));
   let gap = apart + (ALONGSIDE - apart) * met;
   // Drifting apart into Sydney's wider river as its date arrives, still in
@@ -92,8 +104,9 @@ export type BoatPose = {
   // turns in towards the other (+) or away while that changes.
   gap: number; turn: number;
   join: ReturnType<typeof catamaran>;
-  // How far into the mooring: the sails come in as it settles.
-  docking: number;
+  // How far into the mooring at the dock (the sails come in as it settles),
+  // and how far still tied up at the jetties at the start.
+  docking: number; berthed: number;
 };
 
 export function boatPose(p: number, width: number): BoatPose {
@@ -105,7 +118,7 @@ export function boatPose(p: number, width: number): BoatPose {
   const gap = boatGap(p, width);
   const run = Math.hypot(b.x - a.x, b.z - a.z) / BOAT_SCALE;
   const turn = Math.max(-.22, Math.min(.22, -Math.atan((boatGap(q + STEP, width) - boatGap(q - STEP, width)) / run)));
-  return { x, z, yaw, gap, turn, join: catamaran(joining(p)), docking: ease((p - VOYAGE_END) / (DOCKED - VOYAGE_END)) };
+  return { x, z, yaw, gap, turn, join: catamaran(joining(p)), docking: ease((p - VOYAGE_END) / (DOCKED - VOYAGE_END)), berthed: 1 - castingOff(p) };
 }
 
 // The moored catamaran's footprint on the water, as posts round its edge for

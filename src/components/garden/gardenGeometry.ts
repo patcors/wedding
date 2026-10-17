@@ -106,14 +106,44 @@ export function voyageLandmarks(width = 1) {
   };
 }
 
+// Each boat sets out from its own little jetty on its channel's outer bank,
+// beside where it starts under the opening title: Amelia's on the −x bank,
+// Patrick's on +x. They sit a little apart along the river, his longer at the
+// head, as his and hers. Each runs `reach` out over the water to a head
+// `head` long along the bank, where its boat lies alongside, stern to the
+// head and bow free downstream, ready to leave: in portrait the river's
+// middle drifts towards Patrick's bank as they set off. In portrait the
+// channels are only just wider than a boat beside a jetty, so each is a
+// landing stage along the bank and its boat lies about mid-channel, setting
+// off straight down it.
+export const LAUNCH_JETTY = { reach: 1.05, mobileReach: .27, headDepth: .4, neck: .5, landing: .5 } as const;
+export function launchJetties(width = 1) {
+  const middle = riverCenter(ROUTE.start, width);
+  const banks = ([[-1, .25, 1.15], [1, .4, 1.4]] as const).map(([side, dz, head]) => {
+    const z = ROUTE.start + dz;
+    return { side, x: riverCenter(z, width) + side * bankEdge(z, width), z, head };
+  });
+  // The nearer bank's jetty is the shortest; the other reaches out as far
+  // from the river's middle, so both boats lie alongside.
+  const nearest = Math.min(...banks.map(bank => Math.abs(bank.x - middle)));
+  return banks.map(bank => {
+    const reach = (width < 1 ? LAUNCH_JETTY.mobileReach : LAUNCH_JETTY.reach) + Math.abs(bank.x - middle) - nearest;
+    return { ...bank, reach, headDepth: Math.min(LAUNCH_JETTY.headDepth, reach) };
+  });
+}
+
 // Ground kept clear of generated planting: the old tree's trunk and roots,
-// and the jetty with its landing on the bank. `margin` widens both, for
+// and the jetties with their landings on the bank. `margin` widens each, for
 // plants and trees with a spread.
 export function voyageClearing(x: number, z: number, width = 1, margin = 0) {
   const { jetty, tree } = voyageLandmarks(width);
   if (Math.hypot(x - tree.x, z - tree.z) < 2.2 + margin) return true;
   const along = (x - jetty.x) * jetty.side;
-  return along > -jetty.reach - .4 - margin && along < 1.8 + margin && Math.abs(z - jetty.z) < .9 + margin;
+  if (along > -jetty.reach - .4 - margin && along < 1.8 + margin && Math.abs(z - jetty.z) < .9 + margin) return true;
+  return launchJetties(width).some(launch => {
+    const inland = (x - launch.x) * launch.side;
+    return inland > -launch.reach - .2 - margin && inland < LAUNCH_JETTY.landing + .5 + margin && Math.abs(z - launch.z) < launch.head / 2 + .2 + margin;
+  });
 }
 
 // Instances are batched by stretch of river, and a batch is drawn only while

@@ -102,9 +102,10 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
       mast.position.z = HULL.mast.dinghy + (HULL.mast.catamaran - HULL.mast.dinghy) * join.morph;
       // Lowered aft about its foot once the sail is furled, to lie along the hull.
       mast.rotation.x = rig.lower * LOWERED;
-      // Sheeted in at the mooring, clear of the jetty, and rolled into the mast
+      // Sheeted in while tied up, at the start and at the dock, clear of the
+      // jetties, and rolled into the mast
       // as the big mast's time comes.
-      sails.current[i]?.rotation.set(0, side * SAIL_EASED * (1 - .85 * pose.docking), 0);
+      sails.current[i]?.rotation.set(0, side * SAIL_EASED * (1 - .85 * Math.max(pose.docking, pose.berthed)), 0);
       sails.current[i]?.scale.set(1, 1, 1 - .97 * rig.furl);
       // The flag comes down its mast as the sail furls, to go up the big one.
       flag.position.y = -rig.furl * (HULL.mastTop - .5);

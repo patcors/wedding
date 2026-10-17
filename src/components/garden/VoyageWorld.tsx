@@ -1,19 +1,22 @@
-// The Voyage's scenery along the river (owner: world agent): the island and
-// reeds that split the river before they meet, and the jetty and the festoon
+// The Voyage's scenery along the river (owner: world agent): the little
+// jetties the boats set out from, the island and reeds that split the river
+// before they meet, and the jetty and the festoon
 // lights in the old tree past the S-bend. The old tree itself and the stand of
 // trees that hides it until the bend are planted with the rest in
 // GardenTrees, which shares their bark, leaves and wind.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { VOYAGE, voyageLandmarks } from './gardenGeometry';
+import { ROUTE } from './journey';
+import { VOYAGE, riverCenter, voyageLandmarks } from './gardenGeometry';
+import { BOAT_SCALE, berth, castingOff } from './storyBoats';
 import { lampsAt } from './skyCycle';
 import { useGroundMaterial } from './GardenGround';
 import { plantMaterial } from './GardenPlants';
 import { OLD_TREE_SCALE } from './GardenTrees';
 import { plantGeometry } from './gardenPlantGeometry';
 import { islandGeometry, islandPlantSites, type IslandPlant } from './voyageIsland';
-import { FESTOON, festoonStrands, jettyGeometry, jettyLantern, sagPoints } from './voyageDock';
+import { FESTOON, festoonStrands, jettyGeometry, jettyLantern, launchJettyGeometry, launchLanterns, mooringLines, sagPoints } from './voyageDock';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { useRiverReach } from './useRiverReach';
 
@@ -144,8 +147,45 @@ function Dock({ width, mobile }: SlotProps) {
   </group>;
 }
 
+// Each boat's own little jetty, where it lies tied up under the opening title
+// with its lantern still burning from the night. Its lines are let go as the
+// guest starts to scroll, and the lanterns fade as the boats pull away.
+function Launch({ width, mobile }: SlotProps) {
+  const clock = useJourney();
+  const group = useRef<THREE.Group>(null), lines = useRef<THREE.Mesh>(null);
+  const jetties = useMemo(() => launchJettyGeometry(width), [width]);
+  // The hulls' bow and stern ends, a little in from the tips, in world units.
+  const tied = useMemo(() => mooringLines(width, side => ({ x: riverCenter(ROUTE.start, width) + side * berth(width) * BOAT_SCALE, z: ROUTE.start }), -.62, .55), [width]);
+  const lanterns = useMemo(() => new THREE.BufferGeometry().setFromPoints(launchLanterns(width)), [width]);
+  const glow = useMemo(glowTexture, []);
+  const materials = useMemo(() => ({
+    bulb: new THREE.PointsMaterial({ color: LIT, size: .07, toneMapped: false }),
+    glow: new THREE.PointsMaterial({ map: glow, size: mobile ? .5 : .6, transparent: true, opacity: 0,
+      depthWrite: false, blending: THREE.AdditiveBlending, color: LIT, toneMapped: false }),
+  }), [glow, mobile]);
+  useEffect(() => () => { jetties.dispose(); tied.dispose(); lanterns.dispose(); glow.dispose(); Object.values(materials).forEach(m => m.dispose()); }, [jetties, tied, lanterns, glow, materials]);
+  useFrame(() => {
+    const away = castingOff(clock.progress);
+    if (lines.current) lines.current.visible = away === 0;
+    materials.bulb.color.copy(UNLIT).lerp(LIT, 1 - away);
+    materials.glow.opacity = (1 - away) * .55;
+  });
+  useRiverReach(group, useMemo(() => [{ z: ROUTE.start + 2 }, { z: ROUTE.start - 2 }], []));
+  return <group ref={group} name="voyage-launch">
+    <mesh name="voyage-launch-jetties" geometry={jetties} castShadow receiveShadow>
+      <meshStandardMaterial vertexColors roughness={.95} />
+    </mesh>
+    <mesh ref={lines} geometry={tied}>
+      <meshStandardMaterial color="#cbbd9c" roughness={1} />
+    </mesh>
+    <points geometry={lanterns} material={materials.bulb} />
+    <points geometry={lanterns} material={materials.glow} renderOrder={1} />
+  </group>;
+}
+
 export default function VoyageWorld(props: SlotProps) {
   return <group name="voyage-world">
+    <Launch {...props} />
     <Island {...props} />
     <Dock {...props} />
   </group>;

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, VOYAGE_END, progressAt, routeAt, stillProgress } from '../src/components/garden/journey.ts';
-import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, islandHalfWidth, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ALONGSIDE, BOAT_SCALE, CATAMARAN, boatPose, hullHalfBeam, joining, rigging } from '../src/components/garden/storyBoats.ts';
+import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
+import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, boatPose, hullHalfBeam, joining, rigging } from '../src/components/garden/storyBoats.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
 const widths = [1, MOBILE_RIVER_WIDTH];
@@ -10,6 +10,20 @@ const widths = [1, MOBILE_RIVER_WIDTH];
 const hulls = (p, width) => {
   const pose = boatPose(p, width), half = hullHalfBeam(pose.join.morph) * BOAT_SCALE;
   return { pose, half, offsets: [-1, 1].map(side => pose.x - riverCenter(pose.z, width) + side * pose.gap * BOAT_SCALE * Math.cos(pose.yaw)) };
+};
+
+// Points round both hulls' rims in the world at p, from the dinghy's sections.
+const SECTIONS = [[-.78, .015], [-.55, .23], [-.12, .36], [.30, .33], [.66, .22]];
+const hullOutline = (p, width) => {
+  const pose = boatPose(p, width), c = Math.cos(pose.yaw), s = Math.sin(pose.yaw);
+  return [-1, 1].flatMap(side => {
+    const turn = side * pose.turn, ct = Math.cos(turn), st = Math.sin(turn);
+    return SECTIONS.flatMap(([v, w]) => [-w, w].map(u => {
+      // In the boat, turned about its middle, then across to its place in the pair.
+      const bu = side * pose.gap + u * ct + v * st, bv = -u * st + v * ct;
+      return { x: pose.x + (c * bu + s * bv) * BOAT_SCALE, z: pose.z + (-s * bu + c * bv) * BOAT_SCALE };
+    }));
+  });
 };
 
 test('before they meet, each boat keeps to its own channel beside the island', () => {
@@ -127,4 +141,40 @@ test('reduced-motion stills show the rig settled: two masts before the engagemen
     assert.equal(rig.hoist, month >= DATES.engaged ? 1 : 0);
   }
   assert.ok(Object.values(rigging(1, true)).every(k => k === 1) && Object.values(rigging(DOCKED)).every(k => k === 1));
+});
+
+test('under the title each boat lies alongside its own jetty, then casts off into its channel', () => {
+  for (const width of widths) {
+    const jetties = launchJetties(width);
+    // Amelia's (left) and Patrick's (right) on the outer banks of their channels.
+    assert.deepEqual(jetties.map(j => j.side), [-1, 1]);
+    const { pose, half, offsets } = hulls(0, width);
+    assert.equal(pose.berthed, 1);
+    offsets.forEach((offset, i) => {
+      const jetty = jetties[i], head = Math.abs(jetty.x - pose.x) - jetty.reach;
+      const outer = Math.abs(offset) + half;
+      // Just clear of the jetty's head, and alongside it.
+      assert.ok(outer < head && outer > head - .15, `${jetty.side} lies alongside its jetty (${width})`);
+      assert.ok(Math.abs(jetty.z - pose.z) < jetty.head / 2);
+      // Out of the middle of its channel, so it has somewhere to pull out to.
+      // Portrait's channels are only just wider than a boat beside a jetty,
+      // so there it lies about mid-channel and sets off straight down it.
+      const channel = channelOffset(pose.z, width);
+      assert.ok(width < 1 ? Math.abs(Math.abs(offset) - channel) < .15 : Math.abs(offset) > channel + .8, `${jetty.side} moored out by the bank (${width})`);
+    });
+    // Still tied up until the guest scrolls, out in the channels by the end of the opening.
+    assert.equal(boatPose(CAST_OFF.from, width).berthed, 1);
+    const out = boatPose(ARRIVAL_END, width);
+    assert.equal(out.berthed, 0);
+    assert.ok(Math.abs(out.gap * BOAT_SCALE - channelOffset(out.z, width)) < 1e-9);
+    // Pulling away, no part of a hull passes over a jetty's head.
+    for (const p of steps().filter(p => p < ARRIVAL_END)) {
+      for (const point of hullOutline(p, width)) {
+        for (const jetty of jetties) {
+          const along = (jetty.x - point.x) * jetty.side;
+          assert.ok(!(along > -.5 && along < jetty.reach && Math.abs(point.z - jetty.z) < jetty.head / 2), `hull over the jetty at ${p} (${width})`);
+        }
+      }
+    }
+  }
 });
