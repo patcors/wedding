@@ -1,6 +1,7 @@
 // PROTOTYPE: deterministic botanical geometry for the /garden visual study.
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { DATES, ROUTE, routeAtMonth } from './journey.ts';
 
 export function random(seed: number) {
   return () => {
@@ -11,7 +12,10 @@ export function random(seed: number) {
   };
 }
 
-export const GARDEN_CAMERA = { fov: 48, mobileFov: 68, height: 3.2, startZ: 18, targetY: 2.5, targetZ: -28, travel: 28.5 };
+// The camera rides `behind` the boats and looks `ahead` of them down the river
+// (see cameraRig.ts). Nothing past the fog is drawn: `far` and `mobileFar`
+// clear the fog's far distance on each composition.
+export const GARDEN_CAMERA = { fov: 48, mobileFov: 68, height: 3.2, startZ: ROUTE.start + 12, targetY: 2.5, behind: 12, ahead: 34, far: 120, mobileFar: 95 };
 // Portrait uses the same irregular shoreline as desktop, at a smaller scale,
 // plus a bend at the start (see bankSwing).
 export const MOBILE_RIVER_WIDTH = .45;
@@ -28,14 +32,86 @@ function bankSwing(z: number, amount: number, peak: number, near: number, far: n
 const rightSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 2.8, 11, 2.7, 5) : 0;
 const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 2.2, 2.2) : 0;
 
+// Where the Voyage's scenery sits along the river; z falls downstream, so each
+// stretch runs `from` its upstream end `to` its downstream end. The island
+// splits the river from just below the opening view until shortly before they
+// meet. The river widens while Amelia is in Sydney. The S-bend swings the river
+// sideways by `swing` just before the wedding; the jetty and the old tree stand
+// on the `side` bank (+1 is +x) past it, where the boats dock.
+const MEET_Z = routeAtMonth(DATES.meet);
+export const VOYAGE = {
+  island: { from: 10, to: MEET_Z + 3, halfWidth: 1.3 },
+  meet: MEET_Z,
+  sydney: { from: routeAtMonth(DATES.sydney), to: routeAtMonth(DATES.back), widen: 2.2 },
+  bend: { from: -135, to: -164, swing: -12 },
+  dock: { z: ROUTE.dock, side: 1, jetty: 2.4 },
+  tree: { z: ROUTE.dock - 3.5, inland: 3.5 },
+} as const;
+// Everything planted along the river, from just behind the opening view to
+// past the dock, beyond where the camera can see.
+export const RIVER_REACH = { from: 26, to: -260 } as const;
+
+const smootherstep = (t: number) => {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * x * (x * (x * 6 - 15) + 10);
+};
+// The S-bend: the whole river beyond it is offset sideways by the swing.
+export const bendShift = (z: number) =>
+  VOYAGE.bend.swing * smootherstep((VOYAGE.bend.from - z) / (VOYAGE.bend.from - VOYAGE.bend.to));
+// How much wider each bank sits during Sydney, easing in and out over 6 units.
+export const sydneyWiden = (z: number, width = 1) => {
+  const { from, to, widen } = VOYAGE.sydney;
+  return widen * width * Math.min(smootherstep((from + 6 - z) / 6), smootherstep((z - to + 6) / 6));
+};
+
 export function riverCenter(z: number, width = 1) {
   return (Math.sin(z * .12 + .7) * 1.15 + Math.sin(z * .26 - 1.2) * .25) * width
-    + (leftSwing(z, width) - rightSwing(z, width)) / 2;
+    + (leftSwing(z, width) - rightSwing(z, width)) / 2 + bendShift(z);
 }
 
 export function bankEdge(z: number, width = 1) {
   return (5.5 + Math.sin(z * .17) * 1.15 + Math.sin(z * .48) * .38) * width
-    - (leftSwing(z, width) + rightSwing(z, width)) / 2;
+    - (leftSwing(z, width) + rightSwing(z, width)) / 2 + sydneyWiden(z, width);
+}
+
+// The island's half-width across the river at z, 0 outside it. It is
+// lens-shaped, with rounded tips. The island itself is built in VoyageWorld;
+// the story boats keep to the channels either side of it.
+export function islandHalfWidth(z: number, width = 1) {
+  const { from, to, halfWidth } = VOYAGE.island;
+  const t = (from - z) / (from - to);
+  return t <= 0 || t >= 1 ? 0 : halfWidth * width * Math.pow(Math.sin(Math.PI * t), .6);
+}
+
+// The middle of the channel on `side` of the island, as an x offset from the
+// river's centre. Past the island's end it is the middle of that half of the river.
+export const channelOffset = (z: number, width = 1) => (islandHalfWidth(z, width) + bankEdge(z, width)) / 2;
+
+// The jetty runs out from the bank on the dock side; the catamaran moors at its
+// end. The old tree stands inland of it, a little downstream.
+export function voyageLandmarks(width = 1) {
+  const { z, side, jetty } = VOYAGE.dock;
+  const bank = riverCenter(z, width) + side * bankEdge(z, width);
+  const reach = jetty * Math.max(width, .6);
+  const tree = VOYAGE.tree.z;
+  return {
+    jetty: { x: bank, z, side, reach },
+    mooring: { x: bank - side * (reach + .45), z },
+    tree: { x: riverCenter(tree, width) + side * (bankEdge(tree, width) + VOYAGE.tree.inland * Math.max(width, .6)), z: tree },
+  };
+}
+
+// Splits instances into stretches of river so each batch is culled on its own:
+// those behind the camera or past its far plane aren't drawn.
+export const RIVER_CHUNK = 40;
+export function riverChunks<T extends { z: number }>(items: T[]) {
+  const chunks = new Map<number, T[]>();
+  for (const item of items) {
+    const key = Math.floor(item.z / RIVER_CHUNK);
+    const chunk = chunks.get(key);
+    if (chunk) chunk.push(item); else chunks.set(key, [item]);
+  }
+  return [...chunks.values()];
 }
 
 export function groundHeight(x: number, z: number, width = 1) {
@@ -49,13 +125,14 @@ export function groundHeight(x: number, z: number, width = 1) {
 }
 
 export function bankGeometry(side: number, width = 1) {
-  const geometry = new THREE.PlaneGeometry(54, 140, 90, 180);
+  const length = RIVER_REACH.from - RIVER_REACH.to;
+  const geometry = new THREE.PlaneGeometry(54, length, 90, Math.round(length * 1.3));
   const position = geometry.attributes.position;
   const uv = geometry.attributes.uv;
   const colors = [], inlands = [];
   const color = new THREE.Color();
   for (let i = 0; i < position.count; i++) {
-    const z = position.getY(i) - 44;
+    const z = position.getY(i) + (RIVER_REACH.from + RIVER_REACH.to) / 2;
     const inland = position.getX(i) + 27;
     inlands.push(inland);
     const x = riverCenter(z, width) + (bankEdge(z, width) + inland) * side;
