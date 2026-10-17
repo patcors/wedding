@@ -8,9 +8,9 @@ export type EggId = 'balloon' | 'university' | 'snow-2019';
 // doesn't become a long empty stretch.
 export type Milestone = { id: string; month: string; description: string; egg?: EggId; room?: number };
 
-// When Amelia left FinoComp: a placeholder until she confirms the month. Her
-// flag changes as it shows (see FLAG_CHANGES in storyBoats.ts).
-export const AMELIA_LEFT_FINOCOMP = '2022-10';
+// When Amelia left FinoComp. Her flag changes as it shows (see FLAG_CHANGES
+// in storyBoats.ts).
+export const AMELIA_LEFT_FINOCOMP = '2022-08';
 
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
