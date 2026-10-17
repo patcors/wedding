@@ -13,20 +13,20 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { routeAt } from './journey';
 import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, rigging, salsaClock, salsaTurn, universityFlag, type Company } from './storyBoats';
-import { BIG_RIG, FLAG, HULL, LOGO_FLAG, SAIL_EASED, STORY_PALETTES, bigRig, companyFlagTexture, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
+import { BIG_RIG, FLAG, HULL, LOGO_FLAG, SAIL_EASED, bigRig, blendHullPaint, companyFlagTexture, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
+import { BOAT_LOOK, catamaranPaint, deckColours, dinghyPaint, type BoatLook } from './boatLooks';
 
 const ease = (t: number) => {
   const x = Math.min(1, Math.max(0, t));
   return x * x * (3 - 2 * x);
 };
 const BOATS = [
-  { name: 'amelia-boat', side: -1, palette: STORY_PALETTES.amelia },
-  { name: 'patrick-boat', side: 1, palette: STORY_PALETTES.patrick },
+  { name: 'amelia-boat', side: -1, owner: 'amelia' },
+  { name: 'patrick-boat', side: 1, owner: 'patrick' },
 ] as const;
 // Where the deck's crossbeams and planks lie across the hulls, in model units.
 const BEAM_Z = [-.56, .56], PLANK_Z = (i: number) => -.66 + i * .12;
-const DECK_COLOURS = ['#c99f65', '#d3ad76', '#bd9058', '#cfa66c'];
 // How far aft each small mast is lowered, to lie along its hull.
 const LOWERED = 1.48;
 const COMPANIES: Company[] = ['finocomp', 'interim', 'heirwealth'];
@@ -44,42 +44,47 @@ const FLAG_FOOT = .4, LOGO_FOOT = BIG_RIG.boom + .55;
 // on the other side of the mast: staggered, so the two read as two flags.
 const UNDER = FLAG.height * .75;
 
-function useStoryBoatModels() {
+// Disposes every geometry and texture in a set of models.
+const dispose = (part: unknown): void => {
+  if (!part || typeof part !== 'object') return;
+  if ('dispose' in part && typeof part.dispose === 'function') part.dispose();
+  else Object.values(part).forEach(dispose);
+};
+
+function useStoryBoatModels(look: BoatLook) {
   const models = useMemo(() => {
     const deck = new THREE.BoxGeometry(1, 1, 1);
     return {
-      boats: BOATS.map(({ side, palette }) => ({
-        hull: storyHull(palette), rig: storyRig(side),
+      boats: BOATS.map(({ side, owner }) => ({
+        hull: storyHull(dinghyPaint(look.dinghy, owner), catamaranPaint(look.catamaran, owner, dinghyPaint(look.dinghy, owner))),
+        rig: storyRig(side, look.dinghy, owner),
         // The company's flag flies outboard and the university's inboard,
         // each mirrored where it flies to the left so its mark reads.
         flag: flagGeometry(side < 0), university: flagGeometry(side > 0),
       })),
       companies: Object.fromEntries(COMPANIES.map(company => [company, companyFlagTexture(MARKS[company] && texture(MARKS[company]))])) as Record<Company, THREE.CanvasTexture>,
       university: companyFlagTexture(texture(UNIVERSITY_MARK)),
-      deck,
-      big: { ...bigRig(), flag: logoFlagGeometry(), banner: logoFlagTexture(`${import.meta.env.BASE_URL}logo.png`) },
+      deck, deckColours: deckColours(look.catamaran),
+      big: { ...bigRig(look.catamaran), flag: logoFlagGeometry(), banner: logoFlagTexture(`${import.meta.env.BASE_URL}logo.png`) },
       wake: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, .5),
       ripples: wakeTexture(),
     };
-  }, []);
-  useEffect(() => () => {
-    models.boats.forEach(({ hull, rig, flag, university }) => { hull.dispose(); rig.mast.dispose(); rig.sheet.dispose(); flag.dispose(); university.dispose(); });
-    Object.values(models.companies).forEach(cloth => cloth.dispose());
-    models.university.dispose();
-    Object.values(models.big).forEach(part => part.dispose());
-    models.deck.dispose(); models.wake.dispose(); models.ripples.dispose();
-  }, [models]);
+  }, [look.dinghy, look.catamaran]);
+  useEffect(() => () => dispose(models), [models]);
   return models;
 }
 
-export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
+export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }: SlotProps & { look?: BoatLook }) {
   const clock = useJourney();
-  const models = useStoryBoatModels();
+  const models = useStoryBoatModels(look);
   const pair = useRef<THREE.Group>(null);
   const boats = useRef<(THREE.Group | null)[]>([]);
   const hulls = useRef<(THREE.Mesh | null)[]>([]);
   const rigs = useRef<(THREE.Group | null)[]>([]);
-  const sails = useRef<(THREE.Mesh | null)[]>([]);
+  const sails = useRef<(THREE.Group | null)[]>([]);
+  const jibs = useRef<(THREE.Mesh | null)[]>([]);
+  const cabins = useRef<(THREE.Mesh | null)[]>([]);
+  const bigJib = useRef<THREE.Mesh>(null);
   const wakes = useRef<(THREE.Mesh | null)[]>([]);
   const deck = useRef<THREE.InstancedMesh>(null);
   const big = useRef<THREE.Group>(null), bigSail = useRef<THREE.Group>(null), bigCloth = useRef<THREE.Mesh>(null);
@@ -98,11 +103,14 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
   const plank = useMemo(() => ({ matrix: new THREE.Matrix4(), position: new THREE.Vector3(), rotation: new THREE.Quaternion(), euler: new THREE.Euler(), scale: new THREE.Vector3() }), []);
 
   // r3f sets the geometry after making the mesh, so the morph influences need setting up.
-  useLayoutEffect(() => hulls.current.forEach(hull => hull?.updateMorphTargets()), [models]);
+  useLayoutEffect(() => hulls.current.forEach((hull, i) => {
+    hull?.updateMorphTargets();
+    if (hull) blendHullPaint(models.boats[i].hull, hull.morphTargetInfluences?.[0] ?? 0);
+  }), [models]);
   useLayoutEffect(() => {
     if (!deck.current) return;
-    const colour = new THREE.Color();
-    for (let i = 0; i < DECK.beams + DECK.planks; i++) deck.current.setColorAt(i, colour.set(DECK_COLOURS[i < DECK.beams ? 2 : i % DECK_COLOURS.length]));
+    const colour = new THREE.Color(), { beam, planks } = models.deckColours;
+    for (let i = 0; i < DECK.beams + DECK.planks; i++) deck.current.setColorAt(i, colour.set(i < DECK.beams ? beam : planks[i % planks.length]));
     deck.current.instanceColor!.needsUpdate = true;
   }, [models]);
 
@@ -135,7 +143,10 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
       boat.position.set(side * pose.gap, Math.sin(phase * 1.7) * .008 * own, 0);
       boat.rotation.set(Math.sin(phase * 1.4) * .025 * own, yaw, Math.sin(phase * 1.1) * .035 * own);
       const hull = hulls.current[i];
-      if (hull?.morphTargetInfluences) hull.morphTargetInfluences[0] = join.morph;
+      if (hull?.morphTargetInfluences && hull.morphTargetInfluences[0] !== join.morph) {
+        hull.morphTargetInfluences[0] = join.morph;
+        blendHullPaint(models.boats[i].hull, join.morph);
+      }
       mast.position.z = HULL.mast.dinghy + (HULL.mast.catamaran - HULL.mast.dinghy) * join.morph;
       // Lowered aft about its foot once the sail is furled, to lie along the hull.
       mast.rotation.x = rig.lower * LOWERED;
@@ -144,6 +155,15 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
       // as the big mast's time comes.
       sails.current[i]?.rotation.set(0, side * SAIL_EASED * (1 - .85 * Math.max(pose.docking, pose.berthed)), 0);
       sails.current[i]?.scale.set(1, 1, 1 - .97 * rig.furl);
+      // The toy sloop's jib rolls up round its forestay with the main, and
+      // its cabin is taken in as the hull grows long and slim.
+      jibs.current[i]?.scale.set(1 - .97 * rig.furl, 1, 1 - .97 * rig.furl);
+      const cabin = cabins.current[i];
+      if (cabin) {
+        const keep = Math.max(0, 1 - join.morph * 1.6);
+        cabin.visible = keep > 0;
+        cabin.scale.setScalar(Math.max(keep, 1e-3));
+      }
       // The company's flag runs up its halyard to the masthead, and down
       // again as the sail furls for the change of masts. The flags fly
       // outwards whichever way the boats turn, so both marks face the camera:
@@ -179,6 +199,8 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
       big.current.scale.set(1, Math.max(rig.raise, 1e-3), 1);
       bigSail.current.rotation.y = -BIG_RIG.eased * (1 - .25 * pose.docking);
       bigCloth.current.scale.z = Math.max(rig.unfurl, .03);
+      const jib = Math.max(rig.unfurl, .03);
+      bigJib.current?.scale.set(jib, 1, jib);
     }
     // Then their monogram is run up from above the boom to the masthead,
     // flying to starboard, clear of the sail, gently as it's larger.
@@ -205,7 +227,8 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
     deck.current.instanceMatrix.needsUpdate = true;
   });
 
-  return <group ref={pair} name="voyage-boats" scale={BOAT_SCALE}>
+  // Keyed by look, so a new look's materials are built afresh for its maps.
+  return <group key={`${look.dinghy}-${look.catamaran}`} ref={pair} name="voyage-boats" scale={BOAT_SCALE}>
     {BOATS.map(({ name }, i) => <group key={name} name={name} ref={el => { boats.current[i] = el; }}>
       <mesh ref={el => { hulls.current[i] = el; }} geometry={models.boats[i].hull} castShadow>
         <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1} />
@@ -214,9 +237,19 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
         <mesh geometry={models.boats[i].rig.mast} castShadow>
           <meshStandardMaterial vertexColors roughness={1} />
         </mesh>
-        <mesh ref={el => { sails.current[i] = el; }} geometry={models.boats[i].rig.sheet} castShadow>
-          <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1} />
-        </mesh>
+        <group ref={el => { sails.current[i] = el; }}>
+          <mesh geometry={models.boats[i].rig.spars} castShadow>
+            <meshStandardMaterial vertexColors roughness={1} />
+          </mesh>
+          <mesh geometry={models.boats[i].rig.cloth} castShadow>
+            <meshStandardMaterial vertexColors map={models.boats[i].rig.map} side={THREE.DoubleSide} roughness={1} />
+          </mesh>
+        </group>
+        {models.boats[i].rig.jib && <group position={models.boats[i].rig.jib!.position} quaternion={models.boats[i].rig.jib!.quaternion}>
+          <mesh ref={el => { jibs.current[i] = el; }} geometry={models.boats[i].rig.jib!.geometry} castShadow>
+            <meshStandardMaterial vertexColors map={models.boats[i].rig.jib!.map} side={THREE.DoubleSide} roughness={1} />
+          </mesh>
+        </group>}
         {COMPANIES.map(company => <mesh key={company} ref={el => { flags.current[i][company] = el; }} geometry={models.boats[i].flag} visible={false}>
           <meshStandardMaterial map={models.companies[company]} side={THREE.DoubleSide} roughness={1} />
         </mesh>)}
@@ -224,6 +257,9 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
           <meshStandardMaterial map={models.university} side={THREE.DoubleSide} roughness={1} />
         </mesh>
       </group>
+      {models.boats[i].rig.cabin && <mesh ref={el => { cabins.current[i] = el; }} geometry={models.boats[i].rig.cabin!.geometry} position-z={models.boats[i].rig.cabin!.z} castShadow>
+        <meshStandardMaterial vertexColors roughness={.8} />
+      </mesh>}
       <mesh ref={el => { wakes.current[i] = el; }} geometry={models.wake} position-y={.025} scale={[1.3, 1, 2]} visible={false}>
         <meshBasicMaterial map={models.ripples} color="#f7f0d8" transparent opacity={0} depthWrite={false} />
       </mesh>
@@ -237,9 +273,20 @@ export default function VoyageBoats({ paused, reduced, width }: SlotProps) {
           <meshStandardMaterial vertexColors roughness={1} />
         </mesh>
         <mesh ref={bigCloth} geometry={models.big.cloth} castShadow>
-          <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1} />
+          <meshStandardMaterial vertexColors map={models.big.map} side={THREE.DoubleSide} roughness={1} />
         </mesh>
       </group>
+      {models.big.jib && <group position={models.big.jib.position} quaternion={models.big.jib.quaternion}>
+        <mesh ref={bigJib} geometry={models.big.jib.geometry} castShadow>
+          <meshStandardMaterial vertexColors map={models.big.jib.map} side={THREE.DoubleSide} roughness={1} />
+        </mesh>
+      </group>}
+      {models.big.bow && <mesh geometry={models.big.bow} castShadow>
+        <meshStandardMaterial vertexColors roughness={.6} />
+      </mesh>}
+      {models.big.cabin && <mesh geometry={models.big.cabin} castShadow>
+        <meshStandardMaterial vertexColors roughness={.7} />
+      </mesh>}
       <mesh ref={logoFlag} geometry={models.big.flag} visible={false}>
         <meshStandardMaterial map={models.big.banner} side={THREE.DoubleSide} roughness={1} />
       </mesh>

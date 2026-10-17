@@ -20,6 +20,7 @@ import VoyageCamera from './VoyageCamera';
 import VoyageWorld from './VoyageWorld';
 import VoyageBoats from './VoyageBoats';
 import Eggs from './eggs';
+import type { BoatLook } from './boatLooks';
 
 type AssetChoices = { groundStyle: GroundStyle; rockStyle: RockStyle; lightTrees: boolean };
 // Every model and texture the scene needs, with the orientation its maps load in.
@@ -47,9 +48,9 @@ function useGardenAssets(choices: AssetChoices) {
   models.forEach(urls => useGLTF(urls));
   textures.forEach(([urls, flipY]) => useGardenTextures(urls, { flipY }));
 }
-type SceneProps = { prepare: boolean; progress: number; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle };
+type SceneProps = { prepare: boolean; progress: number; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook };
 
-export default function GardenScene({ prepare, progress, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle }: SceneProps) {
+export default function GardenScene({ prepare, progress, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook }: SceneProps) {
   useGardenAssets({ groundStyle, rockStyle, lightTrees });
   const size = useThree(state => state.size);
   // On touch screens the canvas runs on under Safari's toolbar (see
@@ -72,7 +73,7 @@ export default function GardenScene({ prepare, progress, paused, reduced, onRead
     <Petals paused={still} width={width} />
     <FallingLeaves paused={still} width={width} />
     <VoyageWorld {...slot} />
-    <VoyageBoats {...slot} />
+    <VoyageBoats {...slot} look={boatLook} />
     <Eggs {...slot} />
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />
   </JourneyProvider>;

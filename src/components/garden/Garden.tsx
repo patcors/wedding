@@ -13,6 +13,7 @@ import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
 import { DATE_LABEL_MODES, dateLabelMode, shownDate, type DateLabelMode } from './dateLabelMode';
+import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -107,6 +108,8 @@ const REVIEW_SKY = 'pa_dev_sky';
 const REVIEW_WATER = 'pa_dev_water';
 // Dev only: the Review choice of date label (see dateLabelMode.ts), remembered across reloads.
 const REVIEW_DATE = 'pa_dev_date_label';
+// Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
+const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
 
 export default function Garden({ greeting }: { greeting?: string }) {
   const [progress, setProgress] = useState(0);
@@ -118,6 +121,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [groundStyle, setGroundStyle] = useState<GroundStyle>('natural');
   const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
   const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
+  const [boatStyle, setBoatStyle] = useState<BoatLook>(BOAT_LOOK);
   const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [openingReleased, setOpeningReleased] = useState(false);
@@ -223,6 +227,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
   // Dev only: the Review panel's date label, month and year by default.
   const [dateMode, setDateMode] = useState<DateLabelMode>('full');
   useEffect(() => { if (REVIEW) setDateMode(dateLabelMode(localStorage.getItem(REVIEW_DATE))); }, []);
+  useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   // The camera already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
@@ -252,7 +257,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
@@ -386,6 +391,24 @@ export default function Garden({ greeting }: { greeting?: string }) {
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
       <button onClick={() => setSceneOnly(!sceneOnly)} aria-pressed={sceneOnly}>{sceneOnly ? 'Show invitation' : 'Scene only'}</button>
+      <label className="garden-material-selector">Boats
+        <select aria-label="Boats before they join" value={boatStyle.dinghy} onChange={event => {
+          const look = boatLook(event.target.value, boatStyle.catamaran);
+          localStorage.setItem(REVIEW_DINGHY, look.dinghy);
+          setBoatStyle(look);
+        }}>
+          {(Object.keys(DINGHY_LOOKS) as DinghyLook[]).map(look => <option key={look} value={look}>{DINGHY_LOOKS[look]}</option>)}
+        </select>
+      </label>
+      <label className="garden-material-selector">Catamaran
+        <select aria-label="Catamaran" value={boatStyle.catamaran} onChange={event => {
+          const look = boatLook(boatStyle.dinghy, event.target.value);
+          localStorage.setItem(REVIEW_CATAMARAN, look.catamaran);
+          setBoatStyle(look);
+        }}>
+          {(Object.keys(CATAMARAN_LOOKS) as CatamaranLook[]).map(look => <option key={look} value={look}>{CATAMARAN_LOOKS[look]}</option>)}
+        </select>
+      </label>
       <label className="garden-material-selector">Date
         <select aria-label="Date label" value={dateMode} onChange={event => {
           const mode = dateLabelMode(event.target.value);
