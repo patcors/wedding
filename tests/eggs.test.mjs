@@ -451,6 +451,17 @@ test('the Hagia Sophia stands on the left bank at the start of the S-bend, under
   assert.ok(g.attributes.position.count / 3 < 1500, 'one draw call under the budget');
 });
 
+test('on a phone the balloon hangs below the header\'s monogram at the trip\'s stop', async () => {
+  const { balloonSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const { BALLOON } = await import('../src/components/garden/eggs/balloonGeometry.ts');
+  // The sky's open patch is under the monogram, top left, whose foot is about
+  // 3.5° below the top of the picture (53 of 844px). At the stop the whole
+  // balloon, basket to crown, keeps a degree below that.
+  const width = MOBILE_RIVER_WIDTH, stop = tripStop(trip.month), t = (stop - progressAt(trip.month)) / ROOM;
+  const { position: [x, y, z], scale } = balloonSpot(stop, t, true, width);
+  assert.ok(above(stop, width, x, y + BALLOON.height * scale, z) < halfHeight(width) - 4.5);
+});
+
 test('the Hagia Sophia is clear of the petals\' trail, the headland, the old tree and the year markers', async () => {
   const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { HAGIA_SOPHIA } = await import('../src/components/garden/eggs/hagiaSophiaGeometry.ts');

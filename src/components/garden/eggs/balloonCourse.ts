@@ -14,10 +14,11 @@ const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x 
 // a little left as it goes, towards the patch's far side and over the Hagia
 // Sophia on the bank below. Bearings are degrees right of the middle of the
 // picture, elevations degrees above the eye line; portrait's patch is higher
-// and further left.
+// and further left, just under the header's monogram, so there it starts a
+// little lower and at the trip's stop hangs clear below the monogram.
 export const BALLOON_VIEW = {
   desktop: { distance: 30, scale: .5, bearing: [-11, -12.5], elevation: [15.5, 25] },
-  mobile: { distance: 27, scale: .55, bearing: [-8.5, -10.5], elevation: [22.5, 35] },
+  mobile: { distance: 27, scale: .55, bearing: [-8.2, -10.2], elevation: [21, 35] },
 } as const;
 // Its course in milestone shares since the date: it fades in over ARRIVE,
 // climbs until CLIMB, by when it is out of the top of the picture, and is
