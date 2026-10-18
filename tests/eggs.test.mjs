@@ -44,22 +44,47 @@ test('overRiver keeps a point over the water', () => {
   assert.equal(overRiver([middle + .1, 3, z], 1, .5)[0], middle + .1);
 });
 
-test('the balloon climbs straight up over the river, left of the date label, and is gone well before the dock', async () => {
-  const { BALLOON_TIMES, balloonSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
+test('the balloons climb in the open sky left of the date label, the first over the river, and are gone well before the dock', async () => {
+  const { BALLOONS, BALLOON_TIMES, balloonSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const { BALLOON } = await import('../src/components/garden/eggs/balloonGeometry.ts');
   const at = progressAt(trip.month);
+  // A few, all flown on desktop and at least three on a phone.
+  assert.ok(BALLOONS.length >= 3 && BALLOONS.length <= 5);
+  assert.ok(BALLOONS.filter(b => b.mobile).length >= 3);
   for (const [mobile, width] of [[false, 1], [true, MOBILE_RIVER_WIDTH]]) {
-    let last = -Infinity;
-    for (let t = 0; t <= BALLOON_TIMES.climb; t += .1) {
-      const p = at + t * ROOM, { position: [x, y, z] } = balloonSpot(p, t, mobile, width);
-      assert.ok(Math.abs(x - riverCenter(z, width)) < bankEdge(z, width), `over the water at ${t}`);
-      assert.ok(y >= last, `rising at ${t}`);
-      last = y;
-      const [cx, , cz] = cameraPose(p, width).position;
-      const bearing = degrees(Math.atan2(x - cx, cz - z) - cameraHeading(p, width));
-      assert.ok(bearing < -7.5 && bearing > -13, `bearing ${bearing} at ${t}`);
-    }
+    BALLOONS.forEach((_, i) => {
+      let last = -Infinity;
+      for (let t = 0; t <= BALLOON_TIMES.climb; t += .1) {
+        const p = at + t * ROOM, spot = balloonSpot(p, t, mobile, width, i);
+        if (!spot) return;
+        const { position: [x, y, z], scale } = spot;
+        if (i === 0) assert.ok(Math.abs(x - riverCenter(z, width)) < bankEdge(z, width), `over the water at ${t}`);
+        assert.ok(y >= last, `balloon ${i} rising at ${t}`);
+        last = y;
+        const [cx, , cz] = cameraPose(p, width).position, distance = Math.hypot(x - cx, z - cz);
+        const bearing = degrees(Math.atan2(x - cx, cz - z) - cameraHeading(p, width)), half = degrees(Math.atan(BALLOON.radius * scale / distance));
+        // Between the canopy on the left and the date label, whose left edge
+        // is about 4.5° left of the middle on desktop and, where they could
+        // meet it, under the monogram, 2.7° on a phone.
+        assert.ok(bearing + half < (mobile ? -4.5 : -8.5) && bearing - half > (mobile ? -14 : -17), `balloon ${i} at ${bearing} at ${t}`);
+        // On a phone, where it is under the header's monogram (top left, more
+        // than 11.5° left of the middle), it keeps below its foot.
+        if (mobile && bearing - half < -11.5) assert.ok(above(p, width, x, y + (BALLOON.height + BALLOON.basketTop) * scale, z) < halfHeight(width) - 3.5, `balloon ${i} under the monogram at ${t}`);
+      }
+    });
   }
   assert.ok(at + BALLOON_TIMES.gone * ROOM < VOYAGE_END - .05);
+});
+
+test('the balloons keep to the egg budget', async () => {
+  const { BALLOONS } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const { BALLOON_LOOKS, balloonGeometry } = await import('../src/components/garden/eggs/balloonGeometry.ts');
+  assert.equal(BALLOON_LOOKS.length, BALLOONS.length);
+  // Three draw calls for them all: the envelopes and baskets, skinned, a bone
+  // to each balloon; the ropes; and the burners, instanced (8 triangles each).
+  const { geometry } = balloonGeometry();
+  assert.deepEqual([...new Set(geometry.attributes.skinIndex.array.filter((_, k) => k % 4 === 0))], BALLOONS.map((_, i) => i));
+  assert.ok(geometry.attributes.position.count / 3 + 8 * BALLOONS.length < 1500);
 });
 
 const meet = MILESTONES.find(m => m.egg === 'university');
@@ -470,15 +495,19 @@ test('the Hagia Sophia stands on the left bank at the start of the S-bend, under
   assert.ok(g.attributes.position.count / 3 < 1500, 'one draw call under the budget');
 });
 
-test('on a phone the balloon hangs below the header\'s monogram at the trip\'s stop', async () => {
-  const { balloonSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
+test('on a phone the balloons hang below the header\'s monogram at the trip\'s stop', async () => {
+  const { BALLOONS, balloonSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { BALLOON } = await import('../src/components/garden/eggs/balloonGeometry.ts');
   // The sky's open patch is under the monogram, top left, whose foot is about
   // 3.5° below the top of the picture (53 of 844px). At the stop the whole
-  // balloon, basket to crown, keeps a degree below that.
+  // balloon, basket to crown, keeps a degree below that, and the others too.
   const width = MOBILE_RIVER_WIDTH, stop = tripStop(trip.month), t = (stop - progressAt(trip.month)) / ROOM;
-  const { position: [x, y, z], scale } = balloonSpot(stop, t, true, width);
-  assert.ok(above(stop, width, x, y + BALLOON.height * scale, z) < halfHeight(width) - 4.5);
+  for (let i = 0; i < BALLOONS.length; i++) {
+    const spot = balloonSpot(stop, t, true, width, i);
+    if (!spot) continue;
+    const { position: [x, y, z], scale } = spot;
+    assert.ok(above(stop, width, x, y + BALLOON.height * scale, z) < halfHeight(width) - 4.5, `balloon ${i}`);
+  }
 });
 
 test('the Hagia Sophia is clear of the petals\' trail, the headland, the old tree and the year markers', async () => {

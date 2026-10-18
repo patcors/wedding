@@ -9,32 +9,40 @@ import { HAGIA_SOPHIA } from './hagiaSophiaGeometry.ts';
 const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * (3 - 2 * x); };
 // The banks' canopies close over the river, all but one patch of sky at the
 // top of the picture, over the river's next bend, just left of the date
-// label. The balloon keeps to that patch: over the water, nearer than it
-// looks and scaled down, fixed in the picture so it never drifts into the
-// leaves. It fades in at the patch's foot and climbs out of the top, drifting
-// a little left as it goes, towards the patch's far side and over the Hagia
-// Sophia on the bank below. Bearings are degrees right of the middle of the
-// picture, elevations degrees above the eye line; portrait's patch is higher
-// and further left, just under the header's monogram, so there it starts a
-// little lower and at the trip's stop hangs clear below the monogram.
-export const BALLOON_VIEW = {
-  desktop: { distance: 30, scale: .5, bearing: [-11, -12.5], elevation: [15.5, 25] },
-  mobile: { distance: 27, scale: .55, bearing: [-8.2, -10.2], elevation: [21, 35] },
-} as const;
-// Its course in milestone shares since the date: it fades in over ARRIVE,
-// climbs until CLIMB, by when it is out of the top of the picture, and is
-// gone by GONE. Under reduced motion it rests just risen, at SETTLED.
+// label. The balloons keep to that patch: over the water, nearer than they
+// look and scaled down, fixed in the picture so they never drift into the
+// leaves. They fade in at the patch's foot and climb, drifting a little left
+// as they go. The first, the nearest, climbs out of the top, over the Hagia
+// Sophia on the bank below; the others, further off and smaller, a little
+// festival over the river, start to rise one after another (`lag`, in shares
+// after the date) and climb less far, so they are still rising as they go.
+// Bearings are degrees right of the middle of the picture, elevations degrees
+// above the eye line. Portrait's patch is higher and narrower, between the
+// header's monogram (top left, its foot 3.5° below the top of the picture),
+// the canopy on the left and the date label, so there the first starts a
+// little lower and at the trip's stop hangs clear below the monogram, and
+// there is room for only two of the others (`mobile` null: not flown).
+type BalloonView = { distance: number; scale: number; bearing: [number, number]; elevation: [number, number] };
+export const BALLOONS: readonly { lag: number; desktop: BalloonView; mobile: BalloonView | null }[] = [
+  { lag: 0, desktop: { distance: 30, scale: .5, bearing: [-11, -12.5], elevation: [15.5, 25] }, mobile: { distance: 27, scale: .6, bearing: [-8.4, -9.8], elevation: [21, 35] } },
+  { lag: .1, desktop: { distance: 38, scale: .45, bearing: [-14.6, -15], elevation: [13.5, 17] }, mobile: { distance: 36, scale: .4, bearing: [-12.4, -12.8], elevation: [24, 27] } },
+  { lag: .2, desktop: { distance: 44, scale: .42, bearing: [-9.4, -9.6], elevation: [18.5, 21.5] }, mobile: { distance: 42, scale: .4, bearing: [-5.4, -5.6], elevation: [26, 28.5] } },
+  { lag: .3, desktop: { distance: 50, scale: .38, bearing: [-13, -13.3], elevation: [19, 21] }, mobile: null },
+];
+// Their course in milestone shares since the date: they fade in over ARRIVE,
+// climb until CLIMB, by when the first is out of the top of the picture, and
+// are gone by GONE. Under reduced motion they rest just risen, at SETTLED.
 export const BALLOON_TIMES = { arrive: .35, climb: 1.6, gone: 1.8, settled: .3 };
-// Where the balloon is at progress p, `t` shares after its date: the spot it
-// hangs from (the envelope's mouth) and its scale.
-export function balloonSpot(p: number, t: number, mobile: boolean, width: number) {
-  const view = mobile ? BALLOON_VIEW.mobile : BALLOON_VIEW.desktop;
+// Where balloon `index` is at progress p, `t` shares after its date: the spot
+// it hangs from (the envelope's mouth) and its scale; null where it isn't flown.
+export function balloonSpot(p: number, t: number, mobile: boolean, width: number, index = 0) {
+  const { lag, ...views } = BALLOONS[index], view = mobile ? views.mobile : views.desktop;
+  if (!view) return null;
   const [from, to] = view.bearing, [low, high] = view.elevation;
-  const rise = smooth(t / BALLOON_TIMES.climb);
+  const rise = smooth((t - lag) / (BALLOON_TIMES.climb - lag));
   const [x, , z] = inView(p, width, { distance: view.distance, bearing: from + (to - from) * rise });
   return { position: [x, heightAt(view.distance, low + (high - low) * rise), z] as [number, number, number], scale: view.scale };
 }
-
 
 // The Hagia Sophia, a garden miniature, stands on the level lawn cut into the
 // left bank at the start of the S-bend (`VOYAGE.lawn` in gardenGeometry.ts),

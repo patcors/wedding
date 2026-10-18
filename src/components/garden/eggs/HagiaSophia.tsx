@@ -1,6 +1,6 @@
 // July 2026, Turkey and Greece: a garden miniature of the Hagia Sophia on the
 // left bank at the start of the S-bend (placed in balloonCourse.ts), with the
-// trip's balloon rising over it. Still scenery: it comes out of the haze as
+// trip's balloons rising over it. Still scenery: it comes out of the haze as
 // the trip's date nears and stays until the camera has passed it.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
