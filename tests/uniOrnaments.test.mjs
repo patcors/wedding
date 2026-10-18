@@ -346,8 +346,8 @@ test('the carvings further down the river are on real trees of their own, on the
     const all = trees(width), mine = Object.entries(all).filter(([id]) => FOUND.includes(id));
     // Not the university years' trees, 2020's ash or the circus's ashes.
     const used = [...UNIVERSITY.map(id => all[id]), yearCarving(YEAR_MARKERS.find(m => 'carved' in m), width).tree, ...Object.values(RIGS).map(rig => rigTree(rig, width))];
-    // And none of the left bank's trees round 2024's birdhouses, which keep their own scenery.
-    const houses = Object.values(nestSpots(width)[0]);
+    // And none of the trees round 2024's birdhouses, which keep their own scenery.
+    const houses = Object.values(nestSpots(width));
     for (const [id, tree] of mine) {
       for (const other of used) assert.ok(other.x !== tree.x || other.z !== tree.z, `${id} on a tree already used (width ${width})`);
       for (const house of houses) assert.ok(Math.hypot(house.x - tree.x, house.z - tree.z) > 12, `${id} among the birdhouses' trees (width ${width})`);
@@ -382,7 +382,7 @@ test('they keep clear of the other scenery, on the ground and in the picture', (
     const ground = [piSpot(mobile, width), snowSpot(SNOW_SPOTS[2019], '2019-07', width), snowSpot(SNOW_SPOTS[2025], '2025-08', width), operaHouseSpot(width), rocketSpot(width),
       ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ...CAPS.tosses.map(toss => capLanding('2020-08', toss, width)),
       ...DUCKS.launches.map((_, i) => duckLaunchSpot(i, width)), ...Object.values(spots(width)), ...WORK_ORNAMENTS.map(work => workSpot(work, width)),
-      ...Object.values(RIGS).map(rig => hangSpot(rig, width)), ...nestSpots(width).flatMap(pair => Object.values(pair))];
+      ...Object.values(RIGS).map(rig => hangSpot(rig, width)), ...Object.values(nestSpots(width))];
     for (const id of FOUND.filter(id => id in all)) {
       const tree = all[id];
       for (const other of [...ground, ...Object.values(all).filter(t => t !== tree)]) {

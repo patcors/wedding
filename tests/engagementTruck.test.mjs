@@ -119,7 +119,7 @@ test('it keeps clear of the other scenery round the engagement, the trees and th
       ['2025 snowmen', snowSpot(SNOW_SPOTS[2025], '2025-08', width)],
       ['rocket', rocketSpot(width)],
       ['Hagia Sophia', hagiaSophiaSpot('2026-07', width)],
-      ...nestSpots(width).flatMap(pair => [['birdhouse', pair.amelia], ['birdhouse', pair.patrick]]),
+      ...Object.values(nestSpots(width)).map(house => ['birdhouse', house]),
     ];
     for (const [name, other] of others) assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${name} crowds the truck (width ${width})`);
     // 2026's arch is on the other bank and well apart in the picture.
