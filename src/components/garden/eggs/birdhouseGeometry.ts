@@ -1,16 +1,21 @@
 // The apartments' birdhouses and birds (see nesting.ts). Each birdhouse is a
 // little box on a post with a pitched roof, a round door and a peg to perch
 // on, facing +z and standing on y 0, about 1.3 tall: Amelia's wooden with a
-// teal roof, Patrick's soft yellow with a cream one, as their boats are. A
-// pair is one mesh with vertex colours, about 140 triangles. Scaffolding, a
-// ladder and a paint pot go up round Patrick's while he renovates (about 130
-// triangles). The birds are a few flat triangles each, a body, a tail, a beak
-// and two wings that fold and flap, rewritten each frame into one mesh.
+// teal roof, Patrick's soft yellow with a cream one, as their boats are. On
+// its post, under the house, is its number on a little enamel plaque (29 and
+// 54; the plaques are drawn in streetSign.ts's atlas). Scaffolding, a ladder
+// and a paint pot go up round Patrick's while he renovates (about 130
+// triangles). Both houses and the scaffolding are one mesh with vertex
+// colours and the atlas, 320 triangles. The birds are a few flat
+// triangles each, a body, a tail, a beak and two wings that fold and flap,
+// rewritten each frame into one mesh.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { NUMBER_RECTS, WHITE_UV, uvRect } from './streetSign.ts';
 
 type Point = [number, number, number];
 type Owner = 'amelia' | 'patrick';
+type Rect = Parameters<typeof uvRect>[0];
 const POST = '#75644f', HOLE = '#2f2924', PEG = '#5d5142';
 const HOUSE_COLOURS: Record<Owner, { walls: string; roof: string }> = {
   amelia: { walls: '#c99f65', roof: '#6f9e96' },
@@ -22,18 +27,26 @@ const HOUSE_COLOURS: Record<Owner, { walls: string; roof: string }> = {
 const BODY = { width: .34, height: .3, depth: .3, floor: .82 };
 const RIDGE = BODY.floor + BODY.height + .14, PITCH = (RIDGE - BODY.floor - BODY.height) / (BODY.width / 2);
 const onRoof = (x: number, z: number): Point => [x, RIDGE + .025 - Math.abs(x) * PITCH, z];
-export const BIRDHOUSE = { perches: { home: onRoof(-.07, .03), guest: onRoof(.08, 0) }, height: RIDGE };
+// The number plaque on the front of the post, under the house: its middle's
+// height, and its width (its height follows from the atlas).
+export const PLAQUE = { y: .6, width: .22, thick: .012 } as const;
+export const BIRDHOUSE = { perches: { home: onRoof(-.07, .03), guest: onRoof(.08, 0) }, height: RIDGE, post: .06 };
 
 function painter() {
   const pieces: THREE.BufferGeometry[] = [];
   const c = new THREE.Color();
-  const add = (geometry: THREE.BufferGeometry, colour: string) => {
+  // Paints a piece in a colour, and maps its own 0–1 UVs onto `rect` of the
+  // atlas, or all of it onto the atlas's plain white.
+  const add = (geometry: THREE.BufferGeometry, colour: string, rect?: Rect) => {
     const g = geometry.index ? geometry.toNonIndexed() : geometry;
     if (g !== geometry) geometry.dispose();
-    g.deleteAttribute('uv');
-    const colours: number[] = [];
+    const colours: number[] = [], uv = g.attributes.uv, area = rect && uvRect(rect);
     c.set(colour);
-    for (let i = 0; i < g.attributes.position.count; i++) c.toArray(colours, i * 3);
+    for (let i = 0; i < g.attributes.position.count; i++) {
+      c.toArray(colours, i * 3);
+      if (area) uv.setXY(i, area.u + uv.getX(i) * area.w, area.v + uv.getY(i) * area.h);
+      else uv.setXY(i, WHITE_UV[0], WHITE_UV[1]);
+    }
     g.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
     pieces.push(g);
   };
@@ -56,7 +69,7 @@ function painter() {
 function house(owner: Owner, add: ReturnType<typeof painter>['add'], beam: ReturnType<typeof painter>['beam']) {
   const { walls, roof } = HOUSE_COLOURS[owner], { width, height, depth, floor } = BODY;
   // Sunk into the ground, so it stands on any slope.
-  beam([0, -.3, 0], [0, floor, 0], .06, POST);
+  beam([0, -.3, 0], [0, floor, 0], BIRDHOUSE.post, POST);
   add(new THREE.BoxGeometry(width, height, depth).translate(0, floor + height / 2, 0), walls);
   // The gables, front and back, up to the ridge.
   const top = floor + height, gable = new THREE.Shape([new THREE.Vector2(-width / 2, top), new THREE.Vector2(width / 2, top), new THREE.Vector2(0, RIDGE - .01)]);
@@ -74,28 +87,43 @@ function house(owner: Owner, add: ReturnType<typeof painter>['add'], beam: Retur
   // The round door and the peg under it.
   add(new THREE.CircleGeometry(.055, 10).translate(0, floor + height * .55, depth / 2 + .002), HOLE);
   add(new THREE.CylinderGeometry(.012, .012, .09, 5).rotateX(Math.PI / 2).translate(0, floor + .06, depth / 2 + .045), PEG);
+  // Its number, on a plaque screwed to the front of the post.
+  const rect = NUMBER_RECTS[owner], tall = PLAQUE.width * rect.height / rect.width, front = BIRDHOUSE.post / 2;
+  add(new THREE.BoxGeometry(PLAQUE.width, tall, PLAQUE.thick).translate(0, PLAQUE.y, front + PLAQUE.thick / 2), roof);
+  add(new THREE.PlaneGeometry(PLAQUE.width, tall).translate(0, PLAQUE.y, front + PLAQUE.thick + .001), '#ffffff', rect);
 }
 
 export type PlacedHouse = { x: number; y: number; z: number; yaw: number; scale: number };
-// A pair of houses in one mesh, placed in the world relative to `origin`.
-export function birdhousePairGeometry(houses: Record<Owner, PlacedHouse>, origin: { x: number; y: number; z: number }) {
-  const placed: THREE.BufferGeometry[] = [];
+// The parts of the birdhouses' mesh: each house's vertices, and the
+// scaffolding's, with the height each stands on, so each can be raised out
+// of the ground (or the scaffolding taken down) by scaling it up from there.
+export type BirdhousePart = { start: number; count: number; foot: number };
+// Both houses and the scaffolding round Patrick's in one mesh, in world units.
+export function birdhousesGeometry(houses: Record<Owner, PlacedHouse>) {
+  const placed: THREE.BufferGeometry[] = [], parts: Record<Owner | 'scaffold', BirdhousePart> = {} as never;
+  let start = 0;
+  const place = (geometry: THREE.BufferGeometry, spot: PlacedHouse, name: Owner | 'scaffold') => {
+    geometry.scale(spot.scale, spot.scale, spot.scale).rotateY(spot.yaw).translate(spot.x, spot.y, spot.z);
+    parts[name] = { start, count: geometry.attributes.position.count, foot: spot.y };
+    start += geometry.attributes.position.count;
+    placed.push(geometry);
+  };
   for (const owner of ['amelia', 'patrick'] as const) {
-    const { add, merge, beam } = painter(), spot = houses[owner];
+    const { add, merge, beam } = painter();
     house(owner, add, beam);
-    const g = merge().scale(spot.scale, spot.scale, spot.scale).rotateY(spot.yaw);
-    placed.push(g.translate(spot.x - origin.x, spot.y - origin.y, spot.z - origin.z));
+    place(merge(), houses[owner], owner);
   }
+  place(scaffoldGeometry(), houses.patrick, 'scaffold');
   const geometry = mergeGeometries(placed);
   placed.forEach(piece => piece.dispose());
   geometry.computeVertexNormals();
-  return geometry;
+  return { geometry, parts };
 }
 
 // Scaffolding round Patrick's house while he renovates, in the house's frame:
 // two poles and a plank across the front, a brace, a ladder leaning on its
 // post and a pot of his yellow paint at its foot.
-export function scaffoldGeometry() {
+function scaffoldGeometry() {
   const { add, merge, beam } = painter(), POLE = '#a89878', PLANK = '#b08f62';
   const front = BODY.depth / 2 + .1;
   for (const x of [-.27, .27]) beam([x, -.1, front], [x, RIDGE - .05, front], .025, POLE);
@@ -111,9 +139,7 @@ export function scaffoldGeometry() {
   // The paint pot, its lid off and yellow inside.
   add(new THREE.CylinderGeometry(.05, .045, .08, 8, 1, true).translate(.5, .04, .22), '#cfd2d1');
   add(new THREE.CircleGeometry(.048, 8).rotateX(-Math.PI / 2).translate(.5, .07, .22), '#e8c95e');
-  const geometry = merge();
-  geometry.computeVertexNormals();
-  return geometry;
+  return merge();
 }
 
 // The birds: Patrick's soft yellow, Amelia's teal with wooden wings.

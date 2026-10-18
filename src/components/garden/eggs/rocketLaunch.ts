@@ -17,9 +17,9 @@ import { STAND } from './rocketGeometry.ts';
 // out well inside it (at the snow trip's stop, where it used to fire before
 // 2024 and 2025 grew longer, it would now go up at the picture's edge). It
 // stands `lead` past where the boats are then (about z −117), on the `side`
-// bank, `inland` of the water's edge: short of the second pair of birdhouses
-// on the same bank, further inland on desktop and right by the water on a
-// phone, across the river from 2025's oar. Larger than life, and larger
+// bank, `inland` of the water's edge: past Patrick's birdhouse on the same
+// bank, further inland on desktop and right by the water on a phone, across
+// the river from 2025's oar. Larger than life, and larger
 // again in portrait's wider lens. Seconds: the flame burns on the stand for
 // `ignite`, then it takes `flight` to climb out of sight. It rises `lift`
 // straight up off its rod, then turns away up the river to `to`:
@@ -48,9 +48,8 @@ export const launchProgress = () => progressAt(ROCKET.month) + ROCKET.at * ROOM;
 export const rocketTime = (p: number) => (p - launchProgress()) / ROOM;
 const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * (3 - 2 * x); };
 // How much of it shows, 0 to 1: it comes out of the haze as the months
-// after dating roll on, once dating's date has held and the second pair of
-// birdhouses has gone up, rather than as soon as it is in reach, at the
-// apartments.
+// after dating roll on, once dating's date has held, rather than as soon as
+// it is in reach, at the apartments.
 export const rocketShown = (t: number) => smooth((t + .3) / .2);
 
 // Where its stand stands: on the ground, turned to face the camera as it launches.

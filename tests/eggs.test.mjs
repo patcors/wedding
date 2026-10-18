@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
-import { MILESTONES, ROOM, VOYAGE_END, progressAt, stillProgress } from '../src/components/garden/journey.ts';
+import { MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { cameraHeading, eggTime, heightAt, inView, overRiver } from '../src/components/garden/eggs/egg.ts';
 
@@ -230,113 +230,220 @@ test('the mortarboards are tossed straight up off the boats while the date holds
 
 const apartments = MILESTONES.find(m => m.egg === 'apartments');
 
-test('the birds tell the apartments: his at hers from the start while he renovates, home again, then both at his', async () => {
-  const { AMELIA_MOVED_IN } = await import('../src/components/garden/journey.ts');
-  const { NESTS, NEST_EVENTS, PATRICK_HOME, birdPoses, fired, nestSpots, nestTriggers, perchPoint } = await import('../src/components/garden/eggs/nesting.ts');
+test('the birds tell the apartments: one house each side of the river, his at hers while he renovates, home across the river, then both at his', async () => {
+  const { AMELIA_MOVED_IN, DATES } = await import('../src/components/garden/journey.ts');
+  const { MOVE_SHOWN, NESTS, NEST_EVENTS, PATRICK_HOME, birdPoses, fired, nestSpots, nestTriggers, perchPoint } = await import('../src/components/garden/eggs/nesting.ts');
   assert.equal(apartments.month, '2024-05');
   assert.equal(AMELIA_MOVED_IN, '2025-06');
   assert.ok(MILESTONES.every(m => m.month !== AMELIA_MOVED_IN), 'moving in is not a milestone');
-  const living = MILESTONES.find(m => m.id === 'living-together');
-  assert.deepEqual([...new Set(NEST_EVENTS.map(e => e.month))], [apartments.month, PATRICK_HOME, AMELIA_MOVED_IN]);
-  // His house goes up with its scaffolding round it.
-  assert.equal(NEST_EVENTS.find(e => e.pair === 0 && e.build).scaffold, 1);
+  const living = MILESTONES.find(m => m.id === 'living-together'), dating = MILESTONES.find(m => m.id === 'dating');
+  assert.deepEqual([...new Set(NEST_EVENTS.map(e => e.month))], [apartments.month, PATRICK_HOME, MOVE_SHOWN]);
+  // Her move stands in for AMELIA_MOVED_IN early, once dating's date has
+  // held and before 2025 turns, while the houses are still well in view.
+  assert.ok(progressAt(MOVE_SHOWN) > progressAt(dating.month) + dating.hold * ROOM && MOVE_SHOWN < '2025-01' && MOVE_SHOWN < AMELIA_MOVED_IN);
+  // His house goes up with its scaffolding round it; one build only.
+  assert.equal(NEST_EVENTS.filter(e => e.build).length, 1);
+  assert.equal(NEST_EVENTS.find(e => e.build).scaffold, 1);
+  const triggers = nestTriggers();
+  for (let i = 1; i < triggers.length; i++) assert.ok(triggers[i] >= triggers[i - 1], 'in order');
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const spots = nestSpots(width), triggers = nestTriggers(width);
-    for (let i = 1; i < triggers.length; i++) assert.ok(triggers[i] >= triggers[i - 1], 'in order');
+    const houses = nestSpots(width);
     // Where each bird is once the first n events are done.
-    const after = n => birdPoses(NEST_EVENTS.map((_, i) => i < n ? 99 : null), spots);
-    const at = (pose, pair, house, spot) => Math.hypot(pose.x - perchPoint(spots[pair][house], spot).x, pose.y - perchPoint(spots[pair][house], spot).y) < 1e-9;
+    const after = n => birdPoses(NEST_EVENTS.map((_, i) => i < n ? 99 : null), houses);
+    const at = (pose, house, spot) => Math.hypot(pose.x - perchPoint(houses[house], spot).x, pose.y - perchPoint(houses[house], spot).y, pose.z - perchPoint(houses[house], spot).z) < 1e-9;
     const expect = [
-      [2, 0, { amelia: 'amelia', patrick: 'amelia' }],
-      [3, 0, { amelia: 'amelia', patrick: 'patrick' }],
-      [4, 1, { amelia: 'amelia', patrick: 'patrick' }],
-      [5, 1, { amelia: 'patrick', patrick: 'patrick' }],
+      [2, { amelia: 'amelia', patrick: 'amelia' }],
+      [3, { amelia: 'amelia', patrick: 'patrick' }],
+      [4, { amelia: 'patrick', patrick: 'patrick' }],
     ];
-    for (const [n, pair, homes] of expect) {
-      const poses = after(n)[pair];
+    for (const [n, homes] of expect) {
+      const poses = after(n);
       for (const owner of ['amelia', 'patrick']) {
         assert.ok(poses[owner].shown && poses[owner].flying === 0, `${owner} perched after ${n}`);
-        assert.ok(at(poses[owner], pair, homes[owner], homes[owner] === owner ? 'home' : 'guest'), `${owner} at ${homes[owner]}'s after ${n}`);
+        assert.ok(at(poses[owner], homes[owner], homes[owner] === owner ? 'home' : 'guest'), `${owner} at ${homes[owner]}'s after ${n}`);
       }
     }
-    // Nobody in the first pair before they fly in.
-    assert.ok(!after(1)[0].amelia.shown && !after(1)[0].patrick.shown);
-    // Mid-flight a bird is off its perches, up in the air.
-    const flying = birdPoses(NEST_EVENTS.map((_, i) => i < 2 ? 99 : i === 2 ? NESTS.flight / 2 : null), spots)[0].patrick;
-    assert.ok(flying.flying > .9 && flying.y > perchPoint(spots[0].patrick, 'home').y);
-    // Each house stands on the bank (or on a post at its edge), clear of the year markers.
+    // Nobody about before they fly in.
+    assert.ok(!after(1).amelia.shown && !after(1).patrick.shown);
+    // Mid-flight a bird is off its perches, up over the river, well above the boats' masts.
+    for (const [i, owner] of [[2, 'patrick'], [3, 'amelia']]) {
+      const flying = birdPoses(NEST_EVENTS.map((_, k) => k < i ? 99 : k === i ? NESTS.flight / 2 : null), houses)[owner];
+      assert.ok(flying.flying > .9 && flying.y > perchPoint(houses.patrick, 'home').y && flying.y > 2.5, `${owner} up in the air`);
+      assert.ok(Math.abs(flying.x - riverCenter(flying.z, width)) < bankEdge(flying.z, width), `${owner} over the river halfway across`);
+    }
+    // One house on each bank, hers on the left and his on the right, across
+    // the river from each other and turned towards each other, still showing
+    // their fronts to the camera.
     const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
-    const markers = YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width));
-    spots.forEach((pair, k) => Object.values(pair).forEach(house => {
-      assert.ok(onLand(house.x, house.z, width) && Math.sign(house.x - riverCenter(house.z, width)) === NESTS.pairs[k].side);
-      for (const marker of markers) assert.ok(Math.hypot(marker.x - house.x, marker.z - house.z) > 5);
-    }));
-    // Both houses of the pair in the picture, and near enough to read, as each event fires.
-    NEST_EVENTS.forEach((event, i) => {
-      for (const house of Object.values(spots[event.pair])) {
-        const { bearing, distance } = seen(triggers[i], width, house.x, house.z);
-        assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at event ${i}`);
-        assert.ok(distance < (event.build && event.pair === 1 ? 31 : 26), `distance ${distance} at event ${i}`);
+    const { PIE_BED, ornamentSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
+    const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+    const { rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
+    const others = [...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ornamentSpot(PIE_BED, width), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width), rocketSpot(width)];
+    for (const owner of ['amelia', 'patrick']) {
+      const house = houses[owner];
+      assert.ok(onLand(house.x, house.z, width) && Math.sign(house.x - riverCenter(house.z, width)) === NESTS.side[owner], `${owner}'s on ${owner}'s bank`);
+      for (const other of others) assert.ok(Math.hypot(other.x - house.x, other.z - house.z) > 5, `${owner}'s clear of the other scenery`);
+      const [cx, , cz] = cameraPose(triggers[2], width).position;
+      const facing = [Math.sin(house.yaw), Math.cos(house.yaw)], toCamera = [cx - house.x, cz - house.z];
+      const across = Math.sign(facing[0]) === -NESTS.side[owner], front = facing[0] * toCamera[0] + facing[1] * toCamera[1] > .5 * Math.hypot(...toCamera);
+      assert.ok(across && front, `${owner}'s faces across the river and up it`);
+    }
+    assert.ok(Math.abs(houses.amelia.z - houses.patrick.z) < 3.5, 'across the river from each other');
+    // Both houses in the picture, whole, and near enough to read, as each
+    // event fires.
+    const whole = (p, house) => Math.abs(seen(p, width, house.x, house.z).bearing) + degrees(Math.atan(.22 * house.scale / seen(p, width, house.x, house.z).distance));
+    NEST_EVENTS.forEach((_, i) => {
+      for (const house of Object.values(houses)) {
+        assert.ok(whole(triggers[i], house) < halfView(width) - 2, `in the picture at event ${i}`);
+        assert.ok(seen(triggers[i], width, house.x, house.z).distance < 30, `near enough at event ${i}`);
       }
     });
-    // Each flight is done with both its houses still in the picture, and they
-    // stay in it for a good while after (more than a quarter of a share on a
-    // phone, where the narrow lens loses them soonest), so the guest sees
-    // the settled scene before it goes.
+    // Each flight is done with both houses still in the picture, and they
+    // stay in it for a good while after (more than .4 of a share on both),
+    // so the guest sees the settled scene before it goes.
     NEST_EVENTS.forEach((event, i) => {
       if (!event.moves) return;
-      for (let s = 0; s <= .28; s += .02) for (const house of Object.values(spots[event.pair])) {
-        const { bearing } = seen(triggers[i] + s * ROOM, width, house.x, house.z);
-        assert.ok(Math.abs(bearing) < halfView(width) - 2, `bearing ${bearing} ${s} after event ${i}`);
+      for (let s = 0; s <= .4; s += .02) for (const house of Object.values(houses)) {
+        assert.ok(whole(triggers[i] + s * ROOM, house) < halfView(width) - 2, `in the picture ${s} after event ${i}`);
       }
     });
-    // The second pair comes up only once Patrick's bird is home.
-    const home = NEST_EVENTS.findIndex(e => e.month === PATRICK_HOME && e.moves?.patrick);
-    assert.ok(triggers[NEST_EVENTS.findIndex(e => e.pair === 1 && e.build)] >= triggers[home]);
     // Under reduced motion each still shows its stage done: at the
     // apartments' and at living together's, Patrick's bird is at Amelia's and
-    // the scaffolding up; at dating's, each is at home, the scaffolding down.
-    // Scrolling, the houses go up a little before May shows; at a still it
-    // counts from the date.
-    const fly = NEST_EVENTS.findIndex(e => e.pair === 0 && e.moves), up = NEST_EVENTS.findIndex(e => e.scaffold === 1);
+    // the scaffolding up; at dating's, each is at home, the scaffolding down;
+    // from the snow trip on, both at his. Scrolling, the houses go up a
+    // little before May shows; at a still it counts from the date.
+    const fly = NEST_EVENTS.findIndex(e => e.moves?.amelia?.house === 'amelia'), up = NEST_EVENTS.findIndex(e => e.scaffold === 1);
+    const home = NEST_EVENTS.findIndex(e => e.moves?.patrick?.house === 'patrick'), move = NEST_EVENTS.findIndex(e => e.moves?.amelia?.house === 'patrick');
+    const still = month => stillProgress(progressAt(month) + ROOM * .2);
     for (const month of [apartments.month, living.month]) {
-      const still = stillProgress(progressAt(month) + ROOM * .2);
-      assert.ok(fired(up, triggers, still, true) && fired(fly, triggers, still, true) && !fired(home, triggers, still, true), `still at ${month}`);
+      assert.ok(fired(up, triggers, still(month), true) && fired(fly, triggers, still(month), true) && !fired(home, triggers, still(month), true), `still at ${month}`);
     }
+    assert.ok(fired(home, triggers, still(DATES.dating), true) && !fired(move, triggers, still(DATES.dating), true), 'each at home at dating');
+    assert.ok(fired(move, triggers, still(snowAgain.month), true), 'both at his from the snow trip');
     const before = progressAt(apartments.month) - ROOM * .01;
     assert.ok(fired(up, triggers, before, false) && !fired(up, triggers, stillProgress(before), true));
-    assert.ok(fired(home, triggers, stillProgress(progressAt(PATRICK_HOME) + ROOM * .2), true));
   }
 });
 
-test('Patrick\'s bird flies home as July 2024 shows, before they start dating, clear of the dating butterflies', async () => {
+test('Patrick\'s bird flies home across the river as July 2024 shows, before they start dating, clear of the dating butterflies', async () => {
   const { DATES, dateLabel, routeAt } = await import('../src/components/garden/journey.ts');
   const { boatPose } = await import('../src/components/garden/storyBoats.ts');
   const { FLYERS, flightPoint, flying } = await import('../src/components/garden/eggs/datingFlight.ts');
+  const { BIRDHOUSE } = await import('../src/components/garden/eggs/birdhouseGeometry.ts');
   const { NEST_EVENTS, PATRICK_HOME, nestSpots, nestTriggers } = await import('../src/components/garden/eggs/nesting.ts');
   assert.equal(PATRICK_HOME, '2024-08');
   assert.equal(PATRICK_HOME, DATES.dating);
   const home = NEST_EVENTS.findIndex(e => e.month === PATRICK_HOME && e.moves?.patrick);
-  const rise = NEST_EVENTS.findIndex(e => e.pair === 1 && e.build);
+  const triggers = nestTriggers();
+  // Early, so it is home well before the houses leave the picture.
+  assert.equal(dateLabel(triggers[home]), 'July 2024');
+  assert.ok(triggers[home] < progressAt(DATES.dating));
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const triggers = nestTriggers(width), houses = Object.values(nestSpots(width)[0]);
-    // Early, so it is home well before the first pair leaves the picture.
-    assert.equal(dateLabel(triggers[home]), 'July 2024');
-    assert.ok(triggers[home] < progressAt(DATES.dating));
-    // The first pair is still ahead of the boats as his bird flies home.
+    const houses = Object.values(nestSpots(width));
+    // The houses are still ahead of the boats as his bird flies home.
     for (const house of houses) assert.ok(house.z < routeAt(triggers[home]) - 2);
-    // The butterflies come out of the trees on the other bank meanwhile, and
-    // are nowhere near his flight while the guest might scroll on through it.
-    for (let p = triggers[home]; p <= triggers[home] + .1 * ROOM; p += .01 * ROOM) {
-      const t = (p - progressAt(DATES.dating)) / ROOM, pose = boatPose(p, width);
-      for (const flyer of FLYERS.filter(f => flying(f, t))) for (let s = 0; s < 30; s += .5) {
-        const [lx, , lz] = flightPoint(flyer, s, t);
-        const x = pose.x + Math.cos(pose.yaw) * lx + Math.sin(pose.yaw) * lz, z = pose.z - Math.sin(pose.yaw) * lx + Math.cos(pose.yaw) * lz;
-        for (const house of houses) assert.ok(Math.hypot(x - house.x, z - house.z) > 4, `${flyer.colour} by the houses at ${t}`);
+    // How far a butterfly is from a house: its post (with the number on it)
+    // up to the floor, then the house up to the ridge.
+    const clearance = ([x, y, z], house) => {
+      const r = Math.hypot(x - house.x, z - house.z);
+      const part = (from, to, radius) => Math.hypot(Math.max(0, r - radius * house.scale),
+        Math.max(0, house.y + from * house.scale - y, y - house.y - to * house.scale));
+      return Math.min(part(0, .82, .14), part(.82, BIRDHOUSE.height + .05, .3));
+    };
+    // The butterflies come out of the trees on his bank short of his house
+    // and leave up the river over the water, nowhere near either house on
+    // the way in or out (on a phone's narrow river, their circle round the
+    // boats passes the houses close by as the boats go by, but never
+    // through them).
+    for (const flyer of FLYERS) {
+      for (let t = flyer.arrive[0]; t <= flyer.leave[1]; t += .01) {
+        if (!flying(flyer, t)) continue;
+        const p = progressAt(DATES.dating) + t * ROOM, pose = boatPose(p, width);
+        const way = t < flyer.arrive[1] ? 'arriving' : t > flyer.leave[0] ? 'leaving' : 'circling';
+        for (let s = 0; s < 30; s += .5) {
+          const [lx, y, lz] = flightPoint(flyer, s, t);
+          const point = [pose.x + Math.cos(pose.yaw) * lx + Math.sin(pose.yaw) * lz, y, pose.z - Math.sin(pose.yaw) * lx + Math.cos(pose.yaw) * lz];
+          const least = way === 'circling' || width < 1 ? .05 : 2.5;
+          for (const house of houses) assert.ok(clearance(point, house) > least, `${flyer.colour} ${way} by a house at ${t.toFixed(2)} (width ${width})`);
+        }
       }
     }
-    // The second pair rises only once Amelia's and Patrick's are round the boats.
-    assert.ok(triggers[rise] >= progressAt(DATES.dating) + Math.max(...FLYERS.filter(f => f.partner).map(f => f.arrive[1])) * ROOM);
+  }
+});
+
+test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark, and both house numbers read from the boats', async () => {
+  const THREE = await import('three');
+  const { NodeIO } = await import('@gltf-transform/core');
+  const { EXTMeshoptCompression } = await import('@gltf-transform/extensions');
+  const { MeshoptDecoder } = await import('meshoptimizer');
+  const { treePlacements, treeBase } = await import('../src/components/garden/gardenTreeSpots.ts');
+  const { treeMatrix } = await import('../src/components/garden/eggs/barkCarvingGeometry.ts');
+  const { BLADE, NUMBER_RECTS, SIGN_GAP, bladeHeight, signMount } = await import('../src/components/garden/eggs/streetSign.ts');
+  const { PLAQUE, birdhousesGeometry } = await import('../src/components/garden/eggs/birdhouseGeometry.ts');
+  const { NEST_EVENTS, SIGN, nestSpots, nestTriggers, signFaces, signTree } = await import('../src/components/garden/eggs/nesting.ts');
+  await MeshoptDecoder.ready;
+  const io = new NodeIO().registerExtensions([EXTMeshoptCompression]).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
+  const models = {};
+  for (const [type, file] of ['ash-1', 'ash-2', 'ash-1-distant', 'ash-2-distant'].entries()) {
+    const primitive = (await io.read(`public/models/garden/${file}.glb`)).getRoot().listNodes().find(n => n.getName() === 'branches').getMesh().listPrimitives()[0];
+    const normal = primitive.getAttribute('NORMAL');
+    models[type] = { position: primitive.getAttribute('POSITION').getArray(), normal: Array.from({ length: normal.getCount() }, (_, i) => normal.getElement(i, [])).flat(), index: primitive.getIndices().getArray() };
+  }
+  const triggers = nestTriggers(), move = NEST_EVENTS.findIndex(e => e.moves?.amelia?.house === 'patrick');
+  // Pixels tall a thing `size` high is, `distance` away, on each layout (CSS pixels).
+  const pixels = (size, distance, width) => degrees(Math.atan(size / distance)) * (width < 1 ? 844 / 68 : 900 / 24 / 2);
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const houses = nestSpots(width), tree = signTree(width), length = BLADE.length * (width < 1 ? BLADE.mobile : 1);
+    // A real tree on Amelia's bank, the nearest to her house, standing by the water.
+    assert.ok(treePlacements(width, width < 1).some(t => t.x === tree.x && t.z === tree.z && t.type === tree.type));
+    assert.ok(tree.x < riverCenter(tree.z, width) - bankEdge(tree.z, width) && tree.x - riverCenter(tree.z, width) > -bankEdge(tree.z, width) - 2, 'by the water on her bank');
+    assert.ok(Math.hypot(tree.x - houses.amelia.x, tree.z - houses.amelia.z) < 2.5, 'beside her house');
+    // Flat on the trunk, facing the camera: touching the bark and sunk into it nowhere.
+    const matrix = treeMatrix({ ...tree, y: treeBase(tree, width) }), height = width < 1 ? SIGN.height.mobile : SIGN.height.desktop;
+    const { centre, normal, right } = signMount(models[tree.type], matrix, signFaces(width), height, length);
+    const triangles = [], m = models[tree.type];
+    for (let t = 0; t < m.index.length; t += 3) {
+      const corners = [0, 1, 2].map(k => new THREE.Vector3().fromArray(m.position, m.index[t + k] * 3));
+      if (corners.every(c => c.y < 3.6 && Math.hypot(c.x, c.z) < .8)) triangles.push(corners.map(c => c.applyMatrix4(matrix)));
+    }
+    let touch = Infinity, hits = 0;
+    const ray = new THREE.Ray(), hit = new THREE.Vector3();
+    for (let a = 0; a <= 20; a++) for (let b = 0; b <= 8; b++) {
+      const back = centre.clone().addScaledVector(right, (a / 20 - .5) * length).add(new THREE.Vector3(0, (b / 8 - .5) * bladeHeight(length), 0));
+      ray.set(back.clone().addScaledVector(normal, -2), normal);
+      for (const [p, q, r] of triangles) if (ray.intersectTriangle(p, q, r, false, hit)) {
+        const gap = back.clone().sub(hit).dot(normal);
+        assert.ok(gap > 0, `sunk into the bark (width ${width})`);
+        touch = Math.min(touch, gap); hits++;
+      }
+    }
+    assert.ok(hits > 0 && touch < SIGN_GAP + .01, `on the bark, not floating (${touch}, width ${width})`);
+    const { x: cx, z: cz } = signFaces(width), toCamera = new THREE.Vector3(cx - centre.x, 0, cz - centre.z).normalize();
+    assert.ok(normal.dot(toCamera) > .999, 'facing the camera');
+    // In the picture and legible, its capitals (.55 of the blade) at least 5
+    // pixels tall from the living together's stop, and 6.5 from dating's,
+    // until her bird has flown over to his and well after, as the houses
+    // are; above her roof.
+    assert.ok(centre.y - bladeHeight(length) / 2 > houses.amelia.y + 1.3 * houses.amelia.scale, `above her roof (${centre.y - bladeHeight(length) / 2} over ${houses.amelia.y + 1.3 * houses.amelia.scale}, width ${width})`);
+    const fromStop = STOPS[MILESTONES.findIndex(m => m.id === 'living-together') + 1];
+    for (let p = fromStop; p <= triggers[move] + .4 * ROOM; p += .002) {
+      const { bearing, distance } = seen(p, width, centre.x, centre.z);
+      assert.ok(Math.abs(bearing) + degrees(Math.atan(length / 2 / distance)) < halfView(width), `the sign in the picture at ${p}`);
+      const least = p < STOPS[MILESTONES.findIndex(m => m.id === 'dating') + 1] ? 5 : 6.5;
+      assert.ok(pixels(bladeHeight(length) * .55, distance, width) > least, `the sign legible at ${p} (width ${width})`);
+    }
+    // The numbers at the apartments' stop: at least 6 pixels tall on desktop,
+    // and as legible as a phone allows, then larger as the boats come up.
+    const atStop = STOPS[MILESTONES.findIndex(m => m.id === 'apartments') + 1];
+    for (const owner of ['amelia', 'patrick']) {
+      const figures = PLAQUE.width * NUMBER_RECTS[owner].height / NUMBER_RECTS[owner].width * .65 * houses[owner].scale;
+      const { distance } = seen(atStop, width, houses[owner].x, houses[owner].z);
+      assert.ok(pixels(figures, distance, width) > (width < 1 ? 3.5 : 6), `${owner}'s number at the apartments' stop (width ${width})`);
+    }
+    // Within the egg's budget: both houses, their numbers and the
+    // scaffolding in one mesh, the birds in another and the sign a third.
+    const { geometry } = birdhousesGeometry(houses);
+    assert.ok(geometry.attributes.position.count / 3 < 600, 'the houses in one small mesh');
   }
 });
 
@@ -355,7 +462,7 @@ test('the 2025 snowmen stand on the bank holding hands, in view as their date ho
       const { bearing } = seen(progressAt(snowAgain.month) + t * ROOM, width, x, z);
       assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at ${t}`);
     }
-    const others = [...nestSpots(width).flatMap(pair => Object.values(pair)), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width))];
+    const others = [...Object.values(nestSpots(width)), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width))];
     for (const other of others) assert.ok(Math.hypot(other.x - x, other.z - z) > 5, 'clear of the other scenery');
   }
   // Each holds its hand out and down to halfway to the other, where they meet.
@@ -402,11 +509,9 @@ test('the rocket stands on the right bank in 2025, clear of the arch and the oth
     assert.ok(onLand(x, z, width) && x > riverCenter(z, width), 'on the right bank');
     assert.ok(groundHeight(x, z, width) > 0, 'above the waterline');
     assert.ok(Math.abs(z + 117) < 1, `about z −117 (${z})`);
-    // Short of the second pair of birdhouses on the same bank, and across the
-    // river from 2025's oar.
+    // Across the river from 2025's oar, past Patrick's birdhouse on the same bank.
     const arch = yearMarkerSpot(YEAR_MARKERS.find(m => m.year === 2026), width);
-    assert.ok(z > Math.max(...Object.values(nestSpots(width)[1]).map(house => house.z)) + 4);
-    const others = [...nestSpots(width).flatMap(pair => Object.values(pair)), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width)];
+    const others = [...Object.values(nestSpots(width)), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width)];
     for (const other of others) assert.ok(Math.hypot(other.x - x, other.z - z) > 4, 'clear of the other scenery');
     assert.ok(Math.hypot(arch.x - x, arch.z - z) > 4.2, 'clear of the arch');
   }

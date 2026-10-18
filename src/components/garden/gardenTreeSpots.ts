@@ -47,6 +47,10 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
   // (eggs/circusRigs.ts); on a phone nearer the water, so the silk's limb
   // reaches out over the bank into its narrower picture.
   avenue.push({ x: riverCenter(-63.5, width) - bankEdge(-63.5, width) - (mobile ? 2.6 : 3.2), z: -63.5, scale: mobile ? .97 : 1.1, rotation: Math.PI, type: 2, distant: true });
+  // An ash by the water on Amelia's bank just past her birdhouse, for the
+  // street sign fixed to its trunk (eggs/nesting.ts), near enough the water
+  // to stay in a phone's narrow picture while the birdhouses are.
+  avenue.push({ x: riverCenter(-110.3, width) - bankEdge(-110.3, width) - (mobile ? .8 : 1.3), z: -110.3, scale: mobile ? .9 : 1, rotation: 2.2, type: 3, distant: true });
   const rand = random(415);
   // Stagger groves along both banks all the way into the mist. The inner
   // trees overlap the avenue while outer trees fill gaps between canopies.

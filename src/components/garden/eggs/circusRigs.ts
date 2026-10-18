@@ -32,9 +32,9 @@ type Point = readonly [number, number, number];
 //   snowmen, the lyra from the one further back and the bird from the tip
 //   of a low limb of the one by the water, where the leaves thin out,
 //   upside down, its head down and its tail up. Amelia asked for the lyra
-//   about 2024, but that year her bank already holds the flower bed, both
-//   birdhouses and 2025's oar, and on a phone it would hang in front of
-//   the birdhouses. They come in as October 2025 shows, her circus show
+//   about 2024, but that year her bank already holds the flower bed, her
+//   birdhouse and its street sign, and 2025's oar, and on a phone it would
+//   hang in front of her birdhouse. They come in as October 2025 shows, her circus show
 //   that year, hang past the snowmen and short of 2026's arch, and are in
 //   the picture until salsa's stop and passed soon after.
 export type Rig = {
