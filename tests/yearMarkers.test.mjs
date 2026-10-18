@@ -1,16 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
-import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, islandHalfWidth, riverCenter } from '../src/components/garden/gardenGeometry.ts';
-import { ROOM, dateLabel, routeAt } from '../src/components/garden/journey.ts';
+import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, islandHalfWidth, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
+import { ROOM, VOYAGE_END, dateLabel, routeAt } from '../src/components/garden/journey.ts';
 import { BOAT_SCALE, HULL_HALF_BEAM, boatPose } from '../src/components/garden/storyBoats.ts';
-import { MARKER_REACH, YEAR_MARKERS, markerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
+import { MARKER_REACH, YEAR_MARKERS, markerShown, yearMarkerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
+import { hagiaSophiaSpot, tripStop } from '../src/components/garden/eggs/balloonCourse.ts';
+import { yearMarkerModel } from '../src/components/garden/eggs/yearMarkerGeometry.ts';
 
 const LAYOUTS = [[1, 1440 / 900, GARDEN_CAMERA.fov], [MOBILE_RIVER_WIDTH, 390 / 844, GARDEN_CAMERA.mobileFov]];
 const halfView = (aspect, fov) => Math.atan(Math.tan(fov / 2 * Math.PI / 180) * aspect) * 180 / Math.PI;
 
-test('each year from 2017 to 2026 is marked once, each in its own medium', () => {
-  assert.deepEqual(YEAR_MARKERS.map(m => m.year), [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]);
+test('each year from 2017 to 2027 is marked once, each in its own medium', () => {
+  assert.deepEqual(YEAR_MARKERS.map(m => m.year), [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]);
   assert.equal(new Set(YEAR_MARKERS.map(m => m.medium)).size, YEAR_MARKERS.length);
 });
 
@@ -79,4 +81,41 @@ test('a marker dissolves in a little way ahead and is gone once passed', () => {
     const first = cameraPose(yearTurns(marker.year) - 2.6 * ROOM, 1).position[2];
     assert.equal(markerShown(spot.z, first, false), 0, `${marker.year} hidden well before`);
   }
+});
+
+test('2027\'s heart stands on the left bank round the S-bend, clear of the Hagia Sophia, and is out of the picture by the dock', () => {
+  const marker = YEAR_MARKERS.find(m => m.year === 2027);
+  assert.equal(marker.medium, 'heart');
+  for (const [width, aspect, fov] of LAYOUTS) {
+    const spot = yearMarkerSpot(marker, width), { jetty, tree } = voyageLandmarks(width);
+    // On the outside of the bend's second curve, across the river from the
+    // headland that hides the old tree, and well clear of the tree and jetty.
+    assert.ok(spot.z < VOYAGE.bend.from - 15 && spot.z > VOYAGE.bend.to, `heart at z ${spot.z}`);
+    assert.ok(spot.x < riverCenter(spot.z, width) - bankEdge(spot.z, width), `heart on the left bank (width ${width})`);
+    assert.ok(Math.hypot(spot.x - tree.x, spot.z - tree.z) > 15 && Math.hypot(spot.x - jetty.x, spot.z - jetty.z) > 12, `heart clear of the dock (width ${width})`);
+    // Passed before the dock's view, so it never crowds the jetty or the copy.
+    for (let p = VOYAGE_END; p <= 1; p += .005) {
+      const [cx, , cz] = cameraPose(p, width).position, [tx, , tz] = cameraPose(p, width).target;
+      const bearing = (Math.atan2(spot.x - cx, cz - spot.z) - Math.atan2(tx - cx, cz - tz)) * 180 / Math.PI;
+      assert.ok(markerShown(spot.z, cz, width < 1) === 0 || Math.abs(bearing) > halfView(aspect, fov) + 3, `heart in the dock's picture at p ${p} (width ${width})`);
+    }
+  }
+  // Held back while the Hagia Sophia is in the picture, which it would stand
+  // just behind at the trip's stop.
+  for (const [width, aspect, fov] of LAYOUTS) {
+    const spot = yearMarkerSpot(marker, width), hagia = hagiaSophiaSpot('2026-07', width);
+    assert.equal(yearMarkerShown(marker, spot.z, tripStop('2026-07'), cameraPose(tripStop('2026-07'), width).position[2], width < 1), 0);
+    for (let p = tripStop('2026-07'); p < yearTurns(2027); p += .002) {
+      const [cx, , cz] = cameraPose(p, width).position, [tx, , tz] = cameraPose(p, width).target;
+      const bearing = ({ x, z }) => (Math.atan2(x - cx, cz - z) - Math.atan2(tx - cx, cz - tz)) * 180 / Math.PI;
+      if (yearMarkerShown(marker, spot.z, p, cz, width < 1) === 0 || Math.abs(bearing(hagia)) > halfView(aspect, fov)) continue;
+      assert.ok(Math.abs(bearing(spot) - bearing(hagia)) > 3, `heart beside the Hagia Sophia at p ${p} (width ${width})`);
+    }
+    assert.equal(yearMarkerShown(marker, spot.z, yearTurns(2027), cameraPose(yearTurns(2027), width).position[2], width < 1), 1);
+  }
+  // Two draw calls, like the others, and under budget.
+  const { body, face, hanging } = yearMarkerModel(marker, YEAR_MARKERS.indexOf(marker));
+  assert.ok(face && !hanging);
+  const triangles = (body.attributes.position.count + face.index.count) / 3;
+  assert.ok(triangles < 1500, `${triangles} triangles`);
 });

@@ -1,19 +1,20 @@
-// Each year from 2017 to 2026 is marked once in the scenery as the boats enter
+// Each year from 2017 to 2027 is marked once in the scenery as the boats enter
 // it, each in its own hand-made medium, so finding them is a little hunt of its
 // own. Where and when each stands; drawn by YearMarkers.tsx with the models in
 // yearMarkerGeometry.ts. Pure, so it can be tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
-import { progressAt, routeAt } from '../journey.ts';
+import { ROOM, progressAt, routeAt } from '../journey.ts';
 
-export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'shed' | 'stake' | 'pile' | 'slate' | 'lantern' | 'steps' | 'arch';
+export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'shed' | 'stake' | 'pile' | 'slate' | 'lantern' | 'steps' | 'arch' | 'heart';
 // `side` is the bank (−1 is −x, Amelia's; 1 is +x, Patrick's). `lead` is how
 // far downstream of the boats it stands as its year turns, so it is in clear
 // view just past them then and they pass it early in the year. On a bank,
 // `inland` is how far from the water's edge, in world units on desktop
 // (negative stands out over the water); in the river, `share` is how far from
-// the middle to that bank.
-export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number } & ({ inland: number } | { share: number });
+// the middle to that bank. `from`, if set, holds it back until that month
+// shows, however near it is.
+export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number; from?: string } & ({ inland: number } | { share: number });
 
 // Mostly alternating banks, with the buoy and the pile out in the river, where
 // a phone always sees them. 2018's stands on the left bank, across from July
@@ -24,6 +25,12 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // behind it. Sydney's wide river puts its left
 // bank out of a phone's picture, so 2021 and 2023 stand on the right, and
 // 2022's pile stands mid-river between the boats while they are apart.
+// January 2027 turns round the S-bend, so the wedding's heart stands on the
+// outside of its second curve, the left bank, where the river runs straight
+// at it: in the open across from the headland that hides the old tree, well
+// past the Hagia Sophia and passed before the dock comes into view. It would
+// be in reach at the trip's stop, just behind the Hagia Sophia in the picture,
+// so it waits until the Hagia Sophia is passing, fully in as October 2026 shows.
 export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45 },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },
@@ -35,6 +42,7 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
   { year: 2025, medium: 'steps', side: -1, lead: 4.8, inland: .15 },
   { year: 2026, medium: 'arch', side: 1, lead: 4, inland: .6 },
+  { year: 2027, medium: 'heart', side: -1, lead: 3, inland: .9, from: '2026-10' },
 ];
 
 // Bigger on a phone, whose wider lens draws everything smaller; a phone's
@@ -70,4 +78,13 @@ export function markerShown(z: number, cameraZ: number, mobile: boolean) {
   const ahead = cameraZ - z, reach = mobile ? MARKER_REACH.mobile : MARKER_REACH.desktop;
   if (ahead < -MARKER_REACH.behind || ahead > reach) return 0;
   return Math.min(1, (reach - ahead) / MARKER_REACH.fade);
+}
+
+// How much of a year's marker shows at p: as markerShown, but no earlier than
+// its `from` month, dissolving in over the .35 of a share before it, as the
+// working lives' ornaments do.
+const ARRIVE = .35;
+export function yearMarkerShown(marker: YearMarker, z: number, p: number, cameraZ: number, mobile: boolean) {
+  const arrived = marker.from ? Math.min(1, Math.max(0, (p - progressAt(marker.from)) / (ARRIVE * ROOM) + 1)) : 1;
+  return Math.min(arrived, markerShown(z, cameraZ, mobile));
 }
