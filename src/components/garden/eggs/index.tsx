@@ -5,7 +5,7 @@ import type { ComponentType } from 'react';
 import { MILESTONES, type EggId } from '../journey';
 import type { SlotProps } from '../JourneyProvider';
 import type { EggProps } from './egg';
-import Balloon from './Balloon';
+import TurkeyGreece from './TurkeyGreece';
 import University from './University';
 import FriendsFleet from './FriendsFleet';
 import SnowTrip from './SnowTrip';
@@ -17,7 +17,7 @@ import DatingButterflies from './DatingButterflies';
 import EngagementPetals from './EngagementPetals';
 import Rocket from './Rocket';
 
-const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: Balloon, university: University, coast: FriendsFleet, 'snow-2019': SnowTrip,
+const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: TurkeyGreece, university: University, coast: FriendsFleet, 'snow-2019': SnowTrip,
   graduation: Graduation, apartments: Birdhouses, 'snow-2025': SecondSnowTrip };
 // Scenery that isn't an egg on a milestone: the years marked along the banks,
 // the butterflies that circle the boats as they start dating, part of the

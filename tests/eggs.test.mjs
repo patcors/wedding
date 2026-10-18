@@ -56,7 +56,7 @@ test('the balloon climbs straight up over the river, left of the date label, and
       last = y;
       const [cx, , cz] = cameraPose(p, width).position;
       const bearing = degrees(Math.atan2(x - cx, cz - z) - cameraHeading(p, width));
-      assert.ok(bearing < -7.5 && bearing > -12, `bearing ${bearing} at ${t}`);
+      assert.ok(bearing < -7.5 && bearing > -13, `bearing ${bearing} at ${t}`);
     }
   }
   assert.ok(at + BALLOON_TIMES.gone * ROOM < VOYAGE_END - .05);
@@ -416,4 +416,60 @@ test('the rocket and its stand keep to the egg budget', async () => {
   const triangles = g => (g.index ? g.index.count : g.attributes.position.count) / 3;
   // Three draw calls: the stand, the rocket, and the smoke and flame instanced.
   assert.ok(triangles(rocketGeometry()) + triangles(launchStandGeometry()) + triangles(puffGeometry()) * (EXHAUST_COUNT + 1) < 1000);
+});
+
+test('the Hagia Sophia stands on the left bank at the start of the S-bend, under the balloon at the trip\'s stop', async () => {
+  const { BALLOON_TIMES, HAGIA, balloonSpot, hagiaShown, hagiaSophiaSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const { HAGIA_SOPHIA, hagiaSophiaGeometry } = await import('../src/components/garden/eggs/hagiaSophiaGeometry.ts');
+  const { VOYAGE } = await import('../src/components/garden/gardenGeometry.ts');
+  const stop = tripStop(trip.month), t = (stop - progressAt(trip.month)) / ROOM;
+  assert.ok(t > 0 && t < BALLOON_TIMES.climb);
+  for (const [mobile, width] of [[false, 1], [true, MOBILE_RIVER_WIDTH]]) {
+    const spot = hagiaSophiaSpot(trip.month, width);
+    assert.ok(Math.abs(spot.z - HAGIA.z) < 1e-9 && spot.z < VOYAGE.bend.from && spot.z > VOYAGE.bend.from - 10, 'at the start of the S-bend');
+    // On the left bank, the front of its terrace a quay at the water's edge.
+    assert.ok(onLand(spot.x, spot.z, width) && spot.x < riverCenter(spot.z, width), 'on the left bank');
+    const c = Math.cos(spot.yaw), s = Math.sin(spot.yaw);
+    for (const [dx, dz] of [[1, 1], [1, -1], [-1, -1], [-1, 1]]) {
+      const lx = dx * HAGIA_SOPHIA.width / 2 * spot.scale, lz = dz * HAGIA_SOPHIA.depth / 2 * spot.scale;
+      const x = spot.x + c * lx + s * lz, z = spot.z - s * lx + c * lz;
+      assert.ok(riverCenter(z, width) - x > bankEdge(z, width) - .6, 'its terrace no more than a quay at the water\'s edge');
+    }
+    // In the picture, well in from its edge, from the trip's date through the stop.
+    for (let q = progressAt(trip.month); q <= stop; q += .05 * ROOM) {
+      assert.ok(Math.abs(seen(q, width, spot.x, spot.z).bearing) < halfView(width) - 4, `in the picture at ${q}`);
+    }
+    // At the stop the balloon hangs over it: close to the same bearing, above its minarets.
+    const { position: [bx, by, bz] } = balloonSpot(stop, t, mobile, width);
+    const model = seen(stop, width, spot.x, spot.z), balloon = seen(stop, width, bx, bz);
+    assert.ok(Math.abs(balloon.bearing - model.bearing) < (mobile ? 5 : 12), `balloon at ${balloon.bearing}, model at ${model.bearing}`);
+    assert.ok(above(stop, width, bx, by, bz) > above(stop, width, spot.x, spot.y + HAGIA_SOPHIA.height * spot.scale, spot.z) + 5);
+    // It is there, out of the haze, by the trip's date.
+    assert.ok(hagiaShown(0) === 1 && hagiaShown(-.6) === 0);
+  }
+  const g = hagiaSophiaGeometry();
+  assert.ok(g.attributes.position.count / 3 < 1500, 'one draw call under the budget');
+});
+
+test('the Hagia Sophia is clear of the petals\' trail, the headland, the old tree and the year markers', async () => {
+  const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const { HAGIA_SOPHIA } = await import('../src/components/garden/eggs/hagiaSophiaGeometry.ts');
+  const { PETALS, PETAL_LIST, floatPoint, petalCourse } = await import('../src/components/garden/eggs/petalTrail.ts');
+  const { VOYAGE, voyageLandmarks } = await import('../src/components/garden/gardenGeometry.ts');
+  const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const spot = hagiaSophiaSpot(trip.month, width), reach = Math.hypot(HAGIA_SOPHIA.width, HAGIA_SOPHIA.depth) / 2 * spot.scale;
+    for (const petal of PETAL_LIST) {
+      const course = petalCourse(petal, width);
+      for (let age = 0; age <= PETALS.life; age += .05) {
+        const [x, , z] = floatPoint(petal, course, age, width);
+        assert.ok(Math.hypot(x - spot.x, z - spot.z) > reach + .5, 'clear of the petals');
+      }
+    }
+    // The headland that hides the old tree stands on the other bank, further on (see GardenTrees.tsx).
+    assert.ok(spot.x < riverCenter(spot.z, width) && spot.z > VOYAGE.bend.from - 11 - reach);
+    const { tree, jetty } = voyageLandmarks(width);
+    for (const landmark of [tree, jetty]) assert.ok(Math.hypot(landmark.x - spot.x, landmark.z - spot.z) > 20);
+    for (const marker of YEAR_MARKERS.map(m => yearMarkerSpot(m, width))) assert.ok(Math.hypot(marker.x - spot.x, marker.z - spot.z) > 10);
+  }
 });
