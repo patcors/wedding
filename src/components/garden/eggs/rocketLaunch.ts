@@ -42,6 +42,8 @@ export const EXHAUST = {
   pad: 3, padSize: .16, trail: [0, .02, .045, .075, .11, .15, .2, .26, .33, .41, .5, .6, .72, .85], trailSize: .06, linger: 2.6,
 } as const;
 export const EXHAUST_COUNT = EXHAUST.pad + EXHAUST.trail.length - 1;
+// Seconds after it fires by when it has flown and the last of its trail has thinned away.
+export const FLOWN = ROCKET.ignite + ROCKET.flight + EXHAUST.linger;
 
 type Point = [number, number, number];
 export const launchProgress = () => progressAt(ROCKET.month) + ROCKET.at * ROOM;
@@ -49,9 +51,12 @@ export const launchProgress = () => progressAt(ROCKET.month) + ROCKET.at * ROOM;
 export const rocketTime = (p: number) => (p - launchProgress()) / ROOM;
 const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * (3 - 2 * x); };
 // How much of it shows, 0 to 1: it comes out of the haze once the trip's
-// stop is behind, and its empty stand goes back into it once the rocket has
-// flown and its trail has thinned away, long before the dock.
-export const rocketShown = (t: number) => smooth((t + .35) / .25) * (1 - smooth((t - .4) / .3));
+// stop is behind, and its empty stand goes back into it from .1 to .3 of a
+// share after it fires, once the glide has waited for it and moved on, as
+// 2027's heart dissolves in across the river and well before December's
+// frame of the two hearts. Once fired, the rocket flies on and its trail
+// thins away whether or not its stand has gone (FLOWN).
+export const rocketShown = (t: number) => smooth((t + .35) / .25) * (1 - smooth((t - .1) / .2));
 
 // Where its stand stands: on the ground, turned to face the camera as it launches.
 export function rocketSpot(width: number) {

@@ -609,16 +609,18 @@ test('the rocket is in the picture as it fires and climbs away down the open cor
 });
 
 test('nothing is part way through a dissolve as the rocket fires and while the glide waits for it, and 2027\'s heart dissolves in only after', async () => {
-  const { EXHAUST, ROCKET, exhaust, launchProgress, rocketCourse } = await import('../src/components/garden/eggs/rocketLaunch.ts');
+  const { EXHAUST, FLOWN, ROCKET, exhaust, launchProgress, rocketCourse, rocketShown, rocketTime } = await import('../src/components/garden/eggs/rocketLaunch.ts');
   const { GLIDE_STOPS, glideAt, glidePlan } = await import('../src/components/garden/journeyPace.ts');
   const { BALLOON_TIMES, hagiaShown, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { YEAR_MARKERS, yearMarkerShown, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
   const heart = YEAR_MARKERS.find(m => m.year === 2027), stop = GLIDE_STOPS.find(s => s.id === 'rocket').p;
   const at = progressAt(trip.month), board = (p, width) => yearMarkerShown(heart, yearMarkerSpot(heart, width).z, p, cameraPose(p, width).position[2], width < 1);
   // From as it fires to where the glide waits: the balloons and the Hagia
-  // Sophia long gone, and the heart not yet begun to dissolve in.
+  // Sophia long gone, the stand fully shown, and the heart not yet begun to
+  // dissolve in.
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    for (let p = launchProgress(); p <= stop + .05 * ROOM; p += .01 * ROOM) {
+    for (let p = launchProgress(); p <= stop + .04 * ROOM; p += .01 * ROOM) {
+      assert.equal(rocketShown(rocketTime(p)), 1, `stand at ${p}`);
       assert.ok((p - at) / ROOM > BALLOON_TIMES.gone && hagiaShown((p - at) / ROOM) === 0, `balloons or Hagia Sophia at ${p}`);
       assert.equal(board(p, width), 0, `heart at ${p} (width ${width})`);
     }
@@ -640,6 +642,14 @@ test('nothing is part way through a dissolve as the rocket fires and while the g
     assert.ok(exhaust(course, first - fired).every(puff => puff.size < full / 3), `its trail thinned ${(first - fired).toFixed(2)}s after it fired`);
   }
   for (const width of [1, MOBILE_RIVER_WIDTH]) assert.equal(board(progressAt('2026-12') - .05 * ROOM, width), 1);
+  // The empty stand goes back into the haze once the glide has moved on, by
+  // when the rocket has flown, and is gone well before December too.
+  let faded = null;
+  for (let t = fired; t < plan.length && faded === null; t += 1 / 60) if (rocketShown(rocketTime(glideAt(plan, t))) < 1) faded = t;
+  assert.ok(faded > leg.start + leg.travel + leg.hold && faded - fired > ROCKET.ignite + ROCKET.flight);
+  assert.equal(rocketShown(rocketTime(progressAt('2026-12') - .05 * ROOM)), 0);
+  // Once fired, it flies on and its trail thins away whether or not its stand has gone.
+  assert.ok(FLOWN >= ROCKET.ignite + ROCKET.flight + EXHAUST.linger);
 });
 
 test('the rocket and its stand keep to the egg budget', async () => {

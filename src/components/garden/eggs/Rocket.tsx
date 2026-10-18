@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useJourney, type SlotProps } from '../JourneyProvider';
-import { EXHAUST_COUNT, ROCKET, exhaust, rocketCourse, rocketInFlight, rocketShown, rocketSpot, rocketTime } from './rocketLaunch';
+import { EXHAUST_COUNT, FLOWN, ROCKET, exhaust, rocketCourse, rocketInFlight, rocketShown, rocketSpot, rocketTime } from './rocketLaunch';
 import { launchStandGeometry, puffGeometry, rocketGeometry } from './rocketGeometry';
 
 const SMOKE = '#efece6', FLAME = '#ffb45e';
@@ -42,11 +42,7 @@ export default function Rocket({ paused, reduced, width }: SlotProps) {
     if (!group.current || !rocket.current || !puffs.current) return;
     const t = rocketTime(clock.progress);
     const shown = rocketShown(t);
-    group.current.visible = shown > 0;
-    if (!shown) return;
-    parts.brass.opacity = parts.wood.opacity = shown;
     const step = paused ? 0 : Math.min(dt, .1);
-    idle.current += step;
     let air = fired.current;
     // Back on its stand before its moment, to fire again.
     if (reduced || t < 0) air = null;
@@ -54,6 +50,13 @@ export default function Rocket({ paused, reduced, width }: SlotProps) {
     else if (air === null) air = t > .25 ? 99 : 0;
     else air += step;
     fired.current = air;
+    // Once fired it flies on and its trail thins away, even if a guest
+    // scrolling on has taken its stand back into the haze.
+    group.current.visible = shown > 0 || (air !== null && air < FLOWN);
+    if (!group.current.visible) return;
+    parts.wood.opacity = shown;
+    parts.brass.opacity = air === null ? shown : 1;
+    idle.current += step;
     const { position, heading, burn, gone } = rocketInFlight(course, air);
     rocket.current.visible = !gone;
     rocket.current.position.set(...position);
