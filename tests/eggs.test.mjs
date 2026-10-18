@@ -471,40 +471,65 @@ test('the rocket and its stand keep to the egg budget', async () => {
   assert.ok(triangles(rocketGeometry()) + triangles(launchStandGeometry()) + triangles(puffGeometry()) * (EXHAUST_COUNT + 1) < 1000);
 });
 
-test('the Hagia Sophia stands on the left bank at the start of the S-bend, under the balloon at the trip\'s stop', async () => {
-  const { BALLOON_TIMES, balloonSpot, hagiaCorners, hagiaShown, hagiaSophiaSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
+test('the Hagia Sophia stands far off past the S-bend, on level ground back from the left bank, under the balloon at the trip\'s stop', async () => {
+  const { BALLOON_TIMES, HAGIA_TIMES, balloonSpot, hagiaCorners, hagiaShown, hagiaSophiaSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { HAGIA_SOPHIA, hagiaSophiaGeometry } = await import('../src/components/garden/eggs/hagiaSophiaGeometry.ts');
-  const { VOYAGE, groundHeight } = await import('../src/components/garden/gardenGeometry.ts');
-  const stop = tripStop(trip.month), t = (stop - progressAt(trip.month)) / ROOM;
+  const { RIVER_REACH, VOYAGE, groundHeight, lawnSpot, voyageClearing } = await import('../src/components/garden/gardenGeometry.ts');
+  const { treeBase, treePlacements } = await import('../src/components/garden/gardenTreeSpots.ts');
+  const at = progressAt(trip.month), stop = tripStop(trip.month), t = (stop - at) / ROOM;
   assert.ok(t > 0 && t < BALLOON_TIMES.climb);
   for (const [mobile, width] of [[false, 1], [true, MOBILE_RIVER_WIDTH]]) {
-    const spot = hagiaSophiaSpot(trip.month, width);
-    assert.ok(Math.abs(spot.z - VOYAGE.lawn.z) < 1e-9 && spot.z < VOYAGE.bend.from && spot.z > VOYAGE.bend.from - 10, 'at the start of the S-bend');
-    // On the left bank, its whole terrace a little back from the water, on
-    // the level lawn, seated on it: neither sunk into it nor floating.
+    const spot = hagiaSophiaSpot(trip.month, width), lawn = lawnSpot(width), corners = hagiaCorners(spot);
+    // Far off down the river, where it runs straight again past the bend and
+    // the dock, well short of the end of what is planted.
+    assert.ok(spot.z < VOYAGE.dock.z - 20 && spot.z > RIVER_REACH.to + 40, 'past the bend');
+    assert.ok(seen(stop, width, spot.x, spot.z).distance > 70, 'far off at the trip\'s stop');
+    // On the left bank, its whole terrace back beyond the bank's rise from
+    // the water, on the level lawn, seated on it: neither sunk into it nor floating.
     assert.ok(onLand(spot.x, spot.z, width) && spot.x < riverCenter(spot.z, width), 'on the left bank');
-    const [a, b, , d] = hagiaCorners(spot);
-    for (const [x, z] of hagiaCorners(spot)) assert.ok(riverCenter(z, width) - x > bankEdge(z, width) + .25, 'back from the water\'s edge');
+    for (const [x, z] of corners) assert.ok(riverCenter(z, width) - x > bankEdge(z, width) + 2.4, 'back beyond the bank\'s rise');
+    const [a, b, , d] = corners;
     for (let i = 0; i <= 10; i++) for (let k = 0; k <= 10; k++) {
       const x = a[0] + (d[0] - a[0]) * i / 10 + (b[0] - a[0]) * k / 10, z = a[1] + (d[1] - a[1]) * i / 10 + (b[1] - a[1]) * k / 10;
       assert.ok(Math.abs(groundHeight(x, z, width) - spot.y) < .02, `level ground under its terrace at ${x}, ${z}`);
     }
-    // The lawn leaves the shore beside it as it was, rising out of the water a little inland.
-    for (let z = spot.z - 4; z <= spot.z + 4; z += .25) {
-      const edge = riverCenter(z, width) - bankEdge(z, width);
-      assert.ok(groundHeight(edge, z, width) < 0 && groundHeight(edge - .6, z, width) > 0, `shore at ${z}`);
+    // The lawn leaves the water's edge and the bank's rise as they were: it is
+    // level only beyond the rise, and eases back into the ground well inland.
+    for (let a = 0; a < 64; a++) {
+      const [c, s] = [Math.cos(a / 32 * Math.PI), Math.sin(a / 32 * Math.PI)];
+      const inland = reach => riverCenter(lawn.z + s * reach, width) - (lawn.x + c * reach) - bankEdge(lawn.z + s * reach, width);
+      assert.ok(inland(lawn.radius) > 2.4 && inland(lawn.radius + VOYAGE.lawn.ease) > 1, 'the lawn clear of the bank\'s rise');
     }
-    // In the picture, well in from its edge, from the trip's date through the stop.
-    for (let q = progressAt(trip.month); q <= stop; q += .05 * ROOM) {
-      assert.ok(Math.abs(seen(q, width, spot.x, spot.z).bearing) < halfView(width) - 4, `in the picture at ${q}`);
+    // Trees keep off its field, and no trunk stands in front of it from the
+    // trip's date through the stop until it starts to sink back into the haze.
+    const trees = treePlacements(width, mobile);
+    for (const tree of trees) assert.ok(Math.hypot(tree.x - lawn.x, tree.z - lawn.z) > lawn.field, `tree at ${tree.x}, ${tree.z} in its field`);
+    // The lawn covers its terrace, so planting keeps off it too.
+    for (const [x, z] of corners) assert.ok(voyageClearing(x, z, width) && Math.hypot(x - lawn.x, z - lawn.z) < lawn.radius);
+    const far = mobile ? GARDEN_CAMERA.mobileFar : GARDEN_CAMERA.far;
+    for (let q = at; q <= at + HAGIA_TIMES.leave * ROOM; q += .05 * ROOM) {
+      const ends = corners.map(([x, z]) => seen(q, width, x, z));
+      const left = Math.min(...ends.map(end => end.bearing)), right = Math.max(...ends.map(end => end.bearing));
+      // The whole of it in the picture, and nearer than the far plane.
+      assert.ok(left > -halfView(width) + 1 && right < halfView(width) - 1, `in the picture at ${q}`);
+      assert.ok(ends.every(end => end.distance * Math.cos(end.bearing * Math.PI / 180) < far - 1), `past the far plane at ${q}`);
+      const foot = above(q, width, spot.x, spot.y, spot.z);
+      for (const tree of trees) {
+        const { bearing, distance } = seen(q, width, tree.x, tree.z);
+        if (distance > seen(q, width, spot.x, spot.z).distance - 5) continue;
+        const half = degrees(Math.atan2(.32 * tree.scale, distance)), top = above(q, width, tree.x, treeBase(tree, width) + 3.2 * tree.scale, tree.z);
+        assert.ok(bearing + half < left || bearing - half > right || top < foot, `trunk at ${tree.x}, ${tree.z} in front of it at ${q}`);
+      }
     }
     // At the stop the balloon hangs over it: close to the same bearing, above its minarets.
     const { position: [bx, by, bz] } = balloonSpot(stop, t, mobile, width);
     const model = seen(stop, width, spot.x, spot.z), balloon = seen(stop, width, bx, bz);
     assert.ok(Math.abs(balloon.bearing - model.bearing) < (mobile ? 5 : 12), `balloon at ${balloon.bearing}, model at ${model.bearing}`);
     assert.ok(above(stop, width, bx, by, bz) > above(stop, width, spot.x, spot.y + HAGIA_SOPHIA.height * spot.scale, spot.z) + 5);
-    // It is there, out of the haze, by the trip's date.
-    assert.ok(hagiaShown(0) === 1 && hagiaShown(-.6) === 0);
+    // It is there, out of the haze, by the trip's date, and has sunk back
+    // into it before the balloons are gone, long before the dock.
+    assert.ok(hagiaShown(0) === 1 && hagiaShown(t) === 1 && hagiaShown(-.6) === 0);
+    assert.ok(hagiaShown(BALLOON_TIMES.gone) === 0 && hagiaShown((VOYAGE_END - at) / ROOM) === 0);
   }
   const g = hagiaSophiaGeometry();
   assert.ok(g.attributes.position.count / 3 < 1500, 'one draw call under the budget');
@@ -540,8 +565,9 @@ test('the Hagia Sophia is clear of the petals\' trail, the headland, the old tre
         assert.ok(Math.hypot(x - spot.x, z - spot.z) > reach + .5, 'clear of the petals');
       }
     }
-    // The headland that hides the old tree stands on the other bank, further on (see gardenTreeSpots.ts).
-    assert.ok(spot.x < riverCenter(spot.z, width) && spot.z > VOYAGE.bend.from - 11 - reach);
+    // The headland that hides the old tree stands on the other bank, inside
+    // the bend (see gardenTreeSpots.ts); the Hagia Sophia is far past it.
+    assert.ok(spot.x < riverCenter(spot.z, width) && spot.z + reach < VOYAGE.bend.to - 20);
     const { tree, jetty } = voyageLandmarks(width);
     for (const landmark of [tree, jetty]) assert.ok(Math.hypot(landmark.x - spot.x, landmark.z - spot.z) > 20);
     for (const marker of YEAR_MARKERS.map(m => yearMarkerSpot(m, width))) assert.ok(Math.hypot(marker.x - spot.x, marker.z - spot.z) > 10);

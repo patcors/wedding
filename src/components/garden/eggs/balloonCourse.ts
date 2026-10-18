@@ -1,5 +1,5 @@
-// Where the July 2026 balloon is through its window, and the miniature Hagia
-// Sophia it rises over: pure, so it can be tested.
+// Where the July 2026 balloons are through their window, and the Hagia
+// Sophia far off below them: pure, so it can be tested.
 import { cameraPose } from '../cameraRig.ts';
 import { groundHeight, lawnSpot } from '../gardenGeometry.ts';
 import { STOPS, progressAt } from '../journey.ts';
@@ -13,9 +13,10 @@ const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x 
 // look and scaled down, fixed in the picture so they never drift into the
 // leaves. They fade in at the patch's foot and climb, drifting a little left
 // as they go. The first, the nearest, climbs out of the top, over the Hagia
-// Sophia on the bank below; the others, further off and smaller, a little
-// festival over the river, start to rise one after another (`lag`, in shares
-// after the date) and climb less far, so they are still rising as they go.
+// Sophia far off down the river below; the others, further off and smaller,
+// a little festival over the land round it, start to rise one after another
+// (`lag`, in shares after the date) and climb less far, so they are still
+// rising as they go.
 // Bearings are degrees right of the middle of the picture, elevations degrees
 // above the eye line. Portrait's patch is higher and narrower, between the
 // header's monogram (top left, its foot 3.5° below the top of the picture),
@@ -44,15 +45,17 @@ export function balloonSpot(p: number, t: number, mobile: boolean, width: number
   return { position: [x, heightAt(view.distance, low + (high - low) * rise), z] as [number, number, number], scale: view.scale };
 }
 
-// The Hagia Sophia, a garden miniature, stands on the level lawn cut into the
-// left bank at the start of the S-bend (`VOYAGE.lawn` in gardenGeometry.ts),
-// a little back from the water, below the balloon's patch of sky at the
-// trip's stop, so the balloon rises over it, and on the other bank from the
-// headland that hides the old tree. Larger than life; smaller in portrait,
-// whose narrow picture has room for it only close by the water. Turned to
-// face the camera at the stop, and then `turn` further, so its domes and
-// minarets show in the round.
-export const HAGIA = { scale: { desktop: 2.5, mobile: 1.6 }, turn: { desktop: .3, mobile: .1 } } as const;
+// The Hagia Sophia stands far off down the river, a landmark beyond the
+// S-bend, on a level lawn in a field back from the left bank where the river
+// runs straight again (`VOYAGE.lawn` in gardenGeometry.ts), so at the trip's
+// stop it is seen down the river past the bend, below the balloons' patch of
+// sky, and the balloons rise over the land round it. Trees keep off the
+// field (`lawnSpot(width).field`), so none stands in front of it. Many times
+// life, to read at about 80 units, and softened by its own `haze`; smaller in
+// portrait, whose narrow picture has room for it only at its left, beside
+// the headland that hides the old tree. Turned to face the camera at the
+// stop, and then `turn` further, so its domes and minarets show in the round.
+export const HAGIA = { scale: { desktop: 10, mobile: 7 }, turn: .3, haze: .25 } as const;
 // The trip's stop, where the scroll cue lands on it.
 export const tripStop = (month: string) => STOPS.find(stop => stop > progressAt(month))!;
 // The corners of its terrace on the ground, from its spot.
@@ -65,9 +68,9 @@ export function hagiaCorners({ x, z, yaw, scale }: { x: number; z: number; yaw: 
 }
 export function hagiaSophiaSpot(month: string, width: number) {
   const mobile = width < 1, { x, z } = lawnSpot(width);
-  const scale = mobile ? HAGIA.scale.mobile : HAGIA.scale.desktop, turn = mobile ? HAGIA.turn.mobile : HAGIA.turn.desktop;
+  const scale = mobile ? HAGIA.scale.mobile : HAGIA.scale.desktop;
   const [cx, , cz] = cameraPose(tripStop(month), width).position;
-  const spot = { x, y: 0, z, yaw: Math.atan2(cx - x, cz - z) + turn, scale };
+  const spot = { x, y: 0, z, yaw: Math.atan2(cx - x, cz - z) + HAGIA.turn, scale };
   // Seated on the highest ground under its terrace, which is level there, so
   // none of it sinks into the lawn.
   const [a, b, , d] = hagiaCorners(spot), heights: number[] = [];
@@ -76,5 +79,10 @@ export function hagiaSophiaSpot(month: string, width: number) {
   }
   return { ...spot, y: Math.max(...heights) };
 }
-// It comes out of the haze over the half share before the trip's date.
-export const hagiaShown = (t: number) => smooth((t + .5) / .4);
+// It comes out of the haze over the half share before the trip's date and
+// sinks back into it as the balloons climb away round the bend, gone before
+// 2027's heart comes in (see yearMarkerSpots.ts) and long before the dock,
+// where it would stand at the edge of the picture.
+export const HAGIA_TIMES = { arrive: -.5, shown: -.1, leave: 1.2, gone: 1.6 };
+export const hagiaShown = (t: number) =>
+  smooth((t - HAGIA_TIMES.arrive) / (HAGIA_TIMES.shown - HAGIA_TIMES.arrive)) * (1 - smooth((t - HAGIA_TIMES.leave) / (HAGIA_TIMES.gone - HAGIA_TIMES.leave)));

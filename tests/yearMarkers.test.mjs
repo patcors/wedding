@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, islandHalfWidth, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ROOM, VOYAGE_END, dateLabel, routeAt } from '../src/components/garden/journey.ts';
+import { ROOM, VOYAGE_END, dateLabel, routeAt, scrolledSince } from '../src/components/garden/journey.ts';
 import { BOAT_SCALE, HULL_HALF_BEAM, boatPose } from '../src/components/garden/storyBoats.ts';
 import { MARKER_REACH, YEAR_MARKERS, markerShown, yearMarkerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
-import { hagiaSophiaSpot, tripStop } from '../src/components/garden/eggs/balloonCourse.ts';
+import { hagiaShown, tripStop } from '../src/components/garden/eggs/balloonCourse.ts';
 import { yearMarkerModel } from '../src/components/garden/eggs/yearMarkerGeometry.ts';
 
 const LAYOUTS = [[1, 1440 / 900, GARDEN_CAMERA.fov], [MOBILE_RIVER_WIDTH, 390 / 844, GARDEN_CAMERA.mobileFov]];
@@ -100,16 +100,14 @@ test('2027\'s heart stands on the left bank round the S-bend, clear of the Hagia
       assert.ok(markerShown(spot.z, cz, width < 1) === 0 || Math.abs(bearing) > halfView(aspect, fov) + 3, `heart in the dock's picture at p ${p} (width ${width})`);
     }
   }
-  // Held back while the Hagia Sophia is in the picture, which it would stand
-  // just behind at the trip's stop.
-  for (const [width, aspect, fov] of LAYOUTS) {
-    const spot = yearMarkerSpot(marker, width), hagia = hagiaSophiaSpot('2026-07', width);
+  // Held back until the Hagia Sophia, far off down the river and just right of
+  // it in the picture at the trip's stop, has sunk back into the haze.
+  for (const [width] of LAYOUTS) {
+    const spot = yearMarkerSpot(marker, width);
     assert.equal(yearMarkerShown(marker, spot.z, tripStop('2026-07'), cameraPose(tripStop('2026-07'), width).position[2], width < 1), 0);
     for (let p = tripStop('2026-07'); p < yearTurns(2027); p += .002) {
-      const [cx, , cz] = cameraPose(p, width).position, [tx, , tz] = cameraPose(p, width).target;
-      const bearing = ({ x, z }) => (Math.atan2(x - cx, cz - z) - Math.atan2(tx - cx, cz - tz)) * 180 / Math.PI;
-      if (yearMarkerShown(marker, spot.z, p, cz, width < 1) === 0 || Math.abs(bearing(hagia)) > halfView(aspect, fov)) continue;
-      assert.ok(Math.abs(bearing(spot) - bearing(hagia)) > 3, `heart beside the Hagia Sophia at p ${p} (width ${width})`);
+      if (yearMarkerShown(marker, spot.z, p, cameraPose(p, width).position[2], width < 1) === 0) continue;
+      assert.equal(hagiaShown(scrolledSince('2026-07', p)), 0, `heart and Hagia Sophia both showing at p ${p} (width ${width})`);
     }
     assert.equal(yearMarkerShown(marker, spot.z, yearTurns(2027), cameraPose(yearTurns(2027), width).position[2], width < 1), 1);
   }
