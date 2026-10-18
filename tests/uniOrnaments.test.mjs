@@ -146,6 +146,25 @@ test('they keep apart from the working lives\' ornaments, on the ground and in t
   }
 });
 
+test('on Amelia\'s bank the 2019 snowman stands beside her carved trunk in the picture, never behind it', async () => {
+  const { FLURRY } = await import('../src/components/garden/eggs/flurry.ts');
+  const { TRUNK } = await import('../src/components/garden/eggs/carvedTrunkGeometry.ts');
+  const { SNOWMAN } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+  const { ROOM } = await import('../src/components/garden/journey.ts');
+  for (const width of WIDTHS) {
+    const trunk = spots(width).statsTrunk, snowman = snowSpot(SNOW_SPOTS[2019], '2019-07', width);
+    // Its bottom ball's half width, at SnowTrip's scale (portrait's a little smaller).
+    const half = SNOWMAN.balls[0][0] * 1.25 * (width < 1 ? .9 : 1);
+    // From as the flurry clears until the trunk is passed.
+    for (const p of span(progressAt('2019-07') + FLURRY.clear * ROOM, progressAt('2019-07') + ROOM)) {
+      if (!shown(trunk, p, width)) continue;
+      const t = seen(p, width, trunk), s = seen(p, width, snowman);
+      const gap = s.bearing - degrees(Math.atan(half / s.distance)) - t.bearing - degrees(Math.atan(TRUNK.radius * trunk.scale / t.distance));
+      assert.ok(gap > 0, `snowman behind the trunk by ${-gap}° at ${p} (width ${width})`);
+    }
+  }
+});
+
 test('each is drawn only while near the camera: not from the far end of the river, and gone once passed', () => {
   for (const width of WIDTHS) {
     for (const [id, spot] of Object.entries(spots(width))) {

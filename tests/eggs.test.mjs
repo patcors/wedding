@@ -140,6 +140,8 @@ test('the 2019 snowman stands on the bank, in view as its date holds and for a s
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
     const { x, z, yaw } = snowSpot(SNOW_SPOTS[2019], snow.month, width);
     assert.ok(Math.abs(x - riverCenter(z, width)) > bankEdge(z, width), 'on land');
+    // Amelia's snow trip, so on her bank, the left.
+    assert.equal(Math.sign(x - riverCenter(z, width)), -1, 'on Amelia\'s bank');
     for (let t = 0; t <= 1; t += .05) {
       const p = progressAt(snow.month) + t * ROOM, { bearing } = seen(p, width, x, z);
       assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at ${t}`);
@@ -148,6 +150,13 @@ test('the 2019 snowman stands on the bank, in view as its date holds and for a s
     const [cx, , cz] = cameraPose(progressAt(snow.month), width).position;
     assert.ok(Math.abs(Math.atan2(cx - x, cz - z) - yaw) < .3);
   }
+});
+
+test('the eggs about Amelia alone stand on her bank, the left: the 2019 snowman and Sydney\'s duck', async () => {
+  const { SNOW_SPOTS } = await import('../src/components/garden/eggs/flurry.ts');
+  const { DUCK_STATUE } = await import('../src/components/garden/eggs/careerSpots.ts');
+  assert.equal(SNOW_SPOTS[2019].side, -1);
+  assert.equal(DUCK_STATUE.side, -1);
 });
 
 const graduation = MILESTONES.find(m => m.egg === 'graduation');

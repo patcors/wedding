@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { random } from '../gardenGeometry.ts';
 import { simplifiedRubberDuck } from '../rubberDuckGeometry.ts';
-import { PIE, WEDGES, wedgeAngles } from './careerSpots.ts';
+import { DUCK_STATUE, PIE, WEDGES, wedgeAngles } from './careerSpots.ts';
 
 const STONE = '#cfc8b6', STONE_DARK = '#9a9282';
 const c = new THREE.Color();
@@ -24,10 +24,11 @@ function stoneTint(geometry: THREE.BufferGeometry, top: number, foot = 0) {
 export const DUCK_PLINTH = { width: .66, height: .36 } as const;
 // The guests' bath duck, the classic yellow toy with its orange beak, kept in
 // more detail than the university's tossed ones as it is seen close by. It
-// sits on its plinth turned three-quarters to the river on the camera's left,
-// so the beak, the eye and the upturned tail show in profile.
+// sits on its plinth turned three-quarters to the river, on the camera's
+// right from Amelia's bank (DUCK_STATUE.side), so the beak, the eye and the
+// upturned tail show in profile.
 export function duckStatueGeometry() {
-  const duck = simplifiedRubberDuck(.22).rotateY(2.2).translate(0, DUCK_PLINTH.height - .02, 0);
+  const duck = simplifiedRubberDuck(.22).rotateY(2.2 * DUCK_STATUE.side).translate(0, DUCK_PLINTH.height - .02, 0);
   // A squat block with a narrower cap, sunk a little at its foot.
   const { width, height } = DUCK_PLINTH;
   const block = new THREE.BoxGeometry(width, height * .78, width).translate(0, height * .39 - .08, 0).toNonIndexed();

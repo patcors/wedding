@@ -16,20 +16,20 @@ import { progressAt, routeAtMonth } from '../journey.ts';
 // the camera as `facing` shows, when it is best seen, so its carving reads
 // then, and `turn` radians further round towards the river. Larger than life.
 // A phone sees only about 17° either side of the middle, so everything on a
-// bank lines up along it, and July 2017's ducks, the π, 2019's buoy and the
-// snowman leave little room on Patrick's: each keeps out of their way in the
-// picture as well as on the ground.
+// bank lines up along it, and July 2017's ducks, the π and 2019's buoy leave
+// little room on Patrick's: each keeps out of their way in the picture as
+// well as on the ground.
 // - The Möbius stands on the π's lawn, upstream of it and further from the
 //   water, so it is the nearer of the two and always just outside it in the
 //   picture: a pair of bronzes from the meeting until the first coast trip.
 // - The table stands across the river from them at the water's edge, in view
 //   from the meeting, and passed before 2018's rock is reached.
-// - The trunks stand between 2019's buoy and the 2019 snowman on Patrick's
-//   bank, and across from it a little upstream on Amelia's, turned a touch
-//   towards each other, seen from the internship until the snow trip.
-//   Amelia's stands far enough past 2018's candlestick posts on her bank
-//   (careerSpots.ts), and on a phone close enough to the water, to show
-//   clear of their row, and short of 2020's boathouse.
+// - The trunks stand past 2019's buoy on Patrick's bank, and across from it
+//   a little upstream on Amelia's, turned a touch towards each other, seen
+//   from the internship until the snow trip. Amelia's stands far enough past
+//   2018's candlestick posts on her bank (careerSpots.ts), and on a phone
+//   close enough to the water, to show clear of their row, and short of the
+//   2019 snowman (flurry.ts) and 2020's boathouse further down it.
 export type Ornament = {
   side: -1 | 1; month: string; ahead: number; facing: string; turn?: number;
   inland: { desktop: number; mobile: number }; scale: { desktop: number; mobile: number };

@@ -23,15 +23,16 @@ export type BankOrnament = { facing: string; from: string; ahead: number; side: 
 // boats as the FinoComp flags go up; smaller on a phone and set further back
 // from the water, so the whole chart is in its picture at the internship's
 // stop and Amelia's carved trunk (uniOrnaments.ts), further down the same
-// bank, shows clear of the row's river end rather than behind it. The duck sits by the water on the
-// right bank in Sydney, between 2021's stake and 2022's pile, where a phone
-// still sees that bank: it arrives as Sydney shows, right of Patrick's flag at
-// its stop, and is closest through 2021. The flower bed is on the left bank,
-// across the river from 2023's slate, a little past the boats as they come
-// back alongside in March 2023, so it is passing out of the picture by the
-// time the first birdhouses go up behind it.
+// bank, shows clear of the row's river end rather than behind it. The duck is
+// Amelia's move, so it sits on her bank, the left, by the water across from
+// 2022's pile. Sydney widens the river and takes that bank out of a phone's
+// picture, but this far on it is still just in, left of Amelia's boat: it
+// arrives as Sydney shows and comes closer through the first half of 2021.
+// The flower bed is on the left bank, across the river from 2023's slate, a
+// little past the boats as they come back alongside in March 2023, so it is
+// passing out of the picture by the time the first birdhouses go up behind it.
 export const CANDLESTICKS: BankOrnament = { facing: '2018-07', from: '2018-01', ahead: 7.3, side: -1, inland: .9, mobileInland: 1.25, scale: { desktop: 1.3, mobile: .9 } };
-export const DUCK_STATUE: BankOrnament = { facing: '2021-07', from: '2021-02', ahead: 2.4, side: 1, inland: .45, scale: { desktop: 1.6, mobile: 2 } };
+export const DUCK_STATUE: BankOrnament = { facing: '2021-07', from: '2021-02', ahead: 4.5, side: -1, inland: .45, mobileInland: .35, scale: { desktop: 1.6, mobile: 2 } };
 export const PIE_BED: BankOrnament = { facing: '2023-03', from: '2023-03', ahead: 3, side: -1, inland: 1.1, scale: { desktop: 1.15, mobile: 1.3 } };
 export const ORNAMENTS = [CANDLESTICKS, DUCK_STATUE, PIE_BED] as const;
 

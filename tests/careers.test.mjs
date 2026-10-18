@@ -25,6 +25,8 @@ test('the ornaments stand for the internship year, Sydney and working together a
   assert.deepEqual(ORNAMENTS, [CANDLESTICKS, DUCK_STATUE, PIE_BED]);
   assert.equal(CANDLESTICKS.facing.slice(0, 4), '2018');
   assert.ok(DUCK_STATUE.from >= '2021-02' && DUCK_STATUE.facing < '2022-01', 'in Sydney, 2021');
+  // Amelia's move, so on her bank, the left.
+  assert.equal(DUCK_STATUE.side, -1, 'on Amelia\'s bank');
   assert.equal(PIE_BED.from, '2023-03');
 });
 

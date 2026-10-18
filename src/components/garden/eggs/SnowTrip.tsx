@@ -1,5 +1,5 @@
 // July 2019, a snow trip where Amelia broke her wrist snowboarding: a flurry
-// sweeps over the right bank as the date shows and leaves a snowman behind,
+// sweeps over Amelia's bank, the left, as the date shows and leaves a snowman behind,
 // in Amelia's teal scarf, with one arm in a sling.
 import type { EggProps } from './egg';
 import SnowReveal from './SnowReveal';
