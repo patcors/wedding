@@ -106,6 +106,34 @@ test('2025\'s oar is slight: a slim oar stood in the bank, its year on the blade
   assert.ok(triangles < 400, `${triangles} triangles`);
 });
 
+test('on a phone 2025\'s oar stands clear beside Amelia\'s birdhouse in the picture, not behind its roof, out in the shallows and clear of the scenery round it', async () => {
+  const { nestSpots, onHouse, signTree } = await import('../src/components/garden/eggs/nesting.ts');
+  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const { LYRA, hangSpot, rigTree } = await import('../src/components/garden/eggs/circusRigs.ts');
+  const { progressAt } = await import('../src/components/garden/journey.ts');
+  const { groundHeight } = await import('../src/components/garden/gardenGeometry.ts');
+  const marker = YEAR_MARKERS.find(m => m.year === 2025), width = MOBILE_RIVER_WIDTH;
+  const oar = yearMarkerSpot(marker, width), house = nestSpots(width).amelia;
+  const seen = (p, { x, z }) => {
+    const [cx, , cz] = cameraPose(p, width).position, [tx, , tz] = cameraPose(p, width).target;
+    return { bearing: (Math.atan2(x - cx, cz - z) - Math.atan2(tx - cx, cz - tz)) * 180 / Math.PI, distance: Math.hypot(x - cx, z - cz) };
+  };
+  // The corners of the house's roof, in its own frame.
+  const roof = [[-.25, -.19], [.25, -.19], [-.25, .19], [.25, .19]].map(([x, z]) => onHouse(house, [x, 1.26, z]));
+  for (let p = progressAt('2024-12'); p <= progressAt('2025-03'); p += .0005) {
+    const right = Math.max(...roof.map(corner => seen(p, corner).bearing)), { bearing, distance } = seen(p, oar);
+    // The blade's near edge, a fifth of a unit from its middle at a phone's scale, clear of the roof's right edge.
+    assert.ok(bearing - (Math.atan(.2 * oar.scale / distance) * 180 / Math.PI) > right + .5, `oar behind the roof at ${p}`);
+  }
+  // Out in the shallows, its foot on the river bed under the water.
+  assert.ok(oar.y < 0 && Math.abs(oar.y - groundHeight(oar.x, oar.z, width)) < 1e-9);
+  for (const other of [house, signTree(width), snowSpot(SNOW_SPOTS[2025], '2025-08', width), hangSpot(LYRA, width), rigTree(LYRA, width)]) {
+    assert.ok(Math.hypot(other.x - oar.x, other.z - oar.z) > 4.5, `crowds ${other.x}, ${other.z}`);
+  }
+  // On desktop it stands where it did, on the bank.
+  assert.ok(yearMarkerSpot(marker, 1).y >= 0);
+});
+
 test('2027\'s heart stands on the left bank round the S-bend, clear of the Hagia Sophia, and is out of the picture by the dock', () => {
   const marker = YEAR_MARKERS.find(m => m.year === 2027);
   assert.equal(marker.medium, 'heart');

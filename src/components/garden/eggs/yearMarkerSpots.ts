@@ -18,8 +18,12 @@ export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'carving' | 'stake' | 'p
 // `arc` round its trunk either side of the face turned to the camera and
 // `from` and `to` up it, in the tree's own units (see uniOrnaments.ts).
 // `from`, if set, holds it back until that month shows, however near it is.
+// `mobile`, if set, is where it stands on a phone instead: its `lead`, and
+// its `inland` in a phone's own units; out in the shallows (negative), it
+// stands on the river bed, its foot under the water.
 export type YearCarving = { arc: number; from: number; to: number };
-export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number; from?: string } & ({ inland: number } | { share: number } | { carved: YearCarving });
+export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number; from?: string; mobile?: { lead: number; inland: number } }
+  & ({ inland: number } | { share: number } | { carved: YearCarving });
 
 // Mostly alternating banks, with the buoy and the pile out in the river, where
 // a phone always sees them. 2018's stands on the left bank, across from July
@@ -34,7 +38,11 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // From 2025 the river bends left and the S-bend draws the camera round
 // after it, so through late 2025 and 2026 the right bank is at the edge of a
 // phone's picture: 2025's oar and 2026's arch both stand on the left, the
-// arch further on, past the snowmen and the lyra's ashes.
+// arch further on, past the snowmen and the lyra's ashes. On a phone, Amelia's
+// birdhouse stands right by the water just short of the oar, and from the
+// boats the oar would peek out from behind its roof, so there it stands a
+// little further on, out in the shallows at the water's edge, clear to the
+// right of the house in the picture and short of the snowmen.
 // January 2027 turns round the S-bend, so the wedding's heart stands on the
 // outside of its second curve, the left bank, where the river runs straight
 // at it: in the open across from the headland that hides the old tree, and
@@ -54,7 +62,7 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85 },
   { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
-  { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3 },
+  { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3, mobile: { lead: 5.6, inland: -.4 } },
   { year: 2026, medium: 'arch', side: -1, lead: 8.6, inland: .6 },
   { year: 2027, medium: 'heart', side: -1, lead: 1.5, inland: .9, from: '2026-11' },
 ];
@@ -88,13 +96,16 @@ export function yearMarkerSpot(marker: YearMarker, width: number): MarkerSpot {
     const { tree } = yearCarving(marker, width), toward = Math.atan2(cx - tree.x, cz - tree.z), r = TRUNK_RADIUS * tree.scale;
     return { x: tree.x + Math.sin(toward) * r, y: tree.y + (marker.carved.from + marker.carved.to) / 2 * tree.scale, z: tree.z + Math.cos(toward) * r, yaw: toward, scale: tree.scale };
   }
-  const z = routeAt(turn) - marker.lead;
+  const phone = mobile ? marker.mobile : undefined;
+  const z = routeAt(turn) - (phone?.lead ?? marker.lead);
   const middle = riverCenter(z, width), edge = bankEdge(z, width);
   const x = 'share' in marker
     ? middle + marker.side * edge * marker.share
-    : middle + marker.side * (edge + marker.inland * (mobile ? MOBILE_INLAND : 1));
-  // On the bank it stands on the ground, never below the water.
-  return { x, y: 'share' in marker ? 0 : Math.max(0, groundHeight(x, z, width)), z, yaw: Math.atan2(cx - x, cz - z),
+    : middle + marker.side * (edge + (phone?.inland ?? marker.inland * (mobile ? MOBILE_INLAND : 1)));
+  // On the bank it stands on the ground, never below the water, unless a
+  // phone puts it out in the shallows.
+  const ground = groundHeight(x, z, width), shallows = phone !== undefined && phone.inland < 0;
+  return { x, y: 'share' in marker ? 0 : shallows ? ground : Math.max(0, ground), z, yaw: Math.atan2(cx - x, cz - z),
     scale: mobile ? MARKER_SCALE.mobile : MARKER_SCALE.desktop };
 }
 
