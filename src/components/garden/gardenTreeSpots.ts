@@ -1,9 +1,9 @@
 // Where the Garden's trees stand: the avenue along the river, the groves
 // behind it, the stand on the headland that hides the old tree, the shrubs,
 // and the old tree itself. Drawn by GardenTrees.tsx; pure, so scenery can
-// find a real tree (the university years' carvings, uniOrnaments.ts) and be
-// tested.
-import { riverCenter, bankEdge, bendShift, random, sydneyWiden, voyageClearing, voyageLandmarks, islandHalfWidth, VOYAGE, RIVER_REACH } from './gardenGeometry.ts';
+// find a real tree (the university years' carvings, uniOrnaments.ts, and the
+// circus hung from branches, eggs/circusRigs.ts) and be tested.
+import { riverCenter, bankEdge, bendShift, groundHeight, random, sydneyWiden, voyageClearing, voyageLandmarks, islandHalfWidth, VOYAGE, RIVER_REACH } from './gardenGeometry.ts';
 import { islandHeight } from './voyageIsland.ts';
 
 // The old tree's scale: on a phone's narrow river it stands a little smaller.
@@ -16,6 +16,8 @@ const OLD_TREE_SPREAD = 9.5;
 // banks', on the island. Each stands .08 below the ground (TREE_SINK).
 export type Placement = { x: number; y?: number; z: number; scale: number; rotation: number; type: number; distant: boolean };
 export const TREE_SINK = .08;
+// The height a tree's model stands at: on the ground, sunk TREE_SINK.
+export const treeBase = (p: Placement, width: number) => (p.y ?? groundHeight(p.x, p.z, width)) - TREE_SINK;
 
 export function treePlacements(width: number, mobile: boolean): Placement[] {
   const avenue: Placement[] = [
@@ -40,6 +42,11 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
   }
   // Portrait also fills the open stretch of left bank between the first two trees.
   if (mobile) avenue.push({ x: riverCenter(-7, width) - bankEdge(-7, width) - 3.6, z: -7, scale: .95, rotation: 4.4, type: 1, distant: false });
+  // An ash by the water on Amelia's bank past 2020's boathouse, as Sydney
+  // starts to widen the river, for 2020's aerial silk to hang from
+  // (eggs/circusRigs.ts); on a phone nearer the water, so the silk's limb
+  // reaches out over the bank into its narrower picture.
+  avenue.push({ x: riverCenter(-63.5, width) - bankEdge(-63.5, width) - (mobile ? 2.6 : 3.2), z: -63.5, scale: mobile ? .97 : 1.1, rotation: Math.PI, type: 2, distant: true });
   const rand = random(415);
   // Stagger groves along both banks all the way into the mist. The inner
   // trees overlap the avenue while outer trees fill gaps between canopies.
