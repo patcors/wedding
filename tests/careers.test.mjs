@@ -5,7 +5,7 @@ import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, islandHalfWidth, riverCent
 import { MILESTONES, ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
 import { BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
-import { CANDLES, CANDLESTICKS, DUCK_STATUE, ORNAMENTS, PIE_BED, WEDGES, candleBoxes, ornamentShown, ornamentSpot, wedgeAngles } from '../src/components/garden/eggs/careerSpots.ts';
+import { CANDLES, CANDLESTICKS, DUCK_STATUE, ORNAMENTS, PIE, PIE_BED, WEDGES, candleBoxes, groundUnder, ornamentShown, ornamentSpot, pieBedFootprint, wedgeAngles } from '../src/components/garden/eggs/careerSpots.ts';
 import { YEAR_MARKERS, yearMarkerSpot } from '../src/components/garden/eggs/yearMarkerSpots.ts';
 
 const LAYOUTS = [[1, 1440 / 900, GARDEN_CAMERA.fov], [MOBILE_RIVER_WIDTH, 390 / 844, GARDEN_CAMERA.mobileFov]];
@@ -34,7 +34,9 @@ test('each stands on land, off the island, near enough the water to be seen', ()
   for (const [width] of LAYOUTS) {
     for (const ornament of ORNAMENTS) {
       const spot = ornamentSpot(ornament, width), out = Math.abs(spot.x - riverCenter(spot.z, width)), edge = bankEdge(spot.z, width);
-      assert.ok(out > edge + .2 && out < edge + 1.5, `${ornament.facing} on the bank (width ${width})`);
+      // The flower bed lies a little back from the water, its whole width clear of it.
+      const reach = ornament === PIE_BED ? PIE.radius * spot.scale : 0;
+      assert.ok(out - reach > edge + (reach ? .6 : .2) && out < edge + (reach ? 2.2 : 1.5), `${ornament.facing} on the bank (width ${width})`);
       assert.equal(Math.sign(spot.x - riverCenter(spot.z, width)), ornament.side);
       assert.equal(islandHalfWidth(spot.z, width), 0);
     }
@@ -91,6 +93,22 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
   }
 });
 
+test('the bank\'s rocks keep out of the flower bed, and only there', () => {
+  for (const [width] of LAYOUTS) {
+    const spot = ornamentSpot(PIE_BED, width), under = pieBedFootprint(width), r = PIE.radius * spot.scale;
+    // Across the bed, and along it towards the camera, where it runs longer.
+    const across = [Math.cos(spot.yaw), -Math.sin(spot.yaw)], along = [Math.sin(spot.yaw) * PIE.stretch, Math.cos(spot.yaw) * PIE.stretch];
+    assert.ok(under(spot.x, spot.z));
+    for (const [dx, dz] of [across, along]) {
+      for (const side of [-1, 1]) {
+        assert.ok(under(spot.x + side * dx * r * .98, spot.z + side * dz * r * .98), `rim inside (width ${width})`);
+        assert.ok(!under(spot.x + side * dx * r * 1.05, spot.z + side * dz * r * 1.05), `beyond the rim (width ${width})`);
+        assert.ok(under(spot.x + side * dx * (r + .2), spot.z + side * dz * (r + .2), .3), `a rock's width beyond (width ${width})`);
+      }
+    }
+  }
+});
+
 test('each dissolves in no earlier than its month, and is gone once the camera has passed it', () => {
   for (const [width] of LAYOUTS) {
     for (const ornament of ORNAMENTS) {
@@ -105,18 +123,37 @@ test('each dissolves in no earlier than its month, and is gone once the camera h
 });
 
 test('the candles read as a stock chart and the bed as a pie chart, each in budget', async () => {
-  const { duckStatueGeometry, flowerHeadGeometry, pieBedGeometry, pieFlowers } = await import('../src/components/garden/eggs/careerGeometry.ts');
+  const { FLOWER_HEADS, duckStatueGeometry, flowerHeadGeometry, pieBedGeometry, pieFlowers } = await import('../src/components/garden/eggs/careerGeometry.ts');
   // Wicks run from the ground through each body to its high; green months close up, red down.
   assert.ok(CANDLES.every(([open, close, high, low]) => high >= Math.max(open, close) && low <= Math.min(open, close)));
   assert.ok(CANDLES.some(([open, close]) => close < open) && CANDLES.some(([open, close]) => close > open));
   assert.equal(Math.max(...CANDLES.map(([, close]) => close)), CANDLES.at(-1)[1]);
   const boxes = candleBoxes();
   assert.equal(boxes.length, CANDLES.length * 2);
-  // The wedges fill the circle, with HeirWealth's purple pulled out.
+  // The wedges fill the circle, each its own colour, one of them HeirWealth's purple.
   assert.ok(Math.abs(WEDGES.reduce((sum, wedge) => sum + wedge.share, 0) - 1) < 1e-9);
-  assert.equal(WEDGES.filter(wedge => wedge.pulled).length, 1);
+  assert.equal(new Set(WEDGES.map(wedge => wedge.flowers)).size, WEDGES.length);
+  assert.deepEqual(WEDGES.filter(wedge => wedge.heirWealth).map(wedge => wedge.flowers), ['#9c78b8']);
   const angles = wedgeAngles();
   assert.ok(Math.abs(angles.at(-1).to - angles[0].from - Math.PI * 2) < 1e-9);
+  // Flowers on the ground, not a raised bed: every head low over the ground
+  // beneath it and inside its own wedge, as many in each wedge as its share.
+  for (const [width] of LAYOUTS) {
+    const ground = groundUnder(ornamentSpot(PIE_BED, width), width), heads = pieFlowers(ground);
+    const bed = pieBedGeometry(ground).attributes.position;
+    for (let i = 0; i < bed.count; i++) {
+      const lift = bed.getY(i) - ground(bed.getX(i), bed.getZ(i));
+      assert.ok(lift > 0 && lift < .06, `the bed ${lift} off the ground (width ${width})`);
+    }
+    WEDGES.forEach((wedge, w) => {
+      const inside = heads.filter(head => {
+        const turn = Math.atan2(-head.z / PIE.stretch, head.x) - angles[w].from;
+        return turn - Math.floor(turn / (Math.PI * 2)) * Math.PI * 2 < angles[w].to - angles[w].from && Math.hypot(head.x, head.z / PIE.stretch) < PIE.radius;
+      });
+      assert.equal(inside.length, Math.round(wedge.share * FLOWER_HEADS), `${wedge.flowers}'s flowers (width ${width})`);
+      for (const head of inside) assert.ok(head.y - ground(head.x, head.z) < .15, 'a head low over the ground');
+    });
+  }
   const triangles = geometry => (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3;
   const { duck, plinth } = duckStatueGeometry();
   const budget = {
