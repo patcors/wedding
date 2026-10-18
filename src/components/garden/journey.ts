@@ -38,7 +38,7 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'heirwealth', month: '2023-03', description: 'Amelia is back, and Patrick joins her at HeirWealth, so they start working together.' },
   // 2024 is the busiest year: its three dates take nearly all of it, each
   // showing for about the same while, so the months round them rush. June's
-  // room runs on into July, when Patrick's bird flies home (see eggs/nesting.ts).
+  // room runs on into July, which shows for a moment before August.
   { id: 'apartments', month: '2024-05', description: 'They both buy apartments.', egg: 'apartments', room: .43 },
   { id: 'living-together', month: '2024-06', description: 'They start living together.', room: .58, hold: .27 },
   // The boats join and become one catamaran, the butterflies circling. The

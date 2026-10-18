@@ -12,26 +12,32 @@ import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { AMELIA_MOVED_IN, ROOM, progressAt, routeAt } from '../journey.ts';
 import { BIRDHOUSE } from './birdhouseGeometry.ts';
 
-// When Patrick's bird goes home, his renovation done. Not a date they have
-// given: a month after he moved in, so they then live apart about a year
-// until AMELIA_MOVED_IN. Change it here if Amelia gives the month.
-export const PATRICK_HOME = '2024-07';
+// When Patrick's bird goes home, his renovation done: August 2024, so they
+// then live apart about a year until AMELIA_MOVED_IN. It is the month they
+// start dating, so it flies home as the date shows, on Amelia's bank, while
+// the dating butterflies come out of the trees on his (see datingFlight.ts).
+export const PATRICK_HOME = '2024-08';
 
 export type Owner = 'amelia' | 'patrick';
 // The birds are seen in two pairs of birdhouses, so each stage plays close to
 // the camera: the first goes up as May 2024 shows, a little way past the
 // boats, and is passed after Patrick's bird has flown home; the second comes
-// out of the haze once he has, on the other bank, each bird at home, and is
-// passed after Amelia's has flown over to his. Each stands `lead` past where
-// the boats are on its last stage's date, `inland` of the water's edge
-// (portrait's in `mobile`), on the `side` bank. Its two houses stand `apart`
-// either side of it across the picture, Amelia's on the left as her boat is,
-// turned to face the camera then. Larger than life, and larger again in
-// portrait's wider lens, so the birds read.
+// out of the haze once he has and the butterflies have reached the boats, on
+// the other bank, each bird at home, and is passed after Amelia's has flown
+// over to his. Each stands `lead` past where the boats are on its last
+// stage's date, `inland` of the water's edge (portrait's in `mobile`), on
+// the `side` bank. Its two houses stand `apart` either side of it across the
+// picture, Amelia's on the left as her boat is, turned to face the camera
+// then. Larger than life, and larger again in portrait's wider lens, so the
+// birds read. The first pair stands only a little past the boats on
+// August's date, so it is clear of 2025's steps further along the same bank,
+// and in portrait its houses stand a little closer together and nearer the
+// water, so they are still in the picture, clear of its edge, as his bird
+// flies home and for a while after.
 export const NESTS = {
-  pairs: [{ side: -1, last: PATRICK_HOME, lead: 4 }, { side: 1, last: AMELIA_MOVED_IN, lead: 3.5 }],
+  pairs: [{ side: -1, last: PATRICK_HOME, lead: 3.1 }, { side: 1, last: AMELIA_MOVED_IN, lead: 3.5 }],
   desktop: { inland: 1.1, apart: .8, scale: 1.5 },
-  mobile: { inland: .6, apart: .52, scale: 1.9 },
+  mobile: { inland: .5, apart: .45, scale: 1.9 },
   // The second pair comes up out of the haze this far from the camera.
   reach: { desktop: 30, mobile: 26 },
   // Seconds: a house going up, a bird's flight, the scaffolding going up or down.
@@ -52,8 +58,9 @@ export const NEST_EVENTS: readonly NestEvent[] = [
   { month: '2024-06', at: .06, pair: 0, scaffold: 1, moves: { patrick: { house: 'amelia', spot: 'guest' } } },
   { month: PATRICK_HOME, at: 0, pair: 0, scaffold: 0, moves: { patrick: { house: 'patrick', spot: 'home' } } },
   // The second pair rises as it comes into reach (see nestTriggers), its
-  // birds already at home.
-  { month: PATRICK_HOME, at: 0, pair: 1, build: true },
+  // birds already at home, after the butterflies have come out of the trees
+  // beside it and are round the boats.
+  { month: PATRICK_HOME, at: .5, pair: 1, build: true },
   { month: AMELIA_MOVED_IN, at: 0, pair: 1, moves: { amelia: { house: 'patrick', spot: 'guest' } } },
 ];
 // Each pair's birds before its first move: none yet in the first (they fly
