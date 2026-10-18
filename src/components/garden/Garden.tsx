@@ -2,15 +2,20 @@
 // compares visual variants; guests always get the defaults below. The page
 // renders on the server so the opening text is in the HTML before any script;
 // three.js arrives later in its own chunk, behind the cover.
-import { Component, lazy, useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { Component, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
 import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
-import type { SkyStyle } from './GardenScene';
+import { SKY_STYLE, type SkyStyle } from './GardenSky';
+import { WATERS, type WaterStyle } from './skyCycle';
+import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
+import { DATE_LABEL_MODES, dateLabelMode, shownDate, type DateLabelMode } from './dateLabelMode';
+import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
+import './gardenScrollCue.css';
 import './gardenLoader.css';
 
 const GardenCanvas = lazy(() => import('./GardenCanvas'));
@@ -23,14 +28,65 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
     opening={visit.opening} openingReleased={openingReleased} available={available} onLand={onLand} onComplete={onComplete} />;
 }
 
-const MEMORY_START = .20, MEMORY_END = .82;
-const memories = [
-  { file: '20191122_191734.jpg', caption: 'The early days.', alt: 'Patrick and Amelia with a friend beside the harbour' },
-  { file: 'IMG_5509.jpg', caption: 'And then, this.', alt: 'Patrick and Amelia smiling together on a night out' },
-  { file: 'IMG_7024.jpg', caption: 'The first trip away.', alt: 'Patrick and Amelia with hot-air balloons in the sky behind them' },
-  { file: '944d7da37c56a0522ee21fd47b54a4b0.jpg', caption: 'Dressed up, somewhere with a view.', alt: 'Patrick and Amelia dressed up together at sunset' },
-  { file: 'IMG_0466.jpg', caption: 'Us, being us.', alt: 'A playful close-up selfie of Patrick and Amelia' },
-];
+// The page's date and milestone follow the scroll eased as the scene's
+// camera eases it (JourneyProvider), so they arrive with the boats. A rolling
+// date changes at most this often, so it reads as a gentle count rather than
+// a flicker; a milestone is announced once the guest has stayed on it a moment.
+const DATE_EVERY = 400, ANNOUNCE_AFTER = 700;
+function useVoyageMoment(scroll: number, reduced: boolean) {
+  const [date, setDate] = useState<string | null>(null);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
+  const target = useRef(scroll), eased = useRef(scroll), loop = useRef<(() => void) | null>(null);
+  target.current = scroll;
+  useEffect(() => {
+    // Reduced motion: the scene cuts to each milestone's still, and so does the page.
+    if (reduced) {
+      const still = stillProgress(scroll);
+      eased.current = still; setDate(dateLabel(still)); setMilestone(milestoneAt(still));
+      return;
+    }
+    if (loop.current) return;
+    let frame = 0, last = performance.now(), shown: string | null | undefined, changed = -Infinity;
+    const tick = (now: number) => {
+      const dt = Math.min((now - last) / 1000, .05);
+      last = now;
+      // THREE.MathUtils.damp, without pulling three into the page's chunk.
+      eased.current += (target.current - eased.current) * (1 - Math.exp(-2 * dt));
+      const settled = Math.abs(target.current - eased.current) < 1e-5;
+      if (settled) eased.current = target.current;
+      const label = dateLabel(eased.current);
+      if (label !== shown && (settled || now - changed >= DATE_EVERY || label === null || shown == null)) {
+        shown = label; changed = now; setDate(label);
+      }
+      setMilestone(milestoneAt(eased.current));
+      if (settled && label === shown) { loop.current = null; return; }
+      frame = requestAnimationFrame(tick);
+    };
+    loop.current = () => cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(tick);
+  }, [scroll, reduced]);
+  useEffect(() => () => { loop.current?.(); loop.current = null; }, [reduced]);
+  // Screen readers hear the milestone once the guest settles on it.
+  const [announced, setAnnounced] = useState<Milestone | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setAnnounced(milestone), reduced ? 0 : ANNOUNCE_AFTER);
+    return () => clearTimeout(timer);
+  }, [milestone, reduced]);
+  return { date, announced };
+}
+
+// The month and year each crossfade between two layers. A change mid-fade
+// fades the layers on from where they are, so a fast scroll never jumps.
+function Crossfade({ value, className }: { value: string; className: string }) {
+  const [layers, setLayers] = useState([value, '']);
+  const [front, setFront] = useState(0);
+  if (value !== layers[front]) {
+    const back = 1 - front;
+    setLayers(back ? [layers[0], value] : [value, layers[1]]);
+    setFront(back);
+  }
+  return <span className={className}>{layers.map((text, i) => <span key={i} className={i === front ? 'is-shown' : ''}>{text}</span>)}</span>;
+}
 
 class CanvasFallback extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
@@ -47,8 +103,13 @@ const REVIEW = import.meta.env.DEV;
 if (REVIEW) void import('./gardenReview.css');
 // Dev only: the monogram hides and shows the Review panel, remembered across reloads.
 const REVIEW_HIDDEN = 'pa_dev_review_hidden';
-// Dev only: the Review sky choice, remembered so GardenPage can colour Safari's bars to match.
+// Dev only: the Review sky and water, remembered; GardenPage reads the sky to colour Safari's bars to match.
 const REVIEW_SKY = 'pa_dev_sky';
+const REVIEW_WATER = 'pa_dev_water';
+// Dev only: the Review choice of date label (see dateLabelMode.ts), remembered across reloads.
+const REVIEW_DATE = 'pa_dev_date_label';
+// Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
+const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
 
 export default function Garden({ greeting }: { greeting?: string }) {
   const [progress, setProgress] = useState(0);
@@ -56,10 +117,12 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
   const [lightTrees, setLightTrees] = useState(false);
-  const [skyStyle, setSkyStyle] = useState<SkyStyle>('mist');
+  const [skyStyle, setSkyStyle] = useState<SkyStyle>(SKY_STYLE);
   const [groundStyle, setGroundStyle] = useState<GroundStyle>('natural');
   const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
   const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
+  const [boatStyle, setBoatStyle] = useState<BoatLook>(BOAT_LOOK);
+  const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [openingReleased, setOpeningReleased] = useState(false);
   const [prepared, setPrepared] = useState(false);
@@ -68,7 +131,6 @@ export default function Garden({ greeting }: { greeting?: string }) {
   const [slow, setSlow] = useState(false);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const [showReview, setShowReview] = useState(REVIEW);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const cover = useRef<HTMLDivElement>(null);
   // The Garden scrolls inside <main>, not the page (see garden.css).
   const scroller = useRef<HTMLElement>(null);
@@ -82,8 +144,10 @@ export default function Garden({ greeting }: { greeting?: string }) {
     // Dev only: ?slow=8000 holds the cover for 8s from navigation, ?fail fails WebGL.
     if (import.meta.env.DEV && new URLSearchParams(location.search).has('fail')) setFailed(true);
     if (REVIEW && localStorage.getItem(REVIEW_HIDDEN)) setShowReview(false);
-    const sky = REVIEW && localStorage.getItem(REVIEW_SKY);
-    if (sky === 'blue' || sky === 'combo') setSkyStyle(sky);
+    if (REVIEW) {
+      const water = localStorage.getItem(REVIEW_WATER);
+      setSkyStyle({ sky: localStorage.getItem(REVIEW_SKY) === 'mist' ? 'mist' : 'day', water: water && water in WATERS ? water as WaterStyle : SKY_STYLE.water });
+    }
   }, []);
   const toggleReview = () => {
     if (showReview) localStorage.setItem(REVIEW_HIDDEN, '1');
@@ -97,32 +161,45 @@ export default function Garden({ greeting }: { greeting?: string }) {
   }, [ready, failed]);
   useEffect(() => {
     if (!prepared || failed) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false, frame = 0;
     const hold = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('slow')) || 0 : 0;
     void document.fonts.ready.then(() => {
-      // A short settle lets texture uploads finish before the cover fades.
-      if (!cancelled) timer = setTimeout(() => setReady(true), Math.max(300, hold - performance.now()));
+      if (cancelled) return;
+      // The scene starts moving behind the cover first. Its first live frames
+      // can be slow on phones, and a fade started then jumps in partway, so
+      // wait for a few smooth frames (a second at most) before it begins.
+      setRunning(true);
+      const start = performance.now();
+      let previous = 0, smooth = 0;
+      const wait = (now: number) => {
+        smooth = previous && now - previous < 50 ? smooth + 1 : 0;
+        previous = now;
+        if ((smooth >= 3 || now - start > 1000) && now >= hold) setReady(true);
+        else frame = requestAnimationFrame(wait);
+      };
+      frame = requestAnimationFrame(wait);
     });
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
   }, [prepared, failed]);
   useEffect(() => {
     document.documentElement.dataset.gardenState = failed ? 'error' : ready ? 'ready' : 'loading';
   }, [ready, failed]);
   useEffect(() => {
     if (!ready || failed) return;
-    let frame: number;
+    const element = cover.current!;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const waitForReveal = () => {
-      // Start the perch time after the cover's fade, including reduced-motion styles.
-      if (cover.current && getComputedStyle(cover.current).visibility !== 'hidden') {
-        frame = requestAnimationFrame(waitForReveal);
-        return;
-      }
+    // Start the perch time after the cover's fade, including reduced-motion
+    // styles. Listening, rather than checking its style every frame, saves a
+    // style recalculation per frame while the butterflies move.
+    const revealed = (event: TransitionEvent) => {
+      if (event.target !== element || event.propertyName !== 'opacity') return;
+      clearTimeout(timer);
       timer = setTimeout(() => setOpeningReleased(true), 1200);
     };
-    frame = requestAnimationFrame(waitForReveal);
-    return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
+    element.addEventListener('transitionend', revealed);
+    // In case the fade never reports finishing.
+    timer = setTimeout(() => setOpeningReleased(true), 4000);
+    return () => { element.removeEventListener('transitionend', revealed); clearTimeout(timer); };
   }, [ready, failed]);
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)');
@@ -138,35 +215,49 @@ export default function Garden({ greeting }: { greeting?: string }) {
       element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
     };
   }, []);
-  const chapter = progress < MEMORY_START ? 0 : progress < MEMORY_END ? 1 : 2;
+  // The scroll cue goes for good once the guest has scrolled a little.
+  const [explored, setExplored] = useState(false);
+  useEffect(() => { if (progress > .01) setExplored(true); }, [progress]);
+  const chapter = { arrival: 0, voyage: 1, dock: 2 }[chapterAt(progress)];
   const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready });
-  const memoryIndex = Math.max(0, Math.min(memories.length - 1,
-    Math.floor((progress - MEMORY_START) / (MEMORY_END - MEMORY_START) * memories.length)));
+  const voyage = useVoyageMoment(progress, reduced);
+  // The date stays on through the voyage panel's fade out.
+  const [lastDate, setLastDate] = useState<string | null>(null);
+  if (voyage.date && voyage.date !== lastDate) setLastDate(voyage.date);
+  // Dev only: the Review panel's date label, month and year by default.
+  const [dateMode, setDateMode] = useState<DateLabelMode>('full');
+  useEffect(() => { if (REVIEW) setDateMode(dateLabelMode(localStorage.getItem(REVIEW_DATE))); }, []);
+  useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
+  const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
+  // The camera already eases between stops; native smooth scrolling would
+  // introduce a second animation and delay the content on slower devices.
   const goToProgress = (next: number) => {
     setProgress(next);
     const element = scroller.current!;
     element.scrollTo({ top: (element.scrollHeight - element.clientHeight) * next, behavior: 'instant' });
   };
-  const scrollToMemory = (index: number) => {
-    const wrapped = (index + memories.length) % memories.length;
-    goToProgress(MEMORY_START + (wrapped + .5) / memories.length * (MEMORY_END - MEMORY_START));
-  };
-  const scrollToChapter = (index: number) => {
-    // The camera already eases between chapters; native smooth scrolling would
-    // introduce a second animation and delay the content on slower devices.
-    if (index === 1) scrollToMemory(0);
-    else goToProgress(index === 0 ? 0 : 1);
-  };
-  const nextStop = () => {
-    if (chapter === 1 && memoryIndex < memories.length - 1) scrollToMemory(memoryIndex + 1);
-    else scrollToChapter(chapter === 2 ? 0 : chapter + 1);
-  };
+  // The arrow keys step from the opening through each milestone to the
+  // celebration and back, as the photo album's did between photographs.
+  const step = useRef(goToProgress);
+  step.current = goToProgress;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return;
+      if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review')) return;
+      const element = scroller.current!;
+      const at = element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight);
+      event.preventDefault();
+      step.current(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
-  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-sky={skyStyle === 'mist' ? undefined : skyStyle} aria-busy={state === 'loading'}>
+  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!ready ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
@@ -175,12 +266,13 @@ export default function Garden({ greeting }: { greeting?: string }) {
         <p className="garden-visually-hidden" role="status">{failed ? 'The garden couldn’t open. The details are just below.' : ready ? '' : 'Preparing the garden'}</p>
       </div>
     </div>
+    <p className="garden-visually-hidden" role="status">{chapter === 1 && voyage.announced ? `${dateLabel(progressAt(voyage.announced.month))}. ${voyage.announced.description}` : ''}</p>
     {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
       openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
     {/* The chrome sits in pinned layers inside the scroller, so a drag that starts on it still scrolls. */}
     <div className="garden-chrome-layer">
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
-        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => scrollToChapter(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}>P<span>&</span>A</button>
+        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
         <span className="garden-header-date">16 APRIL 2027</span>
         <div className="garden-header-links">
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
@@ -202,51 +294,15 @@ export default function Garden({ greeting }: { greeting?: string }) {
         </div>
       </section>
 
-      <section className={`garden-panel garden-memory ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
-        <div className="garden-album" role="group" aria-label="Our photographs" onKeyDown={event => {
-          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-            event.preventDefault(); scrollToMemory(memoryIndex + (event.key === 'ArrowLeft' ? -1 : 1));
-          }
-        }}>
-          <div className="garden-photo-stack" onTouchStart={event => {
-            const touch = event.touches[0]; touchStart.current = { x: touch.clientX, y: touch.clientY };
-          }} onTouchEnd={event => {
-            if (!touchStart.current) return;
-            const touch = event.changedTouches[0], dx = touch.clientX - touchStart.current.x, dy = touch.clientY - touchStart.current.y;
-            if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) scrollToMemory(memoryIndex + (dx < 0 ? 1 : -1));
-            touchStart.current = null;
-          }}>
-            {/* Stable card positions keep side photos behind the centre throughout
-                a change. Only their contents crossfade, including on rapid scrolls. */}
-            {[-1, 0, 1].map(offset => <div key={offset}
-              className={`garden-photo-slot ${offset === 0 ? 'is-current' : ''}`}
-              aria-hidden={offset !== 0}
-              style={{ '--photo-offset': offset } as CSSProperties}>
-              {memories.map((memory, i) => {
-                const visible = i === (memoryIndex + offset + memories.length) % memories.length;
-                return <figure key={memory.file} className={visible ? 'is-visible' : ''} aria-hidden={offset !== 0 || !visible}>
-                  <img src={ready ? `${BASE}photos/${memory.file}` : undefined} alt={offset === 0 && visible ? memory.alt : ''} decoding="async" draggable={false} />
-                  <figcaption>{memory.caption}</figcaption>
-                </figure>;
-              })}
-            </div>)}
-          </div>
-          <div className="garden-photo-controls">
-            <button aria-label="Previous photograph" onClick={() => scrollToMemory(memoryIndex - 1)}>←</button>
-            <div className="garden-photo-dots">
-              {memories.map((memory, i) => <button key={memory.file} aria-label={`Photograph ${i + 1}: ${memory.caption}`}
-                aria-pressed={i === memoryIndex} onClick={() => scrollToMemory(i)}><span /></button>)}
-            </div>
-            <button aria-label="Next photograph" onClick={() => scrollToMemory(memoryIndex + 1)}>→</button>
-          </div>
-          <p className="garden-photo-count">0{memoryIndex + 1} <span>/ 05</span></p>
-        </div>
-        <div className="garden-memory-copy">
-          <p className="garden-eyebrow">Our story</p>
-          <h2><b className="garden-perch">A</b> lifetime of<br /><em>little moments.</em></h2>
-          <p>And now, one more to share<br />with the people we love.</p>
-          <button className="garden-text-link" onClick={() => scrollToChapter(2)}>The next chapter <span aria-hidden="true">→</span></button>
-        </div>
+      {/* Wordless but for the date: the scenery tells the story. Screen readers
+          hear each milestone instead, from the status line below. */}
+      <section className={`garden-panel garden-voyage ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
+        <h2 className="garden-visually-hidden">Our story</h2>
+        <p className="garden-voyage-date" aria-hidden="true" data-mode={dateMode === 'full' ? undefined : dateMode}>
+          {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
+          <Crossfade className="garden-voyage-year" value={year} />
+        </p>
+        <button className="garden-text-link" onClick={() => goToProgress(1)}>The next chapter <span aria-hidden="true">→</span></button>
       </section>
 
       <section className={`garden-panel garden-celebrate ${chapter === 2 ? 'is-active' : ''}`} inert={chapter !== 2 || sceneOnly} aria-hidden={chapter !== 2 || sceneOnly}>
@@ -260,7 +316,8 @@ export default function Garden({ greeting }: { greeting?: string }) {
 
     <div className="garden-chrome-layer">
       <div className="garden-bottom garden-copy garden-chrome" inert={state !== 'ready'}>
-        <div className="garden-creature-actions">
+        {/* Dev only: test buttons. Guests tap the water for a boat. */}
+        {REVIEW && <div className="garden-creature-actions">
         <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
           <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">
             <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
@@ -274,9 +331,11 @@ export default function Garden({ greeting }: { greeting?: string }) {
           </svg>
           <span>Release a butterfly</span>
         </button>
-        </div>
-        <button className="garden-scroll-cue" onClick={nextStop}>
-          {chapter === 2 ? 'Back to the beginning' : 'Wander with us'} <span aria-hidden="true">{chapter === 2 ? '↑' : '↓'}</span>
+        </div>}
+        <button className={`garden-scroll-cue ${explored ? 'is-done' : ''}`} onClick={() => goToProgress(nextStop(progress))}>
+          Wander with us
+          <span className="garden-scroll-cue-how" aria-hidden="true"><span className="garden-scroll-cue-mouse">Scroll</span><span className="garden-scroll-cue-touch">Swipe up</span></span>
+          <i aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -303,13 +362,20 @@ export default function Garden({ greeting }: { greeting?: string }) {
         </select>
       </label>
       <label className="garden-material-selector">Sky
-        <select aria-label="Sky colour" value={skyStyle} onChange={event => {
+        <select aria-label="Sky" value={skyStyle.sky} onChange={event => {
           localStorage.setItem(REVIEW_SKY, event.target.value);
           // Safari only reads the page colour for its bars at load.
-          if (skyStyle === 'blue' || event.target.value === 'blue') location.reload();
-          else setSkyStyle(event.target.value as SkyStyle);
+          location.reload();
         }}>
-          <option value="mist">Mist</option><option value="blue">Blue</option><option value="combo">Combo</option>
+          <option value="day">Clear day</option><option value="mist">Mist (old)</option>
+        </select>
+      </label>
+      <label className="garden-material-selector">Water
+        <select aria-label="Water colour" value={skyStyle.water} onChange={event => {
+          localStorage.setItem(REVIEW_WATER, event.target.value);
+          setSkyStyle({ ...skyStyle, water: event.target.value as WaterStyle });
+        }}>
+          {(Object.keys(WATERS) as WaterStyle[]).map(water => <option key={water} value={water}>{WATERS[water].label}</option>)}
         </select>
       </label>
       <label className="garden-material-selector">Plants
@@ -325,6 +391,33 @@ export default function Garden({ greeting }: { greeting?: string }) {
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
       <button onClick={() => setSceneOnly(!sceneOnly)} aria-pressed={sceneOnly}>{sceneOnly ? 'Show invitation' : 'Scene only'}</button>
+      <label className="garden-material-selector">Boats
+        <select aria-label="Boats before they join" value={boatStyle.dinghy} onChange={event => {
+          const look = boatLook(event.target.value, boatStyle.catamaran);
+          localStorage.setItem(REVIEW_DINGHY, look.dinghy);
+          setBoatStyle(look);
+        }}>
+          {(Object.keys(DINGHY_LOOKS) as DinghyLook[]).map(look => <option key={look} value={look}>{DINGHY_LOOKS[look]}</option>)}
+        </select>
+      </label>
+      <label className="garden-material-selector">Catamaran
+        <select aria-label="Catamaran" value={boatStyle.catamaran} onChange={event => {
+          const look = boatLook(boatStyle.dinghy, event.target.value);
+          localStorage.setItem(REVIEW_CATAMARAN, look.catamaran);
+          setBoatStyle(look);
+        }}>
+          {(Object.keys(CATAMARAN_LOOKS) as CatamaranLook[]).map(look => <option key={look} value={look}>{CATAMARAN_LOOKS[look]}</option>)}
+        </select>
+      </label>
+      <label className="garden-material-selector">Date
+        <select aria-label="Date label" value={dateMode} onChange={event => {
+          const mode = dateLabelMode(event.target.value);
+          localStorage.setItem(REVIEW_DATE, mode);
+          setDateMode(mode);
+        }}>
+          {Object.entries(DATE_LABEL_MODES).map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
+        </select>
+      </label>
     </aside>}
     <div className="garden-scroll-space" />
   </main>;

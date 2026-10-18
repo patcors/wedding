@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BoatSimulation, boatContact, boatOutline, createBoatBody, resolveBoatContact, stemContact } from '../src/components/garden/boatPhysics.ts';
-import { riverCenter, bankEdge, groundHeight, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
+import { riverCenter, bankEdge, groundHeight, islandHalfWidth, launchJetties, voyageLandmarks, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
+import { jettyStems, launchJettyStems } from '../src/components/garden/voyageDock.ts';
+import { mooredStems } from '../src/components/garden/storyBoats.ts';
 import { plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
 
 const river = { center: riverCenter, halfWidth: bankEdge };
@@ -156,5 +158,54 @@ test('the ground where boats stop is always under water, on both compositions', 
         }
       }
     }
+  }
+});
+
+test('boats keep to the channels round the island and bump off the jetty and the moored catamaran, on both compositions', () => {
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const islandRiver = { ...river, island: islandHalfWidth };
+    const world = new BoatSimulation(islandRiver, width);
+    const stems = [...jettyStems(width), ...mooredStems(width)];
+    world.setStems(stems, width);
+    let id = 0;
+    // Dropped above the island's head and beside it. (In portrait the channels
+    // at the head are narrower than a paper boat, which may catch there.)
+    for (const z of [16, 12, 6, -2]) for (const lateral of [-.8, -.1, .1, .8]) world.launch({ id: ++id, kind: id % 3 ? 'sailboat' : 'duck', lateral, z }, width);
+    const { jetty } = voyageLandmarks(width);
+    // Out in the river they slide past the catamaran and the jetty's end; one
+    // beside the bank may come to rest in the corner of the jetty's head.
+    for (const lateral of [-.2, .3, .5, .9]) world.launch({ id: ++id, kind: 'tugboat', lateral, z: jetty.z + 3 }, width);
+    const start = world.bodies.map(b => b.z);
+    for (let i = 0; i < 60 * 30; i++) {
+      world.advance(1 / 60, width, false);
+      if (i % 10) continue;
+      for (const a of world.bodies) {
+        for (const p of boatOutline(a)) {
+          const island = islandHalfWidth(p.z, width);
+          assert.ok(!island || Math.abs(p.x - riverCenter(p.z, width)) > island + .1, `a hull crossed onto the island at z=${p.z.toFixed(2)}`);
+        }
+        for (const stem of stems) assert.ok((stemContact(a, stem)?.depth ?? 0) < .05, 'a hull sailed through the jetty or the catamaran');
+      }
+    }
+    world.bodies.slice(0, -1).forEach((a, i) => assert.ok(a.z < (start[i] < jetty.z + 5 ? jetty.z - 3 : start[i] - 12), `boat ${a.id} stuck at z=${a.z.toFixed(2)}`));
+  }
+});
+
+test('boats bump off the little jetties at the start and glance on down their channels, on both compositions', () => {
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const world = new BoatSimulation({ ...river, island: islandHalfWidth }, width);
+    const stems = launchJettyStems(width);
+    world.setStems(stems, width);
+    let id = 0;
+    // Dropped upstream, out by the banks where the current carries them onto
+    // the jetties. (A paper boat may catch on the island's head in portrait.)
+    for (const z of [16, 12, 9]) for (const lateral of [-.95, -.8, .8, .95]) world.launch({ id: ++id, kind: ['sailboat', 'tugboat', 'duck'][id % 3], lateral, z }, width);
+    const jetty = Math.min(...launchJetties(width).map(j => j.z));
+    for (let i = 0; i < 60 * 40; i++) {
+      world.advance(1 / 60, width, false);
+      if (i % 10) continue;
+      for (const a of world.bodies) for (const stem of stems) assert.ok((stemContact(a, stem)?.depth ?? 0) < .05, 'a hull sailed through a little jetty');
+    }
+    for (const a of world.bodies) assert.ok(a.z < jetty - 3, `boat ${a.id} (${a.kind}) stuck at z=${a.z.toFixed(2)} (${width})`);
   }
 });

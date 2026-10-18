@@ -3,31 +3,50 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { plantGeometry, plantSites, type PlantKind } from './gardenPlantGeometry';
 import { configureGrassMaterial } from './gardenGrassMaterial';
+import { riverChunks } from './gardenGeometry';
+import { useRiverReach } from './useRiverReach';
+
+type PlantSite = ReturnType<typeof plantSites>[number];
+
+// Plants sway in the breeze, more towards their tips. VoyageWorld's island
+// planting shares this material.
+export function plantMaterial(kind: PlantKind, wind: { value: number }, mobile: boolean) {
+  const result = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .95 });
+  result.name = `garden-plant-${kind}`;
+  result.onBeforeCompile = shader => {
+    shader.uniforms.plantTime = wind;
+    shader.vertexShader = `uniform float plantTime;\n${shader.vertexShader}`.replace('#include <begin_vertex>', `
+      #include <begin_vertex>
+      vec3 plantRoot = instanceMatrix[3].xyz;
+      float breeze = sin(plantTime * 1.1 + plantRoot.x * .65 + plantRoot.z * .38);
+      transformed.x += breeze * position.y * position.y * .13;
+      transformed.z += sin(plantTime * .8 + plantRoot.z * .46) * position.y * position.y * .07;
+    `);
+  };
+  result.customProgramCacheKey = () => 'garden-plant-wind-1';
+  if (kind === 'meadow') configureGrassMaterial(result, wind, mobile);
+  return result;
+}
 
 function PlantBatch({ kind, width, mobile, paused, visible }: {
   kind: PlantKind; width: number; mobile: boolean; paused: boolean; visible: boolean;
 }) {
-  const mesh = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => plantGeometry(kind), [kind]);
-  const sites = useMemo(() => plantSites(kind, width, mobile), [kind, width, mobile]);
+  const chunks = useMemo(() => riverChunks(plantSites(kind, width, mobile)), [kind, width, mobile]);
   const wind = useMemo(() => ({ value: 0 }), []);
-  const material = useMemo(() => {
-    const result = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .95 });
-    result.name = `garden-plant-${kind}`;
-    result.onBeforeCompile = shader => {
-      shader.uniforms.plantTime = wind;
-      shader.vertexShader = `uniform float plantTime;\n${shader.vertexShader}`.replace('#include <begin_vertex>', `
-        #include <begin_vertex>
-        vec3 plantRoot = instanceMatrix[3].xyz;
-        float breeze = sin(plantTime * 1.1 + plantRoot.x * .65 + plantRoot.z * .38);
-        transformed.x += breeze * position.y * position.y * .13;
-        transformed.z += sin(plantTime * .8 + plantRoot.z * .46) * position.y * position.y * .07;
-      `);
-    };
-    result.customProgramCacheKey = () => 'garden-plant-wind-1';
-    if (kind === 'meadow') configureGrassMaterial(result, wind, mobile);
-    return result;
-  }, [kind, wind, mobile]);
+  const material = useMemo(() => plantMaterial(kind, wind, mobile), [kind, wind, mobile]);
+  useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
+  useFrame((_, dt) => { if (!paused && visible) wind.value += Math.min(dt, .05); });
+  return <>{chunks.map((sites, i) => <PlantChunk key={`${i}-${sites.length}`} kind={kind} sites={sites}
+    geometry={geometry} material={material} visible={visible} />)}</>;
+}
+
+function PlantChunk({ kind, sites, geometry, material, visible }: {
+  kind: PlantKind; sites: PlantSite[]; geometry: THREE.BufferGeometry; material: THREE.Material; visible: boolean;
+}) {
+  const group = useRef<THREE.Group>(null);
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  useRiverReach(group, sites);
   useLayoutEffect(() => {
     const dummy = new THREE.Object3D(), color = new THREE.Color();
     sites.forEach((site, i) => {
@@ -45,10 +64,9 @@ function PlantBatch({ kind, width, mobile, paused, visible }: {
     // Include the taller reeds' wind displacement at frustum boundaries.
     mesh.current!.boundingSphere!.radius += .4;
   }, [sites, kind]);
-  useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
-  useFrame((_, dt) => { if (!paused && visible) wind.value += Math.min(dt, .05); });
-  return <instancedMesh key={sites.length} name={`garden-plants-${kind}`} ref={mesh}
-    args={[geometry, material, sites.length]} visible={visible} receiveShadow />;
+  return <group ref={group}>
+    <instancedMesh name={`garden-plants-${kind}`} ref={mesh} args={[geometry, material, sites.length]} visible={visible} receiveShadow />
+  </group>;
 }
 
 export default function GardenPlants(props: { width: number; mobile: boolean; paused: boolean; visible: boolean }) {

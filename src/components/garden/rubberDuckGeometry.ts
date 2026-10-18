@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // A bath duck facing -z like the boats' bows: round body with an upturned
 // tail, a big head, an orange beak, and black eyes with a glint.
@@ -46,4 +47,16 @@ export function rubberDuck() {
   const creases = new THREE.BufferGeometry();
   creases.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
   return { geometry, creases };
+}
+
+// The duck with only `keep` of its vertices, for ducks seen at a distance in
+// the voyage: no creases, and indexed.
+export function simplifiedRubberDuck(keep: number) {
+  const { geometry, creases } = rubberDuck();
+  creases.dispose();
+  const merged = mergeVertices(geometry, 1e-4);
+  geometry.dispose();
+  const simple = new SimplifyModifier().modify(merged, Math.floor(merged.attributes.position.count * (1 - keep)));
+  merged.dispose();
+  return simple;
 }

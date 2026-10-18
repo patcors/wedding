@@ -1,0 +1,6 @@
+[DRAFT: Amelia to rewrite this message, then delete this line. --send won't run while it's here.]
+Hi {greeting}!
+
+Patrick and Amelia are getting married, and we'd love you to be there. Your invitation is attached, and everything else, including your RSVP, is at your own link:
+
+{link}

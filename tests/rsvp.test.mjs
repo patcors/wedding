@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  contactProblem, describeGuest, formatDietary, joinNames, parseDietary, readParty, readSaved, storageKey, toParams,
+  contactProblem, describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, readLookup, readParty, readSaved, storageKey, toParams,
 } from '../src/components/details/rsvp.ts';
 
 test('a Party is only trusted when localStorage holds a complete one', () => {
@@ -13,20 +13,60 @@ test('a Party is only trusted when localStorage holds a complete one', () => {
   assert.equal(readParty(JSON.stringify({ ...party, code: '' })), null);
 });
 
-test('each Party remembers its own RSVP, and Open RSVPs share one slot', () => {
+test('each Party remembers its own RSVP', () => {
   assert.equal(storageKey('curry'), 'pa_rsvp_curry');
-  assert.equal(storageKey(''), 'pa_rsvp_open');
+  assert.notEqual(storageKey('curry'), storageKey('bridge'));
 });
 
+const dean = { name: 'Dean', attending: 'yes', dietary: '', busTo: 'Wollongong', busFrom: 'none' };
+const saved = {
+  submitted_at: '2026-10-17T00:00:00.000Z', code: 'curry', party: 'Dean & Kelly',
+  contact: 'a@b.co', song: '', message: '', guests: [dean],
+};
+
 test('a saved RSVP must have answered Guests and a contact', () => {
-  const rsvp = { contact: 'a@b.co', guests: [{ name: 'Dean', attending: 'yes', dietary: '', bus: '' }] };
-  assert.deepEqual(readSaved(JSON.stringify(rsvp)), rsvp);
-  assert.equal(readSaved(JSON.stringify({ ...rsvp, guests: [{ name: 'Dean', attending: 'maybe' }] })), null);
-  assert.equal(readSaved(JSON.stringify({ guests: rsvp.guests })), null);
+  assert.deepEqual(readSaved(JSON.stringify(saved)), saved);
+  assert.equal(readSaved(JSON.stringify({ ...saved, guests: [{ name: 'Dean', attending: 'maybe' }] })), null);
+  assert.equal(readSaved(JSON.stringify({ guests: saved.guests })), null);
+});
+
+test('an RSVP saved before the bus had stops still loads, with the bus unanswered', () => {
+  const old = { ...saved, guests: [{ name: 'Dean', attending: 'yes', dietary: 'vegan', bus: 'yes' }] };
+  assert.deepEqual(readSaved(JSON.stringify(old)).guests, [{ name: 'Dean', attending: 'yes', dietary: 'vegan', busTo: '', busFrom: '' }]);
+});
+
+
+test('the Sheet is asked for one Party by code', () => {
+  assert.equal(lookupUrl('https://script.google.com/macros/s/X/exec', 'curry'), 'https://script.google.com/macros/s/X/exec?code=curry');
+  assert.equal(lookupUrl('https://example.com/exec?v=2', 'two words'), 'https://example.com/exec?v=2&code=two%20words');
+});
+
+test('a lookup only counts when it holds this Party’s complete reply', () => {
+  assert.deepEqual(readLookup({ ok: true, rsvp: saved }, 'curry'), saved);
+  assert.equal(readLookup({ ok: true, rsvp: null }, 'curry'), null);
+  assert.equal(readLookup({ ok: true, rsvp: saved }, 'bridge'), null);
+  assert.equal(readLookup({ ok: false, rsvp: saved }, 'curry'), null);
+  assert.equal(readLookup({ ok: true, rsvp: { ...saved, contact: undefined } }, 'curry'), null);
+  assert.equal(readLookup(null, 'curry'), null);
+});
+
+test('the reply sent last wins, and this device keeps ties and unreadable times', () => {
+  const at = (submitted_at) => ({ ...saved, submitted_at });
+  const local = at('2026-10-17T01:00:00.000Z');
+  const later = at('2026-10-17T02:00:00.000Z');
+  assert.equal(latestReply(local, later), later);
+  assert.equal(latestReply(later, local), later);
+  assert.equal(latestReply(local, at(local.submitted_at)), local);
+  assert.equal(latestReply(local, at('')), local);
+  const unreadable = at('');
+  assert.equal(latestReply(unreadable, later), unreadable);
+  assert.equal(latestReply(null, later), later);
+  assert.equal(latestReply(local, null), local);
+  assert.equal(latestReply(null, null), null);
 });
 
 test('the body carries every field, with guests as a JSON string', () => {
-  const guests = [{ name: 'Dean', attending: 'yes', dietary: 'vegetarian', bus: 'yes' }];
+  const guests = [{ name: 'Dean', attending: 'yes', dietary: 'vegetarian', busTo: 'Wollongong', busFrom: 'Berry' }];
   const params = toParams({
     submitted_at: '2026-09-30T00:00:00.000Z', code: 'curry', party: 'Dean & Kelly',
     contact: '0400 000 000', song: 'September', message: 'Yay', guests,
@@ -45,17 +85,13 @@ test('contact accepts an email or a phone number and nothing else', () => {
 });
 
 test('answers read back as one sentence per Guest', () => {
-  assert.equal(describeGuest({ name: 'Dean', attending: 'yes', dietary: 'Vegetarian. ', bus: 'yes' }),
-    'Dean: coming, Vegetarian, taking the bus.');
-  assert.equal(describeGuest({ name: 'Sam', attending: 'yes', dietary: '', bus: 'no' }), 'Sam: coming, not taking the bus.');
-  assert.equal(describeGuest({ name: 'Lou', attending: 'yes', dietary: '', bus: '' }), 'Lou: coming.');
-  assert.equal(describeGuest({ name: 'Kelly', attending: 'no', dietary: 'vegan', bus: 'yes' }), 'Kelly: can’t make it.');
-});
-
-test('names join the way the Garden greets a Party', () => {
-  assert.equal(joinNames(['Paula']), 'Paula');
-  assert.equal(joinNames(['Dean', 'Kelly']), 'Dean & Kelly');
-  assert.equal(joinNames(['A', 'B', 'C']), 'A, B & C');
+  const guest = (fields) => ({ name: 'Dean', attending: 'yes', dietary: '', busTo: '', busFrom: '', ...fields });
+  assert.equal(describeGuest(guest({ dietary: 'Vegetarian. ', busTo: 'Wollongong', busFrom: 'Berry' })),
+    'Dean: coming, Vegetarian, bus from Wollongong, bus home to Berry.');
+  assert.equal(describeGuest(guest({ busTo: 'none', busFrom: 'Gerringong' })), 'Dean: coming, bus home to Gerringong.');
+  assert.equal(describeGuest(guest({ busTo: 'none', busFrom: 'none' })), 'Dean: coming, no bus.');
+  assert.equal(describeGuest(guest({})), 'Dean: coming.');
+  assert.equal(describeGuest(guest({ attending: 'no', dietary: 'vegan', busTo: 'Berry' })), 'Dean: can’t make it.');
 });
 
 test('dietary buttons and Other text become one line for the sheet', () => {

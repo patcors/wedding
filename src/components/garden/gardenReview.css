@@ -6,7 +6,7 @@
 .garden-review button { font-size: 9px; padding: 4px 0; }
 .garden-review button[aria-pressed=true] { color: #8b6158; }
 .garden-review button:disabled { cursor: default; opacity: .6; }
-.garden-butterfly-colours { grid-column: span 2; font-size: 9px; }
+.garden-butterfly-colours { grid-column: span 4; font-size: 9px; }
 .garden-butterfly-colours summary { cursor: pointer; padding: 8px 0; }
 .garden-butterfly-colours summary:focus-visible { outline: 2px solid #6e775c; outline-offset: 4px; }
 .garden-butterfly-palette { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 16px 8px; padding: 20px 12px; box-sizing: border-box; border: 1px solid #fff9; border-radius: 20px; background: #f7f6ee; box-shadow: 0 4px 24px #3d4e3520; }
@@ -17,9 +17,18 @@
 .garden-material-selector { display: flex; align-items: center; gap: 5px; font-size: 9px; }
 .garden-material-selector select { min-width: 0; max-width: 100%; padding: 5px 3px; border: 0; border-bottom: 1px solid #747d6040; border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .garden-material-selector select:focus-visible { outline: 2px solid #8b6158; outline-offset: 2px; }
+/* On one line it is about 1170px wide: narrower screens, such as a phone on
+   its side, wrap it onto two rows rather than run it off both sides. */
+@media (min-width: 701px) and (max-width: 1200px) {
+  .garden-review { flex-wrap: wrap; justify-content: center; row-gap: 2px; width: max-content; max-width: calc(100vw - 24px); padding: 8px 20px; border-radius: 26px; }
+  .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
+}
 @media (max-width: 700px) {
-  .garden-review { bottom: calc(16px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
-  .garden-review > button, .garden-material-selector { grid-column: span 2; }
+  /* Three rows, so it stays clear of the scroll cue above it: the five
+     selectors and the colours three to a row, the three buttons and the Date four. */
+  .garden-review { bottom: calc(16px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
+  .garden-review > button, .garden-material-selector { grid-column: span 4; }
+  .garden-review > button, .garden-review > .garden-material-selector:last-child { grid-column: span 3; }
   .garden-material-selector { flex-direction: column; gap: 0; font-size: 8px; }
   .garden-material-selector select { font-size: 10px; }
   .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
@@ -28,4 +37,33 @@
 }
 @media (max-width: 700px) and (max-height: 700px) {
   .garden-review { bottom: 12px; }
+}
+/* Dev only: test buttons for a boat and a butterfly, beside the scroll cue. */
+.garden-creature-actions { display: flex; align-items: center; gap: 24px; }
+.garden-creature-actions button:disabled { opacity: .45; cursor: default; }
+.garden-boat-launch { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0; }
+.garden-boat-launch span { font: italic 16px 'Cormorant Garamond', Georgia, serif; }
+/* Dev only: lift the scroll cue and the test buttons above the Review panel,
+   two rows of it on narrower screens. */
+@media (min-width: 701px) {
+  .garden-prototype:has(.garden-review) .garden-scroll-cue { bottom: 44px; }
+  .garden-prototype:has(.garden-review) .garden-creature-actions { transform: translateY(-44px); }
+}
+@media (min-width: 701px) and (max-width: 1200px) {
+  .garden-prototype:has(.garden-review) .garden-scroll-cue { bottom: 84px; }
+  .garden-prototype:has(.garden-review) .garden-creature-actions { transform: translateY(-84px); }
+}
+/* Phones have no room beside the scroll cue, so the test buttons sit in a row
+   above it while it shows, and at the foot of the screen once it has gone.
+   With the Review panel open they sit just above the panel, and the cue does
+   too while it shows; there is no room for both over the opening on a short
+   phone, so the buttons wait for the cue to go (or the panel to be hidden). */
+@media (max-width: 700px) {
+  .garden-creature-actions { position: absolute; left: 0; right: 0; bottom: 0; justify-content: center; gap: 20px; }
+  .garden-bottom:has(.garden-scroll-cue:not(.is-done)) .garden-creature-actions { bottom: 110px; }
+  .garden-prototype:has(.garden-review) .garden-bottom .garden-creature-actions { bottom: 134px; }
+  .garden-prototype:has(.garden-review) .garden-bottom:has(.garden-scroll-cue:not(.is-done)) .garden-creature-actions { visibility: hidden; }
+  .garden-prototype:has(.garden-review) .garden-scroll-cue { bottom: 132px; }
+  .garden-boat-launch { gap: 6px; }
+  .garden-boat-launch span { font-size: 14px; }
 }

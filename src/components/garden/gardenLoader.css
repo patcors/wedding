@@ -1,11 +1,10 @@
 /* The cover: a plain field beneath the opening text and butterflies while the
-   scene loads. It fades to reveal the garden without moving the text. */
+   scene loads. It fades to reveal the garden without moving the text, easing
+   in so the garden surfaces gently rather than appearing at once. */
 .garden-prototype[data-state='loading'], .garden-prototype[data-state='error'] { overflow: hidden; }
 /* Inside the pinned stage, so it covers the whole screen including under
    Safari's toolbar (see garden.css). */
-.garden-cover { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse 90% 70% at 50% 36%, #eeeee5 30%, #e4e7dc); transition: opacity .9s ease, visibility .9s; }
-/* Dev only: the Review panel's blue sky, edged in the status bar's blue. */
-html[data-dev-sky='blue'] .garden-cover { background: radial-gradient(ellipse 90% 70% at 50% 36%, #aebbd2 30%, #9dacc7); }
+.garden-cover { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse 90% 70% at 50% 36%, var(--garden-sky-glow, #eeeee5) 30%, var(--garden-page, #e4e7dc)); transition: opacity 1.2s cubic-bezier(.4, 0, .2, 1), visibility 1.2s; }
 .garden-prototype[data-state='ready'] .garden-cover { opacity: 0; visibility: hidden; }
 .garden-prototype[data-state='error'] .garden-canvas { opacity: 0; }
 .garden-chrome { transition: opacity .9s ease; }
@@ -18,5 +17,6 @@ html[data-dev-sky='blue'] .garden-cover { background: radial-gradient(ellipse 90
 .garden-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* Opacity alone is not motion: keep the crossfade when motion is reduced. */
 @media (prefers-reduced-motion: reduce) {
-  .garden-prototype .garden-cover, .garden-prototype .garden-chrome, .garden-prototype .garden-arrival-actions a { transition: opacity .9s ease, visibility .9s !important; }
+  .garden-prototype .garden-cover { transition: opacity 1.2s cubic-bezier(.4, 0, .2, 1), visibility 1.2s !important; }
+  .garden-prototype .garden-chrome, .garden-prototype .garden-arrival-actions a { transition: opacity .9s ease, visibility .9s !important; }
 }

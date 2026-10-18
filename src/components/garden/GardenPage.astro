@@ -4,6 +4,7 @@
 // Details page can show their RSVP. The Garden renders here on the server, so
 // its opening text and cover paint before any script arrives.
 import Garden from './Garden';
+import { DAWN, MIST_DAWN, type SkyKey } from './skyCycle';
 import type { Party } from '../../data/parties';
 
 interface Props { party?: Party }
@@ -13,13 +14,18 @@ const title = party ? `${party.greeting}, you're invited` : 'Patrick & Amelia';
 const description = 'Patrick & Amelia · Friday 16 April 2027 · Jasper’s Berry';
 const image = new URL(`${BASE}og.jpg`, Astro.site).href;
 const remembered = party && { code: party.code, greeting: party.greeting, guests: party.guests };
+// The page opens in the dawn sky's colours, so the cover, the opening copy and
+// Safari's bars match the scene before it arrives (GardenSky takes over from
+// these). The bars keep the dawn's top colour all the way down.
+const opening = (key: SkyKey) => ({ '--garden-page': key.zenith, '--garden-sky-top': key.zenith, '--garden-sky-glow': key.glow, '--garden-ink-on-sky': key.ink });
+const devMist = import.meta.env.DEV && opening(MIST_DAWN);
 ---
-<html lang="en" data-garden-state="loading">
+<html lang="en" data-garden-state="loading" style={opening(DAWN)}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
-    <meta name="theme-color" content="#eeeee5" />
+    <meta name="theme-color" content={DAWN.zenith} />
     <title>{party ? `${party.greeting} · Patrick & Amelia` : 'Patrick & Amelia · 16 April 2027'}</title>
     <meta name="description" content={description} />
     <meta property="og:type" content="website" />
@@ -46,15 +52,15 @@ const remembered = party && { code: party.code, greeting: party.greeting, guests
         set(); addEventListener('resize', set);
       })();
     </script>
-    <style is:global>@view-transition { navigation: auto; } html { background: #eeeee5; } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; }</style>
-    {import.meta.env.DEV && <script is:inline>
+    <style is:global>@view-transition { navigation: auto; } html { background: var(--garden-page); } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; }</style>
+    {devMist && <script is:inline define:vars={{ devMist }}>
       // Dev only: Safari colours its status bar and toolbar from the page at
-      // load, so the Review panel's blue sky reloads the page and is applied
-      // here, along with a blue loading cover to match.
+      // load, so the Review panel's old misty sky reloads the page and opens in
+      // the mist's colours here.
       try {
-        if (localStorage.getItem('pa_dev_sky') === 'blue') {
-          document.documentElement.style.background = '#9dacc7';
-          document.documentElement.dataset.devSky = 'blue';
+        if (localStorage.getItem('pa_dev_sky') === 'mist') {
+          for (var name in devMist) document.documentElement.style.setProperty(name, devMist[name]);
+          document.querySelector('meta[name="theme-color"]').content = devMist['--garden-page'];
         }
       } catch {}
     </script>}

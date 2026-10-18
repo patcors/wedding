@@ -10,8 +10,9 @@ Vocabulary (Party, Guest, Invite code, Personal link, RSVP, Garden, Details page
 |---|---|
 | `/` | The Garden, for anyone without a Personal link |
 | `/<code>` | A Party's Personal link: the Garden, greeting them by name. It remembers the Party so the Details page can show their RSVP |
-| `/details` | Location, times, getting there, where to stay, questions, and the RSVP |
+| `/details` | Location, times, getting there, where to stay, questions, and the RSVP. Without a remembered Party, the RSVP points visitors to their Personal link instead of showing a form |
 | `/dev/links` | Dev only. Every Party's Personal link with a QR code, for making cards. Never built into the deployed site |
+| `/dev/invite/<code>` | Dev only. A Party's invitation image, screenshotted by `pnpm invites`. Never built into the deployed site |
 
 Parties live in `src/data/parties.ts`. Adding a Party there adds their page; the build fails if a code clashes with a page name.
 
@@ -27,13 +28,61 @@ node --test tests/*.test.mjs
 pnpm build && pnpm preview   # check the production build
 ```
 
-Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Garden's Review panel (ground, rocks, plants and tree variants, butterfly colours, pause, scene only) and `/dev/links`. Gate anything new like it behind `import.meta.env.DEV`.
+Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Garden's Review panel (ground, rocks, plants and tree variants, butterfly colours, pause, scene only), its Float a boat and Release a butterfly buttons, `/dev/links` and `/dev/invite/<code>`. Gate anything new like it behind `import.meta.env.DEV`.
 
 ## Editing content
 
 - Details page facts (schedule, venue, travel, where to stay, FAQs): the objects at the top of `src/pages/details.astro`. Wrap anything unconfirmed in `tbc()` and it shows a "to confirm" tag.
-- Garden photos and captions: `memories` in `src/components/garden/Garden.tsx`.
+- The Garden's story: `MILESTONES` in `src/components/garden/journey.ts`, one per date, oldest first. `month` is `'YYYY-MM'` and shows as the running date; `description` is what screen readers hear there; `room` gives a milestone more or less scroll at its date (a third of a share by default) and `hold` how long its date holds; each year from 2018 gets the same scroll however its milestones fall. See [docs/VOYAGE.md](docs/VOYAGE.md); `node --test tests/*.test.mjs` checks the story still runs in order.
 - Link preview image: `public/og.jpg` (1200×630).
+
+## Invitations
+
+Each Party gets an iMessage with a personalised image, a message and their Personal link. The image is `/dev/invite/<code>`, a 1080×1350 page greeting the Party by name; with `pnpm dev` running:
+
+```sh
+pnpm invites                              # every Party → invites/out/<code>.png (2160×2700)
+pnpm invites curry crash                  # just these codes
+pnpm invites --no-photo                   # without the engagement photo
+pnpm invites --crop=offset                # another crop from CROPS in the page
+pnpm invites --scale=1                    # 1080×1350
+pnpm invites --base=http://localhost:4334 # dev server on another port
+```
+
+It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, fonts, photo crops and sizes are at the top of `src/pages/dev/invite/[code].astro`; open the page in a browser to tweak it, with `?crop=<name>` or `?photo=none` to try the photo options. `invites/out/` is git-ignored.
+
+### Sending by text from Messages
+
+`scripts/send-invites.mjs` texts each Party from this Mac's Messages app: the message in `invites/message.txt` with their greeting and Personal link filled in, then their image `invites/out/<code>.png` as an attachment. On its own it only prints what it would send; nothing goes until you add `--send` and type `send` to confirm.
+
+1. Copy `invites/contacts.example.csv` to `invites/contacts.csv` and add a `code,phone` row for every mobile. A Party with two phones gets two rows. Write numbers any Australian way (`0400 000 000`, `+61 400…`, `61400…`); numbers from overseas need their `+` code. `contacts.csv` is gitignored: **phone numbers must never be committed.**
+2. Rewrite `invites/message.txt`. `{greeting}`, `{link}` and `{code}` are filled in for each Party; any other `{…}` stops the run. `--send` refuses while the `[DRAFT…]` line is still there.
+3. Dry run, and read every message:
+
+   ```sh
+   node scripts/send-invites.mjs
+   ```
+
+   It stops on unknown codes or numbers that aren't mobiles, lists Parties with no number, and skips Parties with no image (`--no-image` sends the text alone).
+4. Test on yourself: `--to` sends the chosen Parties' messages to your number instead of theirs, and isn't logged.
+
+   ```sh
+   node scripts/send-invites.mjs --only curry --to "0400 000 000" --send
+   ```
+
+5. Send: `node scripts/send-invites.mjs --send`. `--limit 5` sends the next five; `--only curry,bridge` picks Parties.
+
+Each attempt is appended to `invites/sent.log` (gitignored). A re-run skips numbers already sent, and numbers where only the text went or Messages didn't answer, so nothing arrives twice. Failures are retried. `--resend` sends again regardless.
+
+How it sends:
+
+- Through `scripts/send-invite.applescript`, run by `osascript` with every value passed as an argument, so apostrophes and emoji in the message are safe.
+- By iMessage. If iMessage refuses a number outright and Messages has an SMS account (Text Message Forwarding from your iPhone), it retries by SMS. `--service sms` forces SMS; `--no-fallback` turns the retry off.
+- Images are first copied to `~/Pictures/Wedding invites` (`--stage-dir`), because Messages marks scripted attachments from other folders "Not Delivered". Delete that folder once everything has gone.
+- 5 seconds between recipients (`--delay`).
+- The first run asks for permission for your terminal to control Messages (System Settings → Privacy & Security → Automation).
+
+"Sent" means Messages accepted it, not that it arrived. Afterwards, look in Messages for any red "Not Delivered", usually a number not on iMessage, and resend with `--only <code> --resend --service sms`.
 
 ## RSVP backend
 
@@ -45,9 +94,12 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    ```js
    // RSVPs: one row per Guest, only the latest answer for each Invite code.
    // Log: every submission exactly as received, never edited.
+   // Every RSVP comes from a Personal link, so a post without a code is
+   // logged but never reaches RSVPs. GET ?code=… reads a Party's reply back,
+   // so the Details page can show it on any device.
    const RSVP_SHEET = 'RSVPs';
    const LOG_SHEET = 'Log';
-   const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus', 'contact', 'song', 'message'];
+   const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus_to', 'bus_from', 'contact', 'song', 'message'];
    const LOG_HEADERS = ['submitted_at', 'code', 'party', 'contact', 'song', 'message', 'guests'];
 
    function doPost(e) {
@@ -62,27 +114,74 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
        const log = sheetWithHeaders(LOG_SHEET, LOG_HEADERS);
        appendText(log, [LOG_HEADERS.map((h) => p[h] || '')]);
 
+       if (!code) return json({ ok: false, error: 'missing code' });
+
        const rsvps = sheetWithHeaders(RSVP_SHEET, RSVP_HEADERS);
-       // A Party's new reply replaces its old rows. Open RSVPs (no code) always append.
-       if (code) deleteRowsWithCode(rsvps, code);
+       // A Party's new reply replaces its old rows.
+       deleteRowsWithCode(rsvps, code);
        appendText(rsvps, guests.map((g) => [
          p.submitted_at || '', code, p.party || '',
-         g.name || '', g.attending || '', g.dietary || '', g.bus || '',
+         g.name || '', g.attending || '', g.dietary || '', g.busTo || '', g.busFrom || '',
          p.contact || '', p.song || '', p.message || '',
        ]));
 
-       return ContentService
-         .createTextOutput(JSON.stringify({ ok: true }))
-         .setMimeType(ContentService.MimeType.JSON);
+       return json({ ok: true });
      } finally {
        lock.releaseLock();
      }
    }
 
+   // { ok: true, rsvp: null } when the Party hasn't replied; otherwise rsvp
+   // is shaped like the reply the page saves: { submitted_at, code, party,
+   // contact, song, message, guests: [{ name, attending, dietary, busTo, busFrom }] }.
+   function doGet(e) {
+     const p = (e && e.parameter) || {};
+     const code = String(p.code || '').trim();
+     const lock = LockService.getScriptLock();
+     lock.waitLock(20000);
+     try {
+       return json({ ok: true, rsvp: code ? findRsvp(code) : null }, p.callback);
+     } finally {
+       lock.releaseLock();
+     }
+   }
+
+   function findRsvp(code) {
+     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RSVP_SHEET);
+     if (!sheet || sheet.getLastRow() < 2) return null;
+     const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, RSVP_HEADERS.length).getValues()
+       .map((row) => Object.fromEntries(RSVP_HEADERS.map((h, i) => [h, String(row[i])])))
+       .filter((row) => row.code === code);
+     if (!rows.length) return null;
+     const first = rows[0];
+     return {
+       submitted_at: first.submitted_at, code, party: first.party,
+       contact: first.contact, song: first.song, message: first.message,
+       guests: rows.map((r) => ({
+         name: r.guest, attending: r.attending, dietary: r.dietary, busTo: r.bus_to, busFrom: r.bus_from,
+       })),
+     };
+   }
+
+   // The page reads JSON with fetch. A `callback` (JSONP) is there in case a
+   // browser ever refuses the cross-origin read.
+   function json(body, callback) {
+     if (callback && /^[\w.$]+$/.test(callback)) {
+       return ContentService
+         .createTextOutput(`${callback}(${JSON.stringify(body)})`)
+         .setMimeType(ContentService.MimeType.JAVASCRIPT);
+     }
+     return ContentService
+       .createTextOutput(JSON.stringify(body))
+       .setMimeType(ContentService.MimeType.JSON);
+   }
+
+   // Rewrites the header row every time, so it follows the columns above.
    function sheetWithHeaders(name, headers) {
      const book = SpreadsheetApp.getActiveSpreadsheet();
      const sheet = book.getSheetByName(name) || book.insertSheet(name);
      if (sheet.getLastRow() === 0) appendText(sheet, [headers]);
+     else sheet.getRange(1, 1, 1, headers.length).setNumberFormat('@').setValues([headers]);
      return sheet;
    }
 
@@ -117,16 +216,42 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    workflow by hand). The build bakes the URL in, so setting the secret alone
    changes nothing on the live site.
 
-The form posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`,
+The form only appears for a Party remembered from their Personal link, and
+posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`,
 `song`, `message`, and `guests` as a JSON string of
-`[{ name, attending, dietary, bus }]`) with `mode: "no-cors"`. The response is
+`[{ name, attending, dietary, busTo, busFrom }]`) with `mode: "no-cors"`. The response is
 opaque, so the page treats fetch resolving as success. With no endpoint set, a
 dev server logs the payload to the console and shows the thank-you. A
 production build shows the "email or text us" failure message.
 
+`busTo` (where a Guest gets on to come to the venue) and `busFrom` (where they
+get off on the way home) are `''` when the Guest isn't coming or didn't
+answer, `none`, or a stop from `BUS_STOPS` in `src/components/details/rsvp.ts`.
+The script keeps the RSVPs header row in step with `RSVP_HEADERS`, but rows
+already in the sheet keep the columns they were written with. After changing
+columns (as when `bus` became `bus_to` and `bus_from`), delete the old test
+rows from the RSVPs tab.
+
+The page also reads a Party's reply back with a plain `GET …/exec?code=<code>`
+(no custom headers, so no CORS preflight; Apps Script answers through a
+redirect to `script.googleusercontent.com`). It shows this device's saved copy
+straight away, swaps in the Sheet's copy if that was sent later, and quietly
+keeps what it has if the lookup fails or takes more than 5 seconds. Anyone who
+knows an Invite code can read that Party's reply this way, contact details
+included.
+
 Every new deployment of the Apps Script gets a **new URL**. To change the
-script and keep the same URL, use "Manage deployments → edit → Version: New
-version" on the existing deployment.
+script and keep the same URL:
+
+1. Paste the new script over the old one and save.
+2. **Deploy → Manage deployments**, pick the existing web app deployment, and
+   click the pencil (edit).
+3. Under **Version**, choose **New version**, then **Deploy**.
+4. If Google asks for permissions again, review and allow them.
+
+The URL stays the same, so the site doesn't need rebuilding. To check it,
+open `…/exec?code=<a real code>` in a browser: it should show
+`{"ok":true,"rsvp":…}`.
 
 ## Deployment
 

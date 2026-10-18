@@ -4,17 +4,24 @@
 
 export type Answer = 'yes' | 'no';
 
+/** Where the bus stops, in the order the form offers them. Change stops here. */
+export const BUS_STOPS = ['Berry', 'Gerringong', 'Wollongong'];
+
+/** A bus answer: '' when not coming or not answered, 'none', or a stop from BUS_STOPS. */
+export type BusChoice = string;
+
 export interface GuestReply {
   name: string;
   attending: Answer;
-  dietary: string;   // only for Guests who are coming
-  bus: Answer | '';  // '' when not coming, or not answered
+  dietary: string;     // only for Guests who are coming
+  busTo: BusChoice;    // where they get on to come to the venue
+  busFrom: BusChoice;  // where they get off on the way home
 }
 
 export interface Rsvp {
   submitted_at: string;
-  code: string;      // Invite code, or '' for an Open RSVP
-  party: string;     // the Party's greeting, or OPEN_PARTY
+  code: string;      // the Party's Invite code
+  party: string;     // the Party's greeting
   contact: string;
   song: string;
   message: string;
@@ -27,9 +34,6 @@ export interface RememberedParty {
   greeting: string;
   guests: string[];
 }
-
-export const OPEN_PARTY = 'Open RSVP';
-export const MAX_OPEN_GUESTS = 6;
 
 /** The dietary buttons, in order. Anything else goes in "Other". */
 export const DIETARY_OPTIONS = ['Vego', 'Vegan', 'No peanuts', 'Gluten free'] as const;
@@ -66,15 +70,56 @@ export function readParty(raw: string | null): RememberedParty | null {
   return { code: value.code, greeting: value.greeting, guests: value.guests };
 }
 
-export function readSaved(raw: string | null): Rsvp | null {
-  const value = parse(raw) as Partial<Rsvp> | null;
-  if (!value || !Array.isArray(value.guests) || !value.guests.length) return null;
-  const guests = value.guests.every(g => g && isString(g.name) && isAnswer(g.attending));
-  if (!guests || !isString(value.contact)) return null;
-  return value as Rsvp;
+const text = (value: unknown) => (isString(value) ? value : '');
+
+/** A complete RSVP from untrusted data, or null. Fields it doesn't know (like
+    the old yes/no `bus`) are dropped, and missing bus answers read as unanswered. */
+export function toRsvp(value: unknown): Rsvp | null {
+  const v = value as Partial<Record<keyof Rsvp, unknown>> | null;
+  if (!v || typeof v !== 'object' || !Array.isArray(v.guests) || !v.guests.length || !isString(v.contact)) return null;
+  const guests = v.guests as Partial<Record<keyof GuestReply, unknown>>[];
+  if (!guests.every(g => g && isString(g.name) && isAnswer(g.attending))) return null;
+  return {
+    submitted_at: text(v.submitted_at),
+    code: text(v.code),
+    party: text(v.party),
+    contact: v.contact,
+    song: text(v.song),
+    message: text(v.message),
+    guests: guests.map(g => ({
+      name: g.name as string,
+      attending: g.attending as Answer,
+      dietary: text(g.dietary),
+      busTo: text(g.busTo),
+      busFrom: text(g.busFrom),
+    })),
+  };
 }
 
-export const storageKey = (code: string) => (code ? `pa_rsvp_${code}` : 'pa_rsvp_open');
+export const readSaved = (raw: string | null): Rsvp | null => toRsvp(parse(raw));
+
+export const storageKey = (code: string) => `pa_rsvp_${code}`;
+
+/** Where to ask the Sheet for a Party's reply (the Apps Script's doGet). */
+export const lookupUrl = (endpoint: string, code: string) =>
+  `${endpoint}${endpoint.includes('?') ? '&' : '?'}code=${encodeURIComponent(code)}`;
+
+/** The reply in a doGet response, `{ ok: true, rsvp: {...} | null }`, if it's this Party's. */
+export function readLookup(body: unknown, code: string): Rsvp | null {
+  const value = body as { ok?: unknown; rsvp?: unknown } | null;
+  if (!value || value.ok !== true) return null;
+  const rsvp = toRsvp(value.rsvp);
+  return rsvp && rsvp.code === code ? rsvp : null;
+}
+
+/** Whichever reply was sent last. Ties, and times that can't be read, keep this device's copy. */
+export function latestReply(local: Rsvp | null, remote: Rsvp | null): Rsvp | null {
+  if (!remote) return local;
+  if (!local) return remote;
+  const remoteTime = Date.parse(remote.submitted_at);
+  const localTime = Date.parse(local.submitted_at);
+  return remoteTime > localTime ? remote : local;
+}
 
 /** The urlencoded body Apps Script reads as e.parameter. */
 export function toParams(rsvp: Rsvp): URLSearchParams {
@@ -99,19 +144,16 @@ export function contactProblem(contact: string): string | null {
   return looksLikeEmail || looksLikePhone ? null : 'That doesn’t look like an email or mobile number.';
 }
 
-/** "Dean", "Dean & Kelly", "Dean, Kelly & Sam". */
-export function joinNames(names: string[]): string {
-  if (names.length < 2) return names.join('');
-  return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
-}
+const isStop = (choice: BusChoice) => choice !== '' && choice !== 'none';
 
-/** One Guest's answer as a sentence: "Dean: coming, vegetarian, taking the bus." */
+/** One Guest's answer as a sentence: "Dean: coming, vegetarian, bus from Wollongong, bus home to Berry." */
 export function describeGuest(guest: GuestReply): string {
   if (guest.attending === 'no') return `${guest.name}: can’t make it.`;
   const parts = ['coming'];
   const dietary = guest.dietary.trim().replace(/[.\s]+$/, '');
   if (dietary) parts.push(dietary);
-  if (guest.bus === 'yes') parts.push('taking the bus');
-  if (guest.bus === 'no') parts.push('not taking the bus');
+  if (isStop(guest.busTo)) parts.push(`bus from ${guest.busTo}`);
+  if (isStop(guest.busFrom)) parts.push(`bus home to ${guest.busFrom}`);
+  if (!isStop(guest.busTo) && !isStop(guest.busFrom) && (guest.busTo === 'none' || guest.busFrom === 'none')) parts.push('no bus');
   return `${guest.name}: ${parts.join(', ')}.`;
 }

@@ -29,14 +29,14 @@ const venue = {
   appleMapsUrl: 'https://maps.apple.com/?daddr=4+O%27Keeffes+Lane,+Jaspers+Brush+NSW+2535',
   travel: [
     { name: 'Driving', note: 'About 45 minutes south of Wollongong, and there is plenty of parking on site.' },
-    { name: 'Bus', note: tbc('We’re organising a bus to and from the venue, with stops between Wollongong and Gerringong. Exact stops and times to come.') },
+    { name: 'Bus', note: tbc('We’re running a bus to and from the venue, stopping at Wollongong, Gerringong and Berry. Times to come.') },
     { name: 'Train', note: 'South Coast line to Berry station, then a ten-minute taxi.' },
   ],
 };
 
 const stay = [
   { name: 'In Berry village', note: 'Guesthouses and cottages a short drive from the venue. Berry weekends fill up, so book early.' },
-  { name: 'In Gerringong', note: 'By the sea, and the bus will stop there on the way home.' },
+  { name: 'In Gerringong', note: 'By the sea, with a bus stop there on the way to the venue and home again.' },
   { name: 'Around the countryside', note: 'Airbnbs across Jaspers Brush, Broughton Village and the surrounding hills.' },
   { name: 'Our recommendations', note: tbc('We’ll add specific places we love here.') },
 ];
@@ -51,10 +51,10 @@ const faqs = [
 
 const rsvp = {
   replyBy: '16 February 2027',
-  busHint: 'To and from the venue, stopping between Wollongong and Gerringong. Stops and times to come.',
+  busHint: 'Stopping at Wollongong, Gerringong and Berry. Times to come.',
   // Where guests can reach us if the form fails to send.
   email: 'patrickcorbett12@gmail.com',
-  phone: '0435597406',
+  phone: '0435 597 406',
 };
 
 const photos = {
@@ -80,7 +80,7 @@ const photos = {
   <body>
     <main class="info">
       <header class="info-header">
-        <a class="info-monogram" href={BASE} aria-label="Back to the garden">P<span>&</span>A</a>
+        <a class="info-monogram" href={BASE} aria-label="Back to the garden"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
         <span class="info-header-date">16 APRIL 2027</span>
         <a class="info-rsvp-link" href="#rsvp">RSVP</a>
       </header>
@@ -166,7 +166,7 @@ const photos = {
       </section>
 
       <footer class="info-footer">
-        <span class="info-monogram">P<span>&</span>A</span>
+        <span class="info-monogram"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></span>
         <p>Friday 16 April 2027 · {venue.name}, {venue.place}</p>
       </footer>
     </main>
@@ -200,8 +200,8 @@ const photos = {
 
   .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
     padding: 26px 48px; background: linear-gradient(#eeeee5 55%, #eeeee500); }
-  .info-monogram { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; letter-spacing: -.1em; }
-  .info-monogram span { font-style: italic; font-size: 20px; padding: 0 3px; }
+  .info-monogram { display: block; line-height: 0; }
+  .info-monogram img { display: block; width: auto; height: 34px; }
   .info-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
   .info .info-rsvp-link { font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--paper);
     background: var(--deep); border-radius: 999px; padding: 11px 19px 11px 21px; transition: background-color .3s; }
@@ -261,7 +261,8 @@ const photos = {
   .info-boat { color: var(--leaf); }
 
   .info-footer { text-align: center; padding: 30px 24px 55px; }
-  .info-footer .info-monogram { font-size: 24px; }
+  .info-footer .info-monogram { display: inline-block; }
+  .info-footer .info-monogram img { height: 28px; }
   .info-footer p { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
 
   /* Gentle rise-and-fade as sections enter the viewport; browsers without
@@ -297,6 +298,7 @@ const photos = {
 
   @media (max-width: 860px) {
     .info-header { padding: 22px 24px; }
+    .info-header .info-monogram img { height: 30px; }
     .info-header-date { display: none; }
     .info-hero { flex-direction: column; padding: 20px 28px 10px; text-align: center; }
     .info-date-row { flex-direction: column; gap: 10px; }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bankEdge, groundHeight, random, riverCenter } from './gardenGeometry.ts';
+import { bankEdge, groundHeight, random, riverCenter, voyageClearing, RIVER_REACH } from './gardenGeometry.ts';
 
 export type PlantKind = 'grass' | 'clover' | 'fern' | 'meadow' | 'reed' | 'cattail';
 export type PlantStyle = 'original' | 'varied';
@@ -106,16 +106,24 @@ export function plantGeometry(kind: PlantKind) {
   return geometry;
 }
 
+// The original planting covered 138 units of river; counts scale with the
+// Voyage's longer river to keep the same density.
+const PLANTED_LENGTH = RIVER_REACH.from - 1 - RIVER_REACH.to;
+// Beds past the original river, alternating banks down to the dock and beyond.
+const REED_BEDS_DOWNSTREAM = [-101, -119, -142, -158, -186, -210, -236].map((z, i) => ({ z, side: i % 2 ? -1 : 1 }));
+
 export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
   if (kind === 'reed' || kind === 'cattail') {
     const rand = random(kind === 'reed' ? 3107 : 4129);
     // Portrait's bend at the start (see gardenGeometry) brings the first bed
     // nearer the camera, running up onto the bank, and keeps it from reaching
-    // as far into the river. The second runs further towards the camera along
-    // the right bank so no water shows between it and the shore.
-    const patches = [mobile ? { z: 8.6, side: -1, reach: .6 } : { z: 7, side: -1 },
-      mobile ? { z: -3.9, side: 1, length: 5.2 } : { z: -5, side: 1 },
-      { z: -23, side: -1 }, { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 }]
+    // as far into the river. The first stops just upstream of Amelia's little
+    // jetty, so it doesn't hide it. The second runs further towards the camera
+    // along the right bank so no water shows between it and the shore.
+    const patches = [mobile ? { z: 9.4, side: -1, reach: .6 } : { z: 8.3, side: -1, length: 2.6 },
+      mobile ? { z: -3.9, side: 1, length: 5.2, reach: .6 } : { z: -5, side: 1 },
+      { z: -23, side: -1 }, { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 },
+      ...REED_BEDS_DOWNSTREAM]
       .map(patch => ({ length: 3.5, reach: 1, ...patch }));
     const reedColumns = 8, reedRows = mobile ? 8 : 12;
     const perPatch = kind === 'reed' ? reedColumns * reedRows : (mobile ? 4 : 6);
@@ -145,23 +153,27 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
   }
   if (kind === 'meadow') {
     const rand = random(2081);
-    const columns = mobile ? 100 : 200;
-    const rows = mobile ? 200 : 250;
+    // Portrait's narrow view never sees the meadow more than about 24 units
+    // inland before the fog closes in, so it plants only that far, at the
+    // same density.
+    const columns = mobile ? 62 : 200, reach = mobile ? .62 : 1;
+    const rows = Math.round((mobile ? 200 : 250) * PLANTED_LENGTH / 138);
     // Jitter a continuous carpet across the whole terrain, beyond the narrow
     // shoreline colonies. Both sides retain coverage at every depth.
     return Array.from({ length: columns * rows * 2 }, (_, i) => {
       const cell = Math.floor(i / 2);
       // Concentrate blades on the visible inner meadow, retaining coverage
       // beneath the outer trees. Roots remain clear of the water.
-      const lateral = (cell % columns + .1 + rand() * .8) / columns;
+      const lateral = (cell % columns + .1 + rand() * .8) / columns * reach;
       const inland = .5 + Math.pow(lateral, 1.6) * 52;
-      const z = 25 - (Math.floor(cell / columns) + .15 + rand() * .7) / rows * 138;
+      const z = 25 - (Math.floor(cell / columns) + .15 + rand() * .7) / rows * PLANTED_LENGTH;
       const x = riverCenter(z, width) + (i % 2 ? 1 : -1) * (bankEdge(z, width) + inland);
       return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
         scale: .65 + rand() * .65, tint: .8 + rand() * .3 };
-    }).filter(aboveWater);
+    }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2));
   }
-  const counts = mobile ? { grass: 1530, clover: 650, fern: 100 } : { grass: 3000, clover: 1250, fern: 220 };
+  const counts = Object.fromEntries(Object.entries(mobile ? { grass: 1530, clover: 650, fern: 100 } : { grass: 3000, clover: 1250, fern: 220 })
+    .map(([kind, count]) => [kind, Math.round(count * PLANTED_LENGTH / 138)])) as Record<'grass' | 'clover' | 'fern', number>;
   const salt = kind === 'grass' ? 731 : kind === 'clover' ? 937 : 1143;
   const rand = random(salt);
   return Array.from({ length: counts[kind] }, (_, i) => {
@@ -172,14 +184,14 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
     const pocket = random(cluster * 97 + salt);
     const distant = cluster % 3 === 0;
     const z = distant
-      ? -24 - pocket() * 84 + (rand() - .5) * 3
-      : 23 - Math.pow(pocket(), 1.5) * 111 + (rand() - .5) * 3;
+      ? -24 - pocket() * (PLANTED_LENGTH - 54) + (rand() - .5) * 3
+      : 23 - Math.pow(pocket(), 1.5) * (PLANTED_LENGTH - 27) + (rand() - .5) * 3;
     const side = cluster % 2 ? 1 : -1;
     const inland = .7 + pocket() * (distant ? 8 : kind === 'fern' ? 3.5 : 4.5) + rand() * .7;
     const x = riverCenter(z, width) + side * (bankEdge(z, width) + inland);
     return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
       scale: .65 + rand() * .6, tint: .85 + rand() * .25 };
-  }).filter(aboveWater);
+  }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2));
 }
 
 // The bank's height wobbles, so near the edge the waterline wanders inland.
