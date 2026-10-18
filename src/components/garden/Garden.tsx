@@ -13,6 +13,7 @@ import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
 import { DATE_LABEL_MODES, dateLabelMode, shownDate, type DateLabelMode } from './dateLabelMode';
+import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
 import './gardenScrollCue.css';
@@ -108,6 +109,8 @@ const REVIEW_SKY = 'pa_dev_sky';
 const REVIEW_WATER = 'pa_dev_water';
 // Dev only: the Review choice of date label (see dateLabelMode.ts), remembered across reloads.
 const REVIEW_DATE = 'pa_dev_date_label';
+// Dev only: the Review choice of how the copy is set over the scene (see textLook.ts), remembered across reloads.
+const REVIEW_TEXT = 'pa_dev_text';
 // Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
 const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
 
@@ -227,6 +230,9 @@ export default function Garden() {
   // Dev only: the Review panel's date label, month and year by default.
   const [dateMode, setDateMode] = useState<DateLabelMode>('full');
   useEffect(() => { if (REVIEW) setDateMode(dateLabelMode(localStorage.getItem(REVIEW_DATE))); }, []);
+  // Dev only: the Review panel's copy, in today's glow by default.
+  const [text, setText] = useState<TextLook>('glow');
+  useEffect(() => { if (REVIEW) setText(textLook(localStorage.getItem(REVIEW_TEXT))); }, []);
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   // The camera already eases between stops; native smooth scrolling would
@@ -253,7 +259,7 @@ export default function Garden() {
     return () => removeEventListener('keydown', onKey);
   }, []);
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
-  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
+  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-text={text === 'glow' ? undefined : text} data-golden={REVIEW && inkTurnsWhite(progress) ? '' : undefined} aria-busy={state === 'loading'}>
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
@@ -388,6 +394,15 @@ export default function Garden() {
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
       <button onClick={() => setSceneOnly(!sceneOnly)} aria-pressed={sceneOnly}>{sceneOnly ? 'Show invitation' : 'Scene only'}</button>
+      <label className="garden-material-selector garden-text-selector">Text
+        <select aria-label="Text over the scene" value={text} onChange={event => {
+          const look = textLook(event.target.value);
+          localStorage.setItem(REVIEW_TEXT, look);
+          setText(look);
+        }}>
+          {Object.entries(TEXT_LOOKS).map(([look, label]) => <option key={look} value={look}>{label}</option>)}
+        </select>
+      </label>
       <label className="garden-material-selector">Boats
         <select aria-label="Boats before they join" value={boatStyle.dinghy} onChange={event => {
           const look = boatLook(event.target.value, boatStyle.catamaran);
