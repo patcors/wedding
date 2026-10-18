@@ -40,8 +40,11 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // at it: in the open across from the headland that hides the old tree, and
 // passed before the dock comes into view. It would be in reach at the trip's
 // stop, just left of the far-off Hagia Sophia in the picture, so it waits
-// until the Hagia Sophia has sunk back into the haze, fully in as November
-// 2026 shows.
+// until the Hagia Sophia has sunk back into the haze. Bullet's rocket goes up
+// across the river as October 2026 shows, and "The next chapter" waits for
+// it, so the heart waits too, until it has flown and its trail has thinned,
+// and dissolves in as November 2026 shows, well before December's frame of
+// the two hearts.
 export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45 },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },
@@ -106,11 +109,15 @@ export function markerShown(z: number, cameraZ: number, mobile: boolean) {
   return Math.min(1, (reach - ahead) / MARKER_REACH.fade);
 }
 
-// How much of a year's marker shows at p: as markerShown, but no earlier than
-// its `from` month, dissolving in over the .35 of a share before it, as the
-// working lives' ornaments do.
-const ARRIVE = .35;
+// How much of something held back until a `from` month shows, at p: none
+// before it, dissolving in over the ARRIVE of a share after it (briefly, as
+// the hashed fade is grainy part way), so it is never part way in at
+// whatever plays out before it. Without a `from`, it isn't held back.
+export const ARRIVE = .15;
+export const heldBack = (from: string | undefined, p: number) =>
+  from ? Math.min(1, Math.max(0, (p - progressAt(from)) / (ARRIVE * ROOM))) : 1;
+// How much of a year's marker shows at p: as markerShown, but held back until
+// its `from` month shows.
 export function yearMarkerShown(marker: YearMarker, z: number, p: number, cameraZ: number, mobile: boolean) {
-  const arrived = marker.from ? Math.min(1, Math.max(0, (p - progressAt(marker.from)) / (ARRIVE * ROOM) + 1)) : 1;
-  return Math.min(arrived, markerShown(z, cameraZ, mobile));
+  return Math.min(heldBack(marker.from, p), markerShown(z, cameraZ, mobile));
 }
