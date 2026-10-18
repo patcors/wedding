@@ -2,7 +2,7 @@
 // compares visual variants; guests always get the defaults below. The page
 // renders on the server so the opening text is in the HTML before any script;
 // three.js arrives later in its own chunk, behind the cover.
-import { Component, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Component, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
@@ -11,9 +11,10 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
-import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Chapter, type Milestone } from './journey';
+import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, createPace, glidePlan, leashed } from './journeyPace';
-import { DATE_LABEL_MODES, dateLabelMode, shownDate, type DateLabelMode } from './dateLabelMode';
+import { DATE_LABEL_MODES, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
+import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
 import './gardenScrollCue.css';
@@ -173,6 +174,41 @@ function Crossfade({ value, className }: { value: string; className: string }) {
   return <span className={className}>{layers.map((text, i) => <span key={i} className={i === front ? 'is-shown' : ''}>{text}</span>)}</span>;
 }
 
+// Dev only (Review "Digits"): the date as DD-MM-YYYY, read from the eased
+// story time every frame. Each digit flips over on its own as it changes, like
+// an old flip clock's cards; the day, the month and the year each flip
+// together, no faster than their pace (FLIP_EVERY), so a fast scroll flicks
+// the days without strobing. Under reduced motion each still's date simply shows.
+type Clock = Flips & { was: string[]; flips: number[] };
+function DigitClock({ month, reduced }: { month: () => number; reduced: boolean }) {
+  const clock = useRef<Clock | null>(null);
+  clock.current ??= { ...startFlips(digitDate(month())), was: [], flips: [] };
+  const [, setShown] = useState('');
+  useEffect(() => {
+    let frame = 0;
+    const tick = (now: number) => {
+      const current = clock.current!, target = digitDate(month());
+      const next = reduced ? (target === current.shown ? current : startFlips(target)) : flipTowards(current, target, now);
+      if (next !== current) {
+        const flipped = (i: number) => next.shown[i] !== current.shown[i];
+        clock.current = { ...next, was: [...next.shown].map((_, i) => flipped(i) ? current.shown[i] : current.was[i]),
+          flips: [...next.shown].map((_, i) => (current.flips[i] ?? 0) + (flipped(i) ? 1 : 0)) };
+        setShown(next.shown);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [month, reduced]);
+  const { shown, was, flips } = clock.current;
+  return <span className="garden-voyage-digits">{[...shown].map((char, i) => char === '-'
+    ? <span key={i} className="garden-digit-dash">{char}</span>
+    : <span key={i} className="garden-digit" style={{ '--flip': `${FLIP_EVERY[i]}ms` } as CSSProperties}>
+      {!reduced && flips[i] > 0 && <span key={`was${flips[i]}`} className="is-out">{was[i]}</span>}
+      <span key={flips[i] ?? 0} className={!reduced && flips[i] > 0 ? 'is-in' : undefined}>{char}</span>
+    </span>)}</span>;
+}
+
 class CanvasFallback extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -193,10 +229,12 @@ const REVIEW_SKY = 'pa_dev_sky';
 const REVIEW_WATER = 'pa_dev_water';
 // Dev only: the Review choice of date label (see dateLabelMode.ts), remembered across reloads.
 const REVIEW_DATE = 'pa_dev_date_label';
+// Dev only: the Review choice of how the copy is set over the scene (see textLook.ts), remembered across reloads.
+const REVIEW_TEXT = 'pa_dev_text';
 // Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
 const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
 
-export default function Garden({ greeting }: { greeting?: string }) {
+export default function Garden() {
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
@@ -305,13 +343,17 @@ export default function Garden({ greeting }: { greeting?: string }) {
   // Dev only: the Review panel's date label, month and year by default.
   const [dateMode, setDateMode] = useState<DateLabelMode>('full');
   useEffect(() => { if (REVIEW) setDateMode(dateLabelMode(localStorage.getItem(REVIEW_DATE))); }, []);
+  // Dev only: the Review panel's copy, in today's glow by default.
+  const [text, setText] = useState<TextLook>('glow');
+  useEffect(() => { if (REVIEW) setText(textLook(localStorage.getItem(REVIEW_TEXT))); }, []);
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
+  const easedMonth = useCallback(() => storyMonth(voyage.pace.progress), [voyage.pace]);
   // The scene already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
   const goToProgress = voyage.go;
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
-  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
+  return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-text={text === 'glow' ? undefined : text} data-golden={REVIEW && inkTurnsWhite(progress) ? '' : undefined} aria-busy={state === 'loading'}>
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
@@ -331,7 +373,6 @@ export default function Garden({ greeting }: { greeting?: string }) {
     <div className="garden-chrome-layer">
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
         <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0, true)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
-        <span className="garden-header-date">16 APRIL 2027</span>
         <div className="garden-header-links">
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
           <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
@@ -341,10 +382,8 @@ export default function Garden({ greeting }: { greeting?: string }) {
 
     <div className="garden-panels garden-copy">
       <section className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
-        <p className="garden-eyebrow">{greeting ? `${greeting}, together with our favourite people` : 'Together with our favourite people'}</p>
         <h1><b className="garden-perch">P</b>atrick <span>&</span> <b className="garden-perch">A</b>melia</h1>
-        <p className="garden-subtitle">A new chapter, together.</p>
-        <div className="garden-date"><span>16 . 04 . 2027</span><i /><span>Jasper’s Berry</span></div>
+        <p className="garden-subtitle">the journey so far</p>
         {/* Out of flow, so neither link can move the text above. */}
         <div className="garden-arrival-actions">
           <a className={`garden-skip ${slow && state === 'loading' ? 'is-visible' : ''}`} href={`${BASE}details/`}>Skip to the details <span aria-hidden="true">→</span></a>
@@ -357,8 +396,10 @@ export default function Garden({ greeting }: { greeting?: string }) {
       <section className={`garden-panel garden-voyage ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
         <h2 className="garden-visually-hidden">Our story</h2>
         <p className="garden-voyage-date" aria-hidden="true" data-mode={dateMode === 'full' ? undefined : dateMode}>
-          {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
-          <Crossfade className="garden-voyage-year" value={year} />
+          {dateMode === 'digits' ? <DigitClock month={easedMonth} reduced={reduced} /> : <>
+            {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
+            <Crossfade className="garden-voyage-year" value={year} />
+          </>}
         </p>
         {/* Glides on to the dock at an easy pace; while it does, it pauses the glide. */}
         <button className="garden-text-link garden-glide" onClick={voyage.glide}>
@@ -452,6 +493,15 @@ export default function Garden({ greeting }: { greeting?: string }) {
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
       <button onClick={() => setSceneOnly(!sceneOnly)} aria-pressed={sceneOnly}>{sceneOnly ? 'Show invitation' : 'Scene only'}</button>
+      <label className="garden-material-selector garden-text-selector">Text
+        <select aria-label="Text over the scene" value={text} onChange={event => {
+          const look = textLook(event.target.value);
+          localStorage.setItem(REVIEW_TEXT, look);
+          setText(look);
+        }}>
+          {Object.entries(TEXT_LOOKS).map(([look, label]) => <option key={look} value={look}>{label}</option>)}
+        </select>
+      </label>
       <label className="garden-material-selector">Boats
         <select aria-label="Boats before they join" value={boatStyle.dinghy} onChange={event => {
           const look = boatLook(event.target.value, boatStyle.catamaran);
