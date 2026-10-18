@@ -43,10 +43,11 @@ export const catamaran = (j: number) => ({
 // The last plank is down a little before they get engaged. Then, as April
 // 2026 shows, the two masts give way to one: each boat furls its sail and
 // strikes its flag, and its mast is lowered aft along its hull; one tall mast
-// rises from the middle of the deck while the date holds, its plain sail
-// unfurls, and their monogram's flag is run up to its masthead. Each step
-// runs over these spans of scroll since the date first shows, in milestone
-// shares, and all is done before July 2026's balloon and the bend.
+// rises from the middle of the deck while the date holds, its sail, striped
+// in both their colours, unfurls, and their monogram's flag is run up to its
+// masthead. Each step runs over these spans of scroll since the date first
+// shows, in milestone shares, and all is done before July 2026's balloon
+// and the bend.
 export const RIG_CHANGE = { furl: [-.3, -.1], lower: [-.2, .04], raise: [.04, .34], unfurl: [.3, .58], hoist: [.5, .8] } as const;
 export type Rigging = Record<keyof typeof RIG_CHANGE, number>;
 // A reduced-motion still shows the rig settled: the two masts before the

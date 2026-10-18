@@ -161,11 +161,21 @@ export function dinghySailCloth(look: DinghyLook, owner: Owner, sail: 'main' | '
   }
 }
 
-// The catamaran's mainsail or jib for a cruiser look: a coloured leech and
-// foot, and on the main a pale panel, numbered on 'numbered'. `aspect` is
-// the sail's height over its foot, so the numbers aren't stretched.
+// The original catamaran's one main is the toy sloops' white cloth, each of
+// their two stripes now a band of Amelia's teal under one of Patrick's
+// yellow, their colours joined. Lower and finer than the sloops', as the
+// sail is so much larger.
+export const JOINED_STRIPES = [[.12, .2, 'amelia'], [.2, .28, 'patrick'], [.44, .5, 'amelia'], [.5, .56, 'patrick']] as const;
+
+// The catamaran's mainsail or jib: the original's joined stripes (it has no
+// jib), or for a cruiser look a coloured leech and foot, and on the main a
+// pale panel, numbered on 'numbered'. `aspect` is the sail's height over
+// its foot, so the numbers aren't stretched.
 export function catamaranSailCloth(look: CatamaranLook, sail: 'main' | 'jib', aspect = 1) {
-  if (look === 'original') return null;
+  if (look === 'original') return sail === 'jib' ? null : cloth(256, (ctx, s) => {
+    band(ctx, s, 0, 1, '#f6f1e4');
+    for (const [from, to, owner] of JOINED_STRIPES) band(ctx, s, from, to, ACCENT[owner].paint);
+  });
   const warm = look === 'warm';
   const ground = warm ? '#f6efdd' : '#f7f5f0', edge = warm ? '#66715e' : '#2f4a6b', panel = warm ? '#dfe1d3' : '#b9cadb';
   return cloth(512, (ctx, s) => {

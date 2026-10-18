@@ -304,7 +304,7 @@ export function bigRig(look: CatamaranLook = 'original') {
   const { top, boom, foot } = BIG_RIG;
   const cruiser = look !== 'original', head = cruiser ? 1.84 : BIG_RIG.head;
   const tint = look === 'cruiser' || look === 'numbered' ? '#d3d6d6' : '#d8b47d';
-  // Plain ivory, or the cruiser's cloth: their monogram flies from the masthead instead (logoFlag).
+  // The toy sloops' white cloth in both their stripes, or the cruiser's: their monogram flies from the masthead instead (logoFlag).
   const map = catamaranSailCloth(look, 'main', (head - boom) / (foot - .035));
   const cloth = sail([0, head, .035], [0, boom, .035], [0, boom, foot], .07, map ? '#ffffff' : '#fff6df');
   const extras = cruiser ? {
