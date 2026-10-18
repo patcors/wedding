@@ -80,7 +80,7 @@ test('inside a year, clustered milestones still get time for their dates to be r
   assert.ok(share(at('meet')) > 1.2 && share(at('dating')) > 1.1);
   assert.equal(dateLabel(progressAt(DATES.dating) + .4 * ROOM), 'August 2024');
   // 2024's three dates each show for a while, though the year is no longer
-  // than any other, and July, when Patrick's bird flies home, for a moment.
+  // than any other, and July, between June and August, for a moment.
   const shows = month => (progressAt(monthIndex(month) + 1) - progressAt(month)) / ROOM;
   for (const month of ['2024-05', '2024-06', '2024-08']) assert.ok(shows(month) > .42, `${month} shows for ${shows(month)}`);
   assert.ok(shows('2024-07') > .15);

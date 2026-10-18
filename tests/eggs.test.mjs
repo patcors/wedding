@@ -252,6 +252,35 @@ test('the birds tell the apartments: one each, his at hers while he renovates, h
   }
 });
 
+test('Patrick\'s bird flies home as August 2024 shows, clear of the dating butterflies', async () => {
+  const { DATES, dateLabel, routeAt } = await import('../src/components/garden/journey.ts');
+  const { boatPose } = await import('../src/components/garden/storyBoats.ts');
+  const { FLYERS, flightPoint, flying } = await import('../src/components/garden/eggs/datingFlight.ts');
+  const { NEST_EVENTS, PATRICK_HOME, nestSpots, nestTriggers } = await import('../src/components/garden/eggs/nesting.ts');
+  assert.equal(PATRICK_HOME, '2024-08');
+  assert.equal(PATRICK_HOME, DATES.dating);
+  const home = NEST_EVENTS.findIndex(e => e.month === PATRICK_HOME && e.moves?.patrick);
+  const rise = NEST_EVENTS.findIndex(e => e.pair === 1 && e.build);
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const triggers = nestTriggers(width), houses = Object.values(nestSpots(width)[0]);
+    assert.equal(dateLabel(triggers[home]), 'August 2024');
+    // The first pair is still ahead of the boats as his bird flies home.
+    for (const house of houses) assert.ok(house.z < routeAt(triggers[home]) - 2);
+    // The butterflies come out of the trees on the other bank meanwhile, and
+    // are nowhere near his flight while the guest might scroll on through it.
+    for (let p = triggers[home]; p <= triggers[home] + .1 * ROOM; p += .01 * ROOM) {
+      const t = (p - progressAt(DATES.dating)) / ROOM, pose = boatPose(p, width);
+      for (const flyer of FLYERS.filter(f => flying(f, t))) for (let s = 0; s < 30; s += .5) {
+        const [lx, , lz] = flightPoint(flyer, s, t);
+        const x = pose.x + Math.cos(pose.yaw) * lx + Math.sin(pose.yaw) * lz, z = pose.z - Math.sin(pose.yaw) * lx + Math.cos(pose.yaw) * lz;
+        for (const house of houses) assert.ok(Math.hypot(x - house.x, z - house.z) > 4, `${flyer.colour} by the houses at ${t}`);
+      }
+    }
+    // The second pair rises only once they are all round the boats.
+    assert.ok(triggers[rise] >= progressAt(DATES.dating) + Math.max(...FLYERS.map(f => f.arrive[1])) * ROOM);
+  }
+});
+
 const snowAgain = MILESTONES.find(m => m.egg === 'snow-2025');
 
 test('the 2025 snowmen stand on the bank holding hands, in view as their date holds, clear of the birdhouses', async () => {
@@ -281,3 +310,4 @@ test('the 2025 snowmen stand on the bank holding hands, in view as their date ho
   }
   assert.ok(holdingHandsGeometry({ scarf: '#4d827f' }, { scarf: '#e3c46a' }).attributes.position.count / 3 < 1600, 'two simple snowmen');
 });
+
