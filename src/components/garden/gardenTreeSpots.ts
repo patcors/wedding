@@ -3,7 +3,7 @@
 // and the old tree itself. Drawn by GardenTrees.tsx; pure, so scenery can
 // find a real tree (the university years' carvings, uniOrnaments.ts, and the
 // circus hung from branches, eggs/circusRigs.ts) and be tested.
-import { riverCenter, bankEdge, bendShift, groundHeight, random, sydneyWiden, voyageClearing, voyageLandmarks, islandHalfWidth, VOYAGE, RIVER_REACH } from './gardenGeometry.ts';
+import { riverCenter, bankEdge, bendShift, groundHeight, lawnSpot, random, sydneyWiden, voyageClearing, voyageLandmarks, islandHalfWidth, VOYAGE, RIVER_REACH } from './gardenGeometry.ts';
 import { islandHeight } from './voyageIsland.ts';
 
 // The old tree's scale: on a phone's narrow river it stands a little smaller.
@@ -87,10 +87,12 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
     const x = riverCenter(z, width) + across * islandHalfWidth(z, width);
     shrubs.push({ x, y: islandHeight(x, z, width), z, scale: scale * (mobile ? .75 : 1), rotation: z * 2.1, type: 5, distant: true });
   }
-  // Keep every tree out from under the old tree's crown and off the jetty.
+  // Keep every tree out from under the old tree's crown, off the jetty and
+  // out of the Hagia Sophia's field far off past the bend.
   const { tree } = voyageLandmarks(width);
   const spread = OLD_TREE_SPREAD * (mobile ? OLD_TREE_SCALE.mobile : OLD_TREE_SCALE.desktop);
-  const clear = (p: Placement) => Math.hypot(p.x - tree.x, p.z - tree.z) > spread && !voyageClearing(p.x, p.z, width, 1.5);
+  const lawn = lawnSpot(width);
+  const clear = (p: Placement) => Math.hypot(p.x - tree.x, p.z - tree.z) > spread && Math.hypot(p.x - lawn.x, p.z - lawn.z) > lawn.field && !voyageClearing(p.x, p.z, width, 1.5);
   return [...avenue, ...groves, ...headland, ...shrubs].filter(clear);
 }
 

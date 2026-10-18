@@ -44,9 +44,10 @@ const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 
 // on it and the Harbour Bridge across Amelia's channel from it to her bank, at
 // `bridge` (see eggs/harbour.ts). The S-bend swings the river
 // sideways by `swing` just before the wedding; the jetty and the old tree stand
-// on the `side` bank (+1 is +x) past it, where the boats dock. A level lawn
-// is cut into the left bank at the start of the bend, for July 2026's
-// miniature Hagia Sophia (see lawnSpot).
+// on the `side` bank (+1 is +x) past it, where the boats dock. Far off past
+// the bend, where the river runs straight again, a level lawn lies in an
+// open field back from the left bank, for July 2026's Hagia Sophia (see
+// lawnSpot).
 const MEET_Z = routeAtMonth(DATES.meet);
 export const VOYAGE = {
   island: { from: 10, mobileFrom: 7.2, to: MEET_Z + 3, halfWidth: 1.5 },
@@ -56,7 +57,7 @@ export const VOYAGE = {
   bend: { from: -135, to: -164, swing: -12 },
   dock: { z: ROUTE.dock, side: 1, jetty: 2.4 },
   tree: { z: ROUTE.dock - 3.5, inland: 3.5 },
-  lawn: { z: -143, side: -1, inland: 2.35, mobileInland: 1.3, radius: 2, mobileRadius: 1.4, ease: 1 },
+  lawn: { z: -202, side: -1, inland: 10, mobileInland: 7.5, radius: 7.1, mobileRadius: 5, ease: 1, field: 15, mobileField: 12 },
 } as const;
 // Everything planted along the river, from just behind the opening view to
 // past the dock, beyond where the camera can see.
@@ -160,8 +161,8 @@ export function launchJetties(width = 1) {
 }
 
 // Ground kept clear of generated planting: the old tree's trunk and roots,
-// the level lawn, and the jetties with their landings on the bank. `margin` widens each, for
-// plants and trees with a spread.
+// the level lawn far off past the bend, and the jetties with their landings
+// on the bank. `margin` widens each, for plants and trees with a spread.
 export function voyageClearing(x: number, z: number, width = 1, margin = 0) {
   const { jetty, tree } = voyageLandmarks(width);
   if (Math.hypot(x - tree.x, z - tree.z) < 2.2 + margin) return true;
@@ -205,13 +206,15 @@ export function groundHeight(x: number, z: number, width = 1) {
   return onLawn(x, z, width, inland, ground);
 }
 
-// The level lawn (`VOYAGE.lawn`): its middle, how far round it is level, and
-// its height, the bank's rise there without the wobble, so it is cut into the
-// slope behind and made up in front.
+// The level lawn (`VOYAGE.lawn`): its middle, how far round it is level, how
+// far round it the field is open (trees keep off it, so none stands in front
+// of the Hagia Sophia), and its height, the bank's level top without the
+// wobble. It lies `inland` from the water, far enough that it is level
+// beyond the bank's rise (2.4), which it leaves as it was.
 export function lawnSpot(width = 1) {
-  const { z, side, inland: desktop, mobileInland, radius, mobileRadius } = VOYAGE.lawn;
+  const { z, side, inland: desktop, mobileInland, radius, mobileRadius, field, mobileField } = VOYAGE.lawn;
   const inland = width < 1 ? mobileInland : desktop;
-  return { x: riverCenter(z, width) + side * (bankEdge(z, width) + inland), z, radius: width < 1 ? mobileRadius : radius, height: bankRise(inland) };
+  return { x: riverCenter(z, width) + side * (bankEdge(z, width) + inland), z, radius: width < 1 ? mobileRadius : radius, field: width < 1 ? mobileField : field, height: bankRise(inland) };
 }
 // The ground eases from the bank's into the lawn's level over `ease` round
 // it, but not at the water's edge, which keeps its shore.

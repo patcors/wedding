@@ -1,4 +1,4 @@
-// July 2026's Hagia Sophia as a miniature for the garden (see balloonCourse.ts):
+// July 2026's Hagia Sophia, a model for the far distance (see balloonCourse.ts):
 // a low stone terrace, the warm terracotta-plastered body and the square
 // tower over its crossing, buttressed at the corners, a drum ringed with
 // dark windows under the great lead dome, a semi-dome stepping down either
@@ -14,7 +14,7 @@ const STONE = '#cbbda3', STONE_DARK = '#9d927e', PLASTER = '#c98b69', PLASTER_LI
 const LEAD = '#8b9399', WINDOW = '#4a3b33', MINARET = '#e6d8bf', GOLD = '#c9a24a';
 // Heights: the terrace's top, the body's, the crossing tower's, and the
 // drum's. The terrace runs down to `sunk` below its foot, so no gap shows
-// under it where the lawn it stands on eases back into the bank.
+// under it should the ground it stands on dip a little.
 const PLINTH = .1, BODY = .35, TOWER = .48, DRUM = .53;
 export const HAGIA_SOPHIA = { width: 1.15, depth: .82, height: .93, sunk: .12 } as const;
 

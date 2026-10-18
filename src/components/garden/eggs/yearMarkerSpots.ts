@@ -28,11 +28,11 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // 2022's pile stands mid-river between the boats while they are apart.
 // January 2027 turns round the S-bend, so the wedding's heart stands on the
 // outside of its second curve, the left bank, where the river runs straight
-// at it: in the open across from the headland that hides the old tree, well
-// past the Hagia Sophia and passed before the dock comes into view. It would
-// be in reach at the trip's stop, just behind the Hagia Sophia in the picture,
-// so it waits until the Hagia Sophia has left the picture, fully in as
-// November 2026 shows.
+// at it: in the open across from the headland that hides the old tree, and
+// passed before the dock comes into view. It would be in reach at the trip's
+// stop, just left of the far-off Hagia Sophia in the picture, so it waits
+// until the Hagia Sophia has sunk back into the haze, fully in as November
+// 2026 shows.
 export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45 },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },
