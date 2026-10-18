@@ -1,6 +1,6 @@
 // The university years: a Möbius strip in weathered bronze on a stone plinth,
-// a companion to July 2017's π, standing on its lawn a little upstream of it
-// (placed in uniOrnaments.ts, built in mobiusGeometry.ts).
+// a companion to July 2017's π, standing on Amelia's bank across the river
+// from it (placed in uniOrnaments.ts, built in mobiusGeometry.ts).
 // Still scenery, dissolving in out of the haze like the year markers and gone
 // once the camera has passed. One draw call; it casts a shadow, as the π does.
 import { useEffect, useMemo, useRef } from 'react';

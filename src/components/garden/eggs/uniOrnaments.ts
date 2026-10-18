@@ -1,44 +1,38 @@
 // The university years, July 2017 to August 2020, a double major in
-// statistics and mathematics at UOW: still garden ornaments on the banks, seen in passing as the
-// boats go by. A Möbius strip in bronze beside July 2017's π; a park picnic
-// table across the river from them with Euler's identity carved into its
-// top; and two old trunks across the river from each other, one carved with
-// distribution curves and the other with the quadratic formula. Where each
-// stands; drawn by MobiusSculpture.tsx, PicnicTable.tsx and CarvedTrunks.tsx.
+// statistics and mathematics at UOW: still garden ornaments on the banks, seen
+// in passing as the boats go by. A Möbius strip in bronze across the river
+// from July 2017's π; a plain wooden park bench back among the trees on the
+// π's bank; and two of the riverside trees, one on each bank, with
+// distribution curves and the quadratic formula carved into their bark. Where
+// each is; drawn by MobiusSculpture.tsx, ParkBench.tsx and BarkCarvings.tsx.
 // Pure, so it can be tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
+import { TREE_SINK, treePlacements } from '../gardenTreeSpots.ts';
 import { progressAt, routeAtMonth } from '../journey.ts';
+import { markerShown } from './yearMarkerSpots.ts';
 
 // Each stands `ahead` units past where the boats are as its month shows, on
 // its `side`'s bank (−1 is Amelia's, −x; 1 Patrick's), `inland` of the
 // water's edge (a phone's narrower river brings it nearer). It turns to face
-// the camera as `facing` shows, when it is best seen, so its carving reads
-// then, and `turn` radians further round towards the river. Larger than life.
+// the camera as `facing` shows, when it is best seen, and `turn` radians
+// further round towards the river. Larger than life.
 // A phone sees only about 17° either side of the middle, so everything on a
-// bank lines up along it, and July 2017's ducks, the π and 2019's buoy leave
-// little room on Patrick's: each keeps out of their way in the picture as
-// well as on the ground.
-// - The Möbius stands on the π's lawn, upstream of it and further from the
-//   water, so it is the nearer of the two and always just outside it in the
-//   picture: a pair of bronzes from the meeting until the first coast trip.
-// - The table stands across the river from them at the water's edge, in view
-//   from the meeting, and passed before 2018's rock is reached.
-// - The trunks stand past 2019's buoy on Patrick's bank, and across from it
-//   a little upstream on Amelia's, turned a touch towards each other, seen
-//   from the internship until the snow trip. Amelia's stands far enough past
-//   2018's candlestick posts on her bank (careerSpots.ts), and on a phone
-//   close enough to the water, to show clear of their row, and short of the
-//   2019 snowman (flurry.ts) and 2020's boathouse further down it.
+// bank lines up along it, and July 2017's ducks (on Amelia's bank on desktop,
+// Patrick's in portrait), the π and 2018's rock leave little room: each keeps
+// out of their way in the picture as well as on the ground.
+// - The Möbius stands on Amelia's bank across the river from the π, a little
+//   upstream of it and short of 2018's rock, so the two bronzes face each
+//   other over the water from the meeting until the first coast trip.
+// - The bench stands back among the trees on the π's bank, upstream of it and
+//   further from the water, turned to look out over the river.
 export type Ornament = {
   side: -1 | 1; month: string; ahead: number; facing: string; turn?: number;
   inland: { desktop: number; mobile: number }; scale: { desktop: number; mobile: number };
 };
 export const ORNAMENTS = {
-  mobius: { side: 1, month: '2017-07', ahead: 13.4, facing: '2017-09', inland: { desktop: 2.8, mobile: 1.7 }, scale: { desktop: 1.2, mobile: 1.15 } },
-  table: { side: -1, month: '2017-07', ahead: 14, facing: '2017-08', inland: { desktop: 1, mobile: 0 }, scale: { desktop: 1.55, mobile: 1.75 } },
-  statsTrunk: { side: -1, month: '2019-03', ahead: 5.5, facing: '2018-12', turn: .15, inland: { desktop: .6, mobile: .1 }, scale: { desktop: 1.35, mobile: 1.6 } },
-  algebraTrunk: { side: 1, month: '2019-03', ahead: 7, facing: '2018-12', turn: .15, inland: { desktop: 3, mobile: 1.2 }, scale: { desktop: 1.35, mobile: 1.6 } },
+  mobius: { side: -1, month: '2017-07', ahead: 15.2, facing: '2017-09', inland: { desktop: .9, mobile: .2 }, scale: { desktop: 1.2, mobile: 1.15 } },
+  bench: { side: 1, month: '2017-07', ahead: 13.6, facing: '2017-09', turn: .5, inland: { desktop: 4.3, mobile: 1.2 }, scale: { desktop: 1.3, mobile: 1.4 } },
 } as const satisfies Record<string, Ornament>;
 export type OrnamentId = keyof typeof ORNAMENTS;
 
@@ -55,3 +49,49 @@ export function ornamentSpot(ornament: Ornament, width: number, footprint = .5):
   const [cx, , cz] = cameraPose(progressAt(ornament.facing), width).position;
   return { x, y, z, yaw: Math.atan2(cx - x, cz - z) - ornament.side * (ornament.turn ?? 0), scale };
 }
+
+// The carvings are cut into the bark of real trees from gardenTreeSpots.ts,
+// small, like initials cut into a trunk: statistics on Amelia's bank and
+// algebra on Patrick's, seen from the internship into 2019. Each is on the
+// riverside tree on its `side` nearest `z` (trees stand where they stand,
+// whatever the story's timing), on the face of the trunk turned to the
+// camera as `facing` shows. `arc` is how far round the trunk it reaches
+// either side of that, in radians, and it runs `from` and `to` heights up
+// the trunk, in the tree's own units.
+// - Amelia's tree stands a little past her candlestick posts, and its
+//   carving is high on the trunk, so it shows above the row's river end at
+//   the internship and clear of it through 2019, upstream of the 2019
+//   snowman and clear of it once its flurry has gone.
+// - Patrick's stands a little past 2019's buoy, well above it in the picture.
+// A phone's narrower river moves the trees, and its narrow lens sees a
+// riverside trunk only from well up the river, so there each is on the
+// avenue's nearest tree on its bank, seen small through 2018.
+export type BarkCarving = { side: -1 | 1; z: { desktop: number; mobile: number }; facing: string; arc: number; from: number; to: number };
+export const CARVINGS = {
+  stats: { side: -1, z: { desktop: -45, mobile: -37 }, facing: '2019-05', arc: .7, from: .98, to: 1.54 },
+  algebra: { side: 1, z: { desktop: -45.6, mobile: -43 }, facing: '2019-03', arc: 1, from: .4, to: .92 },
+} as const satisfies Record<string, BarkCarving>;
+export type CarvingId = keyof typeof CARVINGS;
+// Trees within this of the water: the avenue and the groves' inner row.
+const RIVERSIDE = 7;
+
+export type CarvedTree = { x: number; y: number; z: number; rotation: number; scale: number; type: number };
+// The tree a carving is cut into, as GardenTrees places it (its foot TREE_SINK under the ground).
+export function carvedTree(carving: BarkCarving, width: number): CarvedTree {
+  const mobile = width < 1, z = mobile ? carving.z.mobile : carving.z.desktop;
+  const riverside = treePlacements(width, mobile).filter(tree => tree.y === undefined && tree.type < 4
+    && Math.sign(tree.x - riverCenter(tree.z, width)) === carving.side
+    && Math.abs(tree.x - riverCenter(tree.z, width)) - bankEdge(tree.z, width) < RIVERSIDE);
+  const tree = riverside.reduce((best, tree) => Math.abs(tree.z - z) < Math.abs(best.z - z) ? tree : best);
+  return { x: tree.x, y: groundHeight(tree.x, tree.z, width) - TREE_SINK, z: tree.z, rotation: tree.rotation, scale: tree.scale, type: tree.type };
+}
+// Where the camera is as the carving's month shows: its face turns to it.
+export const carvingFaces = (carving: BarkCarving, width: number) => {
+  const [x, , z] = cameraPose(progressAt(carving.facing), width).position;
+  return { x, z };
+};
+// How much of a carving shows with the camera at cameraZ: as the year
+// markers, but from desktop's reach on a phone too, as a phone sees its tree
+// only from that far. The tree is always there, so nothing appears from
+// nowhere.
+export const carvingShown = (tree: CarvedTree, cameraZ: number) => markerShown(tree.z, cameraZ, false);

@@ -13,7 +13,8 @@ export type Carver = { colour: CanvasRenderingContext2D; depth: CanvasRenderingC
 
 // A colour canvas and its depth map, as textures. `paint` draws the whole
 // surface, carvings and all, and is run again once Cormorant has loaded, so
-// lettering is never left in the fallback serif.
+// lettering is never left in the fallback serif. What it leaves unpainted is
+// clear.
 export function carvedTextures(width: number, height: number, paint: (carver: Carver) => void) {
   const make = () => Object.assign(document.createElement('canvas'), { width, height });
   const colour = make(), depth = make();
@@ -22,6 +23,7 @@ export function carvedTextures(width: number, height: number, paint: (carver: Ca
   map.anisotropy = bumpMap.anisotropy = 8;
   const draw = () => {
     const carver = { colour: colour.getContext('2d')!, depth: depth.getContext('2d')! };
+    carver.colour.clearRect(0, 0, width, height);
     carver.depth.fillStyle = '#fff';
     carver.depth.fillRect(0, 0, width, height);
     paint(carver);
