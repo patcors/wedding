@@ -74,10 +74,11 @@ export default function Birdhouses({ paused, reduced, width }: EggProps) {
       }
       return on;
     });
-    // The scaffolding goes up after Patrick's bird has flown over, and comes
-    // down as it flies home.
-    const last = scaffolds.findLast(i => since.current[i] !== null);
-    const up = last === undefined ? 0 : NEST_EVENTS[last].scaffold ? smooth(since.current[last]! / NESTS.scaffold) : 1 - smooth(since.current[last]! / NESTS.scaffold);
+    // The scaffolding springs up with Patrick's house, and comes down as his
+    // bird flies home.
+    const last = scaffolds.findLast(i => since.current[i] !== null), s = last === undefined ? 0 : since.current[last]!;
+    const up = last === undefined ? 0 : NEST_EVENTS[last].build ? springUp(s / NESTS.rise)
+      : NEST_EVENTS[last].scaffold ? smooth(s / NESTS.scaffold) : 1 - smooth(s / NESTS.scaffold);
     scaffold.current.visible = shown[0] && up > 0;
     scaffold.current.scale.set(spots[0].patrick.scale, spots[0].patrick.scale * up, spots[0].patrick.scale);
     birds.current.visible = shown.some(Boolean);
