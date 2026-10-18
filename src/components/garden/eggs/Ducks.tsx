@@ -5,24 +5,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { rubberDuck } from '../rubberDuckGeometry';
+import { simplifiedRubberDuck } from '../rubberDuckGeometry';
 import { useJourney } from '../JourneyProvider';
 import { DUCKS, duckLaunchSpot, duckOnWater } from './campus';
 import { eggTime, type EggProps } from './egg';
 
-// The guests' rubber duck, simplified: these are small and a little way off,
-// so a tenth of its faces is plenty.
-function smallDuck() {
-  const { geometry, creases } = rubberDuck();
-  creases.dispose();
-  const merged = mergeVertices(geometry, 1e-4);
-  geometry.dispose();
-  const simple = new SimplifyModifier().modify(merged, Math.floor(merged.attributes.position.count * .9));
-  merged.dispose();
-  return simple;
-}
 const RING = { seconds: 1.2, size: .7 };
 
 export default function Ducks({ milestone, paused, reduced, mobile, width }: EggProps) {
@@ -32,7 +19,8 @@ export default function Ducks({ milestone, paused, reduced, mobile, width }: Egg
   const rings = useRef<THREE.InstancedMesh>(null);
   const count = DUCKS.launches.length;
   const parts = useMemo(() => ({
-    duck: smallDuck(),
+    // Small and a little way off, so a tenth of its faces is plenty.
+    duck: simplifiedRubberDuck(.1),
     ring: new THREE.RingGeometry(.8, 1, 24).rotateX(-Math.PI / 2),
     plastic: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .45 }),
     // Rings add a little light to the water, so each fades on its own by
