@@ -25,7 +25,7 @@ export const parties: Party[] = [
   { code: "tesla", greeting: "Ian", guests: ["Ian"] },
   { code: "pika", greeting: "Sam & Sarah", guests: ["Sam", "Sarah"] },
   { code: "z1263gy", greeting: "Jarrod", guests: ["Jarrod"] },
-  { code: "footy", greeting: "Jono & Niahm", guests: ["Jono", "Niahm"] },
+  { code: "footy", greeting: "Jono & Niamh", guests: ["Jono", "Niamh"] },
   { code: "safari", greeting: "Jules & Mikayla", guests: ["Jules", "Mikayla"] },
   { code: "numpy", greeting: "Daniel & Danika", guests: ["Daniel", "Danika"] },
   { code: "magic", greeting: "Josh & Annabelle", guests: ["Josh", "Annabelle"] },
