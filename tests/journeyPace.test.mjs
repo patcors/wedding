@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DATES, MILESTONES, ROOM, STOPS, YEAR, progressAt } from '../src/components/garden/journey.ts';
-import { GLIDE, MAX_SPEED, PACE, advancePace, createPace, glideAt, glidePlan, leashed, paceToward } from '../src/components/garden/journeyPace.ts';
+import { DATES, ROOM, STOPS, YEAR, progressAt } from '../src/components/garden/journey.ts';
+import { GLIDE, GLIDE_STOPS, MAX_SPEED, PACE, advancePace, createPace, glideAt, glidePlan, leashed, paceToward } from '../src/components/garden/journeyPace.ts';
 import { SALSA } from '../src/components/garden/storyBoats.ts';
 import { PROPOSAL } from '../src/components/garden/eggs/proposal.ts';
 import { CAPS } from '../src/components/garden/eggs/capToss.ts';
@@ -58,9 +58,14 @@ function glide(from) {
   return { plan, frames };
 }
 
-test('the glide stops at each milestone and the celebration in turn, never faster than a guest may scroll', () => {
+test('the glide stops at each milestone, the rocket and the celebration in turn, never faster than a guest may scroll', () => {
   const { plan, frames } = glide(STOPS[1]);
-  assert.deepEqual(plan.legs.map(leg => leg.to), STOPS.slice(2));
+  assert.deepEqual(plan.legs.map(leg => leg.to), GLIDE_STOPS.slice(1).map(stop => stop.p));
+  // Every milestone's stop, and one more between the trip and the wedding, where the rocket goes up.
+  assert.deepEqual(GLIDE_STOPS.map(stop => stop.p).filter(p => STOPS.includes(p)), STOPS.slice(1));
+  const rocket = GLIDE_STOPS.findIndex(stop => stop.id === 'rocket');
+  assert.equal(GLIDE_STOPS[rocket - 1].id, 'turkey-greece');
+  assert.equal(GLIDE_STOPS[rocket + 1].id, 'celebration');
   assert.equal(frames.at(-1).p, 1);
   for (let i = 1; i < frames.length; i++) {
     const v = (frames[i].p - frames[i - 1].p) / FRAME;
@@ -83,14 +88,14 @@ test('the glide stops at each milestone and the celebration in turn, never faste
 test('the glide holds long enough at a milestone for what plays out there', () => {
   const { plan, frames } = glide(STOPS[1]);
   const held = (start, id) => {
-    const leg = plan.legs.find(leg => leg.to === STOPS[MILESTONES.findIndex(m => m.id === id) + 1]);
+    const leg = plan.legs.find(leg => leg.to === GLIDE_STOPS.find(stop => stop.id === id).p);
     const reached = frames.find(frame => frame.p >= start).t;
     return leg.start + leg.travel + leg.hold - reached;
   };
   const scenes = [
     ['graduation', progressAt('2020-08') + Math.max(...CAPS.tosses.map(toss => toss.at)) * ROOM, CAPS.flight],
     ['apartments', progressAt('2024-05') + NEST_EVENTS[1].at * ROOM, NESTS.flight],
-    ['snow-2025', launchProgress(), ROCKET.ignite + ROCKET.flight],
+    ['rocket', launchProgress(), ROCKET.ignite + ROCKET.flight],
     ['salsa', progressAt('2026-01') + SALSA.cue * ROOM, SALSA.seconds],
     ['engaged', progressAt(DATES.engaged) + PROPOSAL.kneel.cue * ROOM, PROPOSAL.kneel.seconds],
   ];
