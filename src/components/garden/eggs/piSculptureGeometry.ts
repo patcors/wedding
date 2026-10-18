@@ -52,24 +52,35 @@ export function piSculptureGeometry() {
     const p = s.path[end ? s.path.length - 1 : 0], r = end ? s.to : s.from;
     pieces.push(new THREE.SphereGeometry(r, 8, 6).scale(1, 1, .7).translate(...p).deleteAttribute('uv'));
   }
-  // Verdigris over most of it, thickest where it faces the sky; the bronze
-// shows warm on its front and dark underneath.
-  const bronze = new THREE.Color(BRONZE), light = new THREE.Color(BRONZE_LIGHT), patina = new THREE.Color(PATINA), c = new THREE.Color();
   const glyph = mergeGeometries(pieces.map(piece => piece.toNonIndexed()));
   pieces.forEach(piece => piece.dispose());
-  const n = glyph.attributes.normal, gp = glyph.attributes.position, colours: number[] = [];
+  weatheredBronze(glyph);
+  const [block, cap] = stonePlinth(PI_PLINTH);
+  const geometry = mergeGeometries([glyph, block, cap]);
+  [glyph, block, cap].forEach(g => g.dispose());
+  return geometry;
+}
+
+// Verdigris over most of it, thickest where it faces the sky; the bronze
+// shows warm on its front and dark underneath. Colours a geometry by its normals.
+export function weatheredBronze(geometry: THREE.BufferGeometry) {
+  const bronze = new THREE.Color(BRONZE), light = new THREE.Color(BRONZE_LIGHT), patina = new THREE.Color(PATINA), c = new THREE.Color();
+  const n = geometry.attributes.normal, gp = geometry.attributes.position, colours: number[] = [];
   for (let i = 0; i < gp.count; i++) {
     const up = n.getY(i), facing = Math.abs(n.getZ(i));
     c.copy(bronze).lerp(light, .6 * facing).lerp(patina, .2 + .65 * THREE.MathUtils.smoothstep(up, .1, .95));
     colours.push(c.r, c.g, c.b);
   }
-  glyph.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
+  return geometry;
+}
 
-  // The plinth: a stone block with a slightly narrower cap, darker at its foot.
-  const { width, height, depth } = PI_PLINTH;
+// A plinth: a stone block with a slightly narrower cap, darker at its foot,
+// its top at `height`. Its block and cap, non-indexed, in vertex colours.
+export function stonePlinth({ width, height, depth }: { width: number; height: number; depth: number }) {
   const block = new THREE.BoxGeometry(width, height * .8, depth).translate(0, height * .4 - .1, 0).toNonIndexed();
   const cap = new THREE.BoxGeometry(width * .92, height * .25, depth * .88).translate(0, height * .875 - .02, 0).toNonIndexed();
-  const stone = new THREE.Color(STONE), dark = new THREE.Color(STONE_DARK);
+  const stone = new THREE.Color(STONE), dark = new THREE.Color(STONE_DARK), c = new THREE.Color();
   for (const box of [block, cap]) {
     box.deleteAttribute('uv');
     const bp = box.attributes.position, tint: number[] = [];
@@ -79,7 +90,5 @@ export function piSculptureGeometry() {
     }
     box.setAttribute('color', new THREE.Float32BufferAttribute(tint, 3));
   }
-  const geometry = mergeGeometries([glyph, block, cap]);
-  [glyph, block, cap].forEach(g => g.dispose());
-  return geometry;
+  return [block, cap];
 }
