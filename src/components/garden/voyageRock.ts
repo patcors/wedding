@@ -2,10 +2,12 @@
 // move to Sydney: a low, weathered outcrop of honey-coloured Sydney sandstone,
 // Bennelong Point, its outline from rockHalfWidth. It rises out of the water
 // in a low cliff with a ledge part way up, as sandstone weathers in beds, to
-// a flat back for the Opera House (eggs/harbour.ts), and slopes into the
-// water at its nose and end. Pure, so it can be tested.
+// a low back, and slopes into the water at its nose and end. And further
+// down, the little point of the same sandstone on Amelia's bank, Bennelong
+// Point, that the Opera House stands on (eggs/harbour.ts). Pure, so it can be
+// tested.
 import * as THREE from 'three';
-import { VOYAGE, random, riverCenter, rockHalfWidth } from './gardenGeometry.ts';
+import { POINT_ROUND, VOYAGE, groundHeight, pointInland, pointSpot, random, riverCenter, rockHalfWidth } from './gardenGeometry.ts';
 
 // Its back, above the water, a little lower on a phone's narrower rock.
 export const ROCK = { top: { desktop: .24, mobile: .15 } } as const;
@@ -131,3 +133,83 @@ export function rockGeometry(width = 1) {
 }
 // Where along it (0 at the nose, 1 at the end), on which side, and how big.
 const BOULDERS = [[.5, 1, .2], [.62, -1, .16], [.75, 1, .14], [.9, 1, .18], [.97, -1, .13]] as const;
+
+// Bennelong Point (VOYAGE.point, pointSpot): a low platform of the rock's
+// sandstone jutting from Amelia's bank into the river, flat on top for the
+// Opera House. Its top stands a little above the bank everywhere under it,
+// so it never lies in the grass, and it rises out of the water in a low cliff
+// with a ledge, as the rock does, its sides running on down under the water
+// and into the bank, so it is seated with no gap.
+const POINT_PROFILE = [{ in: -.14, y: -.45 }, { in: 0, y: -.12 }, { in: .02, up: .45 }, { in: .08, up: .52 }, { in: .1, up: 1 }] as const;
+// The height of its top: just above the highest ground under it.
+export function pointTop(width = 1) {
+  const point = pointSpot(width);
+  let top = 0;
+  for (let u = -point.out; u <= point.back; u += .05) for (let v = -point.wide / 2; v <= point.wide / 2; v += .05) {
+    const x = point.x + point.side * u, z = point.z + v;
+    if (pointInland(x, z, width) > -.15) top = Math.max(top, groundHeight(x, z, width));
+  }
+  return top + .05;
+}
+// Boulders fallen from its cliffs, half in the water round its end: how far
+// round its outline (0 to 1, from its upstream corner on the bank), and how
+// big, at desktop's size.
+const POINT_BOULDERS = [[.18, .17], [.34, .13], [.47, .2], [.6, .12], [.83, .15]] as const;
+export function pointGeometry(width = 1) {
+  const point = pointSpot(width), top = pointTop(width), rand = random(7707), round = point.wide * POINT_ROUND;
+  // Round its outline: a rectangle with rounded corners (as pointInland),
+  // each corner a quarter circle, its edge wandering a little in and out at
+  // each bed, as the rock's does. `u` runs inland from the water's edge, `v`
+  // along the river.
+  const middle = (point.back - point.out) / 2, hu = (point.back + point.out) / 2 - round, hv = point.wide / 2 - round;
+  const around = ([[1, 1], [-1, 1], [-1, -1], [1, -1]] as const).flatMap(([su, sv], c) => Array.from({ length: 6 }, (_, i) => {
+    const a = (c + i / 5) * Math.PI / 2;
+    return { u: middle + su * hu + Math.cos(a) * round, v: sv * hv + Math.sin(a) * round, nu: Math.cos(a), nv: Math.sin(a) };
+  }));
+  const world = (u: number, v: number, y: number) => new THREE.Vector3(point.x + point.side * u, y, point.z + v);
+  const rings = POINT_PROFILE.map((step, level) => around.map(({ u, v, nu, nv }, i) => {
+    const inset = step.in + (level > 1 ? Math.sin(i * 1.9 + level) * .02 + grain(u, v + level) * .015 : 0);
+    const y = 'y' in step ? step.y : step.up * top + (level > 1 ? grain(v + level, u) * .012 : 0);
+    return world(u - nu * inset, v - nv * inset, y);
+  }));
+  const positions: number[] = [], colors: number[] = [], color = new THREE.Color(), normal = new THREE.Vector3(), edge = new THREE.Vector3();
+  // Each face in its colour, a shade lighter or darker, wound to face `out`.
+  const face = (p: THREE.Vector3, q: THREE.Vector3, r: THREE.Vector3, shade: string, out: THREE.Vector3) => {
+    color.set(shade).multiplyScalar(.94 + rand() * .1);
+    normal.subVectors(q, p).cross(edge.subVectors(r, p));
+    for (const corner of normal.dot(out) > 0 ? [p, q, r] : [p, r, q]) { positions.push(corner.x, corner.y, corner.z); color.toArray(colors, colors.length); }
+  };
+  for (let level = 0; level < rings.length - 1; level++) for (let i = 0; i < around.length; i++) {
+    const j = (i + 1) % around.length, [a, b, c, d] = [rings[level][i], rings[level][j], rings[level + 1][i], rings[level + 1][j]];
+    const out = new THREE.Vector3(point.side * (around[i].nu + around[j].nu), 0, around[i].nv + around[j].nv);
+    face(a, b, c, BEDS[level + 1], out); face(b, d, c, BEDS[level + 1], out);
+  }
+  // Its top, weathered in patches like the rock's back.
+  const last = rings[rings.length - 1], centre = world(middle, 0, top), up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < around.length; i++) {
+    const a = last[i], b = last[(i + 1) % around.length];
+    face(a, b, centre, BACK[Math.floor((hump(a.x * 1.7, a.z * 1.3) * .5 + .5) * BACK.length * .999)], up);
+  }
+  // Boulders at the foot of its cliffs, only on its river side.
+  const k = width < 1 ? .65 : 1, river = around.map((corner, i) => ({ corner, i })).filter(({ corner }) => corner.u < 0);
+  for (const [t, size] of POINT_BOULDERS) {
+    const { corner } = river[Math.floor(t * (river.length - 1))], r = size * k;
+    const boulder = new THREE.IcosahedronGeometry(r, 0), p = boulder.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), zz = p.getZ(i), n = 1 + grain(x * 9 + t, zz * 9 + y) * .5;
+      const at = world(corner.u + corner.nu * r * .5 + x * n * 1.1, corner.v + corner.nv * r * .5 + zz * n, Math.max(y * n * .75, -r) - .03);
+      p.setXYZ(i, at.x, at.y, at.z);
+    }
+    for (let i = 0; i < p.count; i += 3) {
+      const [a, b, c] = [0, 1, 2].map(j => new THREE.Vector3(p.getX(i + j), p.getY(i + j), p.getZ(i + j)));
+      const centroid = a.clone().add(b).add(c).divideScalar(3);
+      face(a, b, c, BEDS[2 + Math.floor(rand() * 3)], centroid.sub(world(corner.u + corner.nu * r * .5, corner.v + corner.nv * r * .5, 0)));
+    }
+    boulder.dispose();
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
+  return geometry;
+}

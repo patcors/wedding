@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
-import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, groundHeight, riverCenter, rockHalfWidth } from '../src/components/garden/gardenGeometry.ts';
+import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, groundHeight, pointInland, pointSpot, riverCenter, rockHalfWidth, voyageClearing } from '../src/components/garden/gardenGeometry.ts';
 import { DATES, MILESTONES, ROOM, STOPS, progressAt, routeAt } from '../src/components/garden/journey.ts';
 import { ALONGSIDE, BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
 import { HULL } from '../src/components/garden/storyBoatGeometry.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
-import { BRIDGE, HARBOUR_SHOWN, OPERA, archAt, bridgeStems, harbourBridge, harbourShown, operaHouseSpot } from '../src/components/garden/eggs/harbour.ts';
-import { rockGeometry, rockHeight, rockInland } from '../src/components/garden/voyageRock.ts';
+import { BRIDGE, HARBOUR_SHOWN, OPERA, archAt, bridgeStems, harbourBridge, harbourShown, onPoint, operaHouseSpot, pointStems } from '../src/components/garden/eggs/harbour.ts';
+import { pointGeometry, pointTop, rockGeometry, rockHeight, rockInland } from '../src/components/garden/voyageRock.ts';
+import { YEAR_MARKERS, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
 
 const widths = [1, MOBILE_RIVER_WIDTH];
 const degrees = radians => radians * 180 / Math.PI;
@@ -36,6 +37,8 @@ const boat = (p, width, side) => {
 };
 // When the boats reach z.
 const reach = z => { let p = p0; while (routeAt(p) > z) p += 1e-5; return p; };
+// How far past the bridge's middle her boat's stern is through it.
+const bridgeLength = .9;
 
 test('a rock stands in the middle of the river where the boats first part for Sydney', () => {
   for (const width of widths) {
@@ -84,21 +87,85 @@ test('the rock rises out of the water in low cliffs and is seated in it, cheaply
   }
 });
 
-test('the Opera House stands on the rock\'s back, seated, between the boats at Sydney\'s stop', () => {
+// The Opera House's podium corners and the top of its tallest shell, in the world.
+const house = width => {
+  const spot = operaHouseSpot(width), c = Math.cos(spot.yaw), s = Math.sin(spot.yaw);
+  const at = (lx, lz, y = spot.y) => ({ x: spot.x + (c * lx + s * lz) * spot.scale, y, z: spot.z + (-s * lx + c * lz) * spot.scale });
+  const half = OPERA.width / 2;
+  return { spot, corners: [-1, 1].flatMap(a => [-.5, .5].map(b => at(a * half, b))), top: at(-.155, -.18, spot.y + .49 * spot.scale) };
+};
+const interim = STOPS[MILESTONES.findIndex(m => m.id === 'interim') + 1];
+
+test('Sydney carries on down the river: the Opera House stands on a sandstone point on Amelia\'s bank, across from 2022\'s pile', () => {
+  const pile = YEAR_MARKERS.find(m => m.year === 2022);
   for (const width of widths) {
-    const spot = operaHouseSpot(width), c = Math.cos(spot.yaw), s = Math.sin(spot.yaw);
-    assert.ok(VOYAGE.rock.from > OPERA.z && OPERA.z > VOYAGE.rock.bridge);
-    // Its podium's corners on the rock, its foot below the rock under every one.
-    for (const a of [-1, 1]) for (const b of [-.5, .5]) {
-      const lx = a * OPERA.width / 2 * spot.scale, lz = b * spot.scale, x = spot.x + c * lx + s * lz, z = spot.z - s * lx + c * lz;
-      assert.ok(rockInland(x, z, width) > -.02, `a corner off the rock (width ${width})`);
-      assert.ok(spot.y + spot.foot * spot.scale < rockHeight(x, z, width), 'seated');
-    }
-    // Side on to the camera, its shells rising one behind another.
+    const point = pointSpot(width), { spot, corners } = house(width), top = pointTop(width);
+    // The point juts from her bank, the left, into the river.
+    assert.equal(point.side, -1);
+    assert.ok(Math.abs(point.x - (riverCenter(point.z, width) - bankEdge(point.z, width))) < 1e-9);
+    assert.ok(point.out > .15 && point.out < bankEdge(point.z, width) * .25, 'a little point, not across the river');
+    // Downstream of the rock and across the river from 2022's pile, past where the boats are as 2022 turns.
+    const across = yearMarkerSpot(pile, width);
+    assert.ok(across.x > riverCenter(across.z, width) && Math.abs(spot.z - across.z) < 7, `across from the pile (width ${width})`);
+    assert.ok(spot.z < VOYAGE.rock.to - 10 && spot.z < routeAt(yearTurns(2022)));
+    // Its podium's corners on the point, its foot down into the point's top.
+    for (const corner of corners) assert.ok(pointInland(corner.x, corner.z, width) > .1, `a corner off the point (width ${width})`);
+    assert.ok(spot.y === top && spot.foot < 0);
+    // Side on to the camera, its harbour front facing out over the river.
     assert.ok(Math.abs(Math.abs(spot.yaw) - Math.PI / 2) < .3);
-    const house = seen(stop, width, spot.x, spot.z).bearing;
-    const [amelia, patrick] = [-1, 1].map(side => boat(stop, width, side).mast).map(({ x, z }) => seen(stop, width, x, z).bearing);
-    assert.ok(amelia < house && house < patrick, `between the boats (width ${width})`);
+    assert.ok(-Math.sin(spot.yaw) > .9, 'its front to the river');
+  }
+});
+
+test('the point rises out of the water above the bank everywhere under it, seated, and planting and boats keep off it', () => {
+  for (const width of widths) {
+    const point = pointSpot(width), top = pointTop(width), geometry = pointGeometry(width), position = geometry.attributes.position;
+    // Above the ground all over it, so it never lies in the grass, and low.
+    for (let u = -point.out; u <= point.back; u += .05) for (let v = -point.wide / 2; v <= point.wide / 2; v += .05) {
+      const x = point.x + point.side * u, z = point.z + v;
+      if (pointInland(x, z, width) > 0) assert.ok(groundHeight(x, z, width) < top - .03, `the bank over the point at ${u}, ${v}`);
+    }
+    assert.ok(top > .2 && top < .65, `top at ${top}`);
+    // Its sides run down under the water, and nothing of it stands above its top.
+    let low = Infinity, high = -Infinity;
+    for (let i = 0; i < position.count; i++) { low = Math.min(low, position.getY(i)); high = Math.max(high, position.getY(i)); }
+    assert.ok(low < -.3 && high < top + .03, `${low} to ${high}`);
+    // Every face of its top faces up, every face of its cliffs outwards (the
+    // boulders at their foot are lower).
+    for (let i = 0; i < position.count; i += 3) {
+      const [a, b, c] = [0, 1, 2].map(k => ({ x: position.getX(i + k), y: position.getY(i + k), z: position.getZ(i + k) }));
+      if (Math.max(a.y, b.y, c.y) < .15) continue;
+      const n = { x: (b.y - a.y) * (c.z - a.z) - (b.z - a.z) * (c.y - a.y), y: (b.z - a.z) * (c.x - a.x) - (b.x - a.x) * (c.z - a.z), z: (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) };
+      const mid = { x: (a.x + b.x + c.x) / 3, z: (a.z + b.z + c.z) / 3 }, middle = { x: point.x + point.side * (point.back - point.out) / 2, z: point.z };
+      assert.ok(n.y > .5 * Math.hypot(n.x, n.y, n.z) || n.x * (mid.x - middle.x) + n.z * (mid.z - middle.z) > 0, 'faces outwards');
+    }
+    assert.ok(position.count / 3 < 500);
+    geometry.dispose();
+    // No tree, rock or plant on it, guests' boats bump off its waterline and taps on it don't launch.
+    assert.ok(voyageClearing(point.x + point.side * .3, point.z, width) && !voyageClearing(point.x + point.side * (point.back + .5), point.z, width));
+    assert.ok(onPoint(point.x - point.side * point.out * .5, point.z, width));
+    const stems = pointStems(width);
+    for (const v of [-.3, 0, .3]) assert.ok(stems.some(stem => Math.hypot(stem.x - (point.x - point.side * point.out), stem.z - (point.z + v * point.wide)) < .25));
+  }
+});
+
+test('the Opera House is in the picture through 2022 to August\'s stop on desktop and a phone, clear of her boat and its sails there', () => {
+  for (const width of widths) {
+    const { corners, top } = house(width);
+    for (const p of range(progressAt('2022-01'), interim, .001)) {
+      assert.equal(harbourShown(p, cameraPose(p, width).position[2], width < 1).opera, 1, `shown at ${p}`);
+      for (const { x, z } of [...corners, top]) {
+        const at = seen(p, width, x, z);
+        assert.ok(Math.abs(at.bearing) < halfView(width) - .6 && at.distance < 26, `${at.bearing.toFixed(1)}°, ${at.distance.toFixed(1)} away at ${p} (width ${width})`);
+      }
+    }
+    // At August 2022's stop it stands clear of her boat's sails, to their left.
+    const { hull, mast } = boat(interim, width, -1), sails = Math.min(...hull.map(({ x, z }) => seen(interim, width, x, z).bearing), seen(interim, width, mast.x - .5, mast.z).bearing);
+    for (const { x, z } of corners) assert.ok(seen(interim, width, x, z).bearing < sails - .3, `behind her sails at August's stop (width ${width})`);
+    // Amelia's boat passes well clear of the point.
+    for (const p of range(progressAt('2022-08'), progressAt('2023-01'))) {
+      for (const { x, z } of boat(p, width, -1).hull) assert.ok(pointInland(x, z, width) < -.3, `her boat near the point at ${p} (width ${width})`);
+    }
   }
 });
 
@@ -160,26 +227,33 @@ test('at Sydney\'s stop the arch over her boat is in the picture, on a phone too
   }
 });
 
-test('both stay hidden through the snow trip, come out of the haze before 2020, and go before they block the view', () => {
+test('the bridge comes in towards the end of 2020 and the Opera House with 2022, and each goes before it blocks the view', () => {
   for (const width of widths) {
     const shown = p => harbourShown(p, cameraPose(p, width).position[2], width < 1);
-    const snow = shown(STOPS[MILESTONES.findIndex(m => m.id === 'snow-2019') + 1]);
-    assert.equal(snow.opera + snow.bridge, 0);
-    assert.ok(HARBOUR_SHOWN.from < '2020-01');
-    // Both fully in from 2020's turn until she is through, past the date's hold.
-    const through = progressAt(sydney.month) + .35 * ROOM;
-    for (const p of range(progressAt('2020-01'), through)) assert.deepEqual(shown(p), { opera: 1, bridge: 1 }, `shown at ${p}`);
-    // The bridge has gone before its rock end comes between the camera and her boat.
+    // Neither down the river through the snow trip or graduation.
+    for (const id of ['snow-2019', 'graduation']) assert.deepEqual(shown(STOPS[MILESTONES.findIndex(m => m.id === id) + 1]), { opera: 0, bridge: 0 });
+    assert.ok(HARBOUR_SHOWN.bridge.from >= '2020-10' && HARBOUR_SHOWN.bridge.from <= '2020-12');
+    for (const p of range(0, progressAt(HARBOUR_SHOWN.bridge.from) - (HARBOUR_SHOWN.bridge.arrive + .01) * ROOM, .002)) assert.equal(shown(p).bridge, 0, `bridge at ${p}`);
+    // The bridge fully in from its month until she is through, past the date's stop.
+    const through = reach(VOYAGE.rock.bridge - bridgeLength);
+    for (const p of range(progressAt(HARBOUR_SHOWN.bridge.from), through)) assert.equal(shown(p).bridge, 1, `bridge shown at ${p}`);
+    // It fades away quickly once she is through, and evenly (see Sydney.tsx).
+    const gone = range(through, progressAt('2022-01')).find(p => shown(p).bridge === 0);
+    assert.ok(gone - through < .2 * ROOM, `the bridge takes ${(gone - through) / ROOM} of a share to go`);
+    // Before its rock end comes between the camera and her boat.
     const bridge = harbourBridge(width);
-    for (const p of range(through, progressAt('2022-06'))) {
-      if (!shown(p).bridge) break;
+    for (const p of range(through, gone)) {
       const { mast } = boat(p, width, -1), pylon = seen(p, width, bridge.near, bridge.z), her = seen(p, width, mast.x, mast.z);
       const wide = degrees(Math.atan(bridge.size.pylon.across / 2 / pylon.distance));
       assert.ok(Math.abs(pylon.bearing - her.bearing) > wide + 1.5, `the pylon in front of her boat at ${p} (width ${width})`);
     }
-    // The Opera House goes once the camera has passed it.
-    let p = stop;
-    while (cameraPose(p, width).position[2] > OPERA.z - 4) p += 1e-3;
+    // The Opera House waits for 2022, not years early: hidden as the camera passes the rock in 2021.
+    for (const p of range(0, progressAt(HARBOUR_SHOWN.opera.from) - (HARBOUR_SHOWN.opera.arrive + .01) * ROOM, .002)) assert.equal(shown(p).opera, 0, `Opera House at ${p}`);
+    assert.ok(HARBOUR_SHOWN.opera.from >= '2021-11' && HARBOUR_SHOWN.opera.from <= '2022-01');
+    assert.equal(shown(progressAt(HARBOUR_SHOWN.opera.from)).opera, 1);
+    // And goes once the camera has passed it.
+    let p = progressAt('2022-06');
+    while (cameraPose(p, width).position[2] > pointSpot(width).z - 4) p += 1e-3;
     assert.deepEqual(shown(p), { opera: 0, bridge: 0 });
   }
 });

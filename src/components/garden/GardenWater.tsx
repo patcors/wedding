@@ -10,7 +10,7 @@ import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch, type Stem 
 import { useGardenTextures } from './gardenTextures';
 import { jettyStems, launchJettyStems, underJetty, underLaunchJetty } from './voyageDock';
 import { mooredStems } from './storyBoats';
-import { bridgeStems } from './eggs/harbour';
+import { bridgeStems, onPoint, pointStems } from './eggs/harbour';
 import { DOCKED } from './journey';
 import { useJourney } from './JourneyProvider';
 
@@ -41,7 +41,7 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
   // The reeds, the jetties and the Harbour Bridge's pylons always; the
   // catamaran once it is tied up there.
   const stems = useMemo(() => {
-    const fixed = [...reeds ? reedStems(width, mobile) : [], ...launchJettyStems(width), ...jettyStems(width), ...bridgeStems(width)];
+    const fixed = [...reeds ? reedStems(width, mobile) : [], ...launchJettyStems(width), ...jettyStems(width), ...bridgeStems(width), ...pointStems(width)];
     return { fixed, moored: [...fixed, ...mooredStems(width)] };
   }, [reeds, width, mobile]);
   const moored = useRef(false);
@@ -88,8 +88,8 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
     // A thumb wanders further than a mouse during a tap, so touch gets more slack.
     const slack = (event.nativeEvent as PointerEvent).pointerType === 'mouse' ? 6 : 16;
     const out = Math.abs(x - riverCenter(z, width));
-    // A tap on the island, the rock or a jetty reaches the water plane beneath it, which isn't open water.
-    if (event.delta > slack || event.button !== 0 || out >= bankEdge(z, width) - .08 || out < midRiver(z, width) || underJetty(x, z, width) || underLaunchJetty(x, z, width)
+    // A tap on the island, the rock, Bennelong Point or a jetty reaches the water plane beneath it, which isn't open water.
+    if (event.delta > slack || event.button !== 0 || out >= bankEdge(z, width) - .08 || out < midRiver(z, width) || underJetty(x, z, width) || underLaunchJetty(x, z, width) || onPoint(x, z, width)
       || z < camera.position.z - 65 || z > camera.position.z - 1) return;
     event.stopPropagation();
     launch(x, z);

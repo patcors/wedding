@@ -1,7 +1,8 @@
 // The Voyage's scenery along the river (owner: world agent): the little
 // jetties the boats set out from, the island and reeds that split the river
-// before they meet, the sandstone rock that parts it again in Sydney, and the
-// jetty and the festoon
+// before they meet, the sandstone rock that parts it again in Sydney and the
+// little sandstone point on Amelia's bank further down, and the jetty and the
+// festoon
 // lights in the old tree past the S-bend. The old tree itself and the stand of
 // trees that hides it until the bend are planted with the rest in
 // GardenTrees, which shares their bark, leaves and wind.
@@ -17,7 +18,7 @@ import { plantMaterial } from './GardenPlants';
 import { OLD_TREE_SCALE } from './GardenTrees';
 import { plantGeometry } from './gardenPlantGeometry';
 import { islandGeometry, islandPlantSites, type IslandPlant } from './voyageIsland';
-import { rockGeometry } from './voyageRock';
+import { pointGeometry, rockGeometry } from './voyageRock';
 import { FESTOON, festoonStrands, jettyGeometry, jettyLantern, launchJettyGeometry, launchLanterns, mooringLines, sagPoints } from './voyageDock';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { useRiverReach } from './useRiverReach';
@@ -66,13 +67,27 @@ function Island({ width, mobile, paused }: SlotProps) {
 }
 
 // The low sandstone rock in Sydney's river, where the boats first part. The
-// Opera House stands on it and the Harbour Bridge lands on it (eggs/Sydney.tsx).
+// Harbour Bridge lands on it (eggs/Sydney.tsx).
 function Rock({ width }: SlotProps) {
   const group = useRef<THREE.Group>(null);
   const geometry = useMemo(() => rockGeometry(width), [width]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useRiverReach(group, useMemo(() => [{ z: VOYAGE.rock.from + 1 }, { z: VOYAGE.rock.to - 1 }], []));
   return <group ref={group} name="voyage-rock">
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial vertexColors roughness={.95} flatShading />
+    </mesh>
+  </group>;
+}
+
+// Bennelong Point, the little sandstone point on Amelia's bank further down
+// Sydney's river, which the Opera House stands on (eggs/Sydney.tsx).
+function Point({ width }: SlotProps) {
+  const group = useRef<THREE.Group>(null);
+  const geometry = useMemo(() => pointGeometry(width), [width]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useRiverReach(group, useMemo(() => [{ z: VOYAGE.point.z }, { z: VOYAGE.point.mobile.z }], []));
+  return <group ref={group} name="voyage-point">
     <mesh geometry={geometry} receiveShadow>
       <meshStandardMaterial vertexColors roughness={.95} flatShading />
     </mesh>
@@ -204,6 +219,7 @@ export default function VoyageWorld(props: SlotProps) {
     <Launch {...props} />
     <Island {...props} />
     <Rock {...props} />
+    <Point {...props} />
     <Dock {...props} />
   </group>;
 }
