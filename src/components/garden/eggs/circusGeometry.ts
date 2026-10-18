@@ -1,6 +1,6 @@
 // The circus on Amelia's bank (see circusRigs.ts): an aerial silk, a lyra and a
 // bird hanging upside down. Each hangs from y 0, where it meets the limb, and
-// faces +z. The silk is two long tails of teal fabric from one rigging point
+// faces +z. The silk is two long tails of purple fabric from one rigging point
 // under a short rope, rewritten each frame as it sways (about 90 triangles).
 // The lyra is a cream-taped hoop on a teal strop and swivel (about 420). The
 // bird is the birdhouses' teal bird (birdhouseGeometry.ts) upside down, its
@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BIRD_COLOURS, BIRD_TRIANGLES, writeBird } from './birdhouseGeometry.ts';
 
-const FABRIC = '#79aea5', FOLD = '#5f948b', ROPE = '#4b423a';
+// A soft, rich aerial-silk purple, a deeper plum where it folds.
+const FABRIC = '#8a68a6', FOLD = '#674a83', ROPE = '#4b423a';
 // The silk: its rope from the limb to the rigging point, each tail's width
 // where it leaves the rigging and once it has opened out, how far apart the
 // two tails hang at the foot, and how many lengths each is drawn in.

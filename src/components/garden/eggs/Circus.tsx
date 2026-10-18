@@ -1,5 +1,5 @@
-// Amelia's aerial circus on her bank (see circusRigs.ts for where and when): an
-// aerial silk at the end of 2020, a lyra from October 2025 and beside it a
+// Amelia's aerial circus on her bank (see circusRigs.ts for where and when): a
+// purple aerial silk late in 2022, a lyra from October 2025 and beside it a
 // bird hanging upside down from a branch for her handstands, each hung from a
 // real tree. Each dissolves in as its month comes and goes once the camera
 // has passed it, one draw call each: the silk alone, or the lyra and the

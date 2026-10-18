@@ -28,9 +28,9 @@ const degrees = radians => radians * 180 / Math.PI;
 const stop = id => STOPS[MILESTONES.findIndex(m => m.id === id) + 1];
 const limb = (rig, width) => width < 1 ? rig.limb.mobile : rig.limb.desktop;
 const inland = (x, z, width) => riverCenter(z, width) - x - bankEdge(z, width);
-// Each one's stretch in the picture: the silk from November 2020 into the new
-// year, the lyra and the bird from October 2025 to just past salsa's stop.
-const SEEN = [[SILK, '2020-11', progressAt('2021-01')], [LYRA, '2025-10', stop('salsa') + .4 * ROOM], [BIRD, '2025-10', stop('salsa') + .4 * ROOM]];
+// Each one's stretch in the picture: the silk from November 2022 to January
+// 2023's stop, the lyra and the bird from October 2025 to just past salsa's stop.
+const SEEN = [[SILK, '2022-11', stop('amelia-heirwealth')], [LYRA, '2025-10', stop('salsa') + .4 * ROOM], [BIRD, '2025-10', stop('salsa') + .4 * ROOM]];
 
 test('each hangs on Amelia\'s bank, the left, from a tree standing there', () => {
   for (const [width] of LAYOUTS) {
@@ -42,7 +42,8 @@ test('each hangs on Amelia\'s bank, the left, from a tree standing there', () =>
       assert.ok(inland(spot.x, spot.z, width) > -.2, 'over the bank, not the river');
     }
   }
-  assert.ok(SILK.from >= '2020-01' && SILK.from <= '2020-12', 'the silk in 2020');
+  // Between the 2022 and 2023 year turns, once Amelia's interim flag is up.
+  assert.ok(SILK.from > '2022-08' && SILK.from < '2023-01', 'the silk late in 2022');
   // October 2025: her circus show that year (Amelia asked for about 2024; see circusRigs.ts).
   assert.equal(LYRA.from, '2025-10');
 });
@@ -99,6 +100,7 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
   const { ORNAMENTS: UNI, ornamentSpot: uniSpot } = await import('../src/components/garden/eggs/uniOrnaments.ts');
   const { rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
   const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const { operaHouseSpot } = await import('../src/components/garden/eggs/harbour.ts');
   for (const [width] of LAYOUTS) {
     const others = [
       ...YEAR_MARKERS.map(marker => [marker.year, yearMarkerSpot(marker, width)]),
@@ -111,16 +113,35 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
       ...Object.entries(UNI).map(([name, ornament]) => [name, uniSpot(ornament, width)]),
       ['rocket', rocketSpot(width)],
       ['Hagia Sophia', hagiaSophiaSpot('2026-07', width)],
+      ['Opera House', operaHouseSpot(width)],
     ];
     for (const [id, rig] of Object.entries(RIGS)) {
       const spot = hangSpot(rig, width);
       for (const [name, other] of others) assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${name} crowds the ${id} (width ${width})`);
     }
-    // The lyra and the bird hang together, a little apart; the silk on its own, years before.
+    // The lyra and the bird hang together, a little apart; the silk on its own, years before them.
     const [silk, lyra, bird] = [SILK, LYRA, BIRD].map(rig => hangSpot(rig, width));
     const apart = Math.hypot(lyra.x - bird.x, lyra.z - bird.z);
     assert.ok(apart > 1.5 && apart < 4, `the lyra and the bird ${apart} apart`);
     assert.ok(Math.abs(silk.z - lyra.z) > 40);
+  }
+});
+
+test('the silk never hangs in front of or behind the Opera House in the picture, on the same bank', async () => {
+  const { OPERA, harbourShown, operaHouseSpot } = await import('../src/components/garden/eggs/harbour.ts');
+  for (const [width, aspect, fov] of LAYOUTS) {
+    const half = halfView(aspect, fov), house = operaHouseSpot(width), silk = hangSpot(SILK, width);
+    const c = Math.cos(house.yaw), s = Math.sin(house.yaw);
+    for (let p = progressAt('2022-01'); p < progressAt('2023-03'); p += .001) {
+      const [cx, , cz] = cameraPose(p, width).position;
+      if (!rigShown(SILK, silk, p, cz, width < 1) || !harbourShown(p, cz, width < 1).opera) continue;
+      const bearing = (x, z) => degrees(Math.atan2(x - cx, cz - z) - cameraHeading(p, width));
+      const corners = [-1, 1].flatMap(a => [-.5, .5].map(b => bearing(house.x + (c * a * OPERA.width / 2 + s * b) * house.scale, house.z + (-s * a * OPERA.width / 2 + c * b) * house.scale)));
+      if (Math.max(...corners) < -half) continue;
+      // Its tails, spread a little either side of where it hangs.
+      const tails = degrees(Math.atan(.25 * silk.scale / Math.hypot(silk.x - cx, silk.z - cz)));
+      assert.ok(bearing(silk.x, silk.z) - tails - Math.max(...corners) > 2, `the silk beside the Opera House at ${p} (width ${width})`);
+    }
   }
 });
 
