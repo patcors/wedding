@@ -15,8 +15,9 @@ export type Milestone = { id: string; month: string; description: string; egg?: 
 // in storyBoats.ts).
 export const AMELIA_LEFT_FINOCOMP = '2022-08';
 // When Amelia moved into Patrick's apartment: a placeholder until she
-// confirms the month. Only the birdhouses read it (eggs/nesting.ts), when her
-// bird flies over to his; it isn't a milestone.
+// confirms the month. It isn't a milestone, and nothing is timed by it: her
+// bird's flight over to his birdhouse stands in for it earlier, while the
+// houses are in view (MOVE_SHOWN in eggs/nesting.ts).
 export const AMELIA_MOVED_IN = '2025-06';
 // When Bullet, the product Patrick worked on, goes up as a little rocket on
 // his bank (eggs/rocketLaunch.ts): `at` shares after the month shows, as it

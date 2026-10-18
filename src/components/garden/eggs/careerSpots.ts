@@ -24,7 +24,7 @@ export type BankOrnament = { facing: string; from: string; ahead: number; side: 
 // stop. The statistics carved into a tree further down the same bank
 // (uniOrnaments.ts) show above the row in the picture. The flower bed is on the left bank, across the river from 2023's slate, a
 // little past the boats as they come back alongside in March 2023, so it is
-// passing out of the picture by the time the first birdhouses go up behind it.
+// passing out of the picture by the time the birdhouses go up beyond it.
 // It lies a little back from the water, on the slope up from it, which tips
 // it towards the camera, and far enough on that a phone's narrow picture
 // takes in the whole bed.

@@ -48,6 +48,10 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
   // eggs/yearMarkerSpots.ts); broad in the trunk, so the year reads large,
   // and on a phone nearer the water, so it stays in its narrower picture.
   avenue.push({ x: riverCenter(-54.5, width) - bankEdge(-54.5, width) - (mobile ? 1 : 2), z: -54.5, scale: mobile ? 1.1 : 1.25, rotation: 2.4, type: 2, distant: true });
+  // An ash by the water on Amelia's bank just past her birdhouse, for the
+  // street sign fixed to its trunk (eggs/nesting.ts), near enough the water
+  // to stay in a phone's narrow picture while the birdhouses are.
+  avenue.push({ x: riverCenter(-110.3, width) - bankEdge(-110.3, width) - (mobile ? .8 : 1.3), z: -110.3, scale: mobile ? .9 : 1, rotation: 2.2, type: 3, distant: true });
   const rand = random(415);
   // Stagger groves along both banks all the way into the mist. The inner
   // trees overlap the avenue while outer trees fill gaps between canopies.

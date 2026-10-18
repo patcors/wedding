@@ -108,7 +108,7 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
       ['2019 snowman', snowSpot(SNOW_SPOTS[2019], '2019-07', width)],
       ['2025 snowmen', snowSpot(SNOW_SPOTS[2025], '2025-08', width)],
       ...CAPS.tosses.map(toss => ['mortarboard', capLanding('2020-08', toss, width)]),
-      ...nestSpots(width).flatMap(pair => [['birdhouse', pair.amelia], ['birdhouse', pair.patrick]]),
+      ...Object.values(nestSpots(width)).map(house => ['birdhouse', house]),
       ...WORK.map(ornament => [`${ornament.facing} ornament`, workSpot(ornament, width)]),
       ...Object.entries(UNI).map(([name, ornament]) => [name, uniSpot(ornament, width)]),
       ['rocket', rocketSpot(width)],
