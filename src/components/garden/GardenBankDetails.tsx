@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { riverCenter, bankEdge, groundHeight, leafGeometry, random, voyageClearing, RIVER_REACH } from './gardenGeometry';
 import { ROCK_COUNT } from './GardenRocks';
+import { pieBedFootprint } from './eggs/careerSpots';
 import type { RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 
@@ -36,13 +37,15 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
   }, []);
   const petal = useMemo(() => leafGeometry(true), []);
   useLayoutEffect(() => {
-    const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color();
-    // The same sites as the moss rocks in GardenRocks, compared in Review.
+    const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color(), underBed = pieBedFootprint(width);
+    // The same sites as the moss rocks in GardenRocks, compared in Review,
+    // and kept out of the pie chart's flower bed as they are.
     for (let i = 0; i < ROCK_COUNT; i++) {
       const z = RIVER_REACH.from - rand() * (RIVER_REACH.from - RIVER_REACH.to), x = riverCenter(z, width) + (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
       dummy.position.set(x, groundHeight(x, z, width) - .04, z);
       dummy.rotation.set(rand(), rand() * 6, rand());
-      const s = voyageClearing(x, z, width, .4) ? 0 : .1 + Math.pow(rand(), 3) * .55;
+      let s = voyageClearing(x, z, width, .4) ? 0 : .1 + Math.pow(rand(), 3) * .55;
+      if (underBed(x, z, s * 1.4)) s = 0;
       dummy.scale.set(s * 1.4, s * .5, s);
       dummy.updateMatrix(); stones.current?.setMatrixAt(i, dummy.matrix);
       color.setHSL(.12, .08, .48 + rand() * .2); stones.current?.setColorAt(i, color);

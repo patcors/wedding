@@ -118,10 +118,9 @@ test('they keep apart from the working lives\' ornaments, on the ground and in t
   // Each piece's face as a level line across it, half its width either side
   // of its spot (in its own units): the trunks across their bodies above the
   // root flare, the Möbius across its loop, the table along its length, the
-  // candlesticks' whole row, the duck's plinth and the pie's bed with its
-  // pulled wedge.
+  // candlesticks' whole row, the duck's plinth and the pie's flower bed.
   const HALF = { mobius: MOBIUS.radius + MOBIUS.band, table: TABLE.length / 2, statsTrunk: TRUNK.radius, algebraTrunk: TRUNK.radius };
-  const WORK_HALF = [CANDLE.spacing * (CANDLES.length - 1) / 2 + CANDLE.body / 2, .5, PIE.radius + PIE.pull];
+  const WORK_HALF = [CANDLE.spacing * (CANDLES.length - 1) / 2 + CANDLE.body / 2, .5, PIE.radius];
   // Degrees right of the middle of the picture of its two ends at p.
   const across = (p, width, spot, half) => {
     const ends = [-1, 1].map(s => seen(p, width, { x: spot.x + s * half * spot.scale * Math.cos(spot.yaw), z: spot.z - s * half * spot.scale * Math.sin(spot.yaw) }).bearing);

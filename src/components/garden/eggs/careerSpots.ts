@@ -1,8 +1,8 @@
 // Their working lives, as still ornaments on the banks: candlestick posts, a
 // finance chart's, for 2018 and the internship at FinoComp; a rubber duck on a
-// plinth for Amelia's first year in Sydney, 2021; and a flower bed planted as
-// an exploded pie chart once they work together at HeirWealth, from March
-// 2023. Where and when each stands; drawn by Careers.tsx. Pure, so it can be
+// plinth for Amelia's first year in Sydney, 2021; and a round flower bed
+// planted in slices, a pie chart's, once they work together at HeirWealth,
+// from March 2023. Where and when each stands; drawn by Careers.tsx. Pure, so it can be
 // tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
@@ -31,9 +31,12 @@ export type BankOrnament = { facing: string; from: string; ahead: number; side: 
 // The flower bed is on the left bank, across the river from 2023's slate, a
 // little past the boats as they come back alongside in March 2023, so it is
 // passing out of the picture by the time the first birdhouses go up behind it.
+// It lies a little back from the water, on the slope up from it, which tips
+// it towards the camera, and far enough on that a phone's narrow picture
+// takes in the whole bed.
 export const CANDLESTICKS: BankOrnament = { facing: '2018-07', from: '2018-01', ahead: 7.3, side: -1, inland: .9, mobileInland: 1.25, scale: { desktop: 1.3, mobile: .9 } };
 export const DUCK_STATUE: BankOrnament = { facing: '2021-07', from: '2021-02', ahead: 4.5, side: -1, inland: .45, mobileInland: .35, scale: { desktop: 1.6, mobile: 2 } };
-export const PIE_BED: BankOrnament = { facing: '2023-03', from: '2023-03', ahead: 3, side: -1, inland: 1.1, scale: { desktop: 1.15, mobile: 1.3 } };
+export const PIE_BED: BankOrnament = { facing: '2023-03', from: '2023-03', ahead: 6, side: -1, inland: 2.1, mobileInland: 1.6, scale: { desktop: 1.5, mobile: 1 } };
 export const ORNAMENTS = [CANDLESTICKS, DUCK_STATUE, PIE_BED] as const;
 
 const MOBILE_INLAND = .6;
@@ -87,33 +90,47 @@ export function candleBoxes(): CandleBox[] {
 }
 
 // The pie chart's wedges, as shares of the bed, going round anticlockwise
-// seen from above, each planted in its own colour from the garden's palette.
-// HeirWealth's purple is pulled out, as an exploded pie's slice is.
-export type Wedge = { share: number; flowers: string; pulled?: boolean };
+// seen from above, each planted with flowers of one colour: marigolds, pinks,
+// white alyssum, coral and lavender in HeirWealth's purple.
+export type Wedge = { share: number; flowers: string; heirWealth?: true };
 export const WEDGES: readonly Wedge[] = [
-  { share: .31, flowers: '#5fa9a0' },
-  { share: .23, flowers: '#ecd07a' },
-  { share: .18, flowers: '#df8a74' },
-  { share: .15, flowers: '#efe7cf' },
-  { share: .13, flowers: '#9c78b8', pulled: true },
+  { share: .31, flowers: '#f2c457' },
+  { share: .23, flowers: '#e994a4' },
+  { share: .18, flowers: '#f4efe0' },
+  { share: .15, flowers: '#e07a55' },
+  { share: .13, flowers: '#9c78b8', heirWealth: true },
 ];
-// The bed's radius, the height of its edging at the rim and of the planting's
-// mound at the middle, how far the pulled wedge is drawn out, the gap between
-// wedges (radians), and the tilt of the whole bed towards the camera, so the
-// low view along the river sees its face, raised by `lift` so its front edge
-// stays out of the ground.
-export const PIE = { radius: .8, rim: .2, mound: .1, pull: .2, gap: .05, tilt: .5, lift: .15 } as const;
+// The bed's radius, the bare soil left between wedges (radians), how much
+// longer it runs towards the camera than across (seen from the river it
+// looks round), and how far each flower head is turned up to the camera.
+export const PIE = { radius: .85, gap: .14, stretch: 1.6, face: .5 } as const;
 // Each wedge's start and end angle about +y in the bed's frame, measured from
-// +x towards −z (anticlockwise from above), turned so the pulled wedge points
-// out to the front right, towards the camera.
+// +x towards −z (anticlockwise from above), turned so HeirWealth's wedge is
+// at the front right, towards the camera.
 export function wedgeAngles() {
-  const pulled = WEDGES.findIndex(wedge => wedge.pulled);
-  const before = WEDGES.slice(0, pulled).reduce((sum, wedge) => sum + wedge.share, 0);
-  const start = -Math.PI / 4 - (before + WEDGES[pulled].share / 2) * Math.PI * 2;
+  const purple = WEDGES.findIndex(wedge => wedge.heirWealth);
+  const before = WEDGES.slice(0, purple).reduce((sum, wedge) => sum + wedge.share, 0);
+  const start = -Math.PI / 4 - (before + WEDGES[purple].share / 2) * Math.PI * 2;
   let at = start;
   return WEDGES.map(wedge => {
     const from = at;
     at += wedge.share * Math.PI * 2;
     return { from, to: at, middle: (from + at) / 2 };
   });
+}
+// Whether a point on the ground is under the flower bed, or within `margin`
+// world units of it, so the bank's rocks keep out of it.
+export function pieBedFootprint(width: number) {
+  const spot = ornamentSpot(PIE_BED, width), cos = Math.cos(spot.yaw), sin = Math.sin(spot.yaw);
+  return (x: number, z: number, margin = 0) => {
+    const dx = (x - spot.x) / spot.scale, dz = (z - spot.z) / spot.scale;
+    return Math.hypot(dx * cos - dz * sin, (dx * sin + dz * cos) / PIE.stretch) < PIE.radius + margin / spot.scale;
+  };
+}
+// The ground's height under a point in an ornament's own frame (x across, z
+// towards the camera, both in its units), in its units above its spot, so
+// the bed can lie on the bank's slope rather than on a level.
+export function groundUnder(spot: OrnamentSpot, width: number) {
+  const cos = Math.cos(spot.yaw), sin = Math.sin(spot.yaw);
+  return (x: number, z: number) => (groundHeight(spot.x + spot.scale * (x * cos + z * sin), spot.z + spot.scale * (z * cos - x * sin), width) - spot.y) / spot.scale;
 }
