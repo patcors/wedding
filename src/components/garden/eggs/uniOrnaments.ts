@@ -25,8 +25,11 @@ import { progressAt, routeAtMonth } from '../journey.ts';
 // - The table stands across the river from them at the water's edge, in view
 //   from the meeting, and passed before 2018's rock is reached.
 // - The trunks stand between 2019's buoy and the 2019 snowman on Patrick's
-//   bank, and across from them a little upstream on Amelia's, turned a touch
+//   bank, and across from it a little upstream on Amelia's, turned a touch
 //   towards each other, seen from the internship until the snow trip.
+//   Amelia's stands far enough past 2018's candlestick posts on her bank
+//   (careerSpots.ts), and on a phone close enough to the water, to show
+//   clear of their row, and short of 2020's boathouse.
 export type Ornament = {
   side: -1 | 1; month: string; ahead: number; facing: string; turn?: number;
   inland: { desktop: number; mobile: number }; scale: { desktop: number; mobile: number };
@@ -34,7 +37,7 @@ export type Ornament = {
 export const ORNAMENTS = {
   mobius: { side: 1, month: '2017-07', ahead: 13.4, facing: '2017-09', inland: { desktop: 2.8, mobile: 1.7 }, scale: { desktop: 1.2, mobile: 1.15 } },
   table: { side: -1, month: '2017-07', ahead: 14, facing: '2017-08', inland: { desktop: 1, mobile: 0 }, scale: { desktop: 1.55, mobile: 1.75 } },
-  statsTrunk: { side: -1, month: '2019-03', ahead: 4.4, facing: '2018-12', turn: .15, inland: { desktop: .6, mobile: .3 }, scale: { desktop: 1.35, mobile: 1.6 } },
+  statsTrunk: { side: -1, month: '2019-03', ahead: 5.5, facing: '2018-12', turn: .15, inland: { desktop: .6, mobile: .1 }, scale: { desktop: 1.35, mobile: 1.6 } },
   algebraTrunk: { side: 1, month: '2019-03', ahead: 7, facing: '2018-12', turn: .15, inland: { desktop: 3, mobile: 1.2 }, scale: { desktop: 1.35, mobile: 1.6 } },
 } as const satisfies Record<string, Ornament>;
 export type OrnamentId = keyof typeof ORNAMENTS;

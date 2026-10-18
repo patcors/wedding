@@ -11,6 +11,7 @@ import { YEAR_MARKERS, markerShown, yearMarkerSpot, yearTurns } from '../src/com
 import { ORNAMENTS, ornamentSpot } from '../src/components/garden/eggs/uniOrnaments.ts';
 import { MOBIUS, MOBIUS_PLINTH, mobiusGeometry } from '../src/components/garden/eggs/mobiusGeometry.ts';
 import { TABLE, picnicTableGeometry } from '../src/components/garden/eggs/picnicTableGeometry.ts';
+import { CANDLE, CANDLES, ORNAMENTS as WORK_ORNAMENTS, PIE, ornamentShown as workShown, ornamentSpot as workSpot } from '../src/components/garden/eggs/careerSpots.ts';
 
 const degrees = radians => radians * 180 / Math.PI;
 const WIDTHS = [1, MOBILE_RIVER_WIDTH];
@@ -109,6 +110,39 @@ test('the table has gone from the picture before 2018\'s rock, and nothing stand
         assert.ok(Math.abs(o.bearing - m.bearing) > 2.5, `${id} beside ${marker.year} (${o.bearing}° and ${m.bearing}°, width ${width})`);
       }
     }
+  }
+});
+
+test('they keep apart from the working lives\' ornaments, on the ground and in the picture', async () => {
+  const { TRUNK } = await import('../src/components/garden/eggs/carvedTrunkGeometry.ts');
+  // Each piece's face as a level line across it, half its width either side
+  // of its spot (in its own units): the trunks across their bodies above the
+  // root flare, the Möbius across its loop, the table along its length, the
+  // candlesticks' whole row, the duck's plinth and the pie's bed with its
+  // pulled wedge.
+  const HALF = { mobius: MOBIUS.radius + MOBIUS.band, table: TABLE.length / 2, statsTrunk: TRUNK.radius, algebraTrunk: TRUNK.radius };
+  const WORK_HALF = [CANDLE.spacing * (CANDLES.length - 1) / 2 + CANDLE.body / 2, .5, PIE.radius + PIE.pull];
+  // Degrees right of the middle of the picture of its two ends at p.
+  const across = (p, width, spot, half) => {
+    const ends = [-1, 1].map(s => seen(p, width, { x: spot.x + s * half * spot.scale * Math.cos(spot.yaw), z: spot.z - s * half * spot.scale * Math.sin(spot.yaw) }).bearing);
+    return [Math.min(...ends), Math.max(...ends)];
+  };
+  for (const width of WIDTHS) {
+    const all = spots(width), view = halfView(width);
+    WORK_ORNAMENTS.forEach((work, i) => {
+      const other = workSpot(work, width);
+      for (const [id, spot] of Object.entries(all)) {
+        assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${id} crowds the ornament for ${work.facing} on the ground (width ${width})`);
+        // Whenever both show and both are in the picture, neither stands in front of the other.
+        for (const p of span(progressAt('2017-07'), progressAt('2021-02'))) {
+          if (!shown(spot, p, width) || !workShown(work, other, p, cameraPose(p, width).position[2], width < 1)) continue;
+          const a = across(p, width, spot, HALF[id]), b = across(p, width, other, WORK_HALF[i]);
+          if (a[1] < -view || a[0] > view || b[1] < -view || b[0] > view) continue;
+          const gap = Math.max(a[0] - b[1], b[0] - a[1]);
+          assert.ok(gap > 0, `${id} and the ornament for ${work.facing} overlap by ${-gap}° at ${p} (width ${width})`);
+        }
+      }
+    });
   }
 });
 
