@@ -8,7 +8,8 @@
 // the mark of the company its sailor works for from an ensign staff at its
 // stern, and while they're at university, the university's from the other.
 // As they start salsa classes the catamaran turns once on the spot,
-// everything aboard with it.
+// everything aboard with it, and as they get engaged a little man proposes
+// to a little woman on its deck (eggs/Proposal.tsx).
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -17,6 +18,7 @@ import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, ensignStaffs, rigg
 import { BIG_RIG, ENSIGN, FLAG, HULL, LOGO_FLAG, SAIL_EASED, bigRig, blendHullPaint, companyFlagTexture, ensignStaff, ensignStaffGeometry, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { BOAT_LOOK, catamaranPaint, deckColours, dinghyPaint, type BoatLook } from './boatLooks';
+import Proposal from './eggs/Proposal';
 
 const ease = (t: number) => {
   const x = Math.min(1, Math.max(0, t));
@@ -73,7 +75,7 @@ function useStoryBoatModels(look: BoatLook) {
   return models;
 }
 
-export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }: SlotProps & { look?: BoatLook }) {
+export default function VoyageBoats({ paused, reduced, mobile, width, look = BOAT_LOOK }: SlotProps & { look?: BoatLook }) {
   const clock = useJourney();
   const models = useStoryBoatModels(look);
   const pair = useRef<THREE.Group>(null);
@@ -311,5 +313,6 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
     <instancedMesh ref={deck} args={[models.deck, undefined, DECK.beams + DECK.planks]} castShadow frustumCulled={false}>
       <meshStandardMaterial roughness={1} />
     </instancedMesh>
+    <Proposal paused={paused} reduced={reduced} mobile={mobile} />
   </group>;
 }

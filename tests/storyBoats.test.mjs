@@ -405,3 +405,15 @@ test('turning on the spot, the catamaran stays between the banks all through sal
   }
 });
 
+
+test('the big sail is the toy sloops\' white cloth, each stripe a band of Amelia\'s teal under one of Patrick\'s yellow', async () => {
+  const { JOINED_STRIPES } = await import('../src/components/garden/boatLooks.ts');
+  assert.equal(JOINED_STRIPES.length % 2, 0);
+  JOINED_STRIPES.forEach(([from, to, owner], i) => {
+    assert.ok(from >= 0 && to > from && to < .7, 'low on the sail, where it is wide');
+    assert.equal(owner, i % 2 ? 'patrick' : 'amelia');
+    // Each yellow band joins the teal below it; ivory between the pairs.
+    if (i % 2) assert.equal(from, JOINED_STRIPES[i - 1][1]);
+    else if (i) assert.ok(from > JOINED_STRIPES[i - 1][1] + .1);
+  });
+});
