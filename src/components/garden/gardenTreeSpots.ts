@@ -1,8 +1,9 @@
 // Where the Garden's trees stand: the avenue along the river, the groves
 // behind it, the stand on the headland that hides the old tree, the shrubs,
 // and the old tree itself. Drawn by GardenTrees.tsx; pure, so scenery can
-// find a real tree (the university years' carvings, uniOrnaments.ts, and the
-// circus hung from branches, eggs/circusRigs.ts) and be tested.
+// find a real tree (the university years' carvings, uniOrnaments.ts, 2020's
+// year carved into a trunk, eggs/yearMarkerSpots.ts, and the circus hung from
+// branches, eggs/circusRigs.ts) and be tested.
 import { riverCenter, bankEdge, bendShift, groundHeight, lawnSpot, random, sydneyWiden, voyageClearing, voyageLandmarks, islandHalfWidth, VOYAGE, RIVER_REACH } from './gardenGeometry.ts';
 import { islandHeight } from './voyageIsland.ts';
 
@@ -42,11 +43,11 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
   }
   // Portrait also fills the open stretch of left bank between the first two trees.
   if (mobile) avenue.push({ x: riverCenter(-7, width) - bankEdge(-7, width) - 3.6, z: -7, scale: .95, rotation: 4.4, type: 1, distant: false });
-  // An ash by the water on Amelia's bank past 2020's milestone, as Sydney
-  // starts to widen the river, for 2020's aerial silk to hang from
-  // (eggs/circusRigs.ts); on a phone nearer the water, so the silk's limb
-  // reaches out over the bank into its narrower picture.
-  avenue.push({ x: riverCenter(-63.5, width) - bankEdge(-63.5, width) - (mobile ? 2.6 : 3.2), z: -63.5, scale: mobile ? .97 : 1.1, rotation: Math.PI, type: 2, distant: true });
+  // An ash by the water on Amelia's bank, a little past where the boats are
+  // as 2020 turns, with the year carved into its trunk (2020's marker,
+  // eggs/yearMarkerSpots.ts); broad in the trunk, so the year reads large,
+  // and on a phone nearer the water, so it stays in its narrower picture.
+  avenue.push({ x: riverCenter(-54.5, width) - bankEdge(-54.5, width) - (mobile ? 1 : 2), z: -54.5, scale: mobile ? 1.1 : 1.25, rotation: 2.4, type: 2, distant: true });
   const rand = random(415);
   // Stagger groves along both banks all the way into the mist. The inner
   // trees overlap the avenue while outer trees fill gaps between canopies.

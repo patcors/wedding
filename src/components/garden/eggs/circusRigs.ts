@@ -1,5 +1,5 @@
-// Amelia's aerial circus, on her bank (the left): an aerial silk hung from a
-// riverside ash at the end of 2020, a lyra hung from a tree as her circus
+// Amelia's aerial circus, on her bank (the left): a purple aerial silk hung
+// from a riverside ash late in 2022, a lyra hung from a tree as her circus
 // show comes round in October 2025, and beside it a little teal bird hanging
 // upside down from a branch, for all her handstands. Where and when each
 // hangs; drawn by Circus.tsx with the models in circusGeometry.ts. Pure, so
@@ -21,13 +21,15 @@ type Point = readonly [number, number, number];
 // larger again there. A phone sees only about 17° either side of the middle,
 // so anything on a bank lines up along it with whatever else stands on that
 // bank nearby: each keeps to a stretch of Amelia's bank of its own.
-// - The silk hangs from an ash by the water a little past 2020's milestone,
-//   planted for it where Sydney starts to widen the river, its tails
-//   reaching nearly to the ground. It comes in through the autumn, after
-//   graduation's mortarboards have landed, and is in the picture from
-//   November 2020 into January 2021 (to Sydney's stop on desktop), a little
-//   way past the Harbour Bridge's end on the same bank, so it is seen
-//   beyond the bridge's arch.
+// - The silk hangs from a limb reaching out over the water's edge from an
+//   ash of the avenue near the end of Sydney's river, its tails reaching
+//   nearly to the ground, so the stretch between 2022 and 2023 has
+//   something of its own: Sydney's widening takes the left bank out of a
+//   phone's picture there, but not a limb out over the water. The Opera
+//   House stands further up the same bank, with 2022, so the silk comes in
+//   after August 2022's stop, once Amelia's interim flag is up, as the Opera
+//   House slips out of the picture (on a phone it is still leaving the left
+//   edge), and is in the picture from November 2022 to January 2023's stop.
 // - The lyra and the bird hang from two ashes standing together past 2025's
 //   snowmen, the lyra from the one further back and the bird from the tip
 //   of a low limb of the one by the water, where the leaves thin out,
@@ -41,7 +43,7 @@ export type Rig = {
   tree: { desktop: number; mobile: number }; limb: { desktop: Point; mobile: Point };
   from: string; arrive: number; scale: { desktop: number; mobile: number };
 };
-export const SILK: Rig = { tree: { desktop: -63.5, mobile: -63.5 }, limb: { desktop: [-2.621, 5.045, .832], mobile: [-2.621, 5.045, .832] }, from: '2020-11', arrive: .4, scale: { desktop: 1.25, mobile: 1.4 } };
+export const SILK: Rig = { tree: { desktop: -85, mobile: -85 }, limb: { desktop: [3.038, 4.72, .449], mobile: [3.386, 4.526, .678] }, from: '2022-11', arrive: .3, scale: { desktop: 1.25, mobile: 1.4 } };
 export const LYRA: Rig = { tree: { desktop: -126.1, mobile: -126.62 }, limb: { desktop: [-.726, 4.42, 2.655], mobile: [2.674, 4.772, 2.162] }, from: '2025-10', arrive: .25, scale: { desktop: 1.25, mobile: 1.35 } };
 export const BIRD: Rig = { tree: { desktop: -127, mobile: -127 }, limb: { desktop: [-3.332, 4.056, -.182], mobile: [-3.332, 4.056, -.182] }, from: '2025-10', arrive: .25, scale: { desktop: 3.6, mobile: 4.6 } };
 export const RIGS = { silk: SILK, lyra: LYRA, bird: BIRD } as const;

@@ -40,9 +40,11 @@ const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 
 // begin on desktop and its reeds would close the left channel against the
 // bank's. The river widens while Amelia is in Sydney, and where the boats
 // first part for it a low sandstone rock stands in its middle, so they go
-// either side of it (see rockHalfWidth): Bennelong Point, with the Opera House
-// on it and the Harbour Bridge across Amelia's channel from it to her bank, at
-// `bridge` (see eggs/harbour.ts). The S-bend swings the river
+// either side of it (see rockHalfWidth), with the Harbour Bridge across
+// Amelia's channel from it to her bank, at `bridge` (see eggs/harbour.ts).
+// Further down, across from 2022's pile, a little sandstone point juts from
+// her bank, Bennelong Point, for the Opera House to stand on (`point`, see
+// pointSpot). The S-bend swings the river
 // sideways by `swing` just before the wedding; the jetty and the old tree stand
 // on the `side` bank (+1 is +x) past it, where the boats dock. Far off past
 // the bend, where the river runs straight again, a level lawn lies in an
@@ -54,6 +56,7 @@ export const VOYAGE = {
   meet: MEET_Z,
   sydney: { from: routeAtMonth(DATES.sydney), to: routeAtMonth(DATES.back), widen: 2.2 },
   rock: { from: -53.6, to: -61.3, halfWidth: 1.25, mobileHalfWidth: .64, bridge: -60.1 },
+  point: { z: -77.5, side: -1, out: 1.7, back: .72, wide: 1.95, mobile: { z: -78.3, out: .2, back: 1.1, wide: 1.15 } },
   bend: { from: -135, to: -164, swing: -12 },
   dock: { z: ROUTE.dock, side: 1, jetty: 2.4 },
   tree: { z: ROUTE.dock - 3.5, inland: 3.5 },
@@ -161,13 +164,14 @@ export function launchJetties(width = 1) {
 }
 
 // Ground kept clear of generated planting: the old tree's trunk and roots,
-// the level lawn far off past the bend, and the jetties with their landings
-// on the bank. `margin` widens each, for plants and trees with a spread.
+// the level lawn far off past the bend, Bennelong Point, and the jetties with
+// their landings on the bank. `margin` widens each, for plants and trees with a spread.
 export function voyageClearing(x: number, z: number, width = 1, margin = 0) {
   const { jetty, tree } = voyageLandmarks(width);
   if (Math.hypot(x - tree.x, z - tree.z) < 2.2 + margin) return true;
   const lawn = lawnSpot(width);
   if (Math.hypot(x - lawn.x, z - lawn.z) < lawn.radius + margin) return true;
+  if (Math.abs(z - pointSpot(width).z) < 3 + margin && pointInland(x, z, width) > -margin) return true;
   const along = (x - jetty.x) * jetty.side;
   if (along > -jetty.reach - .4 - margin && along < 1.8 + margin && Math.abs(z - jetty.z) < .9 + margin) return true;
   return launchJetties(width).some(launch => {
@@ -216,6 +220,27 @@ export function lawnSpot(width = 1) {
   const inland = width < 1 ? mobileInland : desktop;
   return { x: riverCenter(z, width) + side * (bankEdge(z, width) + inland), z, radius: width < 1 ? mobileRadius : radius, field: width < 1 ? mobileField : field, height: bankRise(inland) };
 }
+// Bennelong Point (`VOYAGE.point`): where it meets the water's edge on its
+// bank, how far it juts `out` into the river and runs `back` into the bank
+// from there (only a little, where the bank is still low, so the point can
+// be low too), and how `wide` it is along the river; a phone's narrower river
+// takes a smaller point (`mobile`), a little further down, where its narrow
+// lens still sees the bank as August 2022 shows. Built in voyageRock.ts.
+export function pointSpot(width = 1) {
+  const { side, mobile, ...desktop } = VOYAGE.point, { z, out, back, wide } = width < 1 ? mobile : desktop;
+  return { x: riverCenter(z, width) + side * bankEdge(z, width), z, side, out, back, wide };
+}
+// How far in from the point's waterline a spot is (negative off it): its
+// outline is a rectangle with corners rounded `POINT_ROUND` of its width, so planting and guests' boats
+// keep off it.
+export const POINT_ROUND = .2;
+export function pointInland(x: number, z: number, width = 1) {
+  const point = pointSpot(width), round = point.wide * POINT_ROUND;
+  const u = (x - point.x) * point.side - (point.back - point.out) / 2, v = z - point.z;
+  const qu = Math.abs(u) - ((point.back + point.out) / 2 - round), qv = Math.abs(v) - (point.wide / 2 - round);
+  return round - Math.hypot(Math.max(qu, 0), Math.max(qv, 0)) - Math.min(Math.max(qu, qv), 0);
+}
+
 // The ground eases from the bank's into the lawn's level over `ease` round
 // it, but not at the water's edge, which keeps its shore.
 function onLawn(x: number, z: number, width: number, inland: number, ground: number) {

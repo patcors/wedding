@@ -5,24 +5,29 @@
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt, routeAt } from '../journey.ts';
+import { carvedTree, type BarkCarving, type CarvedTree } from './uniOrnaments.ts';
 
-export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'milestone' | 'stake' | 'pile' | 'slate' | 'lantern' | 'oar' | 'arch' | 'heart';
+export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'carving' | 'stake' | 'pile' | 'slate' | 'lantern' | 'oar' | 'arch' | 'heart';
 // `side` is the bank (−1 is −x, Amelia's; 1 is +x, Patrick's). `lead` is how
 // far downstream of the boats it stands as its year turns, so it is in clear
 // view just past them then and they pass it early in the year. On a bank,
 // `inland` is how far from the water's edge, in world units on desktop
 // (negative stands out over the water); in the river, `share` is how far from
-// the middle to that bank. `from`, if set, holds it back until that month
-// shows, however near it is.
-export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number; from?: string } & ({ inland: number } | { share: number });
+// the middle to that bank; `carved` into a tree's bark, it is cut into the
+// riverside tree on that bank standing nearest that spot along the river,
+// `arc` round its trunk either side of the face turned to the camera and
+// `from` and `to` up it, in the tree's own units (see uniOrnaments.ts).
+// `from`, if set, holds it back until that month shows, however near it is.
+export type YearCarving = { arc: number; from: number; to: number };
+export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number; from?: string } & ({ inland: number } | { share: number } | { carved: YearCarving });
 
 // Mostly alternating banks, with the buoy and the pile out in the river, where
 // a phone always sees them. 2018's stands on the left bank, across from July
 // 2017's π, which is still being passed as 2018 turns, and the buoy on the
-// right of the river, clear of the rock behind it. 2020's milestone stands a
-// way past the 2019 snowman on the same bank, to its right in the picture as
-// 2020 turns, short of the Harbour Bridge's end on that bank and across from
-// the nose of Sydney's rock, and August's mortarboard lands in front of it.
+// right of the river, clear of the rock behind it. 2020 is carved into the
+// trunk of an ash by the water a way past the 2019 snowman on the same bank,
+// above its head in the picture as 2020 turns, before the Harbour Bridge
+// comes in, and August's mortarboard lands at its foot, in front of it.
 // Sydney's wide river puts its left
 // bank out of a phone's picture, so 2021 and 2023 stand on the right, and
 // 2022's pile stands mid-river between the boats while they are apart.
@@ -41,7 +46,7 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45 },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },
   { year: 2019, medium: 'buoy', side: 1, lead: 3.5, share: .8 },
-  { year: 2020, medium: 'milestone', side: -1, lead: 9, inland: .4 },
+  { year: 2020, medium: 'carving', side: -1, lead: 8.6, carved: { arc: .95, from: 1.12, to: 2.12 } },
   { year: 2021, medium: 'stake', side: 1, lead: 3.5, inland: .55 },
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85 },
   { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
@@ -59,17 +64,32 @@ const MOBILE_INLAND = .6;
 export const yearTurns = (year: number) => progressAt(`${year}-01`);
 
 export type MarkerSpot = { x: number; y: number; z: number; yaw: number; scale: number };
+// The tree a year is carved into, and the carving as the university years'
+// are placed (uniOrnaments.ts), its face turned to the camera as the year
+// turns.
+export function yearCarving(marker: YearMarker & { carved: YearCarving }, width: number): { tree: CarvedTree; carving: BarkCarving } {
+  const z = routeAt(yearTurns(marker.year)) - marker.lead;
+  const carving = { side: marker.side, z: { desktop: z, mobile: z }, facing: `${marker.year}-01`, ...marker.carved };
+  return { tree: carvedTree(carving, width), carving };
+}
+// The trunk's radius, near enough, in the tree's own units, where the years are carved.
+const TRUNK_RADIUS = .38;
 // Where a year's marker stands in the world, and its yaw (about +y) so its
-// face (+z in its own frame) turns to the camera as its year turns.
+// face (+z in its own frame) turns to the camera as its year turns. A
+// carving's spot is the middle of the year on its trunk's face.
 export function yearMarkerSpot(marker: YearMarker, width: number): MarkerSpot {
   const mobile = width < 1;
   const turn = yearTurns(marker.year);
+  const [cx, , cz] = cameraPose(turn, width).position;
+  if ('carved' in marker) {
+    const { tree } = yearCarving(marker, width), toward = Math.atan2(cx - tree.x, cz - tree.z), r = TRUNK_RADIUS * tree.scale;
+    return { x: tree.x + Math.sin(toward) * r, y: tree.y + (marker.carved.from + marker.carved.to) / 2 * tree.scale, z: tree.z + Math.cos(toward) * r, yaw: toward, scale: tree.scale };
+  }
   const z = routeAt(turn) - marker.lead;
   const middle = riverCenter(z, width), edge = bankEdge(z, width);
   const x = 'share' in marker
     ? middle + marker.side * edge * marker.share
     : middle + marker.side * (edge + marker.inland * (mobile ? MOBILE_INLAND : 1));
-  const [cx, , cz] = cameraPose(turn, width).position;
   // On the bank it stands on the ground, never below the water.
   return { x, y: 'share' in marker ? 0 : Math.max(0, groundHeight(x, z, width)), z, yaw: Math.atan2(cx - x, cz - z),
     scale: mobile ? MARKER_SCALE.mobile : MARKER_SCALE.desktop };

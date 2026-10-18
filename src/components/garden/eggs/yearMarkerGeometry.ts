@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { random } from '../gardenGeometry.ts';
-import { YEAR_MARKERS, type YearMarker } from './yearMarkerSpots.ts';
+import { carvedTextures, incise, lettering } from './carving.ts';
+import { YEAR_MARKERS, type YearMarker, type YearMedium } from './yearMarkerSpots.ts';
 
 // The atlas: a square cell per year, in YEAR_MARKERS' order.
 const CELL = 256, COLS = 4, ROWS = Math.ceil(YEAR_MARKERS.length / COLS);
@@ -133,7 +134,10 @@ type Model = { body: THREE.BufferGeometry; face?: THREE.BufferGeometry;
   hanging?: { body: THREE.BufferGeometry; face: THREE.BufferGeometry; pivot: [number, number, number] } };
 type Build = (index: number, face: Face, river: number, seed: number) => Model;
 
-const MODELS: Record<YearMarker['medium'], { face: Face; build: Build }> = {
+// Every medium but 2020's carving, which is cut into a real tree's bark
+// (yearCarvingTextures, below; drawn by YearMarkers.tsx).
+type Built = Exclude<YearMedium, 'carving'>;
+const MODELS: Record<Built, { face: Face; build: Build }> = {
   // 2017: an arrow-board nailed to an old snag on the bank, painted cream.
   signpost: {
     face: { width: .84, height: .36, lettering: { kind: 'paint', colour: '#f1e8d2' } },
@@ -198,40 +202,6 @@ const MODELS: Record<YearMarker['medium'], { face: Face; build: Build }> = {
         ]),
         face: bandFace(index, face, R + .004, { position: [0, .33, 0] }),
       };
-    },
-  },
-  // 2020: painted on the whitewashed face of an old milestone, a slab of
-  // sandstone with a rounded head, leaning a little in the grass.
-  milestone: {
-    face: { width: .62, height: .3, lettering: { kind: 'paint', colour: '#34352f', weight: 600 } },
-    build: (index, face, river, seed) => {
-      const rand = random(seed), W = .78, H = .84, DEPTH = .2, SINK = .14, R = W / 2;
-      const outline = new THREE.Shape();
-      outline.moveTo(-R, -SINK); outline.lineTo(R, -SINK); outline.lineTo(R, H - R);
-      outline.absarc(0, H - R, R, 0, Math.PI, false);
-      outline.closePath();
-      const slab = new THREE.ExtrudeGeometry(outline, { depth: DEPTH, curveSegments: 8, bevelEnabled: true, bevelThickness: .025, bevelSize: .025, bevelSegments: 1 });
-      // Worn soft at its edges.
-      const p = slab.attributes.position;
-      for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) * (1 + (rand() - .5) * .04), p.getY(i), p.getZ(i));
-      const lean = -.07, tip = .05 * river, at = { rotation: [lean, 0, tip] as [number, number, number] };
-      const onFace = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyEuler(new THREE.Euler(lean, 0, tip)).toArray();
-      const parts = [
-        part(slab, (_, y) => y < .08 ? '#7f735e' : '#a3967c', { ...at, position: [0, 0, -DEPTH / 2 - .025] }, .06, seed),
-        // The whitewashed panel the year is painted on, worn at its edges.
-        part(box(.7, .36, .012), '#ebe5d4', { ...at, position: onFace(0, .4, DEPTH / 2 + .005) }, .03, seed + 1),
-      ];
-      // Lichen on its head and down one side.
-      for (let i = 0; i < 7; i++) {
-        const a = Math.PI * (.15 + rand() * .7), r = R * (.75 + rand() * .2);
-        parts.push(part(blob(.035 + rand() * .03), i % 3 ? '#9aa07c' : '#c8c3a4', { position: onFace(Math.cos(a) * r, H - R + Math.sin(a) * r, DEPTH / 2 + .003), scale: [1, 1, .3] }, .08, seed + 10 + i));
-      }
-      // Grass grown up round its foot.
-      for (let i = 0; i < 6; i++) {
-        const x = (rand() - .5) * 1.1, z = (rand() - .3) * .4;
-        parts.push(part(blob(.09 + rand() * .05), '#73875a', { position: [x, .02, z + (Math.abs(x) < .4 ? .2 : 0)], scale: [1, .55, 1] }, .12, seed + 20 + i));
-      }
-      return { body: merged(parts), face: flatFace(index, face, { position: onFace(0, .4, DEPTH / 2 + .013) as [number, number, number], rotation: [lean, 0, tip] }) };
     },
   },
   // 2021: a garden marker stake among flowers, the year in ink.
@@ -438,7 +408,7 @@ export function yearAtlas() {
   const draw = () => {
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    YEAR_MARKERS.forEach((marker, i) => letter(ctx, i, String(marker.year), MODELS[marker.medium].face));
+    YEAR_MARKERS.forEach((marker, i) => { if (marker.medium !== 'carving') letter(ctx, i, String(marker.year), MODELS[marker.medium].face); });
     texture.needsUpdate = true;
   };
   draw();
@@ -446,7 +416,23 @@ export function yearAtlas() {
   return texture;
 }
 
-export function yearMarkerModel(marker: YearMarker, index: number): Model {
+export function yearMarkerModel(marker: YearMarker & { medium: Built }, index: number): Model {
   const { face, build } = MODELS[marker.medium];
   return build(index, face, -marker.side, marker.year);
+}
+
+// 2020, carved into the bark of an ash by the water: the year stacked 20 over
+// 20, as initials are cut into a trunk, so it reads large on a narrow one;
+// cut deep and broad through the bark to the pale wood, more boldly than the
+// university years' curves, so it reads from the boats. The canvas is the
+// trunk's face, `arc` round it either side and `from` to `to` up it.
+const YEAR_CANVAS = [290, 400] as const, YEAR_MARGIN = 22;
+export function yearCarvingTextures(year: number) {
+  const [wide, high] = YEAR_CANVAS, text = String(year), lines = [text.slice(0, 2), text.slice(2)];
+  const textures = carvedTextures(wide, high, carver => {
+    const size = (high - YEAR_MARGIN * 2) / 1.62, stroke = size * .07;
+    lines.forEach((line, i) => incise(carver, lettering(line, wide / 2, YEAR_MARGIN + size * (.74 + i * .82), size, false), stroke, false));
+  });
+  for (const texture of [textures.map, textures.bumpMap]) texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  return textures;
 }

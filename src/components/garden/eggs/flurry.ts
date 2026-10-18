@@ -12,10 +12,10 @@ export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number; mobileInl
 // Where each snow trip's flurry falls. July 2019's is Amelia's, so on her
 // bank, the left, a little ahead of the boats as its date shows, in view on
 // both compositions and clear of the boats in portrait. It falls short of
-// 2020's milestone, set back from the water on desktop, below and to the right
-// of the statistics carved into a tree on her bank (uniOrnaments.ts) in the
-// picture once the flurry clears, and near the water on a phone, so it shows
-// to the left of the milestone by the time 2020 turns.
+// the ash with 2020 carved into it, set back from the water on desktop, below
+// and to the right of the statistics carved into a tree on her bank
+// (uniOrnaments.ts) in the picture once the flurry clears, and near the water
+// on a phone; either way 2020's carving shows above its head as 2020 turns.
 // August 2025's is on the left, a little ahead of the boats, between 2025's
 // oar and the lyra's ashes and across the river from the second pair of
 // birdhouses, near the water on desktop. On a phone, where the river's bend

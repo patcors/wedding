@@ -14,7 +14,7 @@ import { CARVINGS, carvedTree, carvingFaces, carvingShown, type CarvingId } from
 import { barkCarvingTextures, barkPatchGeometry, treeMatrix, type TreeMesh } from './barkCarvingGeometry';
 
 // The model's branches as plain arrays (its normals are stored packed).
-function treeMesh(geometry: THREE.BufferGeometry): TreeMesh {
+export function treeMesh(geometry: THREE.BufferGeometry): TreeMesh {
   const position = geometry.attributes.position, normal = geometry.attributes.normal;
   const positions = new Float32Array(position.count * 3), normals = new Float32Array(position.count * 3);
   for (let i = 0; i < position.count; i++) {

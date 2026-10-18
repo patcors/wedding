@@ -1,10 +1,11 @@
-// February 2021, Amelia moves to Sydney: a miniature Sydney Opera House on the
-// rock where the boats first part, and the Harbour Bridge across Amelia's
-// channel from the rock to her bank, which her boat sails under as the date
-// shows (placed in harbour.ts). Still scenery: both come out of the haze
-// together; the Opera House stays until the camera has passed it, and the
-// bridge dissolves away once she is through, before its pylons come between
-// the camera and her boat. Two draw calls.
+// Amelia's Sydney: the Harbour Bridge across her channel from the rock where
+// the boats first part to her bank, which her boat sails under as February
+// 2021's date shows, and further down, with 2022, a miniature Sydney Opera
+// House on a little sandstone point on her bank (placed in harbour.ts).
+// Still scenery: the bridge comes in towards the end of 2020 and fades away
+// once she is through, before its pylons come between the camera and her
+// boat; the Opera House comes in with 2022 and stays until the camera has
+// passed it. Two draw calls.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -17,11 +18,13 @@ export default function Sydney({ mobile, width }: EggProps) {
   const clock = useJourney();
   const opera = useRef<THREE.Mesh>(null), bridge = useRef<THREE.Mesh>(null);
   const geometry = useMemo(() => harbourGeometry(width), [width]);
-  // Each dissolves with the year markers' hashed fade; the bridge's truss is
-  // flat strips, seen from both sides.
+  // Each fades evenly in and out rather than with the year markers' hashed
+  // dissolve, which left the bridge's pylon speckled in the middle of the
+  // picture; it is drawn as solid as ever while fully shown. The bridge's
+  // truss is flat strips, seen from both sides.
   const materials = useMemo(() => ({
-    opera: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8, side: THREE.DoubleSide, alphaHash: true }),
-    bridge: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8, side: THREE.DoubleSide, alphaHash: true }),
+    opera: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8, side: THREE.DoubleSide, transparent: true }),
+    bridge: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8, side: THREE.DoubleSide, transparent: true }),
   }), []);
   useEffect(() => () => {
     geometry.opera.dispose(); geometry.bridge.dispose();
