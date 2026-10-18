@@ -1,6 +1,7 @@
 // The university years: a park picnic table on Amelia's bank, across the
-// river from the π, with Euler's identity carved into its top (placed in
-// uniOrnaments.ts, built in picnicTableGeometry.ts).
+// river from the π, with Euler's identity carved into its top, for all the
+// time they spent at picnic tables (placed in uniOrnaments.ts, built in
+// picnicTableGeometry.ts).
 // Still scenery, dissolving in out of the haze like the year markers and gone
 // once the camera has passed. One draw call; it casts a shadow, so it stands
 // on the grass rather than floating over it.

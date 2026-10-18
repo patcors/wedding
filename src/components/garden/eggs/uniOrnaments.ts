@@ -1,5 +1,5 @@
-// The university years, July 2017 to August 2020, both of them reading
-// maths at UOW: still garden ornaments on the banks, seen in passing as the
+// The university years, July 2017 to August 2020, a double major in
+// statistics and mathematics at UOW: still garden ornaments on the banks, seen in passing as the
 // boats go by. A Möbius strip in bronze beside July 2017's π; a park picnic
 // table across the river from them with Euler's identity carved into its
 // top; and two old trunks across the river from each other, one carved with
