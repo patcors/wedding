@@ -432,21 +432,27 @@ test('the rocket and its stand keep to the egg budget', async () => {
 });
 
 test('the Hagia Sophia stands on the left bank at the start of the S-bend, under the balloon at the trip\'s stop', async () => {
-  const { BALLOON_TIMES, HAGIA, balloonSpot, hagiaShown, hagiaSophiaSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const { BALLOON_TIMES, balloonSpot, hagiaCorners, hagiaShown, hagiaSophiaSpot, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { HAGIA_SOPHIA, hagiaSophiaGeometry } = await import('../src/components/garden/eggs/hagiaSophiaGeometry.ts');
-  const { VOYAGE } = await import('../src/components/garden/gardenGeometry.ts');
+  const { VOYAGE, groundHeight } = await import('../src/components/garden/gardenGeometry.ts');
   const stop = tripStop(trip.month), t = (stop - progressAt(trip.month)) / ROOM;
   assert.ok(t > 0 && t < BALLOON_TIMES.climb);
   for (const [mobile, width] of [[false, 1], [true, MOBILE_RIVER_WIDTH]]) {
     const spot = hagiaSophiaSpot(trip.month, width);
-    assert.ok(Math.abs(spot.z - HAGIA.z) < 1e-9 && spot.z < VOYAGE.bend.from && spot.z > VOYAGE.bend.from - 10, 'at the start of the S-bend');
-    // On the left bank, the front of its terrace a quay at the water's edge.
+    assert.ok(Math.abs(spot.z - VOYAGE.lawn.z) < 1e-9 && spot.z < VOYAGE.bend.from && spot.z > VOYAGE.bend.from - 10, 'at the start of the S-bend');
+    // On the left bank, its whole terrace a little back from the water, on
+    // the level lawn, seated on it: neither sunk into it nor floating.
     assert.ok(onLand(spot.x, spot.z, width) && spot.x < riverCenter(spot.z, width), 'on the left bank');
-    const c = Math.cos(spot.yaw), s = Math.sin(spot.yaw);
-    for (const [dx, dz] of [[1, 1], [1, -1], [-1, -1], [-1, 1]]) {
-      const lx = dx * HAGIA_SOPHIA.width / 2 * spot.scale, lz = dz * HAGIA_SOPHIA.depth / 2 * spot.scale;
-      const x = spot.x + c * lx + s * lz, z = spot.z - s * lx + c * lz;
-      assert.ok(riverCenter(z, width) - x > bankEdge(z, width) - .6, 'its terrace no more than a quay at the water\'s edge');
+    const [a, b, , d] = hagiaCorners(spot);
+    for (const [x, z] of hagiaCorners(spot)) assert.ok(riverCenter(z, width) - x > bankEdge(z, width) + .25, 'back from the water\'s edge');
+    for (let i = 0; i <= 10; i++) for (let k = 0; k <= 10; k++) {
+      const x = a[0] + (d[0] - a[0]) * i / 10 + (b[0] - a[0]) * k / 10, z = a[1] + (d[1] - a[1]) * i / 10 + (b[1] - a[1]) * k / 10;
+      assert.ok(Math.abs(groundHeight(x, z, width) - spot.y) < .02, `level ground under its terrace at ${x}, ${z}`);
+    }
+    // The lawn leaves the shore beside it as it was, rising out of the water a little inland.
+    for (let z = spot.z - 4; z <= spot.z + 4; z += .25) {
+      const edge = riverCenter(z, width) - bankEdge(z, width);
+      assert.ok(groundHeight(edge, z, width) < 0 && groundHeight(edge - .6, z, width) > 0, `shore at ${z}`);
     }
     // In the picture, well in from its edge, from the trip's date through the stop.
     for (let q = progressAt(trip.month); q <= stop; q += .05 * ROOM) {

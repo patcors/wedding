@@ -40,7 +40,9 @@ const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 
 // begin on desktop and its reeds would close the left channel against the
 // bank's. The river widens while Amelia is in Sydney. The S-bend swings the river
 // sideways by `swing` just before the wedding; the jetty and the old tree stand
-// on the `side` bank (+1 is +x) past it, where the boats dock.
+// on the `side` bank (+1 is +x) past it, where the boats dock. A level lawn
+// is cut into the left bank at the start of the bend, for July 2026's
+// miniature Hagia Sophia (see lawnSpot).
 const MEET_Z = routeAtMonth(DATES.meet);
 export const VOYAGE = {
   island: { from: 10, mobileFrom: 7.2, to: MEET_Z + 3, halfWidth: 1.5 },
@@ -49,6 +51,7 @@ export const VOYAGE = {
   bend: { from: -135, to: -164, swing: -12 },
   dock: { z: ROUTE.dock, side: 1, jetty: 2.4 },
   tree: { z: ROUTE.dock - 3.5, inland: 3.5 },
+  lawn: { z: -143, side: -1, inland: 2.35, mobileInland: 1.3, radius: 2, mobileRadius: 1.4, ease: 1 },
 } as const;
 // Everything planted along the river, from just behind the opening view to
 // past the dock, beyond where the camera can see.
@@ -139,11 +142,13 @@ export function launchJetties(width = 1) {
 }
 
 // Ground kept clear of generated planting: the old tree's trunk and roots,
-// and the jetties with their landings on the bank. `margin` widens each, for
+// the level lawn, and the jetties with their landings on the bank. `margin` widens each, for
 // plants and trees with a spread.
 export function voyageClearing(x: number, z: number, width = 1, margin = 0) {
   const { jetty, tree } = voyageLandmarks(width);
   if (Math.hypot(x - tree.x, z - tree.z) < 2.2 + margin) return true;
+  const lawn = lawnSpot(width);
+  if (Math.hypot(x - lawn.x, z - lawn.z) < lawn.radius + margin) return true;
   const along = (x - jetty.x) * jetty.side;
   if (along > -jetty.reach - .4 - margin && along < 1.8 + margin && Math.abs(z - jetty.z) < .9 + margin) return true;
   return launchJetties(width).some(launch => {
@@ -170,14 +175,36 @@ export const chunkSpan = (items: { z: number }[]) =>
 export const inReach = (span: { near: number; far: number }, cameraZ: number, cameraFar: number) =>
   span.far < cameraZ + 3 && span.near > cameraZ - cameraFar;
 
+// The bank rises from the water over its first 2.4 units inland, then levels.
+const bankRise = (inland: number) => -.12 + Math.min(1, Math.max(0, inland / 2.4)) * .85;
 export function groundHeight(x: number, z: number, width = 1) {
   const inland = Math.abs(x - riverCenter(z, width)) - bankEdge(z, width);
   // The ground's wobble is calmer at the water's edge, so the shore always
   // rises out of the water a little inland of the bank, never on it, and
   // boats held at the bank stay clear of visible land.
   const wobble = .4 + .6 * Math.min(1, Math.max(0, inland / 1.2));
-  return -.12 + Math.min(1, Math.max(0, inland / 2.4)) * .85
-    + (Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045) * wobble;
+  const ground = bankRise(inland) + (Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045) * wobble;
+  return onLawn(x, z, width, inland, ground);
+}
+
+// The level lawn (`VOYAGE.lawn`): its middle, how far round it is level, and
+// its height, the bank's rise there without the wobble, so it is cut into the
+// slope behind and made up in front.
+export function lawnSpot(width = 1) {
+  const { z, side, inland: desktop, mobileInland, radius, mobileRadius } = VOYAGE.lawn;
+  const inland = width < 1 ? mobileInland : desktop;
+  return { x: riverCenter(z, width) + side * (bankEdge(z, width) + inland), z, radius: width < 1 ? mobileRadius : radius, height: bankRise(inland) };
+}
+// The ground eases from the bank's into the lawn's level over `ease` round
+// it, but not at the water's edge, which keeps its shore.
+function onLawn(x: number, z: number, width: number, inland: number, ground: number) {
+  const { ease } = VOYAGE.lawn;
+  if (Math.abs(z - VOYAGE.lawn.z) > VOYAGE.lawn.radius + ease) return ground;
+  const lawn = lawnSpot(width), out = (Math.hypot(x - lawn.x, z - lawn.z) - lawn.radius) / ease;
+  if (out >= 1) return ground;
+  const t = Math.min(1, Math.max(0, out)), shore = Math.min(1, Math.max(0, inland / .3));
+  const level = (1 - t * t * (3 - 2 * t)) * shore * shore * (3 - 2 * shore);
+  return ground + (lawn.height - ground) * level;
 }
 
 export function bankGeometry(side: number, width = 1) {
