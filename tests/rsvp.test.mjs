@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  contactProblem, describeGuest, joinNames, readParty, readSaved, storageKey, toParams,
+  contactProblem, describeGuest, formatDietary, joinNames, parseDietary, readParty, readSaved, storageKey, toParams,
 } from '../src/components/details/rsvp.ts';
 
 test('a Party is only trusted when localStorage holds a complete one', () => {
@@ -56,4 +56,17 @@ test('names join the way the Garden greets a Party', () => {
   assert.equal(joinNames(['Paula']), 'Paula');
   assert.equal(joinNames(['Dean', 'Kelly']), 'Dean & Kelly');
   assert.equal(joinNames(['A', 'B', 'C']), 'A, B & C');
+});
+
+test('dietary buttons and Other text become one line for the sheet', () => {
+  assert.equal(formatDietary(['Vego', 'No peanuts'], ' shellfish '), 'Vego, No peanuts, shellfish');
+  assert.equal(formatDietary(['Gluten free'], ''), 'Gluten free');
+  assert.equal(formatDietary([], ''), '');
+});
+
+test('a saved dietary line splits back into buttons and Other text', () => {
+  assert.deepEqual(parseDietary('Vego, No peanuts, shellfish, halal'), { choices: ['Vego', 'No peanuts'], other: 'shellfish, halal' });
+  assert.deepEqual(parseDietary('vegan'), { choices: ['Vegan'], other: '' });
+  assert.deepEqual(parseDietary('no dairy please'), { choices: [], other: 'no dairy please' });
+  assert.deepEqual(parseDietary(''), { choices: [], other: '' });
 });

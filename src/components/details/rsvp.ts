@@ -31,6 +31,26 @@ export interface RememberedParty {
 export const OPEN_PARTY = 'Open RSVP';
 export const MAX_OPEN_GUESTS = 6;
 
+/** The dietary buttons, in order. Anything else goes in "Other". */
+export const DIETARY_OPTIONS = ['Vego', 'Vegan', 'No peanuts', 'Gluten free'] as const;
+
+/** The sheet keeps dietary needs as one line: "Vego, No peanuts, shellfish". */
+export function formatDietary(choices: string[], other: string): string {
+  return [...choices, other.trim()].filter(Boolean).join(', ');
+}
+
+/** Splits a saved dietary line back into buttons and "Other" text (older replies were free text). */
+export function parseDietary(dietary: string): { choices: string[]; other: string } {
+  const choices: string[] = [];
+  const rest: string[] = [];
+  for (const part of dietary.split(',').map(p => p.trim()).filter(Boolean)) {
+    const option = DIETARY_OPTIONS.find(o => o.toLowerCase() === part.toLowerCase());
+    if (option && !choices.includes(option)) choices.push(option);
+    else if (!option) rest.push(part);
+  }
+  return { choices, other: rest.join(', ') };
+}
+
 const isString = (value: unknown): value is string => typeof value === 'string';
 const isAnswer = (value: unknown): value is Answer => value === 'yes' || value === 'no';
 

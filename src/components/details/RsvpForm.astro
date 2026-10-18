@@ -9,6 +9,8 @@ interface Props {
   email: string;     // fallback contact when sending fails
   phone: string;
 }
+import { DIETARY_OPTIONS } from './rsvp';
+
 const { replyBy, busHint, email, phone } = Astro.props;
 const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 ---
@@ -74,10 +76,19 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
         <p class="rsvp-error" data-guest-attend-error hidden></p>
       </fieldset>
       <div class="rsvp-extras" data-guest-extras hidden>
-        <label class="rsvp-field">
-          <span class="rsvp-label">Dietary needs <i>optional</i></span>
-          <input class="rsvp-input" type="text" autocomplete="off" data-guest-dietary />
-        </label>
+        <fieldset class="rsvp-dietary">
+          <legend class="rsvp-label">Dietary requirements <i>optional</i></legend>
+          <div class="rsvp-pills rsvp-pills-diet">
+            {DIETARY_OPTIONS.map(option => (
+              <label class="rsvp-pill"><input type="checkbox" value={option} data-guest-diet /><span>{option}</span></label>
+            ))}
+            <label class="rsvp-pill rsvp-pill-other"><input type="checkbox" data-guest-diet-other /><span>Other</span></label>
+          </div>
+          <label class="rsvp-field rsvp-diet-other" data-guest-diet-other-field hidden>
+            <span class="rsvp-visually-hidden">Other dietary requirements</span>
+            <input class="rsvp-input" type="text" autocomplete="off" placeholder="Tell us what you need" data-guest-dietary-other />
+          </label>
+        </fieldset>
         <fieldset class="rsvp-bus">
           <legend class="rsvp-label">Taking the bus?</legend>
           <div class="rsvp-pills rsvp-pills-small">
@@ -93,7 +104,8 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
 <script>
   import {
-    MAX_OPEN_GUESTS, OPEN_PARTY, contactProblem, describeGuest, joinNames, readParty, readSaved, storageKey, toParams,
+    MAX_OPEN_GUESTS, OPEN_PARTY, contactProblem, describeGuest, formatDietary, joinNames, parseDietary, readParty, readSaved, storageKey,
+    toParams,
     type Answer, type GuestReply, type RememberedParty, type Rsvp,
   } from './rsvp';
 
@@ -147,6 +159,9 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     const legend = $('[data-guest-legend]', row);
     const attendError = $('[data-guest-attend-error]', row);
     const extras = $('[data-guest-extras]', row);
+    const otherToggle = $<HTMLInputElement>('[data-guest-diet-other]', row);
+    const otherField = $('[data-guest-diet-other-field]', row);
+    const otherInput = $<HTMLInputElement>('[data-guest-dietary-other]', row);
 
     row.querySelectorAll<HTMLInputElement>('[data-guest-attending]').forEach(r => { r.name = `${id}-attending`; });
     row.querySelectorAll<HTMLInputElement>('[data-guest-bus]').forEach(r => { r.name = `${id}-bus`; });
@@ -176,12 +191,22 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
     if (answer) {
       row.querySelector<HTMLInputElement>(`[data-guest-attending][value="${answer.attending}"]`)!.checked = true;
-      $<HTMLInputElement>('[data-guest-dietary]', row).value = answer.dietary ?? '';
+      const { choices, other } = parseDietary(answer.dietary ?? '');
+      row.querySelectorAll<HTMLInputElement>('[data-guest-diet]').forEach(box => { box.checked = choices.includes(box.value); });
+      otherToggle.checked = Boolean(other);
+      otherInput.value = other;
       if (answer.bus) row.querySelector<HTMLInputElement>(`[data-guest-bus][value="${answer.bus}"]`)!.checked = true;
     }
     extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
+    otherField.hidden = !otherToggle.checked;
     row.addEventListener('change', event => {
-      if (!(event.target as HTMLElement).matches('[data-guest-attending]')) return;
+      const target = event.target as HTMLElement;
+      if (target === otherToggle) {
+        otherField.hidden = !otherToggle.checked;
+        if (otherToggle.checked) otherInput.focus();
+        return;
+      }
+      if (!target.matches('[data-guest-attending]')) return;
       extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
       showError(attendError, null);
     });
@@ -206,6 +231,12 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 
   // ---- Reading and checking the form ---------------------------------------
 
+  function dietaryOf(row: HTMLElement) {
+    const choices = [...row.querySelectorAll<HTMLInputElement>('[data-guest-diet]:checked')].map(box => box.value);
+    const other = $<HTMLInputElement>('[data-guest-diet-other]', row).checked ? $<HTMLInputElement>('[data-guest-dietary-other]', row).value : '';
+    return formatDietary(choices, other);
+  }
+
   function collect(): Rsvp {
     const guests = rows().map((row): GuestReply => {
       const attending = checked(row, 'data-guest-attending') as Answer;
@@ -213,7 +244,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
       return {
         name: row.dataset.name ?? $<HTMLInputElement>('[data-guest-name]', row).value.trim(),
         attending,
-        dietary: coming ? $<HTMLInputElement>('[data-guest-dietary]', row).value.trim() : '',
+        dietary: coming ? dietaryOf(row) : '',
         bus: coming ? checked(row, 'data-guest-bus') : '',
       };
     });
@@ -390,6 +421,11 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
   @media (hover: hover) { .rsvp-pill input:not(:checked):hover + span { border-color: var(--deep); } }
 
   .rsvp-extras { margin-top: 6px; padding-left: 20px; border-left: 1px solid #7a826d66; }
+  .rsvp-dietary { margin-top: 24px; }
+  .rsvp-dietary legend { margin-bottom: 12px; }
+  .rsvp-pills-diet { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .rsvp-pills-diet .rsvp-pill-other { grid-column: 1 / -1; }
+  .rsvp-diet-other { margin-top: 14px; }
   .rsvp-bus { margin-top: 24px; }
   .rsvp-bus legend { margin-bottom: 12px; }
 
