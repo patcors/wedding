@@ -99,7 +99,7 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-voyage .garden-text-link { margin-top: 10px; color: var(--garden-on-sky-soft, #59634f); }
 /* Dev only (Review): the year alone takes the month's place and size. */
 .garden-voyage-date[data-mode=year] .garden-voyage-year { font-size: clamp(42px, 4vw, 58px); font-style: italic; font-weight: 300; letter-spacing: 0; margin-right: 0; line-height: 1.05; color: inherit; }
-/* Dev only (Review "Digits"): DD-MM-YYYY in the month's place, in lining
+/* Digits, as guests see the date: DD-MM-YYYY in the month's place, in lining
    figures, each digit in a cell of its own so the date never shifts. A digit
    flips over about its middle as it changes, the old one folding away before
    the new one folds in, like a flip clock's card, over its pace (--flip, from

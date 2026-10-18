@@ -16,15 +16,16 @@ import { treePlacements, type Placement } from '../gardenTreeSpots.ts';
 import { ROOM, progressAt, routeAt } from '../journey.ts';
 import { BIRDHOUSE } from './birdhouseGeometry.ts';
 
-// When Patrick's bird goes home, his renovation done: August 2024, so they
-// then live apart about a year until AMELIA_MOVED_IN (journey.ts). It is the
+// When Patrick's bird goes home, his renovation done: August 2024 (he moved
+// out about the 12th), so they then live apart until AMELIA_MOVED_IN
+// (journey.ts). It is the
 // month they start dating, so it flies home across the river just before the
 // date shows, as July does, while the dating butterflies come out of the
 // trees on his bank beside the boats, short of his house (see datingFlight.ts).
 export const PATRICK_HOME = '2024-08';
-// When her bird flies over to his, standing in for AMELIA_MOVED_IN (June
-// 2025, a placeholder). Off the true timeline, so the move is seen while both
-// houses are well in the picture: by June 2025 the boats are long past them.
+// When her bird flies over to his, standing in for AMELIA_MOVED_IN (March
+// 2026). Off the true timeline, so the move is seen while both houses are
+// well in the picture: by 2025 the boats are long past them.
 // It is the first month after dating's date has held, so dating's stop shows
 // each bird at home.
 export const MOVE_SHOWN = '2024-09';

@@ -14,7 +14,7 @@ import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
-import { DATE_LABEL_MODES, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
+import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
@@ -350,8 +350,8 @@ export default function Garden() {
   // The date stays on through the voyage panel's fade out.
   const [lastDate, setLastDate] = useState<string | null>(null);
   if (voyage.date && voyage.date !== lastDate) setLastDate(voyage.date);
-  // Dev only: the Review panel's date label, month and year by default.
-  const [dateMode, setDateMode] = useState<DateLabelMode>('full');
+  // The date label: digits for guests; the Review panel can trial the others.
+  const [dateMode, setDateMode] = useState<DateLabelMode>(DEFAULT_DATE_LABEL);
   useEffect(() => { if (REVIEW) setDateMode(dateLabelMode(localStorage.getItem(REVIEW_DATE))); }, []);
   // Dev only: the Review panel's copy, in today's glow by default.
   const [text, setText] = useState<TextLook>('glow');

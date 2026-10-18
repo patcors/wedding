@@ -6,9 +6,9 @@ import {
 import { ARRIVAL_END, MILESTONES, STOPS, VOYAGE_END, progressAt, storyMonth } from '../src/components/garden/journey.ts';
 
 test('the date label reads month and year unless the Review panel chose otherwise', () => {
-  assert.equal(dateLabelMode(null), 'full');
+  assert.equal(dateLabelMode(null), 'digits');
   for (const mode of Object.keys(DATE_LABEL_MODES)) assert.equal(dateLabelMode(mode), mode);
-  for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'full');
+  for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'digits');
 });
 
 test('each mode shows the month and year, the year alone, or nothing', () => {
@@ -33,6 +33,7 @@ test('digits count up to the day they met and hold on each milestone\'s own day,
   assert.equal(settledOn('2018-11'), '2018-11-18');
   assert.equal(settledOn('2021-02'), '2021-02-27');
   assert.equal(settledOn('2026-07'), '2026-07-07');
+  assert.equal(settledOn('2026-04'), '2026-04-16');
   // A milestone whose day isn't known holds on the 1st.
   assert.equal(settledOn('2020-08'), '2020-08-01');
   // Each known day is a real day in a milestone's month (or the wedding's), in order.

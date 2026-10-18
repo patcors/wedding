@@ -1,15 +1,16 @@
-// Dev only (the Review panel): how the voyage's running date reads, to judge
-// whether it's still wanted now each year is marked in the scenery, and to
-// trial it in digits. Guests always see the month and year; screen readers
-// hear each milestone either way. Pure, so it can be tested.
+// How the voyage's running date reads: in digits, as guests see it (Amelia,
+// October 2026), or, in the Review panel only, as month and year, the year
+// alone or not at all. Screen readers hear each milestone either way. Pure,
+// so it can be tested.
 import { DATES, MILESTONES, monthIndex } from './journey.ts';
 
 export const DATE_LABEL_MODES = { full: 'Month & year', year: 'Year only', digits: 'Digits', off: 'Off' } as const;
 export type DateLabelMode = keyof typeof DATE_LABEL_MODES;
 
 // A remembered choice, or the default for anything else.
+export const DEFAULT_DATE_LABEL: DateLabelMode = 'digits';
 export const dateLabelMode = (stored: string | null): DateLabelMode =>
-  stored !== null && Object.hasOwn(DATE_LABEL_MODES, stored) ? stored as DateLabelMode : 'full';
+  stored !== null && Object.hasOwn(DATE_LABEL_MODES, stored) ? stored as DateLabelMode : DEFAULT_DATE_LABEL;
 
 // What the label shows for a date like "July 2017": its month and year, the
 // year alone, or nothing. Digits show their own date (digitDate).
@@ -33,8 +34,12 @@ export const MILESTONE_DAYS: readonly string[] = [
   '2021-02-27', // Amelia moves to Sydney
   '2023-01-01', // Amelia starts at HeirWealth
   '2023-03-20', // Patrick starts at HeirWealth
+  '2024-05-02', // Amelia's apartment settles (Patrick's on 24 July)
+  '2024-06-04', // Patrick moves into hers
   '2024-08-02', // they start dating
   '2025-08-29', // the second snow trip
+  '2026-01-28', // their first salsa class
+  '2026-04-16', // they get engaged, a year to the day before the wedding
   '2026-07-07', // the balloon flight, three days after the Hagia Sophia
   WEDDING_ON,
 ];
@@ -68,12 +73,14 @@ export function digitDate(month: number) {
 }
 
 // How often the day, the month and the year may flip, in ms (each flip's
-// animation takes this long), so a fast scroll flicks the days but never
-// strobes: the days fastest, the months slower, the years slowest. Each
+// animation takes this long), so a fast scroll steps the days along a few at
+// a time but never strobes: the days fastest, the months slower, the years
+// slowest. Calmed (October 2026) from 100, 240 and 400, which Amelia found
+// too busy. Each
 // group's digits flip together, each only if it changes, so the day and the
 // month never read as one that can't be (a "32" or an "18"). A group that may
 // not flip yet catches up once it may, straight to the date then showing.
-export const FLIP_EVERY = [100, 100, 0, 240, 240, 0, 400, 400, 400, 400] as const;
+export const FLIP_EVERY = [300, 300, 0, 500, 500, 0, 700, 700, 700, 700] as const;
 const GROUPS = [[0, 2], [3, 5], [6, 10]] as const;
 export type Flips = { shown: string; at: readonly number[] };
 export const startFlips = (shown: string): Flips => ({ shown, at: GROUPS.map(() => -Infinity) });

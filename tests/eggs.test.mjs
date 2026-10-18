@@ -234,7 +234,7 @@ test('the birds tell the apartments: one house each side of the river, his at he
   const { AMELIA_MOVED_IN, DATES } = await import('../src/components/garden/journey.ts');
   const { MOVE_SHOWN, NESTS, NEST_EVENTS, PATRICK_HOME, birdPoses, fired, nestSpots, nestTriggers, perchPoint } = await import('../src/components/garden/eggs/nesting.ts');
   assert.equal(apartments.month, '2024-05');
-  assert.equal(AMELIA_MOVED_IN, '2025-06');
+  assert.equal(AMELIA_MOVED_IN, '2026-03');
   assert.ok(MILESTONES.every(m => m.month !== AMELIA_MOVED_IN), 'moving in is not a milestone');
   const living = MILESTONES.find(m => m.id === 'living-together'), dating = MILESTONES.find(m => m.id === 'dating');
   assert.deepEqual([...new Set(NEST_EVENTS.map(e => e.month))], [apartments.month, PATRICK_HOME, MOVE_SHOWN]);

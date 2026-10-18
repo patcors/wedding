@@ -14,11 +14,12 @@ export type Milestone = { id: string; month: string; description: string; egg?: 
 // When Amelia left FinoComp. Her flag changes as it shows (see FLAG_CHANGES
 // in storyBoats.ts).
 export const AMELIA_LEFT_FINOCOMP = '2022-08';
-// When Amelia moved into Patrick's apartment: a placeholder until she
-// confirms the month. It isn't a milestone, and nothing is timed by it: her
-// bird's flight over to his birdhouse stands in for it earlier, while the
-// houses are in view (MOVE_SHOWN in eggs/nesting.ts).
-export const AMELIA_MOVED_IN = '2025-06';
+// When Amelia moved into Patrick's apartment: March 2026 (Amelia, October
+// 2026). It isn't a milestone, and nothing is timed by it: her bird's flight
+// over to his birdhouse stands in for it much earlier, in 2024, while the
+// houses are in view (MOVE_SHOWN in eggs/nesting.ts); she liked the whole
+// sequence told in 2024 and 2025.
+export const AMELIA_MOVED_IN = '2026-03';
 // When Bullet, the product Patrick worked on, goes up as a little rocket on
 // his bank (eggs/rocketLaunch.ts): `at` shares after the month shows, as it
 // went into production. It isn't a milestone; it is here so the glide
