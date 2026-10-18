@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DATE_LABEL_MODES, FLIP_EVERY, MET_ON, MILESTONE_DAY, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
+  DATE_LABEL_MODES, FLIP_EVERY, MET_ON, MILESTONE_DAY, MILESTONE_DAYS, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
 } from '../src/components/garden/dateLabelMode.ts';
 import { ARRIVAL_END, MILESTONES, STOPS, VOYAGE_END, progressAt, storyMonth } from '../src/components/garden/journey.ts';
 
@@ -25,12 +25,23 @@ const day = digits => {
   return Date.UTC(y, m - 1, d) / 864e5;
 };
 
-test('digits count up to the day they met and hold on a fixed day at each milestone, through to the wedding', () => {
+test('digits count up to the day they met and hold on each milestone\'s own day, through to the wedding', () => {
   assert.deepEqual([MET_ON, WEDDING_ON, MILESTONE_DAY], ['2017-07-25', '2027-04-16', 1]);
   assert.equal(digitDate(storyMonth(0)), '01-01-2017');
   assert.equal(digitDate(storyMonth(ARRIVAL_END)), '01-01-2017');
   assert.equal(settledOn('2017-07'), MET_ON);
-  assert.equal(settledOn('2018-11'), '2018-11-01');
+  assert.equal(settledOn('2018-11'), '2018-11-18');
+  assert.equal(settledOn('2021-02'), '2021-02-27');
+  assert.equal(settledOn('2026-07'), '2026-07-07');
+  // A milestone whose day isn't known holds on the 1st.
+  assert.equal(settledOn('2020-08'), '2020-08-01');
+  // Each known day is a real day in a milestone's month (or the wedding's), in order.
+  const months = [...MILESTONES.map(m => m.month), WEDDING_ON.slice(0, 7)];
+  for (const iso of MILESTONE_DAYS) {
+    assert.ok(months.includes(iso.slice(0, 7)), `${iso} is a milestone's month`);
+    assert.equal(new Date(`${iso}T00:00Z`).toISOString().slice(0, 10), iso);
+  }
+  assert.deepEqual([...MILESTONE_DAYS].sort(), MILESTONE_DAYS);
   MILESTONES.forEach(({ month }, i) => {
     // From the moment its date shows, through its stop, to the end of its hold.
     for (const p of [progressAt(month), STOPS[i + 1], progressAt(month) + 2 * (STOPS[i + 1] - progressAt(month)) - 1e-6])

@@ -20,13 +20,27 @@ export function shownDate(label: string, mode: DateLabelMode) {
 
 // Digits: the date as DD-MM-YYYY, its days ticking over with story time as
 // the guest scrolls. It counts up from the voyage's start to the day they met,
-// then on through each milestone to the wedding. Most milestones' days aren't
-// known, so each holds on MILESTONE_DAY of its month; the meeting holds on
-// MET_ON (25 July 2017: Amelia to confirm) and the wedding on WEDDING_ON.
+// then on through each milestone to the wedding, holding on each milestone's
+// own day: MET_ON, the days Amelia gave (October 2026) in MILESTONE_DAYS, and
+// WEDDING_ON. A milestone whose day isn't known yet holds on MILESTONE_DAY of
+// its month. Only the label changes: each still holds at its month's place on
+// the river, so nothing in the scenery moves.
 export const VOYAGE_FROM = '2017-01-01', MET_ON = '2017-07-25', WEDDING_ON = '2027-04-16';
+export const MILESTONE_DAYS: readonly string[] = [
+  MET_ON,
+  '2018-11-18', // the FinoComp internship starts
+  '2019-07-20', // Amelia breaks her wrist on the snow trip
+  '2021-02-27', // Amelia moves to Sydney
+  '2023-01-01', // Amelia starts at HeirWealth
+  '2023-03-20', // Patrick starts at HeirWealth
+  '2024-08-02', // they start dating
+  '2025-08-29', // the second snow trip
+  '2026-07-07', // the balloon flight, three days after the Hagia Sophia
+  WEDDING_ON,
+];
 export const MILESTONE_DAY = 1;
 export const settledOn = (month: string) =>
-  [MET_ON, WEDDING_ON].find(day => day.startsWith(month)) ?? `${month}-${String(MILESTONE_DAY).padStart(2, '0')}`;
+  MILESTONE_DAYS.find(day => day.startsWith(month)) ?? `${month}-${String(MILESTONE_DAY).padStart(2, '0')}`;
 
 const DAY = 864e5;
 const dayNumber = (iso: string) => {
