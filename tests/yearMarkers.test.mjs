@@ -41,6 +41,12 @@ test('markers on the banks stand on land and those in the river keep clear of th
   for (const [width] of LAYOUTS) {
     for (const marker of YEAR_MARKERS) {
       const spot = yearMarkerSpot(marker, width), out = Math.abs(spot.x - riverCenter(spot.z, width));
+      // Carved into a tree's trunk, the tree standing on the bank near the water, its foot on the ground.
+      if ('carved' in marker) {
+        assert.ok(out > bankEdge(spot.z, width) + .5 && out < bankEdge(spot.z, width) + 3, `${marker.year}'s tree near the water (width ${width})`);
+        assert.equal(Math.sign(spot.x - riverCenter(spot.z, width)), marker.side);
+        continue;
+      }
       if ('inland' in marker) {
         assert.ok(Math.abs(out - bankEdge(spot.z, width)) < 1, `${marker.year} at the water's edge`);
         assert.ok(islandHalfWidth(spot.z, width) === 0 || out > bankEdge(spot.z, width) - .2, `${marker.year} off the island`);
@@ -64,7 +70,7 @@ test('markers stand apart along the river, further still when on the same bank',
     const spots = YEAR_MARKERS.map(m => yearMarkerSpot(m, width));
     for (let i = 1; i < spots.length; i++) assert.ok(spots[i - 1].z - spots[i].z > 5, `${YEAR_MARKERS[i].year} apart`);
     // Two on the same bank are further apart still, so each reads on its own.
-    const bank = m => 'inland' in m && m.side;
+    const bank = m => ('inland' in m || 'carved' in m) && m.side;
     for (let i = 1; i < spots.length; i++) if (bank(YEAR_MARKERS[i]) === bank(YEAR_MARKERS[i - 1])) assert.ok(spots[i - 1].z - spots[i].z > 10, `${YEAR_MARKERS[i].year} crowds ${YEAR_MARKERS[i - 1].year}`);
   }
 });

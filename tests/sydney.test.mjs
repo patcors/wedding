@@ -258,27 +258,35 @@ test('the bridge comes in towards the end of 2020 and the Opera House with 2022,
   }
 });
 
-test('2020\'s milestone stands on Amelia\'s bank, clear of the rock and the bridge on the ground and in the picture', async () => {
-  const { YEAR_MARKERS, yearMarkerSpot, yearTurns } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+test('2020 is carved into a tree on Amelia\'s bank as 2020 turns, before the bridge comes in, with August\'s mortarboard at its foot', async () => {
+  const { yearCarving } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+  const { treePlacements } = await import('../src/components/garden/gardenTreeSpots.ts');
   const { CAPS, capLanding } = await import('../src/components/garden/eggs/capToss.ts');
+  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
   const marker = YEAR_MARKERS.find(m => m.year === 2020);
-  assert.equal(marker.medium, 'milestone');
+  assert.equal(marker.medium, 'carving');
   assert.equal(marker.side, -1);
   for (const width of widths) {
-    const spot = yearMarkerSpot(marker, width), bridge = harbourBridge(width);
-    assert.ok(riverCenter(spot.z, width) - spot.x > bankEdge(spot.z, width), 'on the bank');
+    const { tree } = yearCarving(marker, width), spot = yearMarkerSpot(marker, width), inland = riverCenter(tree.z, width) - tree.x - bankEdge(tree.z, width);
+    // A real tree standing by the water on her bank, broad enough in the trunk for the year to read.
+    assert.ok(treePlacements(width, width < 1).some(t => t.x === tree.x && t.z === tree.z && t.type === tree.type));
+    assert.ok(inland > .8 && inland < 2.5, `its tree ${inland} from the water (width ${width})`);
+    assert.ok(tree.scale >= 1.1);
+    // On the face of its trunk turned to the camera as the year turns.
+    const [cx, , cz] = cameraPose(yearTurns(2020), width).position;
+    assert.ok(Math.hypot(spot.x - cx, spot.z - cz) < Math.hypot(tree.x - cx, tree.z - cz) - .3);
+    // Well up the river from the bridge, which isn't in yet.
     assert.ok(spot.z > VOYAGE.rock.bridge + 4);
-    for (const pylon of bridge.pylons) assert.ok(Math.hypot(pylon.x - spot.x, pylon.z - spot.z) > 4);
-    // August's teal mortarboard lands in front of it, nearer the camera.
+    for (const p of range(yearTurns(2020), STOPS[MILESTONES.indexOf(MILESTONES.find(m => m.id === 'graduation')) + 1], .002)) assert.equal(harbourShown(p, cameraPose(p, width).position[2], width < 1).bridge, 0);
+    // August's teal mortarboard lands in front of it, near its foot.
     const cap = capLanding('2020-08', CAPS.tosses[0], width);
-    assert.ok(cap.z > spot.z && Math.hypot(cap.x - spot.x, cap.z - spot.z) < 5);
-    // Through 2020 it never stands in front of the bridge's pylons on its bank.
-    for (const p of range(yearTurns(2020), progressAt('2020-08'), .002)) {
-      const at = seen(p, width, spot.x, spot.z), half = degrees(Math.atan(.36 * spot.scale / at.distance));
-      for (const pylon of bridge.pylons.filter(pylon => pylon.x === bridge.far)) {
-        const there = seen(p, width, pylon.x, pylon.z), wide = degrees(Math.atan(bridge.size.pylon.across / 2 / there.distance));
-        assert.ok(at.bearing - there.bearing > half + wide, `beside a pylon at ${p} (width ${width})`);
-      }
+    assert.ok(cap.z > tree.z && Math.hypot(cap.x - tree.x, cap.z - tree.z) < 4.5 && Math.hypot(cap.x - tree.x, cap.z - tree.z) > 1.5);
+    // Above the 2019 snowman's head in the picture, so it isn't hidden behind it.
+    const snowman = snowSpot(SNOW_SPOTS[2019], '2019-07', width), size = 1.25 * (width < 1 ? .9 : 1);
+    for (const p of range(yearTurns(2020), progressAt('2020-10'), .002)) {
+      const [, cy] = cameraPose(p, width).position, at = seen(p, width, spot.x, spot.z), him = seen(p, width, snowman.x, snowman.z);
+      const carving = degrees(Math.atan2(tree.y + marker.carved.from * tree.scale - cy, at.distance)), head = degrees(Math.atan2(snowman.y + 1.52 * size - cy, him.distance));
+      assert.ok(carving > head + .3, `behind the snowman at ${p} (width ${width})`);
     }
   }
 });
