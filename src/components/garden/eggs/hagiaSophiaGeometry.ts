@@ -13,8 +13,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const STONE = '#cbbda3', STONE_DARK = '#9d927e', PLASTER = '#c98b69', PLASTER_LIGHT = '#d9a27d', PLASTER_DARK = '#b07457';
 const LEAD = '#8b9399', WINDOW = '#4a3b33', MINARET = '#e6d8bf', GOLD = '#c9a24a';
 // Heights: the terrace's top, the body's, the crossing tower's, and the
-// drum's. The terrace runs down to `sunk` below its foot, so where it stands
-// at the water's edge its front is a little stone quay.
+// drum's. The terrace runs down to `sunk` below its foot, so no gap shows
+// under it where the lawn it stands on eases back into the bank.
 const PLINTH = .1, BODY = .35, TOWER = .48, DRUM = .53;
 export const HAGIA_SOPHIA = { width: 1.15, depth: .82, height: .93, sunk: .12 } as const;
 

@@ -1,4 +1,4 @@
-// Late 2025: Bullet, the product Patrick worked on, as a brass bullet of a
+// 2025: Bullet, the product Patrick worked on, as a brass bullet of a
 // rocket on a launch stand on the right bank. It comes out of the haze on its
 // stand, and as the scroll passes its moment it fires and climbs away up the
 // river's open sky, trailing puffs of smoke. It isn't a milestone, so it
@@ -10,22 +10,25 @@ import { ROOM, progressAt, routeAt } from '../journey.ts';
 import { heightAt, inView, overRiver } from './egg.ts';
 import { STAND } from './rocketGeometry.ts';
 
-// It launches `at` shares after `month` shows, and stands `lead` past where
-// the boats are then (about z −117), on the `side` bank, `inland` of the
-// water's edge: past the second pair of birdhouses and short of 2026's arch,
-// further inland than the arch on desktop and right by the water on a phone,
-// where the bank is at the edge of the picture as it fires. Larger than life, and larger
-// again in portrait's wider lens. Seconds: the flame burns on the stand for
-// `ignite`, then it takes `flight` to climb out of sight. It rises `lift`
-// straight up off its rod, then turns away up the river to `to`: `distance`
-// ahead of the camera as it launches, `bearing` degrees right of the middle
-// of the picture and `elevation` degrees above the eye line, in the open sky
-// between the canopies and below the date label.
+// It launches `at` shares after `month` shows, just before August 2025's
+// snow trip stop, so it fires as the camera comes to rest there and the whole
+// launch plays out while it is well inside a phone's picture (any later and
+// the camera has come up on it, gliding on, and it fires at the edge). It
+// stands `lead` past where the boats are then (about z −117), on the `side`
+// bank, `inland` of the water's edge: past the second pair of birdhouses and
+// short of 2026's arch, further inland than the arch on desktop and right by
+// the water on a phone. Larger than life, and larger again in portrait's
+// wider lens. Seconds: the flame burns on the stand for `ignite`, then it
+// takes `flight` to climb out of sight. It rises `lift` straight up off its
+// rod, then turns away up the river to `to`:
+// `distance` ahead of the camera as it launches, `bearing` degrees right of
+// the middle of the picture and `elevation` degrees above the eye line, in
+// the open sky between the canopies and below the date label.
 export const ROCKET = {
-  month: '2025-10', at: 0,
-  side: 1, lead: 2, inland: { desktop: 1.3, mobile: .4 },
+  month: '2025-08', at: .14,
+  side: 1, lead: 5.17, inland: { desktop: 1.3, mobile: .4 },
   scale: { desktop: 1.5, mobile: 1.9 },
-  ignite: .6, flight: 3.4, lift: 1.6,
+  ignite: .5, flight: 3.4, lift: 1.6,
   to: { desktop: { distance: 44, bearing: -2, elevation: 8 }, mobile: { distance: 44, bearing: -1, elevation: 16 } },
 } as const;
 // Its smoke, in seconds and world units at desktop's scale: a few puffs
@@ -42,10 +45,10 @@ export const launchProgress = () => progressAt(ROCKET.month) + ROCKET.at * ROOM;
 // Shares since its launch at progress p: negative while it waits on its stand.
 export const rocketTime = (p: number) => (p - launchProgress()) / ROOM;
 const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * (3 - 2 * x); };
-// How much of it shows, 0 to 1: it comes out of the haze in the spring
-// before August 2025's snow trip, rather than as soon as it is in reach, a
-// year earlier, as they start dating.
-export const rocketShown = (t: number) => smooth((t + 1) / .4);
+// How much of it shows, 0 to 1: it comes out of the haze over the first months
+// of 2025, well before August's snow trip, rather than as soon as it is in
+// reach, half a year earlier, as they start dating.
+export const rocketShown = (t: number) => smooth((t + .75) / .4);
 
 // Where its stand stands: on the ground, turned to face the camera as it launches.
 export function rocketSpot(width: number) {

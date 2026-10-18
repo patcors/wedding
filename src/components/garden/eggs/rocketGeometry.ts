@@ -1,4 +1,4 @@
-// Late 2025's rocket (see rocketLaunch.ts): Bullet, the product Patrick
+// 2025's rocket (see rocketLaunch.ts): Bullet, the product Patrick
 // worked on, as a bullet of a rocket. A brass casing with a rim and a groove
 // at its foot, a copper nose, four swept fins in darker brass and a dark
 // nozzle, in one mesh with vertex colours, about 520 triangles; it stands on
