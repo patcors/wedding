@@ -1,18 +1,20 @@
-// Every year of the voyage, 2017 to 2026, marked once in the scenery as the
+// Every year of the voyage, 2017 to 2027, marked once in the scenery as the
 // boats enter it, each in its own medium: a signpost, a carved rock, a buoy, a
 // boathouse's doors, a garden stake, an old pile, a slate on a landing, a paper
-// lantern, stone steps and a garden arch (see yearMarkerSpots.ts for where and
-// when). Each is drawn only from a little way ahead of the camera, dissolving
-// in out of the haze, until just past it, so only one or two cost anything at
-// a time.
+// lantern, stone steps, a garden arch and the wedding's heart on a post (see
+// yearMarkerSpots.ts for where and when). Each is drawn only from a little way
+// ahead of the camera, dissolving in out of the haze, until just past it, so
+// only one or two cost anything at a time.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useJourney } from '../JourneyProvider';
 import type { SlotProps } from '../JourneyProvider';
-import { YEAR_MARKERS, markerShown, yearMarkerSpot } from './yearMarkerSpots';
+import { YEAR_MARKERS, yearMarkerShown, yearMarkerSpot } from './yearMarkerSpots';
 import { yearAtlas, yearMarkerModel } from './yearMarkerGeometry';
 
 export default function YearMarkers({ paused, mobile, width }: SlotProps) {
+  const clock = useJourney();
   const models = useMemo(() => YEAR_MARKERS.map(yearMarkerModel), []);
   // Each marker has its own pair of materials, to dissolve on its own; they
   // share one shader. Hashed alpha fades the solid body without sorting.
@@ -40,7 +42,7 @@ export default function YearMarkers({ paused, mobile, width }: SlotProps) {
     YEAR_MARKERS.forEach((marker, i) => {
       const group = groups.current[i], spot = spots[i];
       if (!group) return;
-      const shown = markerShown(spot.z, camera.position.z, mobile);
+      const shown = yearMarkerShown(marker, spot.z, clock.progress, camera.position.z, mobile);
       group.visible = shown > 0;
       if (!group.visible) return;
       materials[i].body.opacity = materials[i].face.opacity = shown;

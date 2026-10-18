@@ -341,6 +341,59 @@ const MODELS: Record<YearMarker['medium'], { face: Face; build: Build }> = {
       return { body: merged(parts), face: flatFace(index, face, { position: [0, 1.95, .019] }) };
     },
   },
+  // 2027: painted on a heart-shaped board on a post, for the wedding: ivory
+  // with a blush line round it, a garland over its lobes and a ribbon tied
+  // round the post below, one tail in each boat's colour.
+  heart: {
+    face: { width: .9, height: .36, lettering: { kind: 'paint', colour: '#384135', weight: 600 } },
+    build: (index, face, _river, seed) => {
+      const rand = random(seed), WIDE = 1.5, DEPTH = .06, CENTRE = 1.66, LEAN = .035;
+      // The classic heart curve, 32 across and 29 from its lobes to its tip;
+      // `inset` shrinks it about its middle.
+      const S = WIDE / 32, heartAt = (t: number, inset = 0) => {
+        const x = 16 * Math.sin(t) ** 3, y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+        const k = 1 - inset;
+        return new THREE.Vector2(x * S * k, (y * k - 2.5 * inset) * S);
+      };
+      const outline = (inset: number) => Array.from({ length: 36 }, (_, i) => heartAt(i / 36 * Math.PI * 2, inset));
+      const board = new THREE.ExtrudeGeometry(new THREE.Shape(outline(0)), { depth: DEPTH, bevelEnabled: false, curveSegments: 1 });
+      const line = new THREE.Shape(outline(.05));
+      line.holes.push(new THREE.Path(outline(.11)));
+      const at = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyAxisAngle(new THREE.Vector3(0, 0, 1), LEAN).add(new THREE.Vector3(0, CENTRE, 0));
+      const parts = [
+        part(box(.1, CENTRE + .05, .1), WEATHERED, { position: [0, (CENTRE + .05) / 2 - .05, -.06] }, .08, seed),
+        part(box(.07, .5, .03), WEATHERED, { position: at(0, .05, -.015).toArray(), rotation: [0, 0, LEAN] }, .06, seed + 1),
+        // Painted on its face, bare wood round its edge.
+        part(board, (_, __, z) => z > DEPTH * .9 ? '#f4ecdb' : '#8e7d65', { position: at(0, 0, 0).toArray(), rotation: [0, 0, LEAN] }, .03, seed + 2),
+        part(new THREE.ShapeGeometry(line, 1), '#c99592', { position: at(0, 0, DEPTH + .003).toArray(), rotation: [0, 0, LEAN] }, .03, seed + 3),
+      ];
+      // The garland: leaves and white, blush and cream flowers along both lobes,
+      // from beside the cleft out and down each shoulder.
+      const FLOWERS = ['#f4efe4', '#e6bcb6', '#f4efe4', '#efe0b8', '#d99f9f'];
+      for (let i = 0; i < 26; i++) {
+        const side = i % 2 ? 1 : -1, t = side * (.3 + (Math.floor(i / 2) / 12) * 1.45 + rand() * .06);
+        const { x, y } = heartAt(t), flower = i % 3 !== 1;
+        parts.push(part(blob(flower ? .045 + rand() * .015 : .07), flower ? FLOWERS[i % FLOWERS.length] : '#6f8456',
+          { position: at(x * .97, y * .97 + .02, DEPTH + .03 + rand() * .03).toArray(), scale: [1, .8, .7] }, .1, seed + 10 + i));
+        // Each leaf has another tucked just outside the edge, behind the flowers.
+        if (!flower) parts.push(part(blob(.06), '#7d9161', { position: at(x * 1.02 + side * .03, y * 1.02 + .03, DEPTH * .5).toArray(), scale: [1.2, .7, .5] }, .1, seed + 40 + i));
+      }
+      // The ribbon round the post under the tip: a band, a bow's two loops and
+      // two tails, Amelia's teal and Patrick's soft yellow.
+      const tie = .78, TEAL = '#5aa39c', YELLOW = '#e9cd6e';
+      parts.push(part(cylinder(.075, .075, .05, 8), '#efe6d2', { position: [0, tie, -.06] }, .04, seed + 70));
+      for (const [s, colour] of [[-1, TEAL], [1, YELLOW]] as const) {
+        parts.push(part(new THREE.TorusGeometry(.06, .016, 4, 8), colour, { position: [s * .07, tie + .02, 0], rotation: [0, 0, s * .5], scale: [1.2, .7, .6] }, .05, seed + 71 + s));
+        parts.push(part(box(.035, .26, .008), colour, { position: [s * .05, tie - .14, 0], rotation: [0, 0, s * .22] }, .05, seed + 74 + s));
+      }
+      // A tuft or two of grass at its foot.
+      for (let i = 0; i < 5; i++) {
+        const a = i * 1.3 + rand();
+        parts.push(part(blob(.09 + rand() * .05), '#73875a', { position: [Math.cos(a) * .16, .03, Math.sin(a) * .12 - .06], scale: [1, .55, 1] }, .12, seed + 80 + i));
+      }
+      return { body: merged(parts), face: flatFace(index, face, { position: at(0, .04, DEPTH + .004).toArray(), rotation: [0, 0, LEAN] }) };
+    },
+  },
 };
 
 // One canvas holding every year's lettering. Drawn again once Cormorant has
