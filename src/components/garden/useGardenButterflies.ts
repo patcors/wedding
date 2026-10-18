@@ -25,8 +25,11 @@ function measurePerch(perch: { node: Text; offset: number }, height: number, con
       + height * (ink.actualBoundingBoxAscent + ink.actualBoundingBoxDescent) };
 }
 
-export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, ready }: {
-  chapter: number; paused: boolean; disabled: boolean; sceneOnly: boolean; ready: boolean;
+// `away`: the opening title's names have flown off towards their boats
+// (openingNames.ts), so there is nowhere to perch on them, and any butterfly
+// there lets go; they are measured again once the names are home.
+export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, ready, away = false }: {
+  chapter: number; paused: boolean; disabled: boolean; sceneOnly: boolean; ready: boolean; away?: boolean;
 }) {
   const [visits, setVisits] = useState<ButterflyVisit[]>([]);
   const [spots, setSpots] = useState<MeasuredPerch[]>([]);
@@ -49,7 +52,7 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
       if (disposed) return;
       const candidates: MeasuredPerch[] = [];
       let textIndex = 0;
-      for (const element of enabled ? textElements : []) {
+      for (const element of enabled && !away ? textElements : []) {
         const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
         let node: Node | null;
         while ((node = walker.nextNode())) {
@@ -95,7 +98,7 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
       disposed = true; observer.disconnect(); window.removeEventListener('resize', update);
       panel?.removeEventListener('transitionend', update);
     };
-  }, [chapter, enabled]);
+  }, [chapter, enabled, away]);
 
   const release = useCallback((opening = false) => {
     if (!enabled || (!opening && (paused || !ready))) return;

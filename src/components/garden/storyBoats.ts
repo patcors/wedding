@@ -3,6 +3,7 @@
 // VoyageBoats.tsx with the models in storyBoatGeometry.ts.
 import { ARRIVAL_END, DATES, DOCKED, MILESTONES, ROUTE, VOYAGE_END, progressAt, routeAt, scrolledSince } from './journey.ts';
 import { VOYAGE, bankEdge, channelOffset, launchJetties, riverCenter, voyageLandmarks } from './gardenGeometry.ts';
+import { HULL } from './storyBoatGeometry.ts';
 
 // The models are built in their own units; this sizes them in the world so
 // they read as the protagonists on a portrait phone, where the camera's lens
@@ -260,6 +261,19 @@ export function boatPose(p: number, width: number): BoatPose {
   const run = Math.hypot(b.x - a.x, b.z - a.z) / BOAT_SCALE;
   const turn = Math.max(-.22, Math.min(.22, -Math.atan((boatGap(q + STEP, width) - boatGap(q - STEP, width)) / run)));
   return { x, z, yaw, gap, turn, join: catamaran(joining(p)), docking: ease((p - VOYAGE_END) / (DOCKED - VOYAGE_END)), berthed: 1 - castingOff(p) };
+}
+
+// The top of a boat's small mast in the world at p, `side` −1 for Amelia's
+// and 1 for Patrick's, or `above` world units over it: where the opening
+// title's names fly to (openingNames.ts). It leaves out the boats' gentle
+// bobbing, a hundredth of a unit, and holds while the masts stand.
+export function mastheadAt(p: number, width: number, side: -1 | 1, above = 0) {
+  const { x, z, yaw, gap, turn, join } = boatPose(p, width);
+  // In the boat, turned in or out about its middle, then across to its place in the pair.
+  const along = HULL.mast.dinghy + (HULL.mast.catamaran - HULL.mast.dinghy) * join.morph, t = side * turn;
+  const u = side * gap + along * Math.sin(t), v = along * Math.cos(t);
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  return { x: x + (c * u + s * v) * BOAT_SCALE, y: -.02 + HULL.mastTop * BOAT_SCALE + above, z: z + (-s * u + c * v) * BOAT_SCALE };
 }
 
 // The moored catamaran's footprint on the water, as posts round its edge for

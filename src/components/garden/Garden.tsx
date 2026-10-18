@@ -13,6 +13,7 @@ import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, createPace, glidePlan, leashed } from './journeyPace';
+import { namesAway } from './openingNames';
 import { DATE_LABEL_MODES, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
@@ -47,6 +48,8 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   const [date, setDate] = useState<string | null>(null);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [gliding, setGliding] = useState(false);
+  // Whether the opening title's names have left it for their boats.
+  const [away, setAway] = useState(false);
   const controls = useRef({ go: (_next: number, _jump?: boolean) => {}, glide: () => {} });
   useEffect(() => {
     const element = scroller.current!;
@@ -55,6 +58,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
     let frame = 0, shown: string | null | undefined, changed = -Infinity, travelling = false;
     const show = (p: number, settled: boolean, now: number) => {
       setChapter(chapterAt(p));
+      setAway(namesAway(p));
       const label = dateLabel(p);
       if (label !== shown && (settled || now - changed >= DATE_EVERY || label === null || shown == null)) {
         shown = label; changed = now; setDate(label);
@@ -158,7 +162,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   }, [milestone, reduced]);
   const go = useCallback((next: number, jump?: boolean) => controls.current.go(next, jump), []);
   const glide = useCallback(() => controls.current.glide(), []);
-  return { pace, progress, chapter, date, announced, gliding, go, glide };
+  return { pace, progress, chapter, date, announced, gliding, away, go, glide };
 }
 
 // The month and year each crossfade between two layers. A change mid-fade
@@ -336,7 +340,13 @@ export default function Garden() {
   const [explored, setExplored] = useState(false);
   useEffect(() => { if (progress > .01 && !explored) setExplored(true); }, [progress, explored]);
   const chapter = { arrival: 0, voyage: 1, dock: 2 }[voyage.chapter];
-  const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready });
+  // Once the scene is up, the opening names fly to their boats as the guest
+  // scrolls (NameFlight.tsx); before it, without it, or under reduced
+  // motion, the title fades as a whole. The butterflies let go of the names
+  // as they start to move.
+  const flight = ready && !failed && !reduced;
+  const arrival = useRef<HTMLElement>(null);
+  const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready, away: flight && voyage.away });
   // The date stays on through the voyage panel's fade out.
   const [lastDate, setLastDate] = useState<string | null>(null);
   if (voyage.date && voyage.date !== lastDate) setLastDate(voyage.date);
@@ -357,7 +367,7 @@ export default function Garden() {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} arrival={flight ? arrival : undefined} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
@@ -381,8 +391,8 @@ export default function Garden() {
     </div>
 
     <div className="garden-panels garden-copy">
-      <section className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
-        <h1><b className="garden-perch">P</b>atrick <span>&</span> <b className="garden-perch">A</b>melia</h1>
+      <section ref={arrival} className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''} ${flight ? 'has-flight' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
+        <h1><span className="garden-name" data-name="patrick"><b className="garden-perch">P</b>atrick</span> <span className="garden-amp">&</span> <span className="garden-name" data-name="amelia"><b className="garden-perch">A</b>melia</span></h1>
         <p className="garden-subtitle">the journey so far</p>
         {/* Out of flow, so neither link can move the text above. */}
         <div className="garden-arrival-actions">
