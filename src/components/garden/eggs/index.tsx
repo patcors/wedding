@@ -19,6 +19,7 @@ import MobiusSculpture from './MobiusSculpture';
 import PicnicTable from './PicnicTable';
 import Careers from './Careers';
 import Rocket from './Rocket';
+import Circus from './Circus';
 
 const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: TurkeyGreece, university: University, 'snow-2019': SnowTrip,
   graduation: Graduation, apartments: Birdhouses, 'snow-2025': SecondSnowTrip };
@@ -26,8 +27,9 @@ const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: TurkeyGreece, un
 // the butterflies that circle the boats as they start dating, part of the
 // boats' joining, the rose petals in the catamaran's wake as they get engaged,
 // the university years' ornaments (see uniOrnaments.ts), ornaments on the
-// banks for their working lives, and late 2025's rocket.
-const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies, EngagementPetals, CarvedTrunks, MobiusSculpture, PicnicTable, Careers, Rocket];
+// banks for their working lives, late 2025's rocket, and Amelia's aerial
+// circus hung from the trees on her bank (see circusRigs.ts).
+const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies, EngagementPetals, CarvedTrunks, MobiusSculpture, PicnicTable, Careers, Rocket, Circus];
 
 export default function Eggs(props: SlotProps) {
   return <>{MILESTONES.map(milestone => {
