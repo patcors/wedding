@@ -1,6 +1,6 @@
 // The Garden's 3D scene: wiring only. Each part lives in its own component,
 // so it can be worked on without touching the others (see docs/VOYAGE.md).
-import { useMemo } from 'react';
+import { useMemo, type RefObject } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { MOBILE_RIVER_WIDTH } from './gardenGeometry';
@@ -20,6 +20,7 @@ import type { Pace } from './journeyPace';
 import VoyageCamera from './VoyageCamera';
 import VoyageWorld from './VoyageWorld';
 import VoyageBoats from './VoyageBoats';
+import NameFlight from './NameFlight';
 import Eggs from './eggs';
 import type { BoatLook } from './boatLooks';
 
@@ -49,9 +50,11 @@ function useGardenAssets(choices: AssetChoices) {
   models.forEach(urls => useGLTF(urls));
   textures.forEach(([urls, flipY]) => useGardenTextures(urls, { flipY }));
 }
-type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook };
+type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook;
+  // The opening title's panel, while its names are to fly to their boats.
+  arrival?: RefObject<HTMLElement | null> };
 
-export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook }: SceneProps) {
+export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook, arrival }: SceneProps) {
   useGardenAssets({ groundStyle, rockStyle, lightTrees });
   const size = useThree(state => state.size);
   // On touch screens the canvas runs on under Safari's toolbar (see
@@ -76,6 +79,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
     <Eggs {...slot} />
+    {arrival && <NameFlight panel={arrival} width={width} />}
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />
   </JourneyProvider>;
 }
