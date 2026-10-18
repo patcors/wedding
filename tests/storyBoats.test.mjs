@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AMELIA_LEFT_FINOCOMP, ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, routeAt, scrolledSince, stillProgress } from '../src/components/garden/journey.ts';
-import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
+import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, bendShift, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
 import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, SALSA, boatPose, companyFlags, ensignStaffs, hullHalfBeam, joining, rigging, salsaClock, salsaTime, salsaTurn, universityFlag } from '../src/components/garden/storyBoats.ts';
 import { BIG_RIG, ENSIGN, FLAG, HULL, LOGO_FLAG, ensignStaff, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
 
@@ -117,7 +117,7 @@ test('once the last plank is down, the two masts give way to one tall mast as th
   let previous = rigging(0);
   for (const p of steps(20000)) {
     const rig = rigging(p);
-    // Nothing starts before the deck is finished, and all is done before July's balloon and the bend.
+    // Nothing starts before the deck is finished, and all is done before July's balloon, as they enter the bend.
     if (p <= lastPlank) assert.ok(order.every(step => rig[step] === 0), `rigging under way at ${p}`);
     if (p >= balloon) assert.ok(order.every(step => rig[step] === 1), `rigging unfinished at ${p}`);
     // Each step only goes forward, and in order: a sail is furled before its mast
@@ -130,7 +130,9 @@ test('once the last plank is down, the two masts give way to one tall mast as th
     assert.ok(rig.hoist === 0 || rig.unfurl > .5);
     previous = rig;
   }
-  assert.ok(lastPlank < engaged && balloon < bend);
+  // The engagement comes before the S-bend, and July's balloon as they enter
+  // it, before it has swung the river.
+  assert.ok(lastPlank < engaged && engaged < bend && Math.abs(bendShift(routeAt(balloon))) < .1);
   // The big mast rises while April 2026 holds, a third of its share.
   assert.ok(rigging(engaged).raise === 0 && rigging(engaged + .35 * ROOM).raise === 1);
 });

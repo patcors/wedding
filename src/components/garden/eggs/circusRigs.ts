@@ -33,10 +33,10 @@ type Point = readonly [number, number, number];
 //   of a low limb of the one by the water, where the leaves thin out,
 //   upside down, its head down and its tail up. Amelia asked for the lyra
 //   about 2024, but that year her bank already holds the flower bed, both
-//   birdhouses and 2025's steps, and on a phone it would hang in front of
+//   birdhouses and 2025's oar, and on a phone it would hang in front of
 //   the birdhouses. They come in as October 2025 shows, her circus show
-//   that year, hang past the snowmen in the picture at salsa's stop and on
-//   their own after, and are passed at the engagement.
+//   that year, hang past the snowmen and short of 2026's arch, and are in
+//   the picture until salsa's stop and passed soon after.
 export type Rig = {
   tree: { desktop: number; mobile: number }; limb: { desktop: Point; mobile: Point };
   from: string; arrive: number; scale: { desktop: number; mobile: number };

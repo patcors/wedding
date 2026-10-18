@@ -1,9 +1,9 @@
 // April 2026, they get engaged: rose petals trail behind the catamaran. From
 // as the date shows they blow off the deck's after edge onto the water between
 // the sterns and spread out in its wake, and a few flutter down from the big
-// sail as it unrolls (as if rolled up in it). They thin out and stop well
-// before the S-bend, and each sinks out of sight a little way behind, so the
-// trail is gone before the bend. Drawn by EngagementPetals.tsx. Pure, so it
+// sail as it unrolls (as if rolled up in it). They thin out and stop as the
+// trip's date shows, and each sinks out of sight a little way behind, so the
+// trail is gone as the boats enter the S-bend, before it swings the river. Drawn by EngagementPetals.tsx. Pure, so it
 // can be tested.
 import { DATES, ROOM, progressAt, scrolledSince } from '../journey.ts';
 import { bankEdge, random, riverCenter } from '../gardenGeometry.ts';
@@ -17,9 +17,9 @@ import { BOAT_SCALE, CATAMARAN, HULL_HALF_BEAM, RIG_CHANGE, boatPose, rigging } 
 // motion. Sizes are a petal's length in world units, larger than life so
 // they read on a phone.
 export const PETALS = {
-  wake: { count: 84, from: .02, to: .76 },
+  wake: { count: 84, from: .02, to: .62 },
   sail: { count: 14 },
-  life: .45, sink: .35,
+  life: .38, sink: .35,
   settled: 14,
   size: { desktop: .13, mobile: .17 },
   colours: ['#f2b8c3', '#e89aab', '#f7d4da', '#d95f77', '#c4405a', '#eaa7b4'],

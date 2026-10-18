@@ -26,6 +26,10 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // Sydney's wide river puts its left
 // bank out of a phone's picture, so 2021 and 2023 stand on the right, and
 // 2022's pile stands mid-river between the boats while they are apart.
+// From 2025 the river bends left and the S-bend draws the camera round
+// after it, so through late 2025 and 2026 the right bank is at the edge of a
+// phone's picture: 2025's oar and 2026's arch both stand on the left, the
+// arch further on, past the snowmen and the lyra's ashes.
 // January 2027 turns round the S-bend, so the wedding's heart stands on the
 // outside of its second curve, the left bank, where the river runs straight
 // at it: in the open across from the headland that hides the old tree, and
@@ -43,8 +47,8 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
   { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3 },
-  { year: 2026, medium: 'arch', side: 1, lead: 4, inland: .6 },
-  { year: 2027, medium: 'heart', side: -1, lead: 3, inland: .9, from: '2026-11' },
+  { year: 2026, medium: 'arch', side: -1, lead: 8.6, inland: .6 },
+  { year: 2027, medium: 'heart', side: -1, lead: 1.5, inland: .9, from: '2026-11' },
 ];
 
 // Bigger on a phone, whose wider lens draws everything smaller; a phone's

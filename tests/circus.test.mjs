@@ -30,7 +30,7 @@ const limb = (rig, width) => width < 1 ? rig.limb.mobile : rig.limb.desktop;
 const inland = (x, z, width) => riverCenter(z, width) - x - bankEdge(z, width);
 // Each one's stretch in the picture: the silk from November 2020 into the new
 // year, the lyra and the bird from October 2025 to just past salsa's stop.
-const SEEN = [[SILK, '2020-11', progressAt('2021-01')], [LYRA, '2025-10', stop('salsa') + .4 * ROOM], [BIRD, '2025-10', stop('salsa') + .4 * ROOM]];
+const SEEN = [[SILK, '2020-11', progressAt('2021-01')], [LYRA, '2025-10', stop('salsa')], [BIRD, '2025-10', stop('salsa')]];
 
 test('each hangs on Amelia\'s bank, the left, from a tree standing there', () => {
   for (const [width] of LAYOUTS) {

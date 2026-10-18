@@ -16,11 +16,13 @@ export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number; mobileInl
 // of the statistics carved into a tree on her bank (uniOrnaments.ts) in the
 // picture once the flurry clears, and near the water on a phone, so it shows
 // to the left of the milestone by the time 2020 turns.
-// August 2025's is on the left, across
-// the river from the second pair of birdhouses, a little nearer, so in a
-// phone's narrow river it stands well short of 2026's arch, and near the
-// water, so the snowmen stand clear of 2025's steps in front of them.
-export const SNOW_SPOTS = { 2019: { ahead: 7.5, side: -1, inland: 1.5, mobileInland: .35 }, 2025: { ahead: 6.5, side: -1, inland: .4 } } as const satisfies Record<number, SnowSpot>;
+// August 2025's is on the left, a little ahead of the boats, between 2025's
+// oar and the lyra's ashes and across the river from the second pair of
+// birdhouses, near the water on desktop. On a phone, where the river's bend
+// to the left turns the camera along that bank and the boats sit right of
+// the middle, it stands a little back from the water, left of the boats and
+// clear of the birdhouses across the narrow river.
+export const SNOW_SPOTS = { 2019: { ahead: 7.5, side: -1, inland: 1.5, mobileInland: .35 }, 2025: { ahead: 3.7, side: -1, inland: .4, mobileInland: .8 } } as const satisfies Record<number, SnowSpot>;
 
 // Its course in milestone shares since the date (see eggTime): the flurry
 // thickens from 0 to `full`, hides the bank while what it leaves behind

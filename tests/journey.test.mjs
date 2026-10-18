@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  ARRIVAL_END, CHAPTERS, DATES, DOCKED, EVEN_YEARS, MILESTONES, ROOM, ROUTE, VOYAGE_END, YEAR, chapterAt, dateLabel, monthIndex,
-  progressAt, routeAt, routeAtMonth, scrolledSince, since, stillProgress, storyMonth,
+  ARRIVAL_END, CHAPTERS, DATES, DOCKED, LONG_YEARS, MILESTONES, PACED_YEARS, ROOM, ROUTE, VOYAGE_END, YEAR, chapterAt, dateLabel, monthIndex,
+  progressAt, routeAt, routeAtMonth, scrolledSince, since, stillProgress, storyMonth, yearShares,
 } from '../src/components/garden/journey.ts';
-import { VOYAGE, bankEdge, channelOffset, groundHeight, islandHalfWidth, riverCenter, voyageLandmarks, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
+import { VOYAGE, bankEdge, bendShift, channelOffset, groundHeight, islandHalfWidth, riverCenter, voyageLandmarks, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
 
@@ -53,16 +53,35 @@ test('progressAt inverts storyMonth', () => {
   assert.equal(progressAt('2030-01'), VOYAGE_END);
 });
 
-test('every year from 2018 to 2026 gets the same scroll, however its milestones fall', () => {
+test('every year from 2018 to 2023 gets the same scroll, however its milestones fall, and 2024 and 2025 more', () => {
   const january = year => progressAt(`${year}-01`);
-  for (let year = EVEN_YEARS[0]; year < EVEN_YEARS[1]; year++) assert.ok(Math.abs(january(year + 1) - january(year) - YEAR * ROOM) < 1e-9, `${year}`);
-  // About a screen and a half a year, and the whole voyage about as long as before.
+  for (let year = PACED_YEARS[0]; year < PACED_YEARS[1]; year++) assert.ok(Math.abs(january(year + 1) - january(year) - yearShares(year) * ROOM) < 1e-9, `${year}`);
+  for (let year = PACED_YEARS[0]; year < 2024; year++) assert.equal(yearShares(year), YEAR);
+  assert.deepEqual(Object.keys(LONG_YEARS).map(Number), [2024, 2025]);
+  for (const year of [2024, 2025]) assert.ok(yearShares(year) > YEAR + .3 && yearShares(year) < YEAR + .6, `${year}`);
+  // About a screen and a half a year, and the whole voyage as long as before
+  // (21.2 shares), so 2017 to 2024 turn where they always did.
   assert.ok(YEAR > 1.3 && YEAR < 1.7);
-  assert.ok(ROOM > .039 && ROOM < .043);
+  assert.ok(Math.abs(ROOM * 21.2 - (VOYAGE_END - ARRIVAL_END)) < 1e-12);
+  assert.ok(Math.abs(january(2024) - (ARRIVAL_END + (1.4 + 1.4 + .5 + 6 * YEAR) * ROOM)) < 1e-12);
   // The run-in, from the opening through the meeting to 2018, and the run from
   // 2026 round the bend, keep lengths of their own.
   assert.ok(january(2018) - ARRIVAL_END > 2 * YEAR * ROOM);
   assert.ok(VOYAGE_END - january(2026) > 3 * YEAR * ROOM);
+});
+
+test('2025, 2026 and 2027 turn further down the river, more evenly spaced', () => {
+  const turn = year => routeAt(progressAt(`${year}-01`));
+  const gap = year => turn(year) - turn(year + 1);
+  // 2018 to 2024 about 12 units of river apart, as they always were.
+  for (let year = 2018; year < 2024; year++) assert.ok(Math.abs(gap(year) - gap(2018)) < 1e-9 && gap(year) > 11.5 && gap(year) < 12.5);
+  // 2025 and 2026 come later (they were 12 apart, and 37 to 2027 round the
+  // bend), about 15 apart, and the run to 2027 no more than about twice that.
+  assert.ok(gap(2024) > 15 && gap(2025) > 15 && Math.abs(gap(2024) - gap(2025)) < 1, `${gap(2024)}, ${gap(2025)}`);
+  assert.ok(gap(2026) < 2.1 * gap(2025), `${gap(2026)}`);
+  // The months after dating no longer race to 2025: September to December
+  // take a quarter of a share, where they took a fiftieth.
+  assert.ok(progressAt('2025-01') - progressAt('2024-09') > .2 * ROOM);
 });
 
 test('inside a year, clustered milestones still get time for their dates to be read', () => {
@@ -79,8 +98,9 @@ test('inside a year, clustered milestones still get time for their dates to be r
   // dating, whose date holds while the crossbeams go across.
   assert.ok(share(at('meet')) > 1.2 && share(at('dating')) > 1.1);
   assert.equal(dateLabel(progressAt(DATES.dating) + .4 * ROOM), 'August 2024');
-  // 2024's three dates each show for a while, though the year is no longer
-  // than any other, and July, between June and August, for a moment.
+  // 2024's three dates each show for a while, though the year is only a
+  // little longer than the others, and July, between June and August, for a
+  // moment.
   const shows = month => (progressAt(monthIndex(month) + 1) - progressAt(month)) / ROOM;
   for (const month of ['2024-05', '2024-06', '2024-08']) assert.ok(shows(month) > .42, `${month} shows for ${shows(month)}`);
   assert.ok(shows('2024-07') > .15);
@@ -140,7 +160,8 @@ test('the scenery sits in story order along the river', () => {
   const { island, meet, sydney, bend, dock, tree } = VOYAGE;
   assert.ok(island.from > ROUTE.start && island.to > meet, 'the boats start in the channels, which rejoin before they meet');
   assert.ok(meet > sydney.from && sydney.from > sydney.to);
-  assert.ok(routeAtMonth('2026-07') > bend.from, 'the balloon comes before the bend');
+  assert.ok(routeAtMonth('2026-04') > bend.from, 'the engagement comes before the bend');
+  assert.ok(Math.abs(bendShift(routeAtMonth('2026-07'))) < .1, 'the balloon comes as the bend starts, before it swings the river');
   assert.ok(bend.to > dock.z && dock.z > tree.z);
   assert.ok(bend.to >= routeAt(VOYAGE_END), 'the bend is rounded by the end of the voyage');
 });

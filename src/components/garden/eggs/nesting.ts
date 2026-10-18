@@ -31,12 +31,13 @@ export type Owner = 'amelia' | 'patrick';
 // picture, Amelia's on the left as her boat is, turned to face the camera
 // then. Larger than life, and larger again in portrait's wider lens, so the
 // birds read. The first pair stands only a little past the boats on
-// August's date, so it is clear of 2025's steps further along the same bank,
+// August's date, so it is clear of 2025's oar further along the same bank,
 // and in portrait its houses stand a little closer together and nearer the
 // water, so they are still in the picture, clear of its edge, as his bird
-// flies home and for a while after.
+// flies home and for a while after. The second pair stands further past the
+// boats, beyond the rocket on the same bank.
 export const NESTS = {
-  pairs: [{ side: -1, last: PATRICK_HOME, lead: 3.1 }, { side: 1, last: AMELIA_MOVED_IN, lead: 3.5 }],
+  pairs: [{ side: -1, last: PATRICK_HOME, lead: 3.1 }, { side: 1, last: AMELIA_MOVED_IN, lead: 8.5 }],
   desktop: { inland: 1.1, apart: .8, scale: 1.5 },
   mobile: { inland: .5, apart: .45, scale: 1.9 },
   // The second pair comes up out of the haze this far from the camera.
@@ -57,7 +58,9 @@ export const NESTS = {
 // June's living together shows the same scene; his bird flies home as July
 // shows (any earlier would be in June, while they lived together), while
 // the dating butterflies come out of the trees; and her bird flies over to
-// his as April 2025 shows, two months before AMELIA_MOVED_IN. `build`
+// his as March 2025 shows, three months before AMELIA_MOVED_IN, before the
+// river bends left and turns the camera, putting the right bank at the edge
+// of a phone's picture. `build`
 // raises a pair of houses, `scaffold` puts it up round Patrick's house in
 // the first pair (1), rising with it, or takes it down (0), and `moves`
 // sends birds to a house's roof, where they show against the trees: `home`
@@ -72,7 +75,7 @@ export const NEST_EVENTS: readonly NestEvent[] = [
   // birds already at home, once Amelia's and Patrick's butterflies have come
   // out of the trees beside it and are round the boats.
   { month: PATRICK_HOME, at: .4, pair: 1, build: true },
-  { month: AMELIA_MOVED_IN, at: -.19, pair: 1, moves: { amelia: { house: 'patrick', spot: 'guest' } } },
+  { month: AMELIA_MOVED_IN, at: -.35, pair: 1, moves: { amelia: { house: 'patrick', spot: 'guest' } } },
 ];
 // Each pair's birds before its first move: none yet in the first (they fly
 // in to hers from the trees), each at home in the second.

@@ -387,25 +387,25 @@ test('the rocket stands on the right bank in 2025, clear of the arch and the oth
   const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
   const { YEAR_MARKERS, yearMarkerSpot, yearTurns } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
   const { dateLabel } = await import('../src/components/garden/journey.ts');
-  // It keeps its own time: just before the snow trip's stop, so it fires as the camera comes to rest there.
-  assert.equal(ROCKET.month, snowAgain.month);
-  assert.match(dateLabel(launchProgress() + 1e-4), /^August 2025$/);
-  const snowStop = progressAt(snowAgain.month) + .35 * ROOM / 2;
-  assert.ok(launchProgress() < snowStop && launchProgress() > snowStop - .1 * ROOM && launchProgress() < yearTurns(2026));
-  // Out of the haze before the snow trip, not as they start dating a year before.
+  // It keeps its own time: just after January 2025 turns, like a rocket at
+  // New Year, before the river bends left and turns the camera away from
+  // the right bank.
+  assert.equal(ROCKET.month, '2025-01');
+  assert.match(dateLabel(launchProgress() + 1e-4), /^January 2025$/);
+  assert.ok(launchProgress() > yearTurns(2025) && launchProgress() < yearTurns(2025) + .1 * ROOM);
+  // Out of the haze once dating's date has held, not as soon as it is in reach.
   const { rocketShown, rocketTime } = await import('../src/components/garden/eggs/rocketLaunch.ts');
-  assert.equal(rocketShown(rocketTime(progressAt('2024-08') + .5 * ROOM)), 0);
-  assert.equal(rocketShown(rocketTime(snowStop)), 1);
+  assert.equal(rocketShown(rocketTime(progressAt('2024-08') + .42 * ROOM)), 0);
+  assert.equal(rocketShown(rocketTime(launchProgress() - .1 * ROOM)), 1);
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
     const { x, z } = rocketSpot(width);
     assert.ok(onLand(x, z, width) && x > riverCenter(z, width), 'on the right bank');
     assert.ok(groundHeight(x, z, width) > 0, 'above the waterline');
     assert.ok(Math.abs(z + 117) < 1, `about z −117 (${z})`);
-    // Between the second pair of birdhouses and 2026's arch on the same bank,
-    // which a phone's narrow river leaves little room between, and across
-    // the river from the snowmen.
+    // Short of the second pair of birdhouses on the same bank, and across the
+    // river from 2025's oar.
     const arch = yearMarkerSpot(YEAR_MARKERS.find(m => m.year === 2026), width);
-    assert.ok(z < Math.min(...Object.values(nestSpots(width)[1]).map(house => house.z)) && z > arch.z);
+    assert.ok(z > Math.max(...Object.values(nestSpots(width)[1]).map(house => house.z)) + 4);
     const others = [...nestSpots(width).flatMap(pair => Object.values(pair)), ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width)];
     for (const other of others) assert.ok(Math.hypot(other.x - x, other.z - z) > 4, 'clear of the other scenery');
     assert.ok(Math.hypot(arch.x - x, arch.z - z) > 4.2, 'clear of the arch');
@@ -446,15 +446,16 @@ test('the rocket waits on its stand, then fires as the scroll passes and climbs 
 test('the rocket is in the picture as it fires and climbs through the open sky over the river, below the date label', async () => {
   const { ROCKET, exhaust, launchProgress, rocketCourse, rocketInFlight, rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
   const { ROCKET_MODEL } = await import('../src/components/garden/eggs/rocketGeometry.ts');
-  const p = launchProgress(), snowStop = progressAt(snowAgain.month) + .35 * ROOM / 2;
+  const p = launchProgress();
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
     const spot = rocketSpot(width), course = rocketCourse(width);
     // On its stand, in from the edge of the picture, from when the boats near it until it fires.
     for (let q = p - .5 * ROOM; q <= p; q += .05 * ROOM) assert.ok(Math.abs(seen(q, width, spot.x, spot.z).bearing) < halfView(width) - 3, `stand at ${q}`);
-    // Well inside it as it fires and at the stop the camera comes to rest at
-    // (on a phone it used to fire at the edge), and still in it a little way on.
-    for (const q of [p, snowStop]) assert.ok(seen(q, width, spot.x, spot.z).bearing < halfView(width) - 6, `well inside the picture at ${q}`);
-    assert.ok(seen(snowStop + .25 * ROOM, width, spot.x, spot.z).bearing < halfView(width) - 2, 'still in the picture a little way on');
+    // Well inside it as it fires and while it climbs (at the snow trip's stop,
+    // where it used to fire, it would now be at a phone's edge), and still in
+    // it a little way on.
+    for (const q of [p, p + .1 * ROOM]) assert.ok(seen(q, width, spot.x, spot.z).bearing < halfView(width) - 6, `well inside the picture at ${q}`);
+    assert.ok(seen(p + .35 * ROOM, width, spot.x, spot.z).bearing < halfView(width) - 2, 'still in the picture a little way on');
     // Every point of its climb, seen from where it fired, in the picture;
     // once it is above the trees' lowest boughs, over the water.
     for (let air = 0; air < ROCKET.ignite + ROCKET.flight; air += .05) {

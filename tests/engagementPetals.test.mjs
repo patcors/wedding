@@ -1,17 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DATES, DOCKED, MILESTONES, ROOM, progressAt, routeAt, stillProgress } from '../src/components/garden/journey.ts';
-import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
+import { MOBILE_RIVER_WIDTH, bankEdge, bendShift, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { CATAMARAN, HULL_HALF_BEAM, RIG_CHANGE, boatPose } from '../src/components/garden/storyBoats.ts';
 import { PETALS, PETAL_LIST, PETAL_WINDOW, afloat, floatPoint, petalCourse, petalScale, petalTime, petalsShown, restingPetals } from '../src/components/garden/eggs/petalTrail.ts';
 
 const widths = [1, MOBILE_RIVER_WIDTH];
 const engaged = progressAt(DATES.engaged);
-// Shares since the engagement when the boats reach the S-bend.
-const bend = (() => { let p = engaged; while (routeAt(p) > VOYAGE.bend.from) p += 1e-5; return petalTime(p); })();
+// Shares since the engagement when the S-bend has swung the river half a
+// unit under the boats: the trip's date shows just as they enter it.
+const bend = (() => { let p = engaged; while (Math.abs(bendShift(routeAt(p))) < .5) p += 1e-5; return petalTime(p); })();
 const wake = PETAL_LIST.slice(0, PETALS.wake.count), sail = PETAL_LIST.slice(PETALS.wake.count);
 
-test('the petals trail only from the engagement until a little before the S-bend', () => {
+test('the petals trail only from the engagement until the S-bend starts to swing the river', () => {
   assert.ok(!petalsShown(petalTime(engaged - .01 * ROOM)) && !petalsShown(0));
   assert.ok(petalsShown(PETALS.wake.from + .01), 'the first are let go as the date shows');
   assert.ok(PETAL_WINDOW[0] > 0 && PETAL_WINDOW[0] < .05);

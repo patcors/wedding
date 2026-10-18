@@ -25,7 +25,7 @@ const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x 
 // there is room for only two of the others (`mobile` null: not flown).
 type BalloonView = { distance: number; scale: number; bearing: [number, number]; elevation: [number, number] };
 export const BALLOONS: readonly { lag: number; desktop: BalloonView; mobile: BalloonView | null }[] = [
-  { lag: 0, desktop: { distance: 30, scale: .5, bearing: [-11, -12.5], elevation: [15.5, 25] }, mobile: { distance: 27, scale: .6, bearing: [-8.4, -9.8], elevation: [21, 35] } },
+  { lag: 0, desktop: { distance: 30, scale: .5, bearing: [-11, -12.5], elevation: [15.5, 25] }, mobile: { distance: 27, scale: .6, bearing: [-9, -9.8], elevation: [21, 35] } },
   { lag: .1, desktop: { distance: 38, scale: .45, bearing: [-14.6, -15], elevation: [13.5, 17] }, mobile: { distance: 36, scale: .4, bearing: [-12.4, -12.8], elevation: [24, 27] } },
   { lag: .2, desktop: { distance: 44, scale: .42, bearing: [-9.4, -9.6], elevation: [18.5, 21.5] }, mobile: { distance: 42, scale: .4, bearing: [-5.4, -5.6], elevation: [26, 28.5] } },
   { lag: .3, desktop: { distance: 50, scale: .38, bearing: [-13, -13.3], elevation: [19, 21] }, mobile: null },
@@ -80,9 +80,10 @@ export function hagiaSophiaSpot(month: string, width: number) {
   return { ...spot, y: Math.max(...heights) };
 }
 // It comes out of the haze over the half share before the trip's date and
-// sinks back into it as the balloons climb away round the bend, gone before
-// 2027's heart comes in (see yearMarkerSpots.ts) and long before the dock,
-// where it would stand at the edge of the picture.
-export const HAGIA_TIMES = { arrive: -.5, shown: -.1, leave: 1.2, gone: 1.6 };
+// sinks back into it as the balloons climb away round the bend, before the
+// camera turns into the bend and the headland's trees come in front of it on
+// a phone, gone before 2027's heart comes in (see yearMarkerSpots.ts) and
+// long before the dock, where it would stand at the edge of the picture.
+export const HAGIA_TIMES = { arrive: -.5, shown: -.1, leave: .7, gone: 1.1 };
 export const hagiaShown = (t: number) =>
   smooth((t - HAGIA_TIMES.arrive) / (HAGIA_TIMES.shown - HAGIA_TIMES.arrive)) * (1 - smooth((t - HAGIA_TIMES.leave) / (HAGIA_TIMES.gone - HAGIA_TIMES.leave)));
