@@ -100,8 +100,10 @@ export function pointStems(width: number) {
 export const onPoint = (x: number, z: number, width: number) => pointInland(x, z, width) > -.1;
 
 // How much of each shows, 0 to 1, at p with the camera at cameraZ. The
-// bridge comes in towards the end of 2020, as Amelia's move comes near:
-// fully in as `from` shows, dissolving in over the `arrive` shares before.
+// bridge comes in soon after graduation, well down the river, so it is
+// plainly there for months before Amelia's move: it dissolves in over the
+// `arrive` shares before `from` shows, starting just after graduation's
+// date has held, while September shows, and is fully in from October.
 // Its rock end stands right in the camera's path, so once she has sailed
 // under it, and well before its pylons come between the camera and her boat,
 // it fades away quickly as the camera comes `leave` units from it (from the
@@ -109,7 +111,7 @@ export const onPoint = (x: number, z: number, width: number) => pointInland(x, z
 // with 2022, fully in as its `from` shows, and goes once the camera has
 // passed it. Both fade evenly (Sydney.tsx), so neither is grainy part way.
 export const HARBOUR_SHOWN = {
-  bridge: { from: '2020-12', arrive: .35, leave: [10.9, 9.7] },
+  bridge: { from: '2020-10', arrive: .3, leave: [10.9, 9.7] },
   opera: { from: '2022-01', arrive: .35 },
 } as const;
 const arrived = (p: number, { from, arrive }: { from: string; arrive: number }) => Math.min(1, Math.max(0, (p - progressAt(from)) / (arrive * ROOM) + 1));

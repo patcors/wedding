@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, groundHeight, pointInland, pointSpot, riverCenter, rockHalfWidth, voyageClearing } from '../src/components/garden/gardenGeometry.ts';
-import { DATES, MILESTONES, ROOM, STOPS, progressAt, routeAt } from '../src/components/garden/journey.ts';
+import { DATES, MILESTONES, ROOM, STOPS, monthIndex, progressAt, routeAt } from '../src/components/garden/journey.ts';
 import { ALONGSIDE, BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
 import { HULL } from '../src/components/garden/storyBoatGeometry.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
@@ -227,12 +227,17 @@ test('at Sydney\'s stop the arch over her boat is in the picture, on a phone too
   }
 });
 
-test('the bridge comes in towards the end of 2020 and the Opera House with 2022, and each goes before it blocks the view', () => {
+test('the bridge comes in soon after graduation, well before Sydney, and the Opera House with 2022, and each goes before it blocks the view', () => {
   for (const width of widths) {
     const shown = p => harbourShown(p, cameraPose(p, width).position[2], width < 1);
     // Neither down the river through the snow trip or graduation.
     for (const id of ['snow-2019', 'graduation']) assert.deepEqual(shown(STOPS[MILESTONES.findIndex(m => m.id === id) + 1]), { opera: 0, bridge: 0 });
-    assert.ok(HARBOUR_SHOWN.bridge.from >= '2020-10' && HARBOUR_SHOWN.bridge.from <= '2020-12');
+    assert.ok(HARBOUR_SHOWN.bridge.from >= '2020-09' && HARBOUR_SHOWN.bridge.from <= '2020-10');
+    // Not while graduation's date holds, so the caps land first, but fully in
+    // for at least half a share before Sydney's date shows.
+    const graduation = progressAt(monthIndex('2020-08') + 1e-3);
+    for (const p of range(0, graduation, .0005)) assert.equal(shown(p).bridge, 0, `bridge at graduation, ${p}`);
+    assert.ok(progressAt(DATES.sydney) - progressAt(HARBOUR_SHOWN.bridge.from) > .5 * ROOM);
     for (const p of range(0, progressAt(HARBOUR_SHOWN.bridge.from) - (HARBOUR_SHOWN.bridge.arrive + .01) * ROOM, .002)) assert.equal(shown(p).bridge, 0, `bridge at ${p}`);
     // The bridge fully in from its month until she is through, past the date's stop.
     const through = reach(VOYAGE.rock.bridge - bridgeLength);
