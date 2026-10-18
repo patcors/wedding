@@ -83,6 +83,23 @@ test('a marker dissolves in a little way ahead and is gone once passed', () => {
   }
 });
 
+test('2025\'s oar is slight: a slim oar stood in the bank, its year on the blade, in two draw calls', () => {
+  const marker = YEAR_MARKERS.find(m => m.year === 2025);
+  assert.equal(marker.medium, 'oar');
+  const { body, face, hanging } = yearMarkerModel(marker, YEAR_MARKERS.indexOf(marker));
+  assert.ok(face && !hanging);
+  body.computeBoundingBox();
+  face.computeBoundingBox();
+  // Under half a unit across and about two tall, its loom pushed into the bank.
+  const { min, max } = body.boundingBox;
+  assert.ok(max.x - min.x < .5 && max.z - min.z < .5, 'slim');
+  assert.ok(max.y > 1.7 && max.y < 2.1 && min.y < 0, 'stood in the bank');
+  // The year is up on the blade, clear of the grass, and the face no wider than the blade.
+  assert.ok(face.boundingBox.min.y > 1.1 && face.boundingBox.max.x - face.boundingBox.min.x < .3);
+  const triangles = ((body.index ? body.index.count : body.attributes.position.count) + face.index.count) / 3;
+  assert.ok(triangles < 400, `${triangles} triangles`);
+});
+
 test('2027\'s heart stands on the left bank round the S-bend, clear of the Hagia Sophia, and is out of the picture by the dock', () => {
   const marker = YEAR_MARKERS.find(m => m.year === 2027);
   assert.equal(marker.medium, 'heart');

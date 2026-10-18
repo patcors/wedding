@@ -315,24 +315,41 @@ const MODELS: Record<YearMarker['medium'], { face: Face; build: Build }> = {
       };
     },
   },
-  // 2025: whitewashed on the riser of old stone steps down to the water.
-  steps: {
-    face: { width: 1.04, height: .3, lettering: { kind: 'paint', colour: '#f6f2e8' } },
+  // 2025: painted on the blade of an old oar stood upright in the bank, its
+  // loom pushed into the ground at the water's edge, the blade cream with a
+  // faded blue tip, leaning back a little.
+  oar: {
+    face: { width: .26, height: .42, lines: 2, lettering: { kind: 'paint', colour: '#34352f', weight: 600 } },
     build: (index, face, river, seed) => {
-      // Three steps cut into the bank, worn treads over darker risers, between
-      // low stone cheeks, the lowest at the water.
-      const RISE = .32, RUN = .42, WIDTH = 1.24, SINK = .1, parts: THREE.BufferGeometry[] = [];
-      for (let i = 0; i < 3; i++) {
-        const top = (i + 1) * RISE - SINK, z = -i * RUN;
-        const w = WIDTH - i * .06, skew = (i - 1) * .04;
-        parts.push(part(box(w, top + SINK, RUN), '#8b8477', { position: [skew, (top - SINK) / 2, z], rotation: [0, skew, 0] }, .1, seed + i));
-        // Worn, mossy treads.
-        parts.push(part(box(w + .04, .05, RUN + .05), (x) => Math.sin(x * 7 + i) > .55 ? '#9ba184' : '#b2ab9c', { position: [skew, top, z + .02], rotation: [0, skew, 0] }, .08, seed + 10 + i));
-        // Rough stones either side.
-        for (const x of [-1, 1]) parts.push(part(blob(.2, 1), '#7c766b', { position: [skew + x * (w / 2 + .12), top - .12, z], scale: [.8, (top + SINK) * 2.2, 1.1] }, .14, seed + 20 + i * 2 + x));
+      const rand = random(seed), LOOM = 1.1, BLADE = .84, HALF = .16, DEPTH = .028, TIP = BLADE - .17;
+      // The blade, flat, widening from its neck to a rounded tip.
+      const outline = new THREE.Shape();
+      outline.moveTo(-.034, 0);
+      outline.quadraticCurveTo(-HALF, .1, -HALF, .3);
+      outline.lineTo(-HALF, BLADE - .1);
+      outline.absellipse(0, BLADE - .1, HALF, .1, Math.PI, 0, true, 0);
+      outline.lineTo(HALF, .3);
+      outline.quadraticCurveTo(HALF, .1, .034, 0);
+      outline.closePath();
+      const blade = new THREE.ExtrudeGeometry(outline, { depth: DEPTH, curveSegments: 6, bevelEnabled: false });
+      const parts = [
+        // The loom, sunk a little into the bank, a darker leather sleeve and its button.
+        part(cylinder(.028, .032, LOOM + .2, 8), '#9a8160', { position: [0, LOOM / 2 - .1, 0] }, .06, seed),
+        part(cylinder(.036, .036, .2, 8), '#5e4a36', { position: [0, .48, 0] }, .05, seed + 1),
+        part(cylinder(.048, .048, .04, 8), '#5e4a36', { position: [0, .6, 0] }, .05, seed + 2),
+        part(blade, (_, y) => y > LOOM + TIP ? '#7d93a3' : '#ece4cf', { position: [0, LOOM, -DEPTH / 2] }, .04, seed + 3),
+      ];
+      // A stone or two and a few tufts of grass round its foot.
+      for (let i = 0; i < 2; i++) parts.push(part(blob(.06 + rand() * .03), '#8a8478', { position: [(i ? .12 : -.1) * river, .02, .05 - i * .1], scale: [1, .6, 1] }, .12, seed + 10 + i));
+      for (let i = 0; i < 5; i++) {
+        const a = i * 1.3 + rand();
+        parts.push(part(blob(.07 + rand() * .04), '#73875a', { position: [Math.cos(a) * .13, .03, Math.sin(a) * .1], scale: [1, .6, 1] }, .12, seed + 20 + i));
       }
-      parts.push(part(blob(.22, 1), '#8a8478', { position: [.95 * river, .08, .15], scale: [1, .55, 1] }, .12, seed + 6));
-      return { body: merged(parts), face: flatFace(index, face, { position: [0, RISE * 1.5 - SINK, -RUN / 2 + .003] }) };
+      // Leaning back from the river a touch, so it reads as stood there by hand.
+      const lean = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-.05, 0, .05 * river));
+      const body = merged(parts).applyMatrix4(lean);
+      const front = flatFace(index, face, { position: [0, LOOM + .42, DEPTH / 2 + .002] }).applyMatrix4(lean);
+      return { body, face: front };
     },
   },
   // 2026: pokerwork on a pale board hung under a garden arch twined with flowers.

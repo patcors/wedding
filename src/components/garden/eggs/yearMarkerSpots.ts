@@ -6,7 +6,7 @@ import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt, routeAt } from '../journey.ts';
 
-export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'milestone' | 'stake' | 'pile' | 'slate' | 'lantern' | 'steps' | 'arch' | 'heart';
+export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'milestone' | 'stake' | 'pile' | 'slate' | 'lantern' | 'oar' | 'arch' | 'heart';
 // `side` is the bank (−1 is −x, Amelia's; 1 is +x, Patrick's). `lead` is how
 // far downstream of the boats it stands as its year turns, so it is in clear
 // view just past them then and they pass it early in the year. On a bank,
@@ -42,7 +42,7 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85 },
   { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
-  { year: 2025, medium: 'steps', side: -1, lead: 4.8, inland: .15 },
+  { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3 },
   { year: 2026, medium: 'arch', side: 1, lead: 4, inland: .6 },
   { year: 2027, medium: 'heart', side: -1, lead: 3, inland: .9, from: '2026-11' },
 ];
