@@ -14,6 +14,7 @@ import SecondSnowTrip from './SecondSnowTrip';
 import YearMarkers from './YearMarkers';
 import DatingButterflies from './DatingButterflies';
 import EngagementPetals from './EngagementPetals';
+import EngagementTruck from './EngagementTruck';
 import BarkCarvings from './BarkCarvings';
 import MobiusSculpture from './MobiusSculpture';
 import ParkBench from './ParkBench';
@@ -26,11 +27,12 @@ const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: TurkeyGreece, un
   graduation: Graduation, sydney: Sydney, apartments: Birdhouses, 'snow-2025': SecondSnowTrip };
 // Scenery that isn't an egg on a milestone: the years marked along the banks,
 // the butterflies that circle the boats as they start dating, part of the
-// boats' joining, the rose petals in the catamaran's wake as they get engaged,
-// the university years' ornaments (see uniOrnaments.ts), ornaments on the
-// banks for their working lives, 2025's rocket, and Amelia's aerial circus
-// hung from the trees on her bank (see circusRigs.ts).
-const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies, EngagementPetals, BarkCarvings, MobiusSculpture, ParkBench, Careers, Rocket, Circus];
+// boats' joining, the rose petals in the catamaran's wake as they get engaged
+// and the old truck they got engaged on, parked on the bank (see
+// engagementTruck.ts), the university years' ornaments (see uniOrnaments.ts),
+// ornaments on the banks for their working lives, 2025's rocket, and Amelia's
+// aerial circus hung from the trees on her bank (see circusRigs.ts).
+const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies, EngagementPetals, EngagementTruck, BarkCarvings, MobiusSculpture, ParkBench, Careers, Rocket, Circus];
 
 export default function Eggs(props: SlotProps) {
   return <>{MILESTONES.map(milestone => {

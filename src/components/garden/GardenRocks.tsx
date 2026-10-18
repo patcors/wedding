@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { bankEdge, riverCenter, groundHeight, random, riverChunks, voyageClearing, RIVER_REACH } from './gardenGeometry';
 import { useRiverReach } from './useRiverReach';
 import { pieBedFootprint } from './eggs/careerSpots';
+import { truckFootprint } from './eggs/engagementTruck';
 import { useGardenTextures } from './gardenTextures';
 
 const ASSETS = `${import.meta.env.BASE_URL}models/garden/ground/`;
@@ -57,8 +58,8 @@ export default function GardenRocks({ width, visible }: { width: number; visible
   const placements = useMemo(() => {
     const rand = random(319);
     const groups: Rock[][] = [[], [], []];
-    // None comes up through the pie chart's flower bed.
-    const underBed = pieBedFootprint(width);
+    // None comes up through the pie chart's flower bed or under the engagement's truck.
+    const underBed = pieBedFootprint(width), underTruck = truckFootprint(width);
     for (let i = 0; i < ROCK_COUNT; i++) {
       const z = RIVER_REACH.from - rand() * (RIVER_REACH.from - RIVER_REACH.to);
       const x = riverCenter(z, width) + (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
@@ -66,7 +67,7 @@ export default function GardenRocks({ width, visible }: { width: number; visible
       rand(); const rotation = rand() * 6; rand();
       const scale = .1 + Math.pow(rand(), 3) * .55;
       const tint = .88 + rand() * .12;
-      if (!voyageClearing(x, z, width, .4) && !underBed(x, z, scale)) groups[i % 3].push({ x, z, rotation, scale, tint });
+      if (!voyageClearing(x, z, width, .4) && !underBed(x, z, scale) && !underTruck(x, z, scale)) groups[i % 3].push({ x, z, rotation, scale, tint });
     }
     return groups.map(riverChunks);
   }, [width]);
