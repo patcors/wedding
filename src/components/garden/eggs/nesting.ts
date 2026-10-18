@@ -14,8 +14,9 @@ import { BIRDHOUSE } from './birdhouseGeometry.ts';
 
 // When Patrick's bird goes home, his renovation done: August 2024, so they
 // then live apart about a year until AMELIA_MOVED_IN. It is the month they
-// start dating, so it flies home as the date shows, on Amelia's bank, while
-// the dating butterflies come out of the trees on his (see datingFlight.ts).
+// start dating, so it flies home just before the date shows, as July does, on
+// Amelia's bank, while the dating butterflies come out of the trees on his
+// (see datingFlight.ts).
 export const PATRICK_HOME = '2024-08';
 
 export type Owner = 'amelia' | 'patrick';
@@ -44,8 +45,16 @@ export const NESTS = {
   rise: .9, flight: 1.5, scaffold: .7,
 } as const;
 
-// What happens, in order, and when: `at` shares after `month` shows. Each
-// event fires once the scroll reaches it and then plays in real time.
+// What happens, in order, and when: `at` shares after `month` shows (before
+// it where `at` is negative). Each event fires once the scroll reaches it and
+// then plays in real time, so a guest scrolling on has gone a way down the
+// river by the time a bird lands. So each step comes early, done while its
+// houses are well in the picture, and the settled scene stays a good while
+// before they leave it, even on a phone: the first pair springs up just
+// before May 2024 shows, as 2023's last months rush by, and its birds fly in
+// as it shows; his bird lands at hers as June shows and flies home as July
+// does, while the dating butterflies come out of the trees; and her bird
+// flies over to his as April 2025 shows, two months before AMELIA_MOVED_IN.
 // `build` raises a pair of houses, `scaffold` puts it up round Patrick's
 // house in the first pair (1) or takes it down (0), and `moves` sends birds
 // to a house's roof, where they show against the trees: `home` is its own
@@ -53,15 +62,15 @@ export const NESTS = {
 export type Perch = { house: Owner; spot: 'home' | 'guest' };
 export type NestEvent = { month: string; at: number; pair: 0 | 1; build?: boolean; scaffold?: 0 | 1; moves?: Partial<Record<Owner, Perch>> };
 export const NEST_EVENTS: readonly NestEvent[] = [
-  { month: '2024-05', at: .02, pair: 0, build: true },
-  { month: '2024-05', at: .1, pair: 0, moves: { amelia: { house: 'amelia', spot: 'home' }, patrick: { house: 'patrick', spot: 'home' } } },
-  { month: '2024-06', at: .06, pair: 0, scaffold: 1, moves: { patrick: { house: 'amelia', spot: 'guest' } } },
-  { month: PATRICK_HOME, at: 0, pair: 0, scaffold: 0, moves: { patrick: { house: 'patrick', spot: 'home' } } },
+  { month: '2024-05', at: -.05, pair: 0, build: true },
+  { month: '2024-05', at: 0, pair: 0, moves: { amelia: { house: 'amelia', spot: 'home' }, patrick: { house: 'patrick', spot: 'home' } } },
+  { month: '2024-06', at: -.04, pair: 0, scaffold: 1, moves: { patrick: { house: 'amelia', spot: 'guest' } } },
+  { month: PATRICK_HOME, at: -.15, pair: 0, scaffold: 0, moves: { patrick: { house: 'patrick', spot: 'home' } } },
   // The second pair rises as it comes into reach (see nestTriggers), its
-  // birds already at home, after the butterflies have come out of the trees
-  // beside it and are round the boats.
-  { month: PATRICK_HOME, at: .5, pair: 1, build: true },
-  { month: AMELIA_MOVED_IN, at: 0, pair: 1, moves: { amelia: { house: 'patrick', spot: 'guest' } } },
+  // birds already at home, once Amelia's and Patrick's butterflies have come
+  // out of the trees beside it and are round the boats.
+  { month: PATRICK_HOME, at: .4, pair: 1, build: true },
+  { month: AMELIA_MOVED_IN, at: -.19, pair: 1, moves: { amelia: { house: 'patrick', spot: 'guest' } } },
 ];
 // Each pair's birds before its first move: none yet in the first (they fly
 // in from the trees), each at home in the second.
@@ -111,8 +120,8 @@ export function nestTriggers(width: number) {
   });
 }
 // Whether event i has fired at progress p. Under reduced motion the camera
-// cuts to each milestone's still, at its date, so an event a little after a
-// date counts from the date.
+// cuts to each milestone's still, at its date, so an event a little before or
+// after a date counts from the date.
 export const fired = (i: number, triggers: readonly number[], p: number, reduced: boolean) =>
   p >= triggers[i] - (reduced ? NEST_EVENTS[i].at * ROOM : 0) - 1e-9;
 

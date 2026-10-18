@@ -250,18 +250,31 @@ test('the birds tell the apartments: one each, his at hers while he renovates, h
         assert.ok(distance < (event.build && event.pair === 1 ? 31 : 26), `distance ${distance} at event ${i}`);
       }
     });
+    // Each flight is done with both its houses still in the picture, and they
+    // stay in it for a good while after (more than a quarter of a share on a
+    // phone, where the narrow lens loses them soonest), so the guest sees
+    // the settled scene before it goes.
+    NEST_EVENTS.forEach((event, i) => {
+      if (!event.moves) return;
+      for (let s = 0; s <= .28; s += .02) for (const house of Object.values(spots[event.pair])) {
+        const { bearing } = seen(triggers[i] + s * ROOM, width, house.x, house.z);
+        assert.ok(Math.abs(bearing) < halfView(width) - 2, `bearing ${bearing} ${s} after event ${i}`);
+      }
+    });
     // The second pair comes up only once Patrick's bird is home.
     const home = NEST_EVENTS.findIndex(e => e.month === PATRICK_HOME && e.moves?.patrick);
     assert.ok(triggers[NEST_EVENTS.findIndex(e => e.pair === 1 && e.build)] >= triggers[home]);
     // Under reduced motion each still shows its stage done: at living
-    // together's, Patrick's bird is at Amelia's and the scaffolding up.
+    // together's, Patrick's bird is at Amelia's and the scaffolding up. Scrolling,
+    // he flies over a little before June shows; at a still it counts from the date.
     const still = stillProgress(progressAt(living.month) + ROOM * .2), visit = NEST_EVENTS.findIndex(e => e.scaffold === 1);
-    assert.ok(fired(visit, triggers, still, true) && !fired(visit, triggers, still, false));
+    const before = progressAt(living.month) - ROOM * .01;
+    assert.ok(fired(visit, triggers, still, true) && fired(visit, triggers, before, false) && !fired(visit, triggers, stillProgress(before), true));
     assert.ok(!fired(home, triggers, still, true));
   }
 });
 
-test('Patrick\'s bird flies home as August 2024 shows, clear of the dating butterflies', async () => {
+test('Patrick\'s bird flies home as July 2024 shows, before they start dating, clear of the dating butterflies', async () => {
   const { DATES, dateLabel, routeAt } = await import('../src/components/garden/journey.ts');
   const { boatPose } = await import('../src/components/garden/storyBoats.ts');
   const { FLYERS, flightPoint, flying } = await import('../src/components/garden/eggs/datingFlight.ts');
@@ -272,7 +285,9 @@ test('Patrick\'s bird flies home as August 2024 shows, clear of the dating butte
   const rise = NEST_EVENTS.findIndex(e => e.pair === 1 && e.build);
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
     const triggers = nestTriggers(width), houses = Object.values(nestSpots(width)[0]);
-    assert.equal(dateLabel(triggers[home]), 'August 2024');
+    // Early, so it is home well before the first pair leaves the picture.
+    assert.equal(dateLabel(triggers[home]), 'July 2024');
+    assert.ok(triggers[home] < progressAt(DATES.dating));
     // The first pair is still ahead of the boats as his bird flies home.
     for (const house of houses) assert.ok(house.z < routeAt(triggers[home]) - 2);
     // The butterflies come out of the trees on the other bank meanwhile, and
@@ -285,8 +300,8 @@ test('Patrick\'s bird flies home as August 2024 shows, clear of the dating butte
         for (const house of houses) assert.ok(Math.hypot(x - house.x, z - house.z) > 4, `${flyer.colour} by the houses at ${t}`);
       }
     }
-    // The second pair rises only once they are all round the boats.
-    assert.ok(triggers[rise] >= progressAt(DATES.dating) + Math.max(...FLYERS.map(f => f.arrive[1])) * ROOM);
+    // The second pair rises only once Amelia's and Patrick's are round the boats.
+    assert.ok(triggers[rise] >= progressAt(DATES.dating) + Math.max(...FLYERS.filter(f => f.partner).map(f => f.arrive[1])) * ROOM);
   }
 });
 

@@ -25,7 +25,7 @@ export type Point = [number, number, number];
 
 const PAIR_ORBIT: Orbit = { radius: 1.45, stretch: 1.25, height: 1.25, speed: .55, phase: 2.4 };
 // All four come out of the trees on Patrick's bank: on Amelia's, his bird
-// is flying home to its birdhouse as the date shows (see nesting.ts).
+// is flying home to its birdhouse just before the date shows (see nesting.ts).
 export const FLYERS: readonly Flyer[] = [
   { colour: 'turquoise', partner: -1, orbit: PAIR_ORBIT, arrive: [-.1, .4], leave: [.8, 1.12], from: [6.5, 3.2, -7.5], to: [3.5, 4.2, -11] },
   { colour: 'butter', partner: 1, orbit: PAIR_ORBIT, arrive: [-.1, .4], leave: [.8, 1.12], from: [6.5, 3.2, -7.5], to: [3.5, 4.2, -11] },
