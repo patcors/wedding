@@ -1,29 +1,28 @@
-// 2025: Bullet, the product Patrick worked on, as a brass bullet of a
-// rocket on a launch stand on the right bank (course in rocketLaunch.ts). As
-// the scroll passes its moment it fires and climbs away up the river, playing
-// out in real time, as the mortarboards do, so it never hangs in the air when
-// the guest stops; a jump past it finds the stand empty, and scrolling back
-// before it stands it on its stand again. Under reduced motion it stays on
-// its stand.
+// October 2026: Bullet, the product Patrick worked on, as a small brass
+// bullet of a rocket on a launch stand on the right bank down the river
+// (course in rocketLaunch.ts). As the scroll passes its moment it fires and
+// climbs away in a gentle arc with a thin trail, playing out in real time, as
+// the mortarboards do, so it never hangs in the air when the guest stops; a
+// jump past it finds the stand empty, and scrolling back before it stands it
+// on its stand again. Under reduced motion it stays on its stand.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useJourney, type SlotProps } from '../JourneyProvider';
-import { markerShown } from './yearMarkerSpots';
 import { EXHAUST_COUNT, ROCKET, exhaust, rocketCourse, rocketInFlight, rocketShown, rocketSpot, rocketTime } from './rocketLaunch';
 import { launchStandGeometry, puffGeometry, rocketGeometry } from './rocketGeometry';
 
-const SMOKE = '#dedad2', FLAME = '#ffb45e';
+const SMOKE = '#efece6', FLAME = '#ffb45e';
 const UP = new THREE.Vector3(0, 1, 0);
 
-export default function Rocket({ paused, reduced, mobile, width }: SlotProps) {
+export default function Rocket({ paused, reduced, width }: SlotProps) {
   const clock = useJourney();
   const parts = useMemo(() => ({
     rocket: rocketGeometry(), stand: launchStandGeometry(), puff: puffGeometry(),
     // Dissolves in with the year markers' hashed fade.
     brass: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .38, metalness: .45, alphaHash: true }),
     wood: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9, alphaHash: true }),
-    smoke: new THREE.MeshStandardMaterial({ roughness: 1, emissive: SMOKE, emissiveIntensity: .15 }),
+    smoke: new THREE.MeshStandardMaterial({ roughness: 1, emissive: SMOKE, emissiveIntensity: .3 }),
   }), []);
   useEffect(() => () => Object.values(parts).forEach(part => part.dispose()), [parts]);
   const spot = useMemo(() => rocketSpot(width), [width]);
@@ -33,16 +32,16 @@ export default function Rocket({ paused, reduced, mobile, width }: SlotProps) {
   const fired = useRef<number | null>(null);
   const idle = useRef(0);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const turn = useMemo(() => ({ yaw: new THREE.Quaternion().setFromAxisAngle(UP, spot.yaw), heading: new THREE.Vector3() }), [spot]);
+  const turn = useMemo(() => ({ yaw: new THREE.Quaternion().setFromAxisAngle(UP, spot.yaw), heading: new THREE.Vector3(), streak: new THREE.Vector3() }), [spot]);
   useEffect(() => {
     const colour = new THREE.Color();
     for (let i = 0; i <= EXHAUST_COUNT; i++) puffs.current?.setColorAt(i, colour.set(i < EXHAUST_COUNT ? SMOKE : FLAME));
   }, []);
 
-  useFrame(({ camera }, dt) => {
+  useFrame((_, dt) => {
     if (!group.current || !rocket.current || !puffs.current) return;
     const t = rocketTime(clock.progress);
-    const shown = Math.min(rocketShown(t), markerShown(spot.z, camera.position.z, mobile));
+    const shown = rocketShown(t);
     group.current.visible = shown > 0;
     if (!shown) return;
     parts.brass.opacity = parts.wood.opacity = shown;
@@ -66,10 +65,12 @@ export default function Rocket({ paused, reduced, mobile, width }: SlotProps) {
     const smoke = exhaust(course, air);
     puffs.current.visible = air !== null && air < 99;
     if (!puffs.current.visible) return;
-    smoke.forEach(({ x, y, z, size }, i) => {
+    smoke.forEach(({ x, y, z, size, length, dir }, i) => {
       dummy.position.set(x, y, z);
-      dummy.rotation.set(i * 1.3, i * 2.1, 0);
-      dummy.scale.setScalar(size);
+      // A puff tumbled, a streak laid along the trail.
+      if (length > size) dummy.quaternion.setFromUnitVectors(UP, turn.streak.set(...dir));
+      else dummy.rotation.set(i * 1.3, i * 2.1, 0);
+      dummy.scale.set(size, length, size);
       dummy.updateMatrix();
       puffs.current!.setMatrixAt(i, dummy.matrix);
     });

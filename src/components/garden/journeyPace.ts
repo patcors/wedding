@@ -6,7 +6,7 @@
 // carries the story on a little way, as momentum does, rather than leaving
 // the page far ahead. "The next chapter" glides the rest of the way to the
 // dock on its own (glidePlan). Pure, so it can be tested.
-import { MILESTONES, ROOM, STOPS } from './journey.ts';
+import { BULLET_LAUNCH, MILESTONES, ROOM, STOPS, progressAt } from './journey.ts';
 
 // `ease` is the old damping's rate, per second; `max` the most shares a
 // second the story travels; `lead` how many shares the scroll may run ahead
@@ -32,12 +32,20 @@ export const leashed = (scroll: number, p: number) => clamp(scroll, p - PACE.lea
 // travels on and eases into the next stop over another `ramp`, where it holds
 // for `hold` seconds, or longer where something plays out there: the caps
 // tossed at graduation, the birds flying in as they buy their apartments,
-// the rocket at August 2025's snow trip, the catamaran's turn as they start
-// salsa and the proposal on its deck.
+// the catamaran's turn as they start salsa and the proposal on its deck.
+// Between the trip and the wedding it also stops for the rocket, `rocket`
+// shares after it fires (BULLET_LAUNCH), and waits while it climbs away.
 export const GLIDE = {
-  cruise: .8, ramp: 1, hold: 1.8,
-  holds: { graduation: 2.6, apartments: 2.6, 'snow-2025': 3.9, salsa: 3.2, engaged: 2.6 } as Partial<Record<string, number>>,
+  cruise: .8, ramp: 1, hold: 1.8, rocket: .05,
+  holds: { graduation: 2.6, apartments: 2.6, salsa: 3.2, engaged: 2.6, rocket: 4.4 } as Partial<Record<string, number>>,
 } as const;
+
+// Where the glide stops, in order: each milestone's stop (STOPS, by its
+// milestone's id), the rocket's, and the celebration.
+export const GLIDE_STOPS: readonly { p: number; id: string }[] = [
+  ...STOPS.slice(1).map((p, i) => ({ p, id: MILESTONES[i]?.id ?? 'celebration' })),
+  { p: progressAt(BULLET_LAUNCH.month) + (BULLET_LAUNCH.at + GLIDE.rocket) * ROOM, id: 'rocket' },
+].sort((a, b) => a.p - b.p);
 
 export type GlideLeg = { from: number; to: number; start: number; travel: number; hold: number; cruise: number };
 export type GlidePlan = { legs: GlideLeg[]; length: number };
@@ -48,13 +56,12 @@ export type GlidePlan = { legs: GlideLeg[]; length: number };
 export function glidePlan(from: number): GlidePlan {
   const legs: GlideLeg[] = [];
   let at = from, start = 0;
-  for (const [i, stop] of STOPS.entries()) {
+  for (const [i, { p: stop, id }] of GLIDE_STOPS.entries()) {
     if (stop <= at + 5e-4) continue;
     const distance = (stop - at) / ROOM, ramp = GLIDE.ramp;
     const cruise = Math.min(GLIDE.cruise, distance / ramp);
     const travel = distance / cruise + ramp;
-    const milestone = MILESTONES[i - 1];
-    const hold = i === STOPS.length - 1 ? 0 : GLIDE.holds[milestone.id] ?? GLIDE.hold;
+    const hold = i === GLIDE_STOPS.length - 1 ? 0 : GLIDE.holds[id] ?? GLIDE.hold;
     legs.push({ from: at, to: stop, start, travel, hold, cruise });
     start += travel + hold;
     at = stop;
