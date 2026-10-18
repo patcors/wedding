@@ -1,12 +1,12 @@
 // May 2024 to mid 2025, their apartments, told as two birds and their
-// birdhouses on the bank: each buys an apartment (a birdhouse goes up for
-// each, and a bird flies in to each), Patrick stays at Amelia's while he
-// renovates his (his bird flies over to hers, and scaffolding goes up round
-// his), they live apart for about a year (his bird flies home and the
-// scaffolding comes down), and then Amelia moves into his (her bird flies
-// over to his). Where the birdhouses stand, when each of these happens and
-// where the birds perch and fly; drawn by Birdhouses.tsx with the models in
-// birdhouseGeometry.ts. Pure, so it can be tested.
+// birdhouses on the bank: each buys an apartment and Patrick stays at
+// Amelia's while he renovates his (a birdhouse goes up for each, his with
+// scaffolding round it, and both birds fly in to hers), they live apart for
+// about a year (his bird flies home and the scaffolding comes down), and then
+// Amelia moves into his (her bird flies over to his). Where the birdhouses
+// stand, when each of these happens and where the birds perch and fly; drawn
+// by Birdhouses.tsx with the models in birdhouseGeometry.ts. Pure, so it can
+// be tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { AMELIA_MOVED_IN, ROOM, progressAt, routeAt } from '../journey.ts';
@@ -41,7 +41,8 @@ export const NESTS = {
   mobile: { inland: .5, apart: .45, scale: 1.9 },
   // The second pair comes up out of the haze this far from the camera.
   reach: { desktop: 30, mobile: 26 },
-  // Seconds: a house going up, a bird's flight, the scaffolding going up or down.
+  // Seconds: a house going up (its scaffolding with it), a bird's flight, the
+  // scaffolding coming down.
   rise: .9, flight: 1.5, scaffold: .7,
 } as const;
 
@@ -51,20 +52,21 @@ export const NESTS = {
 // river by the time a bird lands. So each step comes early, done while its
 // houses are well in the picture, and the settled scene stays a good while
 // before they leave it, even on a phone: the first pair springs up just
-// before May 2024 shows, as 2023's last months rush by, and its birds fly in
-// as it shows; his bird lands at hers as June shows and flies home as July
-// does, while the dating butterflies come out of the trees; and her bird
-// flies over to his as April 2025 shows, two months before AMELIA_MOVED_IN.
-// `build` raises a pair of houses, `scaffold` puts it up round Patrick's
-// house in the first pair (1) or takes it down (0), and `moves` sends birds
-// to a house's roof, where they show against the trees: `home` is its own
-// bird's place, `guest` beside it.
+// before May 2024 shows, as 2023's last months rush by, the scaffolding
+// already round his house, and its birds fly in to hers as it shows, so
+// June's living together shows the same scene; his bird flies home as July
+// shows (any earlier would be in June, while they lived together), while
+// the dating butterflies come out of the trees; and her bird flies over to
+// his as April 2025 shows, two months before AMELIA_MOVED_IN. `build`
+// raises a pair of houses, `scaffold` puts it up round Patrick's house in
+// the first pair (1), rising with it, or takes it down (0), and `moves`
+// sends birds to a house's roof, where they show against the trees: `home`
+// is its own bird's place, `guest` beside it.
 export type Perch = { house: Owner; spot: 'home' | 'guest' };
 export type NestEvent = { month: string; at: number; pair: 0 | 1; build?: boolean; scaffold?: 0 | 1; moves?: Partial<Record<Owner, Perch>> };
 export const NEST_EVENTS: readonly NestEvent[] = [
-  { month: '2024-05', at: -.05, pair: 0, build: true },
-  { month: '2024-05', at: 0, pair: 0, moves: { amelia: { house: 'amelia', spot: 'home' }, patrick: { house: 'patrick', spot: 'home' } } },
-  { month: '2024-06', at: -.04, pair: 0, scaffold: 1, moves: { patrick: { house: 'amelia', spot: 'guest' } } },
+  { month: '2024-05', at: -.05, pair: 0, build: true, scaffold: 1 },
+  { month: '2024-05', at: 0, pair: 0, moves: { amelia: { house: 'amelia', spot: 'home' }, patrick: { house: 'amelia', spot: 'guest' } } },
   { month: PATRICK_HOME, at: -.15, pair: 0, scaffold: 0, moves: { patrick: { house: 'patrick', spot: 'home' } } },
   // The second pair rises as it comes into reach (see nestTriggers), its
   // birds already at home, once Amelia's and Patrick's butterflies have come
@@ -73,7 +75,7 @@ export const NEST_EVENTS: readonly NestEvent[] = [
   { month: AMELIA_MOVED_IN, at: -.19, pair: 1, moves: { amelia: { house: 'patrick', spot: 'guest' } } },
 ];
 // Each pair's birds before its first move: none yet in the first (they fly
-// in from the trees), each at home in the second.
+// in to hers from the trees), each at home in the second.
 const START: Record<0 | 1, Record<Owner, Perch | null>> = {
   0: { amelia: null, patrick: null },
   1: { amelia: { house: 'amelia', spot: 'home' }, patrick: { house: 'patrick', spot: 'home' } },
