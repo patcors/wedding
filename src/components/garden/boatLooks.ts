@@ -1,7 +1,8 @@
-// Dev only: the Review panel's choices of how the story boats look, the two
-// dinghies before they join and the catamaran they become. 'original' is
-// what guests see until one is chosen. Each look is paint (hull colours and
-// sail cloth) here, and shape (rig, cabin) in storyBoatGeometry.ts.
+// How the story boats look, the two dinghies before they join and the
+// catamaran they become. Guests see BOAT_LOOK: the toy sloops, joining into
+// the original catamaran in their paint. The others are dev-only Review
+// choices. Each look is paint (hull colours and sail cloth) here, and shape
+// (rig, cabin) in storyBoatGeometry.ts.
 import * as THREE from 'three';
 
 export const DINGHY_LOOKS = {
@@ -25,7 +26,7 @@ export const CATAMARAN_LOOKS = {
 export type DinghyLook = keyof typeof DINGHY_LOOKS;
 export type CatamaranLook = keyof typeof CATAMARAN_LOOKS;
 export type BoatLook = { dinghy: DinghyLook; catamaran: CatamaranLook };
-export const BOAT_LOOK: BoatLook = { dinghy: 'original', catamaran: 'original' };
+export const BOAT_LOOK: BoatLook = { dinghy: 'toy', catamaran: 'original' };
 export const boatLook = (dinghy: string | null, catamaran: string | null): BoatLook => ({
   dinghy: dinghy && dinghy in DINGHY_LOOKS ? dinghy as DinghyLook : BOAT_LOOK.dinghy,
   catamaran: catamaran && catamaran in CATAMARAN_LOOKS ? catamaran as CatamaranLook : BOAT_LOOK.catamaran,
