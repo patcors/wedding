@@ -30,7 +30,8 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // at it: in the open across from the headland that hides the old tree, well
 // past the Hagia Sophia and passed before the dock comes into view. It would
 // be in reach at the trip's stop, just behind the Hagia Sophia in the picture,
-// so it waits until the Hagia Sophia is passing, fully in as October 2026 shows.
+// so it waits until the Hagia Sophia has left the picture, fully in as
+// November 2026 shows.
 export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45 },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },
@@ -42,7 +43,7 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
   { year: 2025, medium: 'steps', side: -1, lead: 4.8, inland: .15 },
   { year: 2026, medium: 'arch', side: 1, lead: 4, inland: .6 },
-  { year: 2027, medium: 'heart', side: -1, lead: 3, inland: .9, from: '2026-10' },
+  { year: 2027, medium: 'heart', side: -1, lead: 3, inland: .9, from: '2026-11' },
 ];
 
 // Bigger on a phone, whose wider lens draws everything smaller; a phone's
