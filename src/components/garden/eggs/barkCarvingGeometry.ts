@@ -1,14 +1,14 @@
-// The university years' bark carvings (see uniOrnaments.ts): a patch laid on
-// the bark of a real tree, cut with distribution curves (a normal bell, a
-// right-skewed curve, a Poisson's bars and an exponential's decay) or the
-// quadratic formula. The patch is the trunk's own faces where the carving
+// The bark carvings (see uniOrnaments.ts): a patch laid on the bark of a real
+// tree, cut with distribution curves (a normal bell, a right-skewed curve, a
+// Poisson's bars and an exponential's decay), the quadratic formula, a sloop,
+// a golden spiral, two sloops or a heart with P + A. The patch is the trunk's own faces where the carving
 // goes, copied from the tree's model and lifted a hair off the bark along its
 // normals, so it follows every facet and lump and can't float or sink in; the
 // carving is mapped round the trunk on it, the rest of it clear, so the bark
 // shows through. Its canvas is drawn with carving.ts, its grooves through the
 // bark to paler wood, with a bump map from their depth.
 import * as THREE from 'three';
-import { carvedTextures, incise, lettering, line, type Carver } from './carving.ts';
+import { carvedTextures, incise, lettering, line, type Carver, type Shape } from './carving.ts';
 import type { CarvedTree, CarvingId } from './uniOrnaments.ts';
 
 // The tree model's branches as plain arrays: positions and normals, three
@@ -77,7 +77,7 @@ export function barkPatchGeometry(mesh: TreeMesh, place: PatchPlace) {
 
 // Each canvas: the carving within a clear margin, which the clamped edge
 // carries on over the rest of the patch. The formula's is wider than tall.
-const MARGIN = 28, CANVAS = { stats: [512, 512], algebra: [640, 420] } as const;
+const MARGIN = 28, CANVAS = { stats: [512, 512], algebra: [640, 420], sloop: [440, 480], spiral: [600, 380], sloops: [600, 400], heart: [480, 440] } as const;
 
 // Four distributions in two rows, each over its own axis.
 function stats(carver: Carver) {
@@ -126,8 +126,77 @@ function algebra(carver: Carver) {
   incise(carver, lettering('2a', middle, row3, size), stroke, false);
 }
 
+// A toy sloop, bow to the right, in a box `wide` across from (left, top):
+// its hull, mast, main and jib, cut in outline as initials are.
+function sloop(carver: Carver, left: number, top: number, wide: number, high: number, stroke: number) {
+  const at = (u: number, v: number) => [left + u * wide, top + v * high] as const;
+  incise(carver, line([at(0, .74), at(1, .74), at(.84, .94), at(.12, .94), at(0, .74)]), stroke);
+  incise(carver, line([at(.47, .74), at(.47, 0)]), stroke * .8);
+  incise(carver, line([at(.41, .06), at(.41, .66), at(.06, .66), at(.41, .06)]), stroke * .8);
+  incise(carver, line([at(.53, .14), at(.53, .66), at(.88, .66), at(.53, .14)]), stroke * .8);
+}
+
+// One sloop on a ripple, before they meet.
+function oneSloop(carver: Carver) {
+  const [wide, high] = CANVAS.sloop, stroke = 30;
+  sloop(carver, MARGIN + 20, MARGIN + 10, wide - MARGIN * 2 - 40, (high - MARGIN * 2) * .82, stroke);
+  const y = MARGIN + (high - MARGIN * 2) * .96, left = MARGIN + 10, right = wide - MARGIN - 10;
+  incise(carver, line(Array.from({ length: 25 }, (_, i) => [left + (right - left) * i / 24, y + Math.sin(i / 24 * Math.PI * 4) * 9] as const)), stroke * .55);
+}
+
+// Two sloops side by side, alongside again.
+function twoSloops(carver: Carver) {
+  const [wide, high] = CANVAS.sloops, gap = 34, each = (wide - MARGIN * 2 - gap) / 2;
+  for (const i of [0, 1]) sloop(carver, MARGIN + i * (each + gap), MARGIN, each, high - MARGIN * 2, 26);
+}
+
+// A golden spiral over the Fibonacci squares it grows from (1, 1, 2, 3, 5
+// and 8, in a 13 by 8 rectangle), each quarter turn a quarter circle across
+// its square: the squares cut fine and the spiral deep.
+function goldenSpiral(carver: Carver) {
+  const [wide, high] = CANVAS.spiral, unit = Math.min((wide - MARGIN * 2) / 13, (high - MARGIN * 2) / 8);
+  const left = (wide - unit * 13) / 2, top = (high - unit * 8) / 2;
+  // Each square's corner (in units from the rectangle's top left), size, and
+  // the corner its quarter circle turns about, the spiral running inwards.
+  const squares = [[0, 0, 8, 8, 8, Math.PI, Math.PI * 1.5], [8, 0, 5, 8, 5, Math.PI * 1.5, Math.PI * 2], [10, 5, 3, 10, 5, 0, Math.PI * .5],
+    [8, 6, 2, 10, 6, Math.PI * .5, Math.PI], [8, 5, 1, 9, 6, Math.PI, Math.PI * 1.5], [9, 5, 1, 9, 6, Math.PI * 1.5, Math.PI * 2]] as const;
+  const box: Shape = (ctx, width) => {
+    ctx.lineWidth = width;
+    for (const [x, y, size] of squares) ctx.strokeRect(left + x * unit, top + y * unit, size * unit, size * unit);
+  };
+  incise(carver, box, 11, false);
+  const spiral: Shape = (ctx, width) => {
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    for (const [, , size, cx, cy, from, to] of squares) ctx.arc(left + cx * unit, top + cy * unit, size * unit, from, to);
+    ctx.stroke();
+  };
+  incise(carver, spiral, 26);
+}
+
+// The lovers' carving: a heart cut in outline with P + A inside it.
+function heart(carver: Carver) {
+  const [wide, high] = CANVAS.heart, middle = wide / 2, w = (wide - MARGIN * 2) / 2 - 14, top = MARGIN + 14, bottom = high - MARGIN - 10;
+  const outline: Shape = (ctx, width) => {
+    ctx.lineWidth = width;
+    const dip = top + (bottom - top) * .22;
+    ctx.beginPath();
+    ctx.moveTo(middle, dip);
+    ctx.bezierCurveTo(middle + w * .1, top - 12, middle + w * 1.05, top - 18, middle + w, dip + 30);
+    ctx.bezierCurveTo(middle + w * .96, top + (bottom - top) * .62, middle + w * .3, bottom - 50, middle, bottom);
+    ctx.bezierCurveTo(middle - w * .3, bottom - 50, middle - w * .96, top + (bottom - top) * .62, middle - w, dip + 30);
+    ctx.bezierCurveTo(middle - w * 1.05, top - 18, middle - w * .1, top - 12, middle, dip);
+    ctx.stroke();
+  };
+  incise(carver, outline, 30);
+  const size = 132;
+  incise(carver, lettering('P + A', middle, top + (bottom - top) * .58, size, false), size * .1, false);
+}
+
+const PAINT: Record<CarvingId, (carver: Carver) => void> = { stats, algebra, sloop: oneSloop, spiral: goldenSpiral, sloops: twoSloops, heart };
+
 export function barkCarvingTextures(carving: CarvingId) {
-  const [wide, high] = CANVAS[carving], textures = carvedTextures(wide, high, carving === 'stats' ? stats : algebra);
+  const [wide, high] = CANVAS[carving], textures = carvedTextures(wide, high, PAINT[carving]);
   for (const texture of [textures.map, textures.bumpMap]) texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
   return textures;
 }

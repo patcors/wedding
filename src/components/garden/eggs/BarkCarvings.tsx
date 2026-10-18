@@ -1,16 +1,18 @@
 // The university years: distribution curves carved into the bark of a tree on
 // Amelia's bank and the quadratic formula into one on Patrick's, small, like
-// initials cut into a trunk (which trees, and where on them, in
-// uniOrnaments.ts; the patch and its carving in barkCarvingGeometry.ts).
-// Each is drawn only while its tree is near the camera, much as the year
-// markers are. Two draw calls, 8 to 14 triangles each; no shadows cast.
+// initials cut into a trunk; and four more further down the river, a sloop,
+// a golden spiral, two sloops side by side and a heart with P + A (which
+// trees, and where on them, in uniOrnaments.ts; the patch and its carving in
+// barkCarvingGeometry.ts). Each is drawn only while its tree is near the
+// camera, much as the year markers are, so at most two at a time. One draw
+// call each, 8 to 28 triangles; no shadows cast.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { SlotProps } from '../JourneyProvider';
 import { TREE_MODELS } from '../GardenTrees';
-import { CARVINGS, carvedTree, carvingFaces, carvingShown, type CarvingId } from './uniOrnaments';
+import { CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, type CarvingId } from './uniOrnaments';
 import { barkCarvingTextures, barkPatchGeometry, treeMatrix, type TreeMesh } from './barkCarvingGeometry';
 
 // The model's branches as plain arrays (its normals are stored packed).
@@ -53,5 +55,5 @@ function Carving({ id, width }: SlotProps & { id: CarvingId }) {
 }
 
 export default function BarkCarvings(props: SlotProps) {
-  return <>{(Object.keys(CARVINGS) as CarvingId[]).map(id => <Carving key={id} id={id} {...props} />)}</>;
+  return <>{(Object.keys(CARVINGS) as CarvingId[]).filter(id => carvedOn(CARVINGS[id], props.width)).map(id => <Carving key={id} id={id} {...props} />)}</>;
 }
