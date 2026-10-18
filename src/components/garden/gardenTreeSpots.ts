@@ -42,7 +42,7 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
   }
   // Portrait also fills the open stretch of left bank between the first two trees.
   if (mobile) avenue.push({ x: riverCenter(-7, width) - bankEdge(-7, width) - 3.6, z: -7, scale: .95, rotation: 4.4, type: 1, distant: false });
-  // An ash by the water on Amelia's bank past 2020's boathouse, as Sydney
+  // An ash by the water on Amelia's bank past 2020's milestone, as Sydney
   // starts to widen the river, for 2020's aerial silk to hang from
   // (eggs/circusRigs.ts); on a phone nearer the water, so the silk's limb
   // reaches out over the bank into its narrower picture.

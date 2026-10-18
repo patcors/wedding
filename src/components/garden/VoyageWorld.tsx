@@ -1,6 +1,7 @@
 // The Voyage's scenery along the river (owner: world agent): the little
 // jetties the boats set out from, the island and reeds that split the river
-// before they meet, and the jetty and the festoon
+// before they meet, the sandstone rock that parts it again in Sydney, and the
+// jetty and the festoon
 // lights in the old tree past the S-bend. The old tree itself and the stand of
 // trees that hides it until the bend are planted with the rest in
 // GardenTrees, which shares their bark, leaves and wind.
@@ -16,6 +17,7 @@ import { plantMaterial } from './GardenPlants';
 import { OLD_TREE_SCALE } from './GardenTrees';
 import { plantGeometry } from './gardenPlantGeometry';
 import { islandGeometry, islandPlantSites, type IslandPlant } from './voyageIsland';
+import { rockGeometry } from './voyageRock';
 import { FESTOON, festoonStrands, jettyGeometry, jettyLantern, launchJettyGeometry, launchLanterns, mooringLines, sagPoints } from './voyageDock';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { useRiverReach } from './useRiverReach';
@@ -60,6 +62,20 @@ function Island({ width, mobile, paused }: SlotProps) {
   return <group ref={group} name="voyage-island">
     <mesh geometry={geometry} material={material} receiveShadow />
     {(['reed', 'cattail', 'grass', 'fern'] as const).map(kind => <IslandPlants key={kind} kind={kind} width={width} mobile={mobile} wind={wind} />)}
+  </group>;
+}
+
+// The low sandstone rock in Sydney's river, where the boats first part. The
+// Opera House stands on it and the Harbour Bridge lands on it (eggs/Sydney.tsx).
+function Rock({ width }: SlotProps) {
+  const group = useRef<THREE.Group>(null);
+  const geometry = useMemo(() => rockGeometry(width), [width]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useRiverReach(group, useMemo(() => [{ z: VOYAGE.rock.from + 1 }, { z: VOYAGE.rock.to - 1 }], []));
+  return <group ref={group} name="voyage-rock">
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial vertexColors roughness={.95} flatShading />
+    </mesh>
   </group>;
 }
 
@@ -187,6 +203,7 @@ export default function VoyageWorld(props: SlotProps) {
   return <group name="voyage-world">
     <Launch {...props} />
     <Island {...props} />
+    <Rock {...props} />
     <Dock {...props} />
   </group>;
 }

@@ -20,9 +20,10 @@ import ParkBench from './ParkBench';
 import Careers from './Careers';
 import Rocket from './Rocket';
 import Circus from './Circus';
+import Sydney from './Sydney';
 
 const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: TurkeyGreece, university: University, 'snow-2019': SnowTrip,
-  graduation: Graduation, apartments: Birdhouses, 'snow-2025': SecondSnowTrip };
+  graduation: Graduation, sydney: Sydney, apartments: Birdhouses, 'snow-2025': SecondSnowTrip };
 // Scenery that isn't an egg on a milestone: the years marked along the banks,
 // the butterflies that circle the boats as they start dating, part of the
 // boats' joining, the rose petals in the catamaran's wake as they get engaged,

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BoatSimulation, boatContact, boatOutline, createBoatBody, resolveBoatContact, stemContact } from '../src/components/garden/boatPhysics.ts';
-import { riverCenter, bankEdge, groundHeight, islandHalfWidth, launchJetties, voyageLandmarks, MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
+import { riverCenter, bankEdge, groundHeight, islandHalfWidth, launchJetties, rockHalfWidth, voyageLandmarks, MOBILE_RIVER_WIDTH, VOYAGE } from '../src/components/garden/gardenGeometry.ts';
 import { jettyStems, launchJettyStems } from '../src/components/garden/voyageDock.ts';
 import { mooredStems } from '../src/components/garden/storyBoats.ts';
+import { bridgeStems } from '../src/components/garden/eggs/harbour.ts';
 import { plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
 
 const river = { center: riverCenter, halfWidth: bankEdge };
@@ -207,5 +208,30 @@ test('boats bump off the little jetties at the start and glance on down their ch
       for (const a of world.bodies) for (const stem of stems) assert.ok((stemContact(a, stem)?.depth ?? 0) < .05, 'a hull sailed through a little jetty');
     }
     for (const a of world.bodies) assert.ok(a.z < jetty - 3, `boat ${a.id} (${a.kind}) stuck at z=${a.z.toFixed(2)} (${width})`);
+  }
+});
+
+test('boats part round Sydney\'s rock, never cross onto it, and bump off the bridge\'s pylons, on both compositions', () => {
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    // As GardenWater's river: the rock is an island to them, held only just off.
+    const rockRiver = { ...river, island: (z, w) => islandHalfWidth(z, w) || rockHalfWidth(z, w), islandMargin: z => rockHalfWidth(z) > 0 ? .08 : undefined };
+    const world = new BoatSimulation(rockRiver, width);
+    const stems = bridgeStems(width);
+    world.setStems(stems, width);
+    let id = 0;
+    // Dropped above the rock's nose, down the middle and out towards the banks.
+    for (const z of [VOYAGE.rock.from + 6, VOYAGE.rock.from + 3, VOYAGE.rock.from + 1]) for (const lateral of [-.8, -.3, 0, .3, .8]) world.launch({ id: ++id, kind: ['sailboat', 'tugboat', 'duck', 'paper'][id % 4], lateral, z }, width);
+    for (let i = 0; i < 60 * 25; i++) {
+      world.advance(1 / 60, width, false);
+      if (i % 10) continue;
+      for (const a of world.bodies) {
+        for (const p of boatOutline(a)) {
+          const rock = rockHalfWidth(p.z, width);
+          assert.ok(!rock || Math.abs(p.x - riverCenter(p.z, width)) > rock - .02, `a hull crossed onto the rock at z=${p.z.toFixed(2)} (${width})`);
+        }
+        for (const stem of stems) assert.ok((stemContact(a, stem)?.depth ?? 0) < .05, 'a hull sailed through a pylon');
+      }
+    }
+    for (const a of world.bodies) assert.ok(a.z < VOYAGE.rock.to - 2, `boat ${a.id} (${a.kind}) stuck at z=${a.z.toFixed(2)} (${width})`);
   }
 });

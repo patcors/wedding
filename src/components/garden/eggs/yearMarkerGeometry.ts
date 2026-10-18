@@ -200,24 +200,38 @@ const MODELS: Record<YearMarker['medium'], { face: Face; build: Build }> = {
       };
     },
   },
-  // 2020: painted across a little boathouse's double doors.
-  shed: {
-    face: { width: .92, height: .4, lettering: { kind: 'paint', colour: '#f2ead7' } },
-    build: (index, face, _river, seed) => {
-      const W = 1.5, H = 1.05, D = 1.2;
-      const roof = new THREE.CylinderGeometry(.92, .92, D + .2, 3, 1).rotateX(-Math.PI / 2).rotateZ(0);
-      return {
-        body: merged([
-          // Weatherboards: bands of light and shade up the walls.
-          part(box(W, H, D, [1, 10, 1]), (_, y) => Math.floor(y * 9.5 + 20) % 2 ? '#8a7860' : '#7d6c56', { position: [0, H / 2, -D / 2] }, .05, seed),
-          part(roof, '#5f644f', { position: [0, H + .21, -D / 2], scale: [1, .5, 1] }, .08, seed + 1),
-          part(box(1.12, .86, .05), '#6d8582', { position: [0, .43, .02] }, .06, seed + 2),
-          part(box(.03, .86, .06), '#56696a', { position: [0, .43, .025] }),
-          part(box(1.2, .07, .07), '#5d5246', { position: [0, .9, .03] }),
-          ...[-.05, .05].map(x => part(blob(.018), IRON, { position: [x, .4, .055] })),
-        ]),
-        face: flatFace(index, face, { position: [0, .55, .052] }),
-      };
+  // 2020: painted on the whitewashed face of an old milestone, a slab of
+  // sandstone with a rounded head, leaning a little in the grass.
+  milestone: {
+    face: { width: .62, height: .3, lettering: { kind: 'paint', colour: '#34352f', weight: 600 } },
+    build: (index, face, river, seed) => {
+      const rand = random(seed), W = .78, H = .84, DEPTH = .2, SINK = .14, R = W / 2;
+      const outline = new THREE.Shape();
+      outline.moveTo(-R, -SINK); outline.lineTo(R, -SINK); outline.lineTo(R, H - R);
+      outline.absarc(0, H - R, R, 0, Math.PI, false);
+      outline.closePath();
+      const slab = new THREE.ExtrudeGeometry(outline, { depth: DEPTH, curveSegments: 8, bevelEnabled: true, bevelThickness: .025, bevelSize: .025, bevelSegments: 1 });
+      // Worn soft at its edges.
+      const p = slab.attributes.position;
+      for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) * (1 + (rand() - .5) * .04), p.getY(i), p.getZ(i));
+      const lean = -.07, tip = .05 * river, at = { rotation: [lean, 0, tip] as [number, number, number] };
+      const onFace = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyEuler(new THREE.Euler(lean, 0, tip)).toArray();
+      const parts = [
+        part(slab, (_, y) => y < .08 ? '#7f735e' : '#a3967c', { ...at, position: [0, 0, -DEPTH / 2 - .025] }, .06, seed),
+        // The whitewashed panel the year is painted on, worn at its edges.
+        part(box(.7, .36, .012), '#ebe5d4', { ...at, position: onFace(0, .4, DEPTH / 2 + .005) }, .03, seed + 1),
+      ];
+      // Lichen on its head and down one side.
+      for (let i = 0; i < 7; i++) {
+        const a = Math.PI * (.15 + rand() * .7), r = R * (.75 + rand() * .2);
+        parts.push(part(blob(.035 + rand() * .03), i % 3 ? '#9aa07c' : '#c8c3a4', { position: onFace(Math.cos(a) * r, H - R + Math.sin(a) * r, DEPTH / 2 + .003), scale: [1, 1, .3] }, .08, seed + 10 + i));
+      }
+      // Grass grown up round its foot.
+      for (let i = 0; i < 6; i++) {
+        const x = (rand() - .5) * 1.1, z = (rand() - .3) * .4;
+        parts.push(part(blob(.09 + rand() * .05), '#73875a', { position: [x, .02, z + (Math.abs(x) < .4 ? .2 : 0)], scale: [1, .55, 1] }, .12, seed + 20 + i));
+      }
+      return { body: merged(parts), face: flatFace(index, face, { position: onFace(0, .4, DEPTH / 2 + .013) as [number, number, number], rotation: [lean, 0, tip] }) };
     },
   },
   // 2021: a garden marker stake among flowers, the year in ink.

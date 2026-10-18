@@ -1,7 +1,7 @@
 // Their working lives as still ornaments on the banks (see careerSpots.ts for
-// where and when): candlestick posts for the internship year, a rubber duck
-// on a plinth for Sydney, and a round flower bed planted in a pie chart's
-// slices for working together at HeirWealth.
+// where and when): candlestick posts for the internship year, and a round
+// flower bed planted in a pie chart's slices for working together at
+// HeirWealth.
 // Each dissolves in as the year markers do and goes once the camera has
 // passed it, so at most one or two cost anything at a time.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { useJourney } from '../JourneyProvider';
 import type { SlotProps } from '../JourneyProvider';
 import { ORNAMENTS, PIE, PIE_BED, candleBoxes, groundUnder, ornamentShown, ornamentSpot } from './careerSpots';
-import { duckStatueGeometry, flowerHeadGeometry, pieBedGeometry, pieFlowers } from './careerGeometry';
+import { flowerHeadGeometry, pieBedGeometry, pieFlowers } from './careerGeometry';
 
 // Painted posts, the wicks a dark iron.
 const PAINT = { rising: '#4f9a5b', falling: '#c64a3f', wick: '#34322c' };
@@ -24,7 +24,6 @@ export default function Careers({ mobile, width }: SlotProps) {
   const flowers = useMemo(() => pieFlowers(ground), [ground]);
   const parts = useMemo(() => ({
     box: new THREE.BoxGeometry(1, 1, 1).deleteAttribute('uv'),
-    ...duckStatueGeometry(),
     head: flowerHeadGeometry(),
   }), []);
   const bed = useMemo(() => pieBedGeometry(ground), [ground]);
@@ -32,9 +31,6 @@ export default function Careers({ mobile, width }: SlotProps) {
   // Hashed alpha dissolves each without sorting, as the year markers do.
   const materials = useMemo(() => ({
     paint: new THREE.MeshStandardMaterial({ roughness: .7, alphaHash: true }),
-    // Glossy bath-toy plastic.
-    plastic: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .3, alphaHash: true }),
-    stone: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, alphaHash: true }),
     bed: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, alphaHash: true }),
     petals: new THREE.MeshStandardMaterial({ roughness: .8, alphaHash: true }),
   }), []);
@@ -77,8 +73,7 @@ export default function Careers({ mobile, width }: SlotProps) {
       const shown = ornamentShown(ornament, spots[i], p, camera.position.z, mobile);
       group.visible = shown > 0;
       if (i === 0) materials.paint.opacity = shown;
-      if (i === 1) materials.plastic.opacity = materials.stone.opacity = shown;
-      if (i === 2) materials.bed.opacity = materials.petals.opacity = shown;
+      if (i === 1) materials.bed.opacity = materials.petals.opacity = shown;
     });
   });
 
@@ -88,11 +83,7 @@ export default function Careers({ mobile, width }: SlotProps) {
     <group name="candlesticks" {...place(0)}>
       <instancedMesh ref={candles} args={[parts.box, materials.paint, boxes.length]} frustumCulled={false} receiveShadow />
     </group>
-    <group name="duck-statue" {...place(1)}>
-      <mesh geometry={parts.duck} material={materials.plastic} receiveShadow />
-      <mesh geometry={parts.plinth} material={materials.stone} receiveShadow />
-    </group>
-    <group name="pie-bed" {...place(2)}>
+    <group name="pie-bed" {...place(1)}>
       <mesh geometry={bed} material={materials.bed} receiveShadow />
       <instancedMesh ref={heads} args={[parts.head, materials.petals, flowers.length]} frustumCulled={false} receiveShadow />
     </group>

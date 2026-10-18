@@ -10,7 +10,7 @@ import { BOAT_SCALE, boatPose } from '../storyBoats.ts';
 // One cap a boat: Amelia's (the −x boat) and then Patrick's, each tossed `at`
 // shares after the date, while it holds, just after their UOW flags come
 // down (UNIVERSITY_FLAG in storyBoats.ts). Each lands on its own boat's bank,
-// `ahead` units downstream of where it was tossed, short of 2020's boathouse,
+// `ahead` units downstream of where it was tossed, short of 2020's milestone,
 // and `inland` of the water's edge at desktop's width (portrait's is
 // `mobileInland`, Amelia's nearer the water so it stays in a phone's picture
 // as the camera comes up on it, Patrick's on the higher ground). Seconds in

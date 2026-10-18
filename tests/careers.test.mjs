@@ -5,7 +5,7 @@ import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, islandHalfWidth, riverCent
 import { MILESTONES, ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
 import { BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
-import { CANDLES, CANDLESTICKS, DUCK_STATUE, ORNAMENTS, PIE, PIE_BED, WEDGES, candleBoxes, groundUnder, ornamentShown, ornamentSpot, pieBedFootprint, wedgeAngles } from '../src/components/garden/eggs/careerSpots.ts';
+import { CANDLES, CANDLESTICKS, ORNAMENTS, PIE, PIE_BED, WEDGES, candleBoxes, groundUnder, ornamentShown, ornamentSpot, pieBedFootprint, wedgeAngles } from '../src/components/garden/eggs/careerSpots.ts';
 import { YEAR_MARKERS, yearMarkerSpot } from '../src/components/garden/eggs/yearMarkerSpots.ts';
 
 const LAYOUTS = [[1, 1440 / 900, GARDEN_CAMERA.fov], [MOBILE_RIVER_WIDTH, 390 / 844, GARDEN_CAMERA.mobileFov]];
@@ -19,14 +19,11 @@ const seen = (p, width, x, z) => {
 const shownAt = (ornament, p, width) => ornamentShown(ornament, ornamentSpot(ornament, width), p, cameraPose(p, width).position[2], width < 1);
 const stop = id => STOPS[MILESTONES.findIndex(m => m.id === id) + 1];
 // Each ornament's own stretch: from the month it stands for, or when it is fully in, to the milestone stop it is seen at.
-const SEEN = [[CANDLESTICKS, '2018-01', 'internship'], [DUCK_STATUE, '2021-02', 'sydney'], [PIE_BED, '2023-03', 'heirwealth']];
+const SEEN = [[CANDLESTICKS, '2018-01', 'internship'], [PIE_BED, '2023-03', 'heirwealth']];
 
-test('the ornaments stand for the internship year, Sydney and working together at HeirWealth', () => {
-  assert.deepEqual(ORNAMENTS, [CANDLESTICKS, DUCK_STATUE, PIE_BED]);
+test('the ornaments stand for the internship year and working together at HeirWealth', () => {
+  assert.deepEqual(ORNAMENTS, [CANDLESTICKS, PIE_BED]);
   assert.equal(CANDLESTICKS.facing.slice(0, 4), '2018');
-  assert.ok(DUCK_STATUE.from >= '2021-02' && DUCK_STATUE.facing < '2022-01', 'in Sydney, 2021');
-  // Amelia's move, so on her bank, the left.
-  assert.equal(DUCK_STATUE.side, -1, 'on Amelia\'s bank');
   assert.equal(PIE_BED.from, '2023-03');
 });
 
@@ -123,7 +120,7 @@ test('each dissolves in no earlier than its month, and is gone once the camera h
 });
 
 test('the candles read as a stock chart and the bed as a pie chart, each in budget', async () => {
-  const { FLOWER_HEADS, duckStatueGeometry, flowerHeadGeometry, pieBedGeometry, pieFlowers } = await import('../src/components/garden/eggs/careerGeometry.ts');
+  const { FLOWER_HEADS, flowerHeadGeometry, pieBedGeometry, pieFlowers } = await import('../src/components/garden/eggs/careerGeometry.ts');
   // Wicks run from the ground through each body to its high; green months close up, red down.
   assert.ok(CANDLES.every(([open, close, high, low]) => high >= Math.max(open, close) && low <= Math.min(open, close)));
   assert.ok(CANDLES.some(([open, close]) => close < open) && CANDLES.some(([open, close]) => close > open));
@@ -155,10 +152,8 @@ test('the candles read as a stock chart and the bed as a pie chart, each in budg
     });
   }
   const triangles = geometry => (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3;
-  const { duck, plinth } = duckStatueGeometry();
   const budget = {
     candles: boxes.length * 12,
-    duck: triangles(duck) + triangles(plinth),
     bed: triangles(pieBedGeometry()) + pieFlowers().length * triangles(flowerHeadGeometry()),
   };
   for (const [name, count] of Object.entries(budget)) assert.ok(count < 1500, `${name}: ${count} triangles`);

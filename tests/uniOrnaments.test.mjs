@@ -208,10 +208,10 @@ test('the Möbius is in the picture with 2018\'s rock only well apart from it, a
 test('they keep apart from the working lives\' ornaments, on the ground and in the picture', () => {
   // Each piece's face as a level line across it, half its width either side
   // of its spot (in its own units): the Möbius across its loop, the bench
-  // along its length, the candlesticks' whole row, the duck's plinth and the
-  // pie's bed with its pulled wedge.
+  // along its length, the candlesticks' whole row and the pie's bed with its
+  // pulled wedge.
   const HALF = { mobius: MOBIUS.radius + MOBIUS.band, bench: BENCH.length / 2 };
-  const WORK_HALF = [CANDLE.spacing * (CANDLES.length - 1) / 2 + CANDLE.body / 2, .5, PIE.radius];
+  const WORK_HALF = [CANDLE.spacing * (CANDLES.length - 1) / 2 + CANDLE.body / 2, PIE.radius];
   // Degrees right of the middle of the picture of its two ends at p.
   const across = (p, width, spot, half) => {
     const ends = [-1, 1].map(s => seen(p, width, { x: spot.x + s * half * spot.scale * Math.cos(spot.yaw), z: spot.z - s * half * spot.scale * Math.sin(spot.yaw) }).bearing);

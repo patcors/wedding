@@ -3,19 +3,24 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
-import { riverCenter, bankEdge, channelOffset, islandHalfWidth, RIVER_REACH, VOYAGE } from './gardenGeometry';
+import { riverCenter, bankEdge, channelOffset, islandHalfWidth, rockHalfWidth, RIVER_REACH, VOYAGE } from './gardenGeometry';
 import { plantSites } from './gardenPlantGeometry';
 import { BoatWakes, PaperBoat } from './PaperBoat';
 import { BOAT_MARGIN, BoatSimulation, type BoatBody, type BoatLaunch, type Stem } from './boatPhysics';
 import { useGardenTextures } from './gardenTextures';
 import { jettyStems, launchJettyStems, underJetty, underLaunchJetty } from './voyageDock';
 import { mooredStems } from './storyBoats';
+import { bridgeStems } from './eggs/harbour';
 import { DOCKED } from './journey';
 import { useJourney } from './JourneyProvider';
 
 const BASE = import.meta.env.BASE_URL;
 export const WATER_NORMALS = [`${BASE}textures/garden/water-normal.jpg`];
-const boatRiver = { center: riverCenter, halfWidth: bankEdge, island: islandHalfWidth };
+// Sydney's rock parts the river as the island does, so guests' boats keep to
+// a channel either side of it too, but it is bare stone with no reeds round
+// it, so they are held only just off its waterline.
+const midRiver = (z: number, width: number) => islandHalfWidth(z, width) || rockHalfWidth(z, width);
+const boatRiver = { center: riverCenter, halfWidth: bankEdge, island: midRiver, islandMargin: (z: number) => rockHalfWidth(z) > 0 ? .08 : undefined };
 
 // The water's colour and sun glint. GardenSky owns them and may change them
 // every frame; the water copies them in each frame.
@@ -33,9 +38,10 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
   const camera = useThree(s => s.camera);
   const [simulation] = useState(() => new BoatSimulation(boatRiver, width));
   const clock = useJourney();
-  // The reeds and the jetties always; the catamaran once it is tied up there.
+  // The reeds, the jetties and the Harbour Bridge's pylons always; the
+  // catamaran once it is tied up there.
   const stems = useMemo(() => {
-    const fixed = [...reeds ? reedStems(width, mobile) : [], ...launchJettyStems(width), ...jettyStems(width)];
+    const fixed = [...reeds ? reedStems(width, mobile) : [], ...launchJettyStems(width), ...jettyStems(width), ...bridgeStems(width)];
     return { fixed, moored: [...fixed, ...mooredStems(width)] };
   }, [reeds, width, mobile]);
   const moored = useRef(false);
@@ -69,10 +75,11 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
     lastRequest.current = launchRequest;
     let z = camera.position.z - 10;
     // Beside the island, down the middle of one channel or the other, past its
-    // head, where portrait's channels are narrower than a turning paper boat.
+    // head, where portrait's channels are narrower than a turning paper boat;
+    // beside Sydney's rock, down one channel or the other.
     if (z < VOYAGE.island.from + 1 && z > VOYAGE.island.to) z = Math.min(z, VOYAGE.island.from - 5);
-    const side = launchRequest % 2 ? 1 : -1;
-    launch(riverCenter(z, width) + (islandHalfWidth(z, width) ? side * channelOffset(z, width) : 0), z);
+    const side = launchRequest % 2 ? 1 : -1, rock = rockHalfWidth(z, width);
+    launch(riverCenter(z, width) + (islandHalfWidth(z, width) ? side * channelOffset(z, width) : rock ? side * (rock + bankEdge(z, width)) / 2 : 0), z);
   }, [launchRequest, launch, camera, width]);
   const tapWater = (event: ThreeEvent<MouseEvent>) => {
     const { x, z } = event.point;
@@ -81,8 +88,8 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
     // A thumb wanders further than a mouse during a tap, so touch gets more slack.
     const slack = (event.nativeEvent as PointerEvent).pointerType === 'mouse' ? 6 : 16;
     const out = Math.abs(x - riverCenter(z, width));
-    // A tap on the island or a jetty reaches the water plane beneath it, which isn't open water.
-    if (event.delta > slack || event.button !== 0 || out >= bankEdge(z, width) - .08 || out < islandHalfWidth(z, width) || underJetty(x, z, width) || underLaunchJetty(x, z, width)
+    // A tap on the island, the rock or a jetty reaches the water plane beneath it, which isn't open water.
+    if (event.delta > slack || event.button !== 0 || out >= bankEdge(z, width) - .08 || out < midRiver(z, width) || underJetty(x, z, width) || underLaunchJetty(x, z, width)
       || z < camera.position.z - 65 || z > camera.position.z - 1) return;
     event.stopPropagation();
     launch(x, z);

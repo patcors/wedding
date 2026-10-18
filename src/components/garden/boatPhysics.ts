@@ -12,8 +12,10 @@ type Point = { x: number; z: number };
 // `grip` is how much it holds a hull sliding along it; reeds give a little.
 export type Stem = Point & { radius: number; grip?: number };
 // `island` is the half-width of an island in the middle of the river at z (0
-// where there is none). Boats keep to the channels either side of it.
-type River = { center: (z: number, width: number) => number; halfWidth: (z: number, width: number) => number; island?: (z: number, width: number) => number };
+// where there is none). Boats keep to the channels either side of it, held
+// `islandMargin` off its waterline at full width where that is given (a bare
+// rock's), or ISLAND_MARGIN.
+type River = { center: (z: number, width: number) => number; halfWidth: (z: number, width: number) => number; island?: (z: number, width: number) => number; islandMargin?: (z: number) => number | undefined };
 // How far off the island's waterline hulls are held, at full width: its reeds
 // stand out in the water. It scales with the river: portrait is narrow at the
 // island's head.
@@ -267,7 +269,11 @@ export class BoatSimulation {
     if (!island) return;
     // The island's shore on the hull's side, out where its reeds stand.
     const side = this.side(body);
-    this.shore(body, z => island(z, width) > 0 ? center(z, width) + side * island(z, width) : NaN, -side, ISLAND_MARGIN * width, 1);
+    this.shore(body, z => island(z, width) > 0 ? center(z, width) + side * island(z, width) : NaN, -side, this.islandMargin(body.z) * width, 1);
+  }
+
+  private islandMargin(z: number) {
+    return this.river.islandMargin?.(z) ?? ISLAND_MARGIN;
   }
 
   // Where the current carries a hull across the river: down the middle, or
@@ -276,7 +282,7 @@ export class BoatSimulation {
     const center = this.river.center(body.z, width), island = this.river.island;
     const ahead = island ? Math.max(island(body.z, width), island(body.z - 1.5, width)) : 0;
     if (!ahead) return center;
-    return center + this.side(body) * (ahead + ISLAND_MARGIN * width + this.river.halfWidth(body.z, width)) / 2;
+    return center + this.side(body) * (ahead + this.islandMargin(body.z) * width + this.river.halfWidth(body.z, width)) / 2;
   }
 
   private solve() {

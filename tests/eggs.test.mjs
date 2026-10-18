@@ -177,11 +177,14 @@ test('the 2019 snowman stands on the bank, in view as its date holds and for a s
   }
 });
 
-test('the eggs about Amelia alone stand on her bank, the left: the 2019 snowman and Sydney\'s duck', async () => {
+test('the eggs about Amelia alone stand on her bank, the left: the 2019 snowman and the end of Sydney\'s bridge', async () => {
   const { SNOW_SPOTS } = await import('../src/components/garden/eggs/flurry.ts');
-  const { DUCK_STATUE } = await import('../src/components/garden/eggs/careerSpots.ts');
+  const { harbourBridge } = await import('../src/components/garden/eggs/harbour.ts');
   assert.equal(SNOW_SPOTS[2019].side, -1);
-  assert.equal(DUCK_STATUE.side, -1);
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const { far, z } = harbourBridge(width);
+    assert.ok(far < riverCenter(z, width) - bankEdge(z, width));
+  }
 });
 
 const graduation = MILESTONES.find(m => m.egg === 'graduation');

@@ -1,45 +1,11 @@
 // Models for the careers' ornaments on the banks (placed in careerSpots.ts): the
-// rubber duck on its plinth and the pie chart's flower bed. The candlesticks are
-// instanced boxes, laid out by candleBoxes. Each faces +z with its base at y 0.
+// pie chart's flower bed. The candlesticks are instanced boxes, laid out by
+// candleBoxes. Each faces +z with its base at y 0.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { random } from '../gardenGeometry.ts';
-import { simplifiedRubberDuck } from '../rubberDuckGeometry.ts';
-import { DUCK_STATUE, PIE, WEDGES, wedgeAngles } from './careerSpots.ts';
+import { PIE, WEDGES, wedgeAngles } from './careerSpots.ts';
 
 type Ground = (x: number, z: number) => number;
-
-const STONE = '#cfc8b6', STONE_DARK = '#9a9282';
-const c = new THREE.Color();
-
-// Pale stone, darker towards its foot, as on the π's plinth.
-function stoneTint(geometry: THREE.BufferGeometry, top: number, foot = 0) {
-  const stone = new THREE.Color(STONE), dark = new THREE.Color(STONE_DARK), p = geometry.attributes.position, tint: number[] = [];
-  for (let i = 0; i < p.count; i++) {
-    c.copy(dark).lerp(stone, THREE.MathUtils.clamp((p.getY(i) - foot) / (top - foot), 0, 1));
-    tint.push(c.r, c.g, c.b);
-  }
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(tint, 3));
-}
-
-// The plinth's size, in the duck's own units (it stands about .55 tall).
-export const DUCK_PLINTH = { width: .66, height: .36 } as const;
-// The guests' bath duck, the classic yellow toy with its orange beak, kept in
-// more detail than the university's tossed ones as it is seen close by. It
-// sits on its plinth turned three-quarters to the river, on the camera's
-// right from Amelia's bank (DUCK_STATUE.side), so the beak, the eye and the
-// upturned tail show in profile.
-export function duckStatueGeometry() {
-  const duck = simplifiedRubberDuck(.22).rotateY(2.2 * DUCK_STATUE.side).translate(0, DUCK_PLINTH.height - .02, 0);
-  // A squat block with a narrower cap, sunk a little at its foot.
-  const { width, height } = DUCK_PLINTH;
-  const block = new THREE.BoxGeometry(width, height * .78, width).translate(0, height * .39 - .08, 0).toNonIndexed();
-  const cap = new THREE.BoxGeometry(width * .9, height * .3, width * .9).translate(0, height * .85, 0).toNonIndexed();
-  for (const box of [block, cap]) { box.deleteAttribute('uv'); stoneTint(box, height, -.08); }
-  const plinth = mergeGeometries([block, cap]);
-  block.dispose(); cap.dispose();
-  return { duck, plinth };
-}
 
 const SOIL = '#5b4a36', FOLIAGE = '#4b6136';
 // A point in the bed at `angle` and `r` out from its middle, the bed running

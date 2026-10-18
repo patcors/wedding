@@ -38,7 +38,11 @@ const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 
 // meet; in portrait its head starts lower, beside the little jetties, since
 // the bend at the start (see bankSwing) pinches the river where it would
 // begin on desktop and its reeds would close the left channel against the
-// bank's. The river widens while Amelia is in Sydney. The S-bend swings the river
+// bank's. The river widens while Amelia is in Sydney, and where the boats
+// first part for it a low sandstone rock stands in its middle, so they go
+// either side of it (see rockHalfWidth): Bennelong Point, with the Opera House
+// on it and the Harbour Bridge across Amelia's channel from it to her bank, at
+// `bridge` (see eggs/harbour.ts). The S-bend swings the river
 // sideways by `swing` just before the wedding; the jetty and the old tree stand
 // on the `side` bank (+1 is +x) past it, where the boats dock. A level lawn
 // is cut into the left bank at the start of the bend, for July 2026's
@@ -48,6 +52,7 @@ export const VOYAGE = {
   island: { from: 10, mobileFrom: 7.2, to: MEET_Z + 3, halfWidth: 1.5 },
   meet: MEET_Z,
   sydney: { from: routeAtMonth(DATES.sydney), to: routeAtMonth(DATES.back), widen: 2.2 },
+  rock: { from: -53.6, to: -61.3, halfWidth: 1.25, mobileHalfWidth: .64, bridge: -60.1 },
   bend: { from: -135, to: -164, swing: -12 },
   dock: { z: ROUTE.dock, side: 1, jetty: 2.4 },
   tree: { z: ROUTE.dock - 3.5, inland: 3.5 },
@@ -95,6 +100,19 @@ export function islandHalfWidth(z: number, width = 1) {
   const head = t < .16 ? Math.sqrt(1 - (1 - t / .16) ** 2) : 1;
   const tail = t > .45 ? Math.pow((1 + Math.cos(Math.PI * (t - .45) / .55)) / 2, .7) : 1;
   return halfWidth * width * head * tail * (1 + Math.sin(z * .9 + 1) * .06);
+}
+
+// The Sydney rock's half-width across the river at z, 0 outside it: a blunt
+// nose upstream where the boats first part, a long back on which the Opera
+// House stands, and a rounded end just past the bridge. A phone's narrower
+// river takes a narrower rock, with room for both boats either side.
+export function rockHalfWidth(z: number, width = 1) {
+  const { from, to, halfWidth, mobileHalfWidth } = VOYAGE.rock;
+  const t = (from - z) / (from - to);
+  if (t <= 0 || t >= 1) return 0;
+  const nose = t < .45 ? Math.pow(t / .45, .7) : 1;
+  const end = t > .84 ? Math.sqrt(1 - ((t - .84) / .16) ** 2) : 1;
+  return (width < 1 ? mobileHalfWidth : halfWidth) * nose * end * (1 + Math.sin(z * 1.9 + 2) * .05 + Math.sin(z * 5.3) * .03);
 }
 
 // The middle of the channel on `side` of the island, as an x offset from the

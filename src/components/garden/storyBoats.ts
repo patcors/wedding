@@ -211,13 +211,15 @@ export function boatGap(p: number, width: number) {
   const met = ease((VOYAGE.island.to - z) / (VOYAGE.island.to - VOYAGE.meet));
   let gap = apart + (ALONGSIDE - apart) * met;
   // Drifting apart into Sydney's wider river as its date arrives, still in
-  // sight, and back alongside as March 2023 does, so the reduced-motion stills
-  // on those dates show both. They stay apart through Amelia's changes of
+  // sight, parting at the nose of the rock in its middle (VOYAGE.rock) and
+  // going either side of it, well clear, Amelia's under the Harbour Bridge
+  // as the date holds, and back alongside as March 2023 does, so the
+  // reduced-motion stills on those dates show both. They stay apart through Amelia's changes of
   // flag, so each boat's reads on its own, though not so far out that the
   // year markers on the banks pass behind the flags at the milestones' stops,
   // and never less than twice as far apart as alongside, where a phone's
   // river runs narrow. Story months rush between dates, so this goes by scroll.
-  const away = Math.max(0, ease((scrolledSince(DATES.sydney, p) + .8) / .85) - ease((scrolledSince(DATES.back, p) + .7) / .7));
+  const away = Math.max(0, ease((scrolledSince(DATES.sydney, p) + 1) / .9) - ease((scrolledSince(DATES.back, p) + .7) / .7));
   gap += (Math.max(ALONGSIDE * 2, bankEdge(z, width) * .4 / BOAT_SCALE) - gap) * away;
   return gap + (CATAMARAN - gap) * catamaran(joining(p)).close;
 }

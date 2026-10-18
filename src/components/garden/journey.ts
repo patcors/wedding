@@ -2,7 +2,7 @@
 // through story time, and where along the river the boats are. Boats, sky,
 // eggs and the date label all read from here. Pure, so it can be tested.
 
-export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'apartments' | 'snow-2025';
+export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'sydney' | 'apartments' | 'snow-2025';
 // `room` is the scroll a milestone takes at its date, in shares (ROOM), before
 // the months roll on at its year's pace: its date's hold, and time for what
 // happens there to be seen (HOLD, just the hold, by default). Outside the
@@ -28,11 +28,12 @@ export const MILESTONES: readonly Milestone[] = [
   // Longer, early in the year, so the mortarboards land before Sydney's river
   // widens and the boats only start to drift apart once they have.
   { id: 'graduation', month: '2020-08', description: 'They graduate from university.', egg: 'graduation', room: 1.1 },
-  // The boats drift apart, still in sight, and stay apart through Amelia's
-  // two changes of work, each with room enough that her interim flag, and
-  // then her HeirWealth flag beside Patrick's FinoComp one, fly for most of a
-  // share before the next change.
-  { id: 'sydney', month: '2021-02', description: 'Amelia moves to Sydney for two years.' },
+  // The boats drift apart either side of a rock, Amelia's under the Harbour
+  // Bridge, still in sight, and stay apart through Amelia's two changes of
+  // work, each with room enough that her interim flag, and then her
+  // HeirWealth flag beside Patrick's FinoComp one, fly for most of a share
+  // before the next change.
+  { id: 'sydney', month: '2021-02', description: 'Amelia moves to Sydney for two years.', egg: 'sydney' },
   { id: 'interim', month: AMELIA_LEFT_FINOCOMP, description: 'Amelia leaves FinoComp for a few months of tutoring and selling haircare online.', room: .7 },
   { id: 'amelia-heirwealth', month: '2023-01', description: 'Amelia starts at HeirWealth.', room: 1 },
   { id: 'heirwealth', month: '2023-03', description: 'Amelia is back, and Patrick joins her at HeirWealth, so they start working together.' },

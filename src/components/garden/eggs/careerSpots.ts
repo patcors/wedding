@@ -1,9 +1,8 @@
 // Their working lives, as still ornaments on the banks: candlestick posts, a
-// finance chart's, for 2018 and the internship at FinoComp; a rubber duck on a
-// plinth for Amelia's first year in Sydney, 2021; and a round flower bed
-// planted in slices, a pie chart's, once they work together at HeirWealth,
-// from March 2023. Where and when each stands; drawn by Careers.tsx. Pure, so it can be
-// tested.
+// finance chart's, for 2018 and the internship at FinoComp, and a round
+// flower bed planted in slices, a pie chart's, once they work together at
+// HeirWealth, from March 2023. Where and when each stands; drawn by
+// Careers.tsx. Pure, so it can be tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt, routeAtMonth } from '../journey.ts';
@@ -23,21 +22,15 @@ export type BankOrnament = { facing: string; from: string; ahead: number; side: 
 // boats as the FinoComp flags go up; smaller on a phone and set further back
 // from the water, so the whole chart is in its picture at the internship's
 // stop. The statistics carved into a tree further down the same bank
-// (uniOrnaments.ts) show above the row in the picture. The duck is
-// Amelia's move, so it sits on her bank, the left, by the water across from
-// 2022's pile. Sydney widens the river and takes that bank out of a phone's
-// picture, but this far on it is still just in, left of Amelia's boat: it
-// arrives as Sydney shows and comes closer through the first half of 2021.
-// The flower bed is on the left bank, across the river from 2023's slate, a
+// (uniOrnaments.ts) show above the row in the picture. The flower bed is on the left bank, across the river from 2023's slate, a
 // little past the boats as they come back alongside in March 2023, so it is
 // passing out of the picture by the time the first birdhouses go up behind it.
 // It lies a little back from the water, on the slope up from it, which tips
 // it towards the camera, and far enough on that a phone's narrow picture
 // takes in the whole bed.
 export const CANDLESTICKS: BankOrnament = { facing: '2018-07', from: '2018-01', ahead: 7.3, side: -1, inland: .9, mobileInland: 1.25, scale: { desktop: 1.3, mobile: .9 } };
-export const DUCK_STATUE: BankOrnament = { facing: '2021-07', from: '2021-02', ahead: 4.5, side: -1, inland: .45, mobileInland: .35, scale: { desktop: 1.6, mobile: 2 } };
 export const PIE_BED: BankOrnament = { facing: '2023-03', from: '2023-03', ahead: 6, side: -1, inland: 2.1, mobileInland: 1.6, scale: { desktop: 1.5, mobile: 1 } };
-export const ORNAMENTS = [CANDLESTICKS, DUCK_STATUE, PIE_BED] as const;
+export const ORNAMENTS = [CANDLESTICKS, PIE_BED] as const;
 
 const MOBILE_INLAND = .6;
 // The fade in as `from` shows, in milestone shares.

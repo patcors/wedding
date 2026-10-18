@@ -21,15 +21,13 @@ type Point = readonly [number, number, number];
 // larger again there. A phone sees only about 17° either side of the middle,
 // so anything on a bank lines up along it with whatever else stands on that
 // bank nearby: each keeps to a stretch of Amelia's bank of its own.
-// - The silk hangs from an ash by the water a little past 2020's boathouse,
+// - The silk hangs from an ash by the water a little past 2020's milestone,
 //   planted for it where Sydney starts to widen the river, its tails
 //   reaching nearly to the ground. It comes in through the autumn, after
 //   graduation's mortarboards have landed, and is in the picture from
-//   November 2020 into January 2021 (to Sydney's stop on desktop), short of
-//   Sydney's duck further down the bank. That stretch of bank lines up
-//   behind the boathouse, so the tails pass behind its roof in the picture
-//   until it slides out of the left: about November on desktop, the turn of
-//   the year on a phone.
+//   November 2020 into January 2021 (to Sydney's stop on desktop), a little
+//   way past the Harbour Bridge's end on the same bank, so it is seen
+//   beyond the bridge's arch.
 // - The lyra and the bird hang from two ashes standing together past 2025's
 //   snowmen, the lyra from the one further back and the bird from the tip
 //   of a low limb of the one by the water, where the leaves thin out,

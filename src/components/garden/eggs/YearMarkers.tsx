@@ -1,6 +1,6 @@
 // Every year of the voyage, 2017 to 2027, marked once in the scenery as the
 // boats enter it, each in its own medium: a signpost, a carved rock, a buoy, a
-// boathouse's doors, a garden stake, an old pile, a slate on a landing, a paper
+// milestone, a garden stake, an old pile, a slate on a landing, a paper
 // lantern, stone steps, a garden arch and the wedding's heart on a post (see
 // yearMarkerSpots.ts for where and when). Each is drawn only from a little way
 // ahead of the camera, dissolving in out of the haze, until just past it, so
