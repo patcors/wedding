@@ -77,15 +77,28 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
    above the boats low in the river. Month over year, each crossfading. */
 .garden-voyage { top: 13%; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
 .garden-voyage-date { margin: 0; display: flex; flex-direction: column; align-items: center; font-family: 'Cormorant Garamond', Georgia, serif; }
-.garden-voyage-date > span { display: grid; justify-items: center; }
-.garden-voyage-date > span > span { grid-area: 1 / 1; white-space: nowrap; opacity: 0; transition: opacity .6s ease; }
-.garden-voyage-date > span > span.is-shown { opacity: 1; }
+.garden-voyage-date > :is(.garden-voyage-month, .garden-voyage-year) { display: grid; justify-items: center; }
+.garden-voyage-date > :is(.garden-voyage-month, .garden-voyage-year) > span { grid-area: 1 / 1; white-space: nowrap; opacity: 0; transition: opacity .6s ease; }
+.garden-voyage-date > :is(.garden-voyage-month, .garden-voyage-year) > span.is-shown { opacity: 1; }
 .garden-voyage-month { font-size: clamp(42px, 4vw, 58px); font-style: italic; font-weight: 300; line-height: 1.05; letter-spacing: -.02em; }
 /* The trailing letter-spacing would push the year off centre. */
 .garden-voyage-year { font-size: 21px; font-weight: 500; letter-spacing: .3em; margin-right: -.3em; line-height: 1.3; color: var(--garden-on-sky-soft, #59634f); }
 .garden-voyage .garden-text-link { margin-top: 10px; color: var(--garden-on-sky-soft, #59634f); }
 /* Dev only (Review): the year alone takes the month's place and size. */
 .garden-voyage-date[data-mode=year] .garden-voyage-year { font-size: clamp(42px, 4vw, 58px); font-style: italic; font-weight: 300; letter-spacing: 0; margin-right: 0; line-height: 1.05; color: inherit; }
+/* Dev only (Review "Digits"): DD-MM-YYYY in the month's place, in lining
+   figures, each digit in a cell of its own so the date never shifts. A digit
+   flips over about its middle as it changes, the old one folding away before
+   the new one folds in, like a flip clock's card, over its pace (--flip, from
+   FLIP_EVERY): the days quickly, the months slower, the years slowest. */
+.garden-voyage-digits { display: flex; align-items: baseline; font-size: clamp(38px, 3.6vw, 52px); font-weight: 300; line-height: 1.1; font-variant-numeric: lining-nums tabular-nums; }
+.garden-digit { display: inline-grid; width: .56em; justify-items: center; perspective: 1.6em; }
+.garden-digit > span { grid-area: 1 / 1; backface-visibility: hidden; }
+.garden-digit > .is-out { animation: garden-digit-out calc(var(--flip) / 2) ease-in forwards; }
+.garden-digit > .is-in { animation: garden-digit-in calc(var(--flip) / 2) ease-out calc(var(--flip) / 2) backwards; }
+@keyframes garden-digit-out { to { transform: rotateX(-90deg); opacity: .3; visibility: hidden; } }
+@keyframes garden-digit-in { from { transform: rotateX(90deg); opacity: .3; } }
+.garden-digit-dash { margin: 0 .08em; color: var(--garden-on-sky-soft, #59634f); }
 .garden-panel h2 { font: 400 clamp(48px, 5vw, 76px)/.98 'Cormorant Garamond', Georgia, serif; letter-spacing: -.045em; margin: 24px 0; }
 .garden-panel h2 em { font-weight: 300; }
 .garden-text-link { padding: 13px 0 !important; font-size: 9px !important; text-transform: uppercase; letter-spacing: .15em; border-bottom: 1px solid var(--garden-on-sky-line, #73796770) !important; }
@@ -156,6 +169,7 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-subtitle { font-size: 19px; }
   .garden-voyage { top: 8%; }
   .garden-voyage-month { font-size: 34px; }
+  .garden-voyage-digits { font-size: 30px; }
   .garden-voyage-year { font-size: 15px; }
   .garden-voyage .garden-text-link { margin-top: 0; }
   /* On one line, so the button stays above the catamaran's sail. */
@@ -170,4 +184,5 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 }
 @media (prefers-reduced-motion: reduce) {
   .garden-prototype *, .garden-prototype *::before { transition: none !important; scroll-behavior: auto !important; }
+  .garden-digit > span { animation: none !important; }
 }

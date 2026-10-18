@@ -2,7 +2,7 @@
 // compares visual variants; guests always get the defaults below. The page
 // renders on the server so the opening text is in the HTML before any script;
 // three.js arrives later in its own chunk, behind the cover.
-import { Component, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Component, lazy, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
@@ -11,8 +11,8 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
-import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
-import { DATE_LABEL_MODES, dateLabelMode, shownDate, type DateLabelMode } from './dateLabelMode';
+import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, storyMonth, type Milestone } from './journey';
+import { DATE_LABEL_MODES, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
@@ -73,7 +73,7 @@ function useVoyageMoment(scroll: number, reduced: boolean) {
     const timer = setTimeout(() => setAnnounced(milestone), reduced ? 0 : ANNOUNCE_AFTER);
     return () => clearTimeout(timer);
   }, [milestone, reduced]);
-  return { date, announced };
+  return { date, announced, eased };
 }
 
 // The month and year each crossfade between two layers. A change mid-fade
@@ -87,6 +87,41 @@ function Crossfade({ value, className }: { value: string; className: string }) {
     setFront(back);
   }
   return <span className={className}>{layers.map((text, i) => <span key={i} className={i === front ? 'is-shown' : ''}>{text}</span>)}</span>;
+}
+
+// Dev only (Review "Digits"): the date as DD-MM-YYYY, read from the eased
+// story time every frame. Each digit flips over on its own as it changes, like
+// an old flip clock's cards; the day, the month and the year each flip
+// together, no faster than their pace (FLIP_EVERY), so a fast scroll flicks
+// the days without strobing. Under reduced motion each still's date simply shows.
+type Clock = Flips & { was: string[]; flips: number[] };
+function DigitClock({ month, reduced }: { month: () => number; reduced: boolean }) {
+  const clock = useRef<Clock | null>(null);
+  clock.current ??= { ...startFlips(digitDate(month())), was: [], flips: [] };
+  const [, setShown] = useState('');
+  useEffect(() => {
+    let frame = 0;
+    const tick = (now: number) => {
+      const current = clock.current!, target = digitDate(month());
+      const next = reduced ? (target === current.shown ? current : startFlips(target)) : flipTowards(current, target, now);
+      if (next !== current) {
+        const flipped = (i: number) => next.shown[i] !== current.shown[i];
+        clock.current = { ...next, was: [...next.shown].map((_, i) => flipped(i) ? current.shown[i] : current.was[i]),
+          flips: [...next.shown].map((_, i) => (current.flips[i] ?? 0) + (flipped(i) ? 1 : 0)) };
+        setShown(next.shown);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [month, reduced]);
+  const { shown, was, flips } = clock.current;
+  return <span className="garden-voyage-digits">{[...shown].map((char, i) => char === '-'
+    ? <span key={i} className="garden-digit-dash">{char}</span>
+    : <span key={i} className="garden-digit" style={{ '--flip': `${FLIP_EVERY[i]}ms` } as CSSProperties}>
+      {!reduced && flips[i] > 0 && <span key={`was${flips[i]}`} className="is-out">{was[i]}</span>}
+      <span key={flips[i] ?? 0} className={!reduced && flips[i] > 0 ? 'is-in' : undefined}>{char}</span>
+    </span>)}</span>;
 }
 
 class CanvasFallback extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
@@ -235,6 +270,7 @@ export default function Garden() {
   useEffect(() => { if (REVIEW) setText(textLook(localStorage.getItem(REVIEW_TEXT))); }, []);
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
+  const easedMonth = useCallback(() => storyMonth(voyage.eased.current), [voyage.eased]);
   // The camera already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
   const goToProgress = (next: number) => {
@@ -302,8 +338,10 @@ export default function Garden() {
       <section className={`garden-panel garden-voyage ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
         <h2 className="garden-visually-hidden">Our story</h2>
         <p className="garden-voyage-date" aria-hidden="true" data-mode={dateMode === 'full' ? undefined : dateMode}>
-          {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
-          <Crossfade className="garden-voyage-year" value={year} />
+          {dateMode === 'digits' ? <DigitClock month={easedMonth} reduced={reduced} /> : <>
+            {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
+            <Crossfade className="garden-voyage-year" value={year} />
+          </>}
         </p>
         <button className="garden-text-link" onClick={() => goToProgress(1)}>The next chapter <span aria-hidden="true">→</span></button>
       </section>
