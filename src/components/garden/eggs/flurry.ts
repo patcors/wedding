@@ -11,11 +11,11 @@ import { ROOM, progressAt, routeAtMonth } from '../journey.ts';
 export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number; mobileInland?: number };
 // Where each snow trip's flurry falls. July 2019's is Amelia's, so on her
 // bank, the left, a little ahead of the boats as its date shows, in view on
-// both compositions and clear of the boats in portrait. It falls between her
-// carved trunk (uniOrnaments.ts) and 2020's boathouse, set back from the water
-// on desktop so the snowman stands between the two in the picture once the
-// flurry clears, and near the water on a phone, so it shows clear of the
-// trunk there and to the left of the boathouse by the time 2020 turns.
+// both compositions and clear of the boats in portrait. It falls short of
+// 2020's boathouse, set back from the water on desktop, below and to the right
+// of the statistics carved into a tree on her bank (uniOrnaments.ts) in the
+// picture once the flurry clears, and near the water on a phone, so it shows
+// to the left of the boathouse by the time 2020 turns.
 // August 2025's is on the left, across
 // the river from the second pair of birdhouses, a little nearer, so in a
 // phone's narrow river it stands well short of 2026's arch, and near the

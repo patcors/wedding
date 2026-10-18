@@ -540,7 +540,7 @@ test('the Hagia Sophia is clear of the petals\' trail, the headland, the old tre
         assert.ok(Math.hypot(x - spot.x, z - spot.z) > reach + .5, 'clear of the petals');
       }
     }
-    // The headland that hides the old tree stands on the other bank, further on (see GardenTrees.tsx).
+    // The headland that hides the old tree stands on the other bank, further on (see gardenTreeSpots.ts).
     assert.ok(spot.x < riverCenter(spot.z, width) && spot.z > VOYAGE.bend.from - 11 - reach);
     const { tree, jetty } = voyageLandmarks(width);
     for (const landmark of [tree, jetty]) assert.ok(Math.hypot(landmark.x - spot.x, landmark.z - spot.z) > 20);

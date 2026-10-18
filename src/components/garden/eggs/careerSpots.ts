@@ -22,8 +22,8 @@ export type BankOrnament = { facing: string; from: string; ahead: number; side: 
 // are on the left bank behind 2018's rock, in view through 2018 and beside the
 // boats as the FinoComp flags go up; smaller on a phone and set further back
 // from the water, so the whole chart is in its picture at the internship's
-// stop and Amelia's carved trunk (uniOrnaments.ts), further down the same
-// bank, shows clear of the row's river end rather than behind it. The duck is
+// stop. The statistics carved into a tree further down the same bank
+// (uniOrnaments.ts) show above the row in the picture. The duck is
 // Amelia's move, so it sits on her bank, the left, by the water across from
 // 2022's pile. Sydney widens the river and takes that bank out of a phone's
 // picture, but this far on it is still just in, left of Amelia's boat: it
