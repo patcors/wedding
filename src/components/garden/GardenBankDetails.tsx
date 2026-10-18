@@ -6,6 +6,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { riverCenter, bankEdge, groundHeight, leafGeometry, random, voyageClearing, RIVER_REACH } from './gardenGeometry';
 import { ROCK_COUNT } from './GardenRocks';
 import { pieBedFootprint } from './eggs/careerSpots';
+import { truckFootprint } from './eggs/engagementTruck';
 import type { RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 
@@ -37,15 +38,16 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
   }, []);
   const petal = useMemo(() => leafGeometry(true), []);
   useLayoutEffect(() => {
-    const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color(), underBed = pieBedFootprint(width);
+    const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color(), underBed = pieBedFootprint(width), underTruck = truckFootprint(width);
     // The same sites as the moss rocks in GardenRocks, compared in Review,
-    // and kept out of the pie chart's flower bed as they are.
+    // and kept out of the pie chart's flower bed and from under the
+    // engagement's truck as they are; no grass or flowers grow through the truck.
     for (let i = 0; i < ROCK_COUNT; i++) {
       const z = RIVER_REACH.from - rand() * (RIVER_REACH.from - RIVER_REACH.to), x = riverCenter(z, width) + (bankEdge(z, width) + rand() * 3.4) * (i % 2 ? 1 : -1);
       dummy.position.set(x, groundHeight(x, z, width) - .04, z);
       dummy.rotation.set(rand(), rand() * 6, rand());
       let s = voyageClearing(x, z, width, .4) ? 0 : .1 + Math.pow(rand(), 3) * .55;
-      if (underBed(x, z, s * 1.4)) s = 0;
+      if (underBed(x, z, s * 1.4) || underTruck(x, z, s * 1.4)) s = 0;
       dummy.scale.set(s * 1.4, s * .5, s);
       dummy.updateMatrix(); stones.current?.setMatrixAt(i, dummy.matrix);
       color.setHSL(.12, .08, .48 + rand() * .2); stones.current?.setColorAt(i, color);
@@ -56,7 +58,8 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
       const px = x + (rand() - .5) * .9, pz = z + (rand() - .5) * .9;
       dummy.position.set(px, groundHeight(px, pz, width) - .02, pz);
       dummy.rotation.set((rand() - .5) * .3, rand() * 6.28, (rand() - .5) * .5);
-      dummy.scale.setScalar(.25 + rand() * .48);
+      const size = .25 + rand() * .48;
+      dummy.scale.setScalar(underTruck(px, pz, .2) ? 0 : size);
       dummy.updateMatrix(); grasses.current?.setMatrixAt(i, dummy.matrix);
       color.setHSL(.18 + rand() * .08, .16, .30 + rand() * .20); grasses.current?.setColorAt(i, color);
     }
@@ -67,7 +70,7 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
       dummy.position.set(x, groundHeight(x, z, width) + .18 + r() * .2, z);
       dummy.rotation.set(-Math.PI / 2 + .4, angle, angle);
       // Flowers that would grow through the jetty or the old tree's trunk are left out.
-      dummy.scale.setScalar(voyageClearing(x, z, width, .2) ? 0 : .11); dummy.updateMatrix(); flowers.current!.setMatrixAt(i, dummy.matrix);
+      dummy.scale.setScalar(voyageClearing(x, z, width, .2) || underTruck(x, z, .2) ? 0 : .11); dummy.updateMatrix(); flowers.current!.setMatrixAt(i, dummy.matrix);
       color.set(cluster % 3 ? '#ece6cc' : '#d6a6a0'); flowers.current!.setColorAt(i, color);
     }
     [stones, grasses, flowers].forEach(ref => {
