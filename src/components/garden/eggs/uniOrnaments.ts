@@ -66,19 +66,36 @@ export function ornamentSpot(ornament: Ornament, width: number, footprint = .5):
 // A phone's narrower river moves the trees, and its narrow lens sees a
 // riverside trunk only from well up the river, so there each is on the
 // avenue's nearest tree on its bank, seen small through 2018.
-export type BarkCarving = { side: -1 | 1; z: { desktop: number; mobile: number }; facing: string; arc: number; from: number; to: number };
+// Four more are found further down the river, each in a quiet stretch of its
+// own, cut a little larger as they are seen from further off:
+// - A little sloop on Amelia's bank before they meet, while each boat has
+//   its own channel.
+// - A golden spiral, over the squares it grows from, on Patrick's bank
+//   through 2021, while Amelia is in Sydney. Not on a phone (`mobile` null),
+//   whose narrow lens would see it only far off, past 2021's stake.
+// - Two little sloops side by side on Patrick's bank, as the boats come back
+//   alongside in March 2023.
+// - A heart with P + A cut inside it on the headland in the S-bend, nearest
+//   as the wedding comes, across the river from 2027's heart.
+export type BarkCarving = { side: -1 | 1; z: { desktop: number; mobile: number | null }; facing: string; arc: number; from: number; to: number };
 export const CARVINGS = {
   stats: { side: -1, z: { desktop: -45, mobile: -37 }, facing: '2019-05', arc: .7, from: .98, to: 1.54 },
   algebra: { side: 1, z: { desktop: -45.6, mobile: -43 }, facing: '2019-03', arc: 1, from: .4, to: .92 },
+  sloop: { side: -1, z: { desktop: -17, mobile: -17 }, facing: '2017-05', arc: .95, from: .9, to: 1.72 },
+  spiral: { side: 1, z: { desktop: -82.5, mobile: null }, facing: '2022-01', arc: 1, from: .9, to: 1.4 },
+  sloops: { side: 1, z: { desktop: -95, mobile: -95 }, facing: '2023-01', arc: 1, from: .9, to: 1.42 },
+  heart: { side: 1, z: { desktop: -157.2, mobile: -157.2 }, facing: '2027-01', arc: .85, from: 1.3, to: 1.9 },
 } as const satisfies Record<string, BarkCarving>;
 export type CarvingId = keyof typeof CARVINGS;
 // Trees within this of the water: the avenue and the groves' inner row.
 const RIVERSIDE = 7;
 
 export type CarvedTree = { x: number; y: number; z: number; rotation: number; scale: number; type: number };
+// Whether a carving is cut on this layout.
+export const carvedOn = (carving: BarkCarving, width: number) => width >= 1 || carving.z.mobile !== null;
 // The tree a carving is cut into, as GardenTrees places it (its foot TREE_SINK under the ground).
 export function carvedTree(carving: BarkCarving, width: number): CarvedTree {
-  const mobile = width < 1, z = mobile ? carving.z.mobile : carving.z.desktop;
+  const mobile = width < 1, z = (mobile ? carving.z.mobile : null) ?? carving.z.desktop;
   const riverside = treePlacements(width, mobile).filter(tree => tree.y === undefined && tree.type < 4
     && Math.sign(tree.x - riverCenter(tree.z, width)) === carving.side
     && Math.abs(tree.x - riverCenter(tree.z, width)) - bankEdge(tree.z, width) < RIVERSIDE);

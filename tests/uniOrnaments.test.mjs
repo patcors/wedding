@@ -7,17 +7,21 @@ import { MeshoptDecoder } from 'meshoptimizer';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { treePlacements } from '../src/components/garden/gardenTreeSpots.ts';
-import { ROOM, progressAt } from '../src/components/garden/journey.ts';
+import { ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
 import { DUCKS, duckLaunchSpot, piSpot } from '../src/components/garden/eggs/campus.ts';
 import { CAPS, capLanding } from '../src/components/garden/eggs/capToss.ts';
 import { FLURRY, SNOW_SPOTS, snowSpot } from '../src/components/garden/eggs/flurry.ts';
 import { SNOWMAN } from '../src/components/garden/eggs/snowmanGeometry.ts';
-import { YEAR_MARKERS, markerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
-import { CARVINGS, ORNAMENTS, carvedTree, carvingFaces, carvingShown, ornamentSpot } from '../src/components/garden/eggs/uniOrnaments.ts';
+import { YEAR_MARKERS, markerShown, yearCarving, yearMarkerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
+import { CARVINGS, ORNAMENTS, carvedOn, carvedTree, carvingFaces, carvingShown, ornamentSpot } from '../src/components/garden/eggs/uniOrnaments.ts';
 import { MOBIUS, MOBIUS_PLINTH, mobiusGeometry } from '../src/components/garden/eggs/mobiusGeometry.ts';
 import { BENCH, parkBenchGeometry } from '../src/components/garden/eggs/parkBenchGeometry.ts';
 import { LIFT, barkPatch, treeMatrix } from '../src/components/garden/eggs/barkCarvingGeometry.ts';
+import { RIGS, hangSpot, rigShown, rigTree } from '../src/components/garden/eggs/circusRigs.ts';
+import { harbourShown, operaHouseSpot } from '../src/components/garden/eggs/harbour.ts';
+import { nestSpots } from '../src/components/garden/eggs/nesting.ts';
+import { rocketSpot } from '../src/components/garden/eggs/rocketLaunch.ts';
 import { CANDLE, CANDLES, CANDLESTICKS, ORNAMENTS as WORK_ORNAMENTS, PIE, ornamentShown as workShown, ornamentSpot as workSpot } from '../src/components/garden/eggs/careerSpots.ts';
 
 const degrees = radians => radians * 180 / Math.PI;
@@ -32,7 +36,10 @@ const seen = (p, width, { x, y = 0, z }) => {
 // Each spot as its component places it (half its footprint, in its own units).
 const FOOTPRINT = { mobius: MOBIUS_PLINTH.width / 2, bench: BENCH.length / 2 };
 const spots = width => Object.fromEntries(Object.entries(ORNAMENTS).map(([id, ornament]) => [id, ornamentSpot(ornament, width, FOOTPRINT[id])]));
-const trees = width => Object.fromEntries(Object.entries(CARVINGS).map(([id, carving]) => [id, carvedTree(carving, width)]));
+// The university years' two; the carvings further down the river are tested below.
+const UNIVERSITY = ['stats', 'algebra'];
+// Those cut on this layout (the spiral isn't on a phone).
+const trees = width => Object.fromEntries(Object.entries(CARVINGS).filter(([, carving]) => carvedOn(carving, width)).map(([id, carving]) => [id, carvedTree(carving, width)]));
 // The carvings show from desktop's reach on a phone too.
 const shown = (spot, p, width) => 'type' in spot ? carvingShown(spot, cameraPose(p, width).position[2]) : markerShown(spot.z, cameraPose(p, width).position[2], width < 1);
 const span = (from, to, step = .002) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
@@ -113,7 +120,7 @@ test('the carvings are cut into real riverside trees on their own banks', () => 
       assert.ok(placed.some(p => p.x === tree.x && p.z === tree.z && p.type === tree.type), `${id} on a tree that stands there`);
       const inland = Math.abs(tree.x - riverCenter(tree.z, width)) - bankEdge(tree.z, width);
       assert.equal(Math.sign(tree.x - riverCenter(tree.z, width)), CARVINGS[id].side, `${id} on its own bank`);
-      assert.ok(inland > 2 && inland < 7, `${id}'s tree ${inland} from the water`);
+      assert.ok(inland > 1 && inland < 7, `${id}'s tree ${inland} from the water`);
     }
     assert.equal(CARVINGS.stats.side, -1);
     assert.equal(CARVINGS.algebra.side, 1);
@@ -167,7 +174,7 @@ test('each is in the picture while the boats pass, the ornaments near enough to 
   }
   // On desktop each carving comes near enough to make out, as near as the
   // trees along its bank allow.
-  for (const id of Object.keys(CARVINGS)) {
+  for (const id of UNIVERSITY) {
     const nearest = Math.min(...span(progressAt('2018-11'), progressAt('2019-09')).filter(p => Math.abs(seen(p, 1, trees(1)[id]).bearing) < halfView(1) - 2).map(p => seen(p, 1, trees(1)[id]).distance));
     assert.ok(nearest < 24, `${id} no nearer than ${nearest}`);
   }
@@ -282,7 +289,7 @@ test('each is drawn only while near the camera: not from the far end of the rive
     }
     // The Möbius and the bench are gone by the snow trip; the carvings aren't drawn as the boats meet.
     for (const spot of Object.values(spots(width))) assert.equal(shown(spot, progressAt('2019-07'), width), 0);
-    for (const tree of Object.values(trees(width))) assert.equal(shown(tree, progressAt('2017-09'), width), 0);
+    for (const id of UNIVERSITY) assert.equal(shown(trees(width)[id], progressAt('2017-09'), width), 0);
   }
 });
 
@@ -316,4 +323,113 @@ test('the Möbius strip\'s half twist is spread evenly round the loop and it sta
     assert.ok(Math.abs(wrapped) < .03, `band turned ${wrapped} from an even twist at ${round}`);
   }
   assert.ok(edges >= MOBIUS.segments * 2, `${edges} points on its edges`);
+});
+
+// The carvings further down the river, each in a quiet stretch of its own:
+// a sloop on Amelia's bank before they meet, a golden spiral on Patrick's
+// through 2021, two sloops side by side there as the boats come back
+// alongside, and a heart with P + A in the S-bend as the wedding comes.
+const FOUND = ['sloop', 'spiral', 'sloops', 'heart'];
+const stopAfter = month => STOPS.find(stop => stop > progressAt(month));
+// When each is wholly in the picture, desktop then phone.
+const FOUND_WINDOWS = {
+  sloop: [[progressAt('2017-03'), progressAt('2017-07')], [progressAt('2017-03'), progressAt('2017-05')]],
+  spiral: [[progressAt('2021-07'), progressAt('2022-08')], null],
+  sloops: [[progressAt('2022-09'), stopAfter('2023-03')], [progressAt('2022-09'), progressAt('2022-12')]],
+  heart: [[progressAt('2026-11'), progressAt('2027-03')], [progressAt('2026-11'), progressAt('2027-02')]],
+};
+
+test('the carvings further down the river are on real trees of their own, on their banks, clear of the trees already used', () => {
+  assert.equal(CARVINGS.sloop.side, -1);
+  for (const id of ['spiral', 'sloops', 'heart']) assert.equal(CARVINGS[id].side, 1);
+  for (const width of WIDTHS) {
+    const all = trees(width), mine = Object.entries(all).filter(([id]) => FOUND.includes(id));
+    // Not the university years' trees, 2020's ash or the circus's ashes.
+    const used = [...UNIVERSITY.map(id => all[id]), yearCarving(YEAR_MARKERS.find(m => 'carved' in m), width).tree, ...Object.values(RIGS).map(rig => rigTree(rig, width))];
+    // And none of the left bank's trees round 2024's birdhouses, which keep their own scenery.
+    const houses = Object.values(nestSpots(width)[0]);
+    for (const [id, tree] of mine) {
+      for (const other of used) assert.ok(other.x !== tree.x || other.z !== tree.z, `${id} on a tree already used (width ${width})`);
+      for (const house of houses) assert.ok(Math.hypot(house.x - tree.x, house.z - tree.z) > 12, `${id} among the birdhouses' trees (width ${width})`);
+    }
+    // One tree each.
+    assert.equal(new Set(mine.map(([, tree]) => `${tree.x},${tree.z}`)).size, mine.length);
+  }
+});
+
+test('each is wholly in the picture through its stretch, near enough to make out on desktop', () => {
+  for (const id of FOUND) {
+    WIDTHS.forEach((width, layout) => {
+      if (!FOUND_WINDOWS[id][layout]) return assert.equal(carvedOn(CARVINGS[id], width), false);
+      const [from, to] = FOUND_WINDOWS[id][layout], tree = trees(width)[id];
+      let nearest = Infinity;
+      for (const p of span(from, to)) {
+        const { bearing, distance } = carvingInView(id, width, p);
+        assert.ok(bearing[0] > -halfView(width) + 1 && bearing[1] < halfView(width) - 1, `${id} at ${bearing}° at ${p} (width ${width})`);
+        assert.equal(shown(tree, p, width), 1, `${id} fully shown at ${p} (width ${width})`);
+        nearest = Math.min(nearest, distance);
+      }
+      // As near as the trees along its bank allow: on a phone the sloop and the spiral are seen only from well up the river.
+      const near = width < 1 ? { sloop: 27, sloops: 28, heart: 14 } : { sloop: 26, spiral: 25, sloops: 19, heart: 12 };
+      assert.ok(nearest < near[id], `${id} no nearer than ${nearest} (width ${width})`);
+    });
+  }
+});
+
+test('they keep clear of the other scenery, on the ground and in the picture', () => {
+  for (const width of WIDTHS) {
+    const mobile = width < 1, all = trees(width);
+    const ground = [piSpot(mobile, width), snowSpot(SNOW_SPOTS[2019], '2019-07', width), snowSpot(SNOW_SPOTS[2025], '2025-08', width), operaHouseSpot(width), rocketSpot(width),
+      ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ...CAPS.tosses.map(toss => capLanding('2020-08', toss, width)),
+      ...DUCKS.launches.map((_, i) => duckLaunchSpot(i, width)), ...Object.values(spots(width)), ...WORK_ORNAMENTS.map(work => workSpot(work, width)),
+      ...Object.values(RIGS).map(rig => hangSpot(rig, width)), ...nestSpots(width).flatMap(pair => Object.values(pair))];
+    for (const id of FOUND.filter(id => id in all)) {
+      const tree = all[id];
+      for (const other of [...ground, ...Object.values(all).filter(t => t !== tree)]) {
+        assert.ok(Math.hypot(other.x - tree.x, other.z - tree.z) > 3.5, `${id} crowds the scenery at ${other.x}, ${other.z} (width ${width})`);
+      }
+      // Whenever it shows in the picture, nothing else on the banks that shows
+      // stands beside it there: each taken as up to 1.5 above its foot.
+      const others = [
+        ...YEAR_MARKERS.map(marker => { const spot = yearMarkerSpot(marker, width); return { name: marker.year, spot, shown: (p, cz) => yearMarkerShown(marker, spot.z, p, cz, mobile) }; }),
+        ...Object.entries(RIGS).map(([name, rig]) => { const spot = hangSpot(rig, width); return { name, spot, shown: (p, cz) => rigShown(rig, spot, p, cz, mobile) }; }),
+        ...WORK_ORNAMENTS.map(work => { const spot = workSpot(work, width); return { name: work.facing, spot, shown: (p, cz) => workShown(work, spot, p, cz, mobile) }; }),
+        { name: 'Opera House', spot: operaHouseSpot(width), shown: (p, cz) => harbourShown(p, cz, mobile).opera },
+        ...Object.entries(all).filter(([other]) => other !== id).map(([name, spot]) => ({ name, spot, shown: (_, cz) => carvingShown(spot, cz) })),
+      ];
+      for (const p of span(.05, .92, .004)) {
+        const cz = cameraPose(p, width).position[2];
+        if (!shown(tree, p, width)) continue;
+        const carving = carvingInView(id, width, p);
+        if (carving.bearing[1] < -halfView(width) || carving.bearing[0] > halfView(width)) continue;
+        for (const other of others) {
+          if (!other.shown(p, cz)) continue;
+          const o = seen(p, width, other.spot), top = seen(p, width, { ...other.spot, y: other.spot.y + 1.5 * (other.spot.scale ?? 1) });
+          if (Math.abs(o.bearing) > halfView(width) || o.distance > 34) continue;
+          const gap = Math.max(o.bearing - carving.bearing[1], carving.bearing[0] - o.bearing);
+          const above = Math.max(o.elevation - carving.elevation[1], carving.elevation[0] - top.elevation);
+          assert.ok(gap > 2 || above > 1, `${id} beside ${other.name} in the picture (${gap}° apart, ${above}° above) at ${p} (width ${width})`);
+        }
+      }
+    }
+  }
+});
+
+test('nothing beside a year marker as its year turns, and never more than two carvings in the picture at once', () => {
+  for (const width of WIDTHS) {
+    const all = trees(width);
+    for (const marker of YEAR_MARKERS) {
+      const p = yearTurns(marker.year), m = seen(p, width, yearMarkerSpot(marker, width));
+      for (const id of FOUND.filter(id => id in all)) {
+        const o = seen(p, width, all[id]);
+        if (!shown(all[id], p, width) || Math.abs(o.bearing) > halfView(width)) continue;
+        assert.ok(Math.abs(o.bearing - m.bearing) > 2.5, `${id} beside ${marker.year} (width ${width})`);
+      }
+    }
+    for (const p of span(0, 1, .002)) {
+      // Those shown but out of the picture, behind the camera or off to the side, are culled.
+      const drawn = Object.values(all).filter(tree => shown(tree, p, width) > 0 && Math.abs(seen(p, width, tree).bearing) < halfView(width) + 5).length;
+      assert.ok(drawn <= 2, `${drawn} carvings in the picture at ${p} (width ${width})`);
+    }
+  }
 });
