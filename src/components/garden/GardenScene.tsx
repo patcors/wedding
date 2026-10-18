@@ -16,6 +16,7 @@ import GardenSky, { type SkyStyle } from './GardenSky';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { preloadGardenTextures, useGardenTextures } from './gardenTextures';
 import { JourneyProvider, type SlotProps } from './JourneyProvider';
+import type { Pace } from './journeyPace';
 import VoyageCamera from './VoyageCamera';
 import VoyageWorld from './VoyageWorld';
 import VoyageBoats from './VoyageBoats';
@@ -48,9 +49,9 @@ function useGardenAssets(choices: AssetChoices) {
   models.forEach(urls => useGLTF(urls));
   textures.forEach(([urls, flipY]) => useGardenTextures(urls, { flipY }));
 }
-type SceneProps = { prepare: boolean; progress: number; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook };
+type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook };
 
-export default function GardenScene({ prepare, progress, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook }: SceneProps) {
+export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook }: SceneProps) {
   useGardenAssets({ groundStyle, rockStyle, lightTrees });
   const size = useThree(state => state.size);
   // On touch screens the canvas runs on under Safari's toolbar (see
@@ -61,7 +62,7 @@ export default function GardenScene({ prepare, progress, paused, reduced, onRead
   const still = paused || reduced;
   const slot: SlotProps = { paused: still, reduced, mobile, width };
   const waterTint = useMemo(createWaterTint, []);
-  return <JourneyProvider scroll={progress} paused={paused} reduced={reduced}>
+  return <JourneyProvider scroll={progress} pace={pace} paused={paused} reduced={reduced}>
     <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} />
     <GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} />
     <GardenGround width={width} style={groundStyle} />

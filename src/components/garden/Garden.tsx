@@ -2,7 +2,7 @@
 // compares visual variants; guests always get the defaults below. The page
 // renders on the server so the opening text is in the HTML before any script;
 // three.js arrives later in its own chunk, behind the cover.
-import { Component, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Component, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
@@ -11,7 +11,8 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
-import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Milestone } from './journey';
+import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, type Chapter, type Milestone } from './journey';
+import { advancePace, createPace, glidePlan, leashed } from './journeyPace';
 import { DATE_LABEL_MODES, dateLabelMode, shownDate, type DateLabelMode } from './dateLabelMode';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
@@ -28,51 +29,135 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
     opening={visit.opening} openingReleased={openingReleased} available={available} onLand={onLand} onComplete={onComplete} />;
 }
 
-// The page's date and milestone follow the scroll eased as the scene's
-// camera eases it (JourneyProvider), so they arrive with the boats. A rolling
-// date changes at most this often, so it reads as a gentle count rather than
-// a flicker; a milestone is announced once the guest has stayed on it a moment.
+// The page's chapter, date and milestone follow the progress the scene shows
+// (journeyPace.ts: the scroll, eased at no more than the story's pace), so
+// they arrive with the boats and the celebration never shows over a scene
+// still mid-river. A rolling date changes at most this often, so it reads as
+// a gentle count rather than a flicker; a milestone is announced once the
+// guest has stayed on it a moment. Here too the scroll is kept within reach
+// of the story, the arrow keys and scroll cue send it to a stop, and "The
+// next chapter" glides on to the dock until the guest takes over.
 const DATE_EVERY = 400, ANNOUNCE_AFTER = 700;
-function useVoyageMoment(scroll: number, reduced: boolean) {
+function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
+  const pace = useMemo(createPace, []);
+  // The raw scroll, 0 to 1.
+  const [progress, setProgress] = useState(0);
+  const [chapter, setChapter] = useState<Chapter>('arrival');
   const [date, setDate] = useState<string | null>(null);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
-  const target = useRef(scroll), eased = useRef(scroll), loop = useRef<(() => void) | null>(null);
-  target.current = scroll;
+  const [gliding, setGliding] = useState(false);
+  const controls = useRef({ go: (_next: number, _jump?: boolean) => {}, glide: () => {} });
   useEffect(() => {
-    // Reduced motion: the scene cuts to each milestone's still, and so does the page.
-    if (reduced) {
-      const still = stillProgress(scroll);
-      eased.current = still; setDate(dateLabel(still)); setMilestone(milestoneAt(still));
-      return;
-    }
-    if (loop.current) return;
-    let frame = 0, last = performance.now(), shown: string | null | undefined, changed = -Infinity;
-    const tick = (now: number) => {
-      const dt = Math.min((now - last) / 1000, .05);
-      last = now;
-      // THREE.MathUtils.damp, without pulling three into the page's chunk.
-      eased.current += (target.current - eased.current) * (1 - Math.exp(-2 * dt));
-      const settled = Math.abs(target.current - eased.current) < 1e-5;
-      if (settled) eased.current = target.current;
-      const label = dateLabel(eased.current);
+    const element = scroller.current!;
+    const span = () => Math.max(1, element.scrollHeight - element.clientHeight);
+    // `travelling`: the scroll was sent to a stop, so it may be further ahead than the leash allows.
+    let frame = 0, shown: string | null | undefined, changed = -Infinity, travelling = false;
+    const show = (p: number, settled: boolean, now: number) => {
+      setChapter(chapterAt(p));
+      const label = dateLabel(p);
       if (label !== shown && (settled || now - changed >= DATE_EVERY || label === null || shown == null)) {
         shown = label; changed = now; setDate(label);
       }
-      setMilestone(milestoneAt(eased.current));
-      if (settled && label === shown) { loop.current = null; return; }
-      frame = requestAnimationFrame(tick);
+      setMilestone(milestoneAt(p));
+      return label === shown;
     };
-    loop.current = () => cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(tick);
-  }, [scroll, reduced]);
-  useEffect(() => () => { loop.current?.(); loop.current = null; }, [reduced]);
+    const tick = () => {
+      frame = 0;
+      const now = performance.now();
+      advancePace(pace, now);
+      // The glide moves the scroll with it, so a guest who takes over carries on from there.
+      if (pace.glide) element.scrollTop = pace.progress * span();
+      setGliding(pace.glide !== null);
+      const settled = !pace.glide && pace.progress === pace.target;
+      if (!show(pace.progress, settled, now) || !settled) frame = requestAnimationFrame(tick);
+    };
+    const wake = () => { if (!frame && !reduced) frame = requestAnimationFrame(tick); };
+    const update = () => {
+      const scroll = Math.min(1, element.scrollTop / span());
+      if (reduced) {
+        // The scene cuts to each milestone's still, and so does the page.
+        const still = stillProgress(scroll);
+        pace.progress = pace.target = scroll;
+        setProgress(scroll); show(still, true, performance.now());
+        return;
+      }
+      let target = scroll;
+      if (!pace.glide && !travelling) {
+        // However far a fling goes, the page stays within reach of the story.
+        target = leashed(scroll, pace.progress);
+        if (target !== scroll) element.scrollTop = target > scroll ? Math.ceil(target * span()) : Math.floor(target * span());
+      }
+      if (!pace.glide) pace.target = target;
+      setProgress(target);
+      wake();
+    };
+    const stopGlide = () => {
+      pace.glide = null; pace.target = pace.progress;
+      setGliding(false);
+    };
+    // Any wheel, touch, tap or key from the guest hands control back.
+    const takeOver = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest('.garden-glide')) return;
+      travelling = false;
+      if (pace.glide) stopGlide();
+    };
+    const go = (next: number, jump = false) => {
+      if (pace.glide) stopGlide();
+      // A jump (the monogram) cuts straight there; anything else travels at the story's pace.
+      travelling = !jump;
+      if (jump || reduced) pace.progress = next;
+      pace.target = next;
+      setProgress(next);
+      element.scrollTo({ top: span() * next, behavior: 'instant' });
+      wake();
+    };
+    controls.current = {
+      go,
+      glide: () => {
+        if (pace.glide) return stopGlide();
+        if (reduced) return go(1);
+        travelling = false;
+        pace.glide = { plan: glidePlan(pace.progress), t: 0 };
+        setGliding(true);
+        wake();
+      },
+    };
+    // The arrow keys step from the opening through each milestone to the
+    // celebration and back, as the photo album's did between photographs.
+    const onKey = (event: KeyboardEvent) => {
+      takeOver(event);
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return;
+      if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review')) return;
+      const at = element.scrollTop / span();
+      event.preventDefault();
+      go(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
+    };
+    pace.progress = pace.target = Math.min(1, element.scrollTop / span());
+    update();
+    element.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    element.addEventListener('wheel', takeOver, { passive: true });
+    element.addEventListener('touchstart', takeOver, { passive: true });
+    element.addEventListener('pointerdown', takeOver);
+    addEventListener('keydown', onKey);
+    return () => {
+      cancelAnimationFrame(frame);
+      stopGlide();
+      element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
+      element.removeEventListener('wheel', takeOver); element.removeEventListener('touchstart', takeOver);
+      element.removeEventListener('pointerdown', takeOver);
+      removeEventListener('keydown', onKey);
+    };
+  }, [scroller, pace, reduced]);
   // Screen readers hear the milestone once the guest settles on it.
   const [announced, setAnnounced] = useState<Milestone | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setAnnounced(milestone), reduced ? 0 : ANNOUNCE_AFTER);
     return () => clearTimeout(timer);
   }, [milestone, reduced]);
-  return { date, announced };
+  const go = useCallback((next: number, jump?: boolean) => controls.current.go(next, jump), []);
+  const glide = useCallback(() => controls.current.glide(), []);
+  return { pace, progress, chapter, date, announced, gliding, go, glide };
 }
 
 // The month and year each crossfade between two layers. A change mid-fade
@@ -112,7 +197,6 @@ const REVIEW_DATE = 'pa_dev_date_label';
 const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
 
 export default function Garden({ greeting }: { greeting?: string }) {
-  const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
@@ -204,23 +288,17 @@ export default function Garden({ greeting }: { greeting?: string }) {
   useEffect(() => {
     const query = matchMedia('(prefers-reduced-motion: reduce)');
     const updatePreference = () => setReduced(query.matches);
-    const element = scroller.current!;
-    const update = () => setProgress(Math.min(1, element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight)));
-    updatePreference(); update();
+    updatePreference();
     query.addEventListener('change', updatePreference);
-    element.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
-    return () => {
-      query.removeEventListener('change', updatePreference);
-      element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
-    };
+    return () => query.removeEventListener('change', updatePreference);
   }, []);
+  const voyage = useVoyage(scroller, reduced);
+  const { progress } = voyage;
   // The scroll cue goes for good once the guest has scrolled a little.
   const [explored, setExplored] = useState(false);
-  useEffect(() => { if (progress > .01) setExplored(true); }, [progress]);
-  const chapter = { arrival: 0, voyage: 1, dock: 2 }[chapterAt(progress)];
+  useEffect(() => { if (progress > .01 && !explored) setExplored(true); }, [progress, explored]);
+  const chapter = { arrival: 0, voyage: 1, dock: 2 }[voyage.chapter];
   const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready });
-  const voyage = useVoyageMoment(progress, reduced);
   // The date stays on through the voyage panel's fade out.
   const [lastDate, setLastDate] = useState<string | null>(null);
   if (voyage.date && voyage.date !== lastDate) setLastDate(voyage.date);
@@ -229,35 +307,15 @@ export default function Garden({ greeting }: { greeting?: string }) {
   useEffect(() => { if (REVIEW) setDateMode(dateLabelMode(localStorage.getItem(REVIEW_DATE))); }, []);
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
-  // The camera already eases between stops; native smooth scrolling would
+  // The scene already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
-  const goToProgress = (next: number) => {
-    setProgress(next);
-    const element = scroller.current!;
-    element.scrollTo({ top: (element.scrollHeight - element.clientHeight) * next, behavior: 'instant' });
-  };
-  // The arrow keys step from the opening through each milestone to the
-  // celebration and back, as the photo album's did between photographs.
-  const step = useRef(goToProgress);
-  step.current = goToProgress;
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return;
-      if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review')) return;
-      const element = scroller.current!;
-      const at = element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight);
-      event.preventDefault();
-      step.current(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
-    };
-    addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
-  }, []);
+  const goToProgress = voyage.go;
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
   return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} aria-busy={state === 'loading'}>
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
@@ -272,7 +330,7 @@ export default function Garden({ greeting }: { greeting?: string }) {
     {/* The chrome sits in pinned layers inside the scroller, so a drag that starts on it still scrolls. */}
     <div className="garden-chrome-layer">
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
-        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
+        <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0, true)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
         <span className="garden-header-date">16 APRIL 2027</span>
         <div className="garden-header-links">
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
@@ -302,7 +360,10 @@ export default function Garden({ greeting }: { greeting?: string }) {
           {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
           <Crossfade className="garden-voyage-year" value={year} />
         </p>
-        <button className="garden-text-link" onClick={() => goToProgress(1)}>The next chapter <span aria-hidden="true">→</span></button>
+        {/* Glides on to the dock at an easy pace; while it does, it pauses the glide. */}
+        <button className="garden-text-link garden-glide" onClick={voyage.glide}>
+          {voyage.gliding ? <>Pause <span aria-hidden="true">‖</span></> : <>The next chapter <span aria-hidden="true">→</span></>}
+        </button>
       </section>
 
       <section className={`garden-panel garden-celebrate ${chapter === 2 ? 'is-active' : ''}`} inert={chapter !== 2 || sceneOnly} aria-hidden={chapter !== 2 || sceneOnly}>
