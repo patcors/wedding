@@ -111,7 +111,7 @@ const REVIEW_DATE = 'pa_dev_date_label';
 // Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
 const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
 
-export default function Garden({ greeting }: { greeting?: string }) {
+export default function Garden() {
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -273,7 +273,6 @@ export default function Garden({ greeting }: { greeting?: string }) {
     <div className="garden-chrome-layer">
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
         <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
-        <span className="garden-header-date">16 APRIL 2027</span>
         <div className="garden-header-links">
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
           <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
@@ -283,10 +282,8 @@ export default function Garden({ greeting }: { greeting?: string }) {
 
     <div className="garden-panels garden-copy">
       <section className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
-        <p className="garden-eyebrow">{greeting ? `${greeting}, together with our favourite people` : 'Together with our favourite people'}</p>
         <h1><b className="garden-perch">P</b>atrick <span>&</span> <b className="garden-perch">A</b>melia</h1>
-        <p className="garden-subtitle">A new chapter, together.</p>
-        <div className="garden-date"><span>16 . 04 . 2027</span><i /><span>Jasper’s Berry</span></div>
+        <p className="garden-subtitle">the journey so far</p>
         {/* Out of flow, so neither link can move the text above. */}
         <div className="garden-arrival-actions">
           <a className={`garden-skip ${slow && state === 'loading' ? 'is-visible' : ''}`} href={`${BASE}details/`}>Skip to the details <span aria-hidden="true">→</span></a>

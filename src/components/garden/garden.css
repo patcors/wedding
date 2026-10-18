@@ -58,7 +58,6 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-monogram { position: relative; isolation: isolate; padding: 0; }
 /* The same halo keeps the logo legible over dark treetops, following its strokes. */
 .garden-monogram img { height: 34px; width: auto; display: block; filter: drop-shadow(0 0 1px var(--garden-glow)) drop-shadow(0 0 5px color-mix(in srgb, var(--garden-glow) 80%, transparent)); }
-.garden-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
 .garden-invitation-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid var(--garden-on-sky-line, #73796770); padding-bottom: 8px; }
 .garden-invitation-link span { margin-left: 18px; }
@@ -74,8 +73,6 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-arrival h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300; font-size: clamp(66px, 8.8vw, 144px); line-height: 1.1; letter-spacing: -.06em; margin: 20px 0 10px; }
 .garden-arrival h1 span { font-size: .6em; font-style: italic; font-weight: 300; color: var(--garden-on-sky-soft, #7a826d); display: inline-block; margin: 0 .14em; }
 .garden-subtitle { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 25px; font-style: italic; margin: 0; color: var(--garden-on-sky-soft, #59634f); }
-.garden-date { margin-top: 33px; display: flex; justify-content: center; align-items: center; gap: 17px; font-size: 9px; text-transform: uppercase; letter-spacing: .23em; }
-.garden-date i { width: 3px; height: 3px; border-radius: 50%; background: var(--garden-on-sky-soft, #7a826d); }
 /* The voyage's date sits high in the sky, where the photographs were, well
    above the boats low in the river. Month over year, each crossfading. */
 .garden-voyage { top: 13%; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
@@ -114,14 +111,12 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 @media (max-width: 700px) {
   .garden-header { padding: calc(20px + env(safe-area-inset-top) - var(--garden-edge-clear)) 24px 24px; }
   .garden-monogram img { height: 30px; }
-  .garden-header-date { display: none; }
   .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
   .garden-arrival h1 { font-size: clamp(60px, 16vw, 90px); line-height: .9; margin: 24px 0 20px; }
   .garden-arrival h1 span { display: block; font-size: 35px; line-height: 1.2; margin: 4px 0; }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
   .garden-subtitle { font-size: 22px; }
-  .garden-date { font-size: 8px; gap: 12px; margin-top: 26px; }
   .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-voyage { top: 11%; }
@@ -140,7 +135,6 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-arrival h1 { font-size: min(16vw, 9svh); margin: 14px 0 12px; }
   .garden-arrival h1 span { font-size: 30px; margin: 2px 0; }
   .garden-subtitle { font-size: 20px; }
-  .garden-date { margin-top: 16px; }
   .garden-celebrate { top: 13%; }
   /* Two lines even on the narrowest phone. */
   .garden-celebrate h2 { font-size: min(58px, 17.5vw); margin: 16px 0; }
@@ -154,14 +148,12 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 @media (orientation: landscape) and (max-height: 500px) {
   .garden-header { padding: calc(12px + env(safe-area-inset-top) - var(--garden-edge-clear)) max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left)); }
   .garden-monogram img { height: 28px; }
-  .garden-header-date { display: none; }
   .garden-invitation-link { min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 15%; padding: 0 max(30px, env(safe-area-inset-left), env(safe-area-inset-right)); }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
   .garden-arrival h1 { font-size: min(54px, 13svh); line-height: 1.1; margin: 8px 0 4px; }
   .garden-arrival h1 span { display: inline-block; font-size: .6em; line-height: 1; margin: 0 .14em; }
   .garden-subtitle { font-size: 19px; }
-  .garden-date { font-size: 8px; gap: 12px; margin-top: 12px; }
   .garden-voyage { top: 8%; }
   .garden-voyage-month { font-size: 34px; }
   .garden-voyage-year { font-size: 15px; }
