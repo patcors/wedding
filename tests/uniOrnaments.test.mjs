@@ -13,7 +13,7 @@ import { DUCKS, duckLaunchSpot, piSpot } from '../src/components/garden/eggs/cam
 import { CAPS, capLanding } from '../src/components/garden/eggs/capToss.ts';
 import { FLURRY, SNOW_SPOTS, snowSpot } from '../src/components/garden/eggs/flurry.ts';
 import { SNOWMAN } from '../src/components/garden/eggs/snowmanGeometry.ts';
-import { YEAR_MARKERS, markerShown, yearCarving, yearMarkerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
+import { ARRIVE, YEAR_MARKERS, markerShown, yearCarving, yearMarkerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
 import { CARVINGS, ORNAMENTS, carvedOn, carvedTree, carvingFaces, carvingShown, ornamentSpot } from '../src/components/garden/eggs/uniOrnaments.ts';
 import { MOBIUS, MOBIUS_PLINTH, mobiusGeometry } from '../src/components/garden/eggs/mobiusGeometry.ts';
 import { BENCH, parkBenchGeometry } from '../src/components/garden/eggs/parkBenchGeometry.ts';
@@ -39,9 +39,9 @@ const spots = width => Object.fromEntries(Object.entries(ORNAMENTS).map(([id, or
 // The university years' two; the carvings further down the river are tested below.
 const UNIVERSITY = ['stats', 'algebra'];
 // Those cut on this layout (the spiral isn't on a phone).
-const trees = width => Object.fromEntries(Object.entries(CARVINGS).filter(([, carving]) => carvedOn(carving, width)).map(([id, carving]) => [id, carvedTree(carving, width)]));
-// The carvings show from desktop's reach on a phone too.
-const shown = (spot, p, width) => 'type' in spot ? carvingShown(spot, cameraPose(p, width).position[2]) : markerShown(spot.z, cameraPose(p, width).position[2], width < 1);
+const trees = width => Object.fromEntries(Object.entries(CARVINGS).filter(([, carving]) => carvedOn(carving, width)).map(([id, carving]) => [id, { ...carvedTree(carving, width), after: carving.after }]));
+// The carvings show from desktop's reach on a phone too, the heart not before its month.
+const shown = (spot, p, width) => 'type' in spot ? carvingShown(spot, cameraPose(p, width).position[2], p, spot.after) : markerShown(spot.z, cameraPose(p, width).position[2], width < 1);
 const span = (from, to, step = .002) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
 
 // The carvings' patches, built on the trees' own models as BarkCarvings.tsx builds them.
@@ -336,7 +336,7 @@ const FOUND_WINDOWS = {
   sloop: [[progressAt('2017-03'), progressAt('2017-07')], [progressAt('2017-03'), progressAt('2017-05')]],
   spiral: [[progressAt('2021-07'), progressAt('2022-08')], null],
   sloops: [[progressAt('2022-09'), stopAfter('2023-03')], [progressAt('2022-09'), progressAt('2022-12')]],
-  heart: [[progressAt('2026-11'), progressAt('2027-03')], [progressAt('2026-11'), progressAt('2027-02')]],
+  heart: [[progressAt('2026-11') + ARRIVE * ROOM + 1e-6, progressAt('2027-03')], [progressAt('2026-11') + ARRIVE * ROOM + 1e-6, progressAt('2027-02')]],
 };
 
 test('the carvings further down the river are on real trees of their own, on their banks, clear of the trees already used', () => {
@@ -354,6 +354,26 @@ test('the carvings further down the river are on real trees of their own, on the
     }
     // One tree each.
     assert.equal(new Set(mine.map(([, tree]) => `${tree.x},${tree.z}`)).size, mine.length);
+  }
+});
+
+test('the heart with P + A waits for the rocket\'s moment to be over, then dissolves in with 2027\'s heart across the river; the others aren\'t held back', async () => {
+  const { GLIDE_STOPS } = await import('../src/components/garden/journeyPace.ts');
+  const { tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
+  const hold = GLIDE_STOPS.find(stop => stop.id === 'rocket').p, board = YEAR_MARKERS.find(m => m.year === 2027);
+  for (const id of FOUND.filter(id => id !== 'heart')) assert.equal(CARVINGS[id].after, undefined);
+  for (const width of WIDTHS) {
+    const tree = trees(width).heart, spot = yearMarkerSpot(board, width);
+    // Hidden as the Hagia Sophia comes and at the trip's stop, and through the
+    // rocket's moment and the glide's wait for it, near as its tree is.
+    for (const p of span(progressAt('2026-05'), hold + .05 * ROOM)) assert.equal(shown(tree, p, width), 0, `heart carving at ${p} (width ${width})`);
+    assert.ok(markerShown(tree.z, cameraPose(tripStop('2026-07'), width).position[2], false) === 1, 'its tree in reach at the trip\'s stop');
+    // In step with the board: never more in than it, and in full with it.
+    for (const p of span(hold, progressAt('2027-01'), .0005)) {
+      const cz = cameraPose(p, width).position[2], carving = shown(tree, p, width), heart = yearMarkerShown(board, spot.z, p, cz, width < 1);
+      assert.ok(carving <= heart + 1e-9, `carving ahead of the board at ${p} (width ${width})`);
+      if (heart === 1) assert.equal(carving, 1, `carving behind the board at ${p} (width ${width})`);
+    }
   }
 });
 
@@ -395,7 +415,7 @@ test('they keep clear of the other scenery, on the ground and in the picture', (
         ...Object.entries(RIGS).map(([name, rig]) => { const spot = hangSpot(rig, width); return { name, spot, shown: (p, cz) => rigShown(rig, spot, p, cz, mobile) }; }),
         ...WORK_ORNAMENTS.map(work => { const spot = workSpot(work, width); return { name: work.facing, spot, shown: (p, cz) => workShown(work, spot, p, cz, mobile) }; }),
         { name: 'Opera House', spot: operaHouseSpot(width), shown: (p, cz) => harbourShown(p, cz, mobile).opera },
-        ...Object.entries(all).filter(([other]) => other !== id).map(([name, spot]) => ({ name, spot, shown: (_, cz) => carvingShown(spot, cz) })),
+        ...Object.entries(all).filter(([other]) => other !== id).map(([name, spot]) => ({ name, spot, shown: (p, cz) => carvingShown(spot, cz, p, spot.after) })),
       ];
       for (const p of span(.05, .92, .004)) {
         const cz = cameraPose(p, width).position[2];

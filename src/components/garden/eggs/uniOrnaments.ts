@@ -10,7 +10,7 @@ import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { TREE_SINK, treePlacements } from '../gardenTreeSpots.ts';
 import { progressAt, routeAtMonth } from '../journey.ts';
-import { markerShown } from './yearMarkerSpots.ts';
+import { heldBack, markerShown } from './yearMarkerSpots.ts';
 
 // Each stands `ahead` units past where the boats are as its month shows, on
 // its `side`'s bank (−1 is Amelia's, −x; 1 Patrick's), `inland` of the
@@ -76,15 +76,20 @@ export function ornamentSpot(ornament: Ornament, width: number, footprint = .5):
 // - Two little sloops side by side on Patrick's bank, as the boats come back
 //   alongside in March 2023.
 // - A heart with P + A cut inside it on the headland in the S-bend, nearest
-//   as the wedding comes, across the river from 2027's heart.
-export type BarkCarving = { side: -1 | 1; z: { desktop: number; mobile: number | null }; facing: string; arc: number; from: number; to: number };
+//   as the wedding comes, across the river from 2027's heart. Its tree is
+//   near the middle of the picture from the trip on, so it is held back
+//   (`after`) and dissolves in with 2027's heart, as November 2026 shows once
+//   the rocket has flown, so the two hearts arrive as a pair.
+// `after`, if set, holds a carving back until that month shows, however near
+// its tree is, as a year marker's `from` does (heldBack in yearMarkerSpots.ts).
+export type BarkCarving = { side: -1 | 1; z: { desktop: number; mobile: number | null }; facing: string; arc: number; from: number; to: number; after?: string };
 export const CARVINGS = {
   stats: { side: -1, z: { desktop: -45, mobile: -37 }, facing: '2019-05', arc: .7, from: .98, to: 1.54 },
   algebra: { side: 1, z: { desktop: -45.6, mobile: -43 }, facing: '2019-03', arc: 1, from: .4, to: .92 },
   sloop: { side: -1, z: { desktop: -17, mobile: -17 }, facing: '2017-05', arc: .95, from: .9, to: 1.72 },
   spiral: { side: 1, z: { desktop: -82.5, mobile: null }, facing: '2022-01', arc: 1, from: .9, to: 1.4 },
   sloops: { side: 1, z: { desktop: -95, mobile: -95 }, facing: '2023-01', arc: 1, from: .9, to: 1.42 },
-  heart: { side: 1, z: { desktop: -157.2, mobile: -157.2 }, facing: '2027-01', arc: .85, from: 1.3, to: 1.9 },
+  heart: { side: 1, z: { desktop: -157.2, mobile: -157.2 }, facing: '2027-01', arc: .85, from: 1.3, to: 1.9, after: '2026-11' },
 } as const satisfies Record<string, BarkCarving>;
 export type CarvingId = keyof typeof CARVINGS;
 // Trees within this of the water: the avenue and the groves' inner row.
@@ -110,5 +115,6 @@ export const carvingFaces = (carving: BarkCarving, width: number) => {
 // How much of a carving shows with the camera at cameraZ: as the year
 // markers, but from desktop's reach on a phone too, as a phone sees its tree
 // only from that far. The tree is always there, so nothing appears from
-// nowhere.
-export const carvingShown = (tree: CarvedTree, cameraZ: number) => markerShown(tree.z, cameraZ, false);
+// nowhere. A carving held back until a month (`after`) shows none before it
+// at progress p.
+export const carvingShown = (tree: CarvedTree, cameraZ: number, p = 0, after?: string) => Math.min(heldBack(after, p), markerShown(tree.z, cameraZ, false));

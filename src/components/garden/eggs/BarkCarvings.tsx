@@ -4,15 +4,16 @@
 // a golden spiral, two sloops side by side and a heart with P + A (which
 // trees, and where on them, in uniOrnaments.ts; the patch and its carving in
 // barkCarvingGeometry.ts). Each is drawn only while its tree is near the
-// camera, much as the year markers are, so at most two at a time. One draw
+// camera, much as the year markers are, so at most two at a time, and the
+// heart not before November 2026, when it dissolves in with 2027's heart. One draw
 // call each, 8 to 28 triangles; no shadows cast.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import type { SlotProps } from '../JourneyProvider';
+import { useJourney, type SlotProps } from '../JourneyProvider';
 import { TREE_MODELS } from '../GardenTrees';
-import { CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, type CarvingId } from './uniOrnaments';
+import { CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, type BarkCarving, type CarvingId } from './uniOrnaments';
 import { barkCarvingTextures, barkPatchGeometry, treeMatrix, type TreeMesh } from './barkCarvingGeometry';
 
 // The model's branches as plain arrays (its normals are stored packed).
@@ -27,8 +28,9 @@ export function treeMesh(geometry: THREE.BufferGeometry): TreeMesh {
 }
 
 function Carving({ id, width }: SlotProps & { id: CarvingId }) {
+  const clock = useJourney();
   const models = useGLTF(TREE_MODELS);
-  const carving = CARVINGS[id];
+  const carving: BarkCarving = CARVINGS[id];
   const tree = useMemo(() => carvedTree(carving, width), [carving, width]);
   const geometry = useMemo(() => {
     const branches = (models[tree.type].nodes.branches as THREE.Mesh).geometry;
@@ -46,7 +48,7 @@ function Carving({ id, width }: SlotProps & { id: CarvingId }) {
 
   useFrame(({ camera }) => {
     if (!mesh.current) return;
-    const shown = carvingShown(tree, camera.position.z);
+    const shown = carvingShown(tree, camera.position.z, clock.progress, carving.after);
     mesh.current.visible = shown > 0;
     material.opacity = shown;
   });
