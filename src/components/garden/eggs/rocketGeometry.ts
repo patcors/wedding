@@ -1,11 +1,11 @@
-// Late 2025's rocket (see rocketLaunch.ts): the Bullet rocket, a bullet of a
-// rocket. A brass casing with a rim and a groove at its
-// foot, a copper nose, four swept fins in darker brass and a dark nozzle, in
-// one mesh with vertex colours, about 520 triangles; it stands on its fins
-// at y 0, about .97 tall, its nose up +y. Its launch stand is a wooden
-// trestle on a stone pad with a slim launch rod, about 110 triangles, facing
-// +z with its deck at STAND.deck. The exhaust's puffs and flame share one
-// small ball of a puff, 20 triangles.
+// Late 2025's rocket (see rocketLaunch.ts): Bullet, the product Patrick
+// worked on, as a bullet of a rocket. A brass casing with a rim and a groove
+// at its foot, a copper nose, four swept fins in darker brass and a dark
+// nozzle, in one mesh with vertex colours, about 520 triangles; it stands on
+// its fins at y 0, about .97 tall, its nose up +y. Its launch stand is a
+// wooden trestle on a stone pad with a slim launch rod, about 110 triangles,
+// facing +z with its deck at STAND.deck. The exhaust's puffs and flame share
+// one small ball of a puff, 20 triangles.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 

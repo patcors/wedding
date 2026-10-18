@@ -1,9 +1,9 @@
-// Late 2025: the Bullet rocket, a
-// brass bullet of a rocket on a launch stand on the right bank. It comes out
-// of the haze on its stand, and as the scroll passes its moment it fires and
-// climbs away up the river's open sky, trailing puffs of smoke. It isn't a
-// milestone, so it keeps its own time. Where it stands and flies; drawn by
-// Rocket.tsx with the models in rocketGeometry.ts. Pure, so it can be tested.
+// Late 2025: Bullet, the product Patrick worked on, as a brass bullet of a
+// rocket on a launch stand on the right bank. It comes out of the haze on its
+// stand, and as the scroll passes its moment it fires and climbs away up the
+// river's open sky, trailing puffs of smoke. It isn't a milestone, so it
+// keeps its own time. Where it stands and flies; drawn by Rocket.tsx with the
+// models in rocketGeometry.ts. Pure, so it can be tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt, routeAt } from '../journey.ts';

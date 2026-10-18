@@ -1,4 +1,4 @@
-// Late 2025: the Bullet rocket, a brass bullet of a
+// Late 2025: Bullet, the product Patrick worked on, as a brass bullet of a
 // rocket on a launch stand on the right bank (course in rocketLaunch.ts). As
 // the scroll passes its moment it fires and climbs away up the river, playing
 // out in real time, as the mortarboards do, so it never hangs in the air when
