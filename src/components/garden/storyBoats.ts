@@ -56,11 +56,12 @@ export function rigging(p: number, still = false): Rigging {
   return Object.fromEntries(Object.entries(RIG_CHANGE).map(([step, [from, to]]) => [step, ease((t - from) / (to - from))])) as Rigging;
 }
 
-// Each small masthead flies the mark of whoever its sailor works for, and
-// nothing before their internship. Both run up FinoComp's as November 2018
-// shows and keep them into Sydney. Amelia leaves FinoComp and takes a few
-// months off, tutoring and selling haircare online (the interim flag), then
-// starts at HeirWealth in January 2023; Patrick follows as March 2023 shows,
+// Each boat flies the mark of whoever its sailor works for from an ensign
+// staff on its outboard stern quarter, not the masthead, and nothing before
+// their internship. Both run up FinoComp's as November 2018 shows and keep
+// them into Sydney. Amelia leaves FinoComp and takes a few months off,
+// tutoring and selling haircare online (the interim flag), then starts at
+// HeirWealth in January 2023; Patrick follows as March 2023 shows,
 // so for a while hers is HeirWealth's and his still FinoComp's. Each change
 // is a milestone (journey.ts) with room for its flag to be seen;
 // AMELIA_LEFT_FINOCOMP there sets when she left.
@@ -68,11 +69,12 @@ export type Company = 'finocomp' | 'interim' | 'heirwealth';
 const monthOf = (id: string) => MILESTONES.find(m => m.id === id)!.month;
 type Change = { month: string; company: Company; strike: readonly [number, number]; hoist: readonly [number, number] };
 // Each boat's changes in order, Amelia's then Patrick's: the flag before is
-// struck, then this one run up the same halyard, over these spans of scroll
+// struck, then this one run up the same staff, over these spans of scroll
 // since the month first shows, in shares: each is done early in its date's
 // hold, as the camera glides into the milestone's stop (STOPS), so the stop
-// shows the new flag flying.
-const internship: Change = { month: monthOf('internship'), company: 'finocomp', strike: [0, 0], hoist: [0, .15] };
+// shows the new flag flying. The first waits for its staff to be stepped
+// (ENSIGN_STAFFS).
+const internship: Change = { month: monthOf('internship'), company: 'finocomp', strike: [0, 0], hoist: [.05, .15] };
 const SWAP = { strike: [0, .07], hoist: [.07, .15] } as const;
 export const FLAG_CHANGES: readonly (readonly Change[])[] = [
   [
@@ -86,7 +88,7 @@ export const FLAG_CHANGES: readonly (readonly Change[])[] = [
   ],
 ];
 export type CompanyFlag = { company: Company | null; hoist: number };
-// Amelia's and Patrick's at p: whose flag is up, and how far up its halyard.
+// Amelia's and Patrick's at p: whose flag is up, and how far up its staff.
 // They come down as the small sails furl for the change of masts, and go
 // with the small masts. A reduced-motion still shows each change settled
 // from its month on.
@@ -109,29 +111,41 @@ export function companyFlags(p: number, still = false): CompanyFlag[] {
 }
 
 // While they're at university, from the meeting to graduation, both boats
-// also fly the University of Wollongong's flag. It flies inboard, towards
-// the other boat and away from the sail, so it reads beside the company's
-// flag, which flies outboard. Run up to the masthead as July 2017 shows, it
-// drops a little way down the mast as November 2018 shows, to fly under
-// FinoComp's as that goes up on the other side, and comes down as August
-// 2020 shows. Spans of scroll since each date, in shares, as for
-// FLAG_CHANGES, so each stop shows it settled.
+// also fly the University of Wollongong's flag, from the ensign staff on the
+// inboard stern quarter, towards the other boat and away from the sail, so
+// it reads beside the company's flag, which flies outboard. Run up as July
+// 2017 shows, once its staff is stepped, and struck as August 2020 shows,
+// over spans of scroll since each date, in shares, as for FLAG_CHANGES, so
+// each stop shows it settled.
 export const UNIVERSITY_FLAG = {
-  hoist: { month: DATES.meet, span: [0, .15] },
-  under: { month: monthOf('internship'), span: [0, .1] },
+  hoist: { month: DATES.meet, span: [.05, .15] },
   strike: { month: monthOf('graduation'), span: [0, .08] },
 } as const;
-// How far up its halyard it is (0 down, 1 up), and how far it has dropped
-// from the masthead to its place under the company's flag (0 to 1).
-export type UniversityFlag = { hoist: number; under: number };
-// The same on both boats. A reduced-motion still shows it settled.
-export function universityFlag(p: number, still = false): UniversityFlag {
-  const at = ({ month, span: [from, to] }: { month: string; span: readonly [number, number] }) => {
-    const t = scrolledSince(month, p);
-    return still ? (t < -1e-9 ? 0 : 1) : ease((t - from) / (to - from));
-  };
-  const { hoist, under, strike } = UNIVERSITY_FLAG;
-  return { hoist: at(hoist) * (1 - at(strike)), under: at(under) };
+type Span = { month: string; span: readonly [number, number] };
+// How far through a span of scroll since a date p is; a reduced-motion still
+// shows it done from the date on.
+const through = ({ month, span: [from, to] }: Span, p: number, still: boolean) => {
+  const t = scrolledSince(month, p);
+  return still ? (t < -1e-9 ? 0 : 1) : ease((t - from) / (to - from));
+};
+// How far up its staff it is (0 down, 1 up): the same on both boats.
+export const universityFlag = (p: number, still = false) =>
+  through(UNIVERSITY_FLAG.hoist, p, still) * (1 - through(UNIVERSITY_FLAG.strike, p, still));
+
+// The ensign staffs stand only while they carry a flag, so the sterns are
+// bare before the meeting and at the dock: each is stepped just before its
+// first flag is run up, the outboard one for the company's flags and the
+// inboard one for the university's, and unshipped once its last is struck,
+// the university's just after graduation's and the company's as the small
+// masts are lowered. Spans of scroll since each date, in shares.
+export const ENSIGN_STAFFS = {
+  company: { step: { month: monthOf('internship'), span: [0, .05] }, unship: { month: DATES.engaged, span: [-.1, .04] } },
+  university: { step: { month: DATES.meet, span: [0, .05] }, unship: { month: monthOf('graduation'), span: [.08, .12] } },
+} as const;
+// How far each staff stands (0 down, 1 up): the same on both boats.
+export function ensignStaffs(p: number, still = false) {
+  const stands = ({ step, unship }: { step: Span; unship: Span }) => through(step, p, still) * (1 - through(unship, p, still));
+  return { company: stands(ENSIGN_STAFFS.company), university: stands(ENSIGN_STAFFS.university) };
 }
 
 // January 2026, they start salsa classes: as the date shows, the catamaran

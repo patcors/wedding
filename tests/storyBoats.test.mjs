@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AMELIA_LEFT_FINOCOMP, ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, routeAt, scrolledSince, stillProgress } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, SALSA, boatPose, companyFlags, hullHalfBeam, joining, rigging, salsaClock, salsaTime, salsaTurn, universityFlag } from '../src/components/garden/storyBoats.ts';
-import { BIG_RIG, FLAG, LOGO_FLAG, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
+import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, SALSA, boatPose, companyFlags, ensignStaffs, hullHalfBeam, joining, rigging, salsaClock, salsaTime, salsaTurn, universityFlag } from '../src/components/garden/storyBoats.ts';
+import { BIG_RIG, ENSIGN, FLAG, HULL, LOGO_FLAG, ensignStaff, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
 const widths = [1, MOBILE_RIVER_WIDTH];
@@ -191,7 +191,7 @@ const flagRuns = boat => steps(40000).reduce((runs, p) => {
 }, []);
 const bothUp = (amelia, patrick) => [{ company: amelia, hoist: 1 }, { company: patrick, hoist: 1 }];
 
-test('the small mastheads fly nothing until both run up FinoComp flags as November 2018 shows', () => {
+test('the boats fly no company flag until both run up FinoComp\'s as November 2018 shows', () => {
   const internship = progressAt(MILESTONES.find(m => m.id === 'internship').month);
   for (const p of steps().filter(p => p < internship)) assert.ok(companyFlags(p).every(({ company }) => company === null), `a flag up before ${p}`);
   for (const p of [internship + .35 * ROOM, progressAt(DATES.sydney)]) assert.deepEqual(companyFlags(p), bothUp('finocomp', 'finocomp'));
@@ -202,11 +202,11 @@ test('Amelia leaves FinoComp for a while, then starts at HeirWealth before Patri
   const left = progressAt(DATES.leftFinoComp), joined = progressAt(DATES.joinedHeirWealth), patrick = progressAt(DATES.back);
   assert.ok(progressAt(DATES.sydney) < left && left < joined && joined < patrick);
   for (const month of [DATES.leftFinoComp, DATES.joinedHeirWealth]) assert.ok(MILESTONES.some(m => m.month === month), month);
-  // Each change on one halyard: the flag before all the way down before the next goes up.
+  // Each change on one staff: the flag before all the way down before the next goes up.
   const runs = [0, 1].map(flagRuns);
   assert.deepEqual(runs[0].map(run => run.company), [null, 'finocomp', 'interim', 'heirwealth', null]);
   assert.deepEqual(runs[1].map(run => run.company), [null, 'finocomp', 'heirwealth', null]);
-  for (const boat of runs) for (const run of boat.slice(2, -1)) assert.ok(run.after < .02 && run.hoist < .02, `${run.company} swapped at the foot of the halyard`);
+  for (const boat of runs) for (const run of boat.slice(2, -1)) assert.ok(run.after < .02 && run.hoist < .02, `${run.company} swapped at the foot of the staff`);
   // Each change starts as its month shows and is done while its date holds.
   const [, , interim, amelia] = runs[0], [, , heirwealth] = runs[1];
   assert.ok(interim.from >= left && amelia.from >= joined && heirwealth.from >= patrick);
@@ -250,38 +250,84 @@ test('reduced-motion stills show the company flags settled', () => {
   }
 });
 
-test('while they are at university both fly its flag, at the masthead alone and under FinoComp\'s from the internship', () => {
+test('while they are at university both fly its flag, alone and then beside FinoComp\'s', () => {
   const stopAt = id => STOPS[MILESTONES.findIndex(m => m.id === id) + 1];
   const at = id => progressAt(MILESTONES.find(m => m.id === id).month);
-  for (const p of steps().filter(p => p < progressAt(DATES.meet) || p >= stopAt('graduation'))) assert.equal(universityFlag(p).hoist, 0, `up at ${p}`);
+  for (const p of steps().filter(p => p < progressAt(DATES.meet) || p >= stopAt('graduation'))) assert.equal(universityFlag(p), 0, `up at ${p}`);
   // Run up as they meet and settled by the meeting's stop, flying alone.
-  assert.deepEqual(universityFlag(stopAt('meet')), { hoist: 1, under: 0 });
-  assert.deepEqual(universityFlag(stopAt('coast')), { hoist: 1, under: 0 });
+  assert.equal(universityFlag(stopAt('meet')), 1);
+  assert.equal(universityFlag(stopAt('coast')), 1);
   assert.ok(companyFlags(stopAt('coast')).every(({ company }) => company === null));
-  // Dropped under the company's flag as that goes up, both flying by the
-  // internship's stop and through 2019, and struck as they graduate.
-  assert.ok(universityFlag(at('internship') + .05 * ROOM).under > 0 && universityFlag(at('internship') + .05 * ROOM).hoist === 1);
+  // Both flying by the internship's stop and through 2019, and struck as they graduate.
   for (const id of ['internship', 'snow-2019']) {
-    assert.deepEqual(universityFlag(stopAt(id)), { hoist: 1, under: 1 }, id);
+    assert.equal(universityFlag(stopAt(id)), 1, id);
     assert.deepEqual(companyFlags(stopAt(id)), bothUp('finocomp', 'finocomp'), id);
   }
-  assert.deepEqual(universityFlag(at('graduation') - .01 * ROOM), { hoist: 1, under: 1 });
-  assert.ok(universityFlag(at('graduation') + .07 * ROOM).hoist < 1);
+  assert.equal(universityFlag(at('graduation') - .01 * ROOM), 1);
+  assert.ok(universityFlag(at('graduation') + .07 * ROOM) < 1);
   assert.deepEqual(companyFlags(stopAt('graduation')), bothUp('finocomp', 'finocomp'));
-  // It comes down smoothly: no jumps between steps.
+  // It goes up and comes down smoothly: no jumps between steps.
   let last = universityFlag(0);
   for (const p of steps(40000)) {
     const flag = universityFlag(p);
-    assert.ok(Math.abs(flag.hoist - last.hoist) < .05 && Math.abs(flag.under - last.under) < .05, `jumps at ${p}`);
+    assert.ok(Math.abs(flag - last) < .05, `jumps at ${p}`);
     last = flag;
   }
 });
 
 test('reduced-motion stills show the university\'s flag settled', () => {
   for (const { id, month } of MILESTONES) {
-    const flag = universityFlag(stillProgress(progressAt(month)), true);
-    const expected = ['meet', 'coast'].includes(id) ? { hoist: 1, under: 0 } : ['internship', 'snow-2019'].includes(id) ? { hoist: 1, under: 1 } : { hoist: 0, under: 1 };
-    assert.deepEqual(flag, expected, id);
+    const up = ['meet', 'coast', 'internship', 'snow-2019'].includes(id) ? 1 : 0;
+    assert.equal(universityFlag(stillProgress(progressAt(month)), true), up, id);
+  }
+});
+
+test('the flags fly from ensign staffs at the sterns, the company\'s outboard and the university\'s inboard, clear of each other', () => {
+  for (const morph of [0, .5, 1]) {
+    for (const side of [-1, 1]) {
+      const [x, top, z] = ensignStaff(side, morph);
+      // Aft, at the stern, low beside the sail: well under the masthead.
+      assert.ok(z > .55 && top < HULL.mastTop / 2, `${side} at ${morph}`);
+      assert.ok(side * x >= 0);
+    }
+  }
+  // On the dinghies the two staffs stand apart, so the two flags fly from
+  // their own; on the catamaran each hull's company flag flies from its stern.
+  assert.ok(ensignStaff(1, 0)[0] - ensignStaff(-1, 0)[0] > .2);
+  assert.equal(ensignStaff(1, 1)[2], ensignStaff(-1, 1)[2]);
+  assert.ok(ensignStaff(1, 1)[2] > ensignStaff(1, 0)[2] + .4);
+  // Alongside, the two inboard flags leave water between them.
+  const [inboard] = ensignStaff(1, 0);
+  assert.ok(ALONGSIDE - inboard - FLAG.length > .08);
+  // Each is hoisted to the top of a staff taller than the flag.
+  assert.ok(ENSIGN.height > FLAG.height * 1.6);
+});
+
+test('each staff stands only while it has a flag to carry, so both stand while the university\'s flies beside FinoComp\'s', () => {
+  const stopAt = id => STOPS[MILESTONES.findIndex(m => m.id === id) + 1];
+  for (const p of steps(40000)) {
+    const { company, university } = ensignStaffs(p);
+    // A flag only goes up a staff that is fully stepped.
+    assert.ok(companyFlags(p).every(({ hoist }) => hoist === 0 || company === 1), `a company flag on a falling staff at ${p}`);
+    assert.ok(universityFlag(p) === 0 || university === 1, `the university's flag on a falling staff at ${p}`);
+  }
+  // Bare sterns under the title and at the dock.
+  for (const p of [0, progressAt(DATES.meet) - .001, DOCKED, 1]) assert.deepEqual(ensignStaffs(p), { company: 0, university: 0 }, `${p}`);
+  // Both stand, each with its flag fully up, from the internship's stop through 2019.
+  for (const id of ['internship', 'snow-2019']) {
+    assert.deepEqual(ensignStaffs(stopAt(id)), { company: 1, university: 1 }, id);
+    assert.equal(universityFlag(stopAt(id)), 1, id);
+  }
+  // The university's is unshipped after graduation; the company's stays until the small masts go.
+  assert.deepEqual(ensignStaffs(stopAt('graduation')), { company: 1, university: 0 });
+  assert.deepEqual(ensignStaffs(stopAt('salsa')), { company: 1, university: 0 });
+  assert.deepEqual(ensignStaffs(stopAt('engaged')), { company: 0, university: 0 });
+  // Reduced-motion stills show them settled.
+  for (const { id, month } of MILESTONES) {
+    const p = stillProgress(progressAt(month));
+    const university = ['meet', 'coast', 'internship', 'snow-2019'].includes(id) ? 1 : 0;
+    const company = month >= MILESTONES.find(m => m.id === 'internship').month && month < DATES.engaged ? 1 : 0;
+    assert.deepEqual(ensignStaffs(p, true), { company, university }, id);
   }
 });
 

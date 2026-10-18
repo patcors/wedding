@@ -1,8 +1,8 @@
 // Patrick's and Amelia's boats for the Voyage: a dinghy with a painted
-// stripe, a taller mast for a flag, and a hull that morphs into a long, slim
-// catamaran hull. Both hull shapes share one topology, so the morph (shape
-// and paint) is a morph target the GPU blends. How each looks, dinghy and
-// catamaran, is a Review choice (boatLooks.ts).
+// stripe, ensign staffs at its stern for its flags, and a hull that morphs
+// into a long, slim catamaran hull. Both hull shapes share one topology, so
+// the morph (shape and paint) is a morph target the GPU blends. How each
+// looks, dinghy and catamaran, is a Review choice (boatLooks.ts).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { catamaranSailCloth, dinghySailCloth, type CatamaranLook, type DinghyLook, type HullPaint, type Owner } from './boatLooks.ts';
@@ -10,9 +10,11 @@ import { catamaranSailCloth, dinghySailCloth, type CatamaranLook, type DinghyLoo
 type Point = [number, number, number];
 
 // Cross-sections from bow (−z) to stern: [z, half-beam]. The dinghy's are the
-// wooden sailboat's; the catamaran hull is nearly twice as long and a third as wide.
-const DINGHY = { sections: [[-.78, .015], [-.55, .23], [-.12, .36], [.30, .33], [.66, .22]], keel: -.07, bilge: [.65, -.015], floor: .065 };
-const CATAMARAN = { sections: [[-1.5, .008], [-1.0, .1], [-.2, .135], [.6, .125], [1.15, .085]], keel: -.11, bilge: [.6, -.03], floor: .148 };
+// wooden sailboat's; the catamaran hull is nearly twice as long and a third as
+// wide. `quarter` is how far out the ensign staffs stand, a share of the
+// stern's half-beam.
+const DINGHY = { sections: [[-.78, .015], [-.55, .23], [-.12, .36], [.30, .33], [.66, .22]], keel: -.07, bilge: [.65, -.015], floor: .065, quarter: .6 };
+const CATAMARAN = { sections: [[-1.5, .008], [-1.0, .1], [-.2, .135], [.6, .125], [1.15, .085]], keel: -.11, bilge: [.6, -.03], floor: .148, quarter: 0 };
 export const HULL = {
   stern: { dinghy: .66, catamaran: 1.15 },
   mast: { dinghy: -.42, catamaran: -.36 },
@@ -88,6 +90,24 @@ const flatNormals = (positions: number[]) => {
   geometry.computeVertexNormals();
   return geometry.attributes.normal as THREE.BufferAttribute;
 };
+
+// The ensign staffs the company's and the university's flags fly from, one
+// at each stern quarter (side −1 port, +1 starboard), so each flag has its
+// own and both read when two fly. On a catamaran hull both stand on its
+// centreline at the stern, where the company's flies alone. They follow the
+// hull's morph aft as it grows long; `ensignStaff` is the top of one at a
+// morph, in the hull's frame, and `ensignStaffGeometry` one staff standing
+// on y 0, to be stood at its foot.
+export const ENSIGN = { foot: .1, height: .46, radius: .011 } as const;
+const staffFoot = ({ sections, quarter }: HullShape, side: number): Point => {
+  const [z, w] = sections[sections.length - 1];
+  return [side * w * quarter, ENSIGN.foot, z - .05];
+};
+export const ensignStaff = (side: number, morph: number): Point => {
+  const [dx, , dz] = staffFoot(DINGHY, side), [cx, , cz] = staffFoot(CATAMARAN, side);
+  return [lerp(dx, cx, morph), ENSIGN.foot + ENSIGN.height, lerp(dz, cz, morph)];
+};
+export const ensignStaffGeometry = () => spar([0, 0, 0], [0, ENSIGN.height, 0], ENSIGN.radius);
 
 // The dinghy's hull, with the catamaran hull's shape as morph target 0 and
 // its paint kept to blend into.
@@ -299,14 +319,14 @@ export function bigRig(look: CatamaranLook = 'original') {
   return { mast: spar([0, 0, 0], [0, top, 0], .026, tint), boom: spar([0, boom, .035], [0, boom, foot], .015, tint), cloth, map, ...extras };
 }
 
-// The flag at each small masthead, its hoist on the mast and its fly along
-// +x: the mark of the company each works for, on paper, from their
-// internship until they get engaged, and the university's, the same size,
-// while they're there.
-export const FLAG = { length: .36, height: .26, segments: 8 } as const;
+// The flag on each ensign staff, its hoist on the staff, its top at y 0 and
+// its fly along +x: the mark of the company each works for, on paper, from
+// their internship until they get engaged, and the university's, the same
+// size, while they're there.
+export const FLAG = { length: .32, height: .23, segments: 8 } as const;
 export function flagGeometry(mirrored: boolean) {
   const geometry = new THREE.PlaneGeometry(FLAG.length, FLAG.height, FLAG.segments, 2);
-  geometry.translate(FLAG.length / 2, HULL.mastTop - FLAG.height / 2 - .01, 0);
+  geometry.translate(FLAG.length / 2, -FLAG.height / 2, 0);
   // Seen from its back, a flag flying to the left would read backwards.
   if (mirrored) {
     const uv = geometry.attributes.uv;
@@ -347,7 +367,7 @@ export const companyFlagTexture = (mark: string | null) =>
   markedCloth(192, Math.round(192 * FLAG.height / FLAG.length), mark, { fill: .82 });
 
 // The flag the big mast flies from its masthead once they are engaged: their
-// monogram on paper, larger than the small masts' flags so it reads at the
+// monogram on paper, larger than the company flags so it reads at the
 // dock on a phone, and short enough to stay clear of the copy beside it on
 // desktop. In the big mast's units, hoist on the mast at its top (y 0) and
 // fly along +x, to starboard, clear of the sail.

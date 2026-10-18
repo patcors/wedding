@@ -1,19 +1,20 @@
 // Patrick's and Amelia's boats (owner: boats agent). They are kinematic: where
 // they are follows from useJourney().progress through storyBoats.ts, never
-// from boatPhysics. Two wooden sailboats, in separate channels before they
+// from boatPhysics. Two small sailboats, in separate channels before they
 // meet, side by side after, apart while Amelia is in Sydney, then joined into a
 // catamaran plank by plank from when they start dating, under one tall mast
 // flying their monogram from their engagement, moored at the jetty for the
-// celebration. Amelia's is on the left, Patrick's on the right. Each small
-// masthead flies the mark of the company its sailor works for, and while
-// they're at university, the university's under it. As they start salsa
-// classes the catamaran turns once on the spot, everything aboard with it.
+// celebration. Amelia's is on the left, Patrick's on the right. Each flies
+// the mark of the company its sailor works for from an ensign staff at its
+// stern, and while they're at university, the university's from the other.
+// As they start salsa classes the catamaran turns once on the spot,
+// everything aboard with it.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { routeAt } from './journey';
-import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, rigging, salsaClock, salsaTurn, universityFlag, type Company } from './storyBoats';
-import { BIG_RIG, FLAG, HULL, LOGO_FLAG, SAIL_EASED, bigRig, blendHullPaint, companyFlagTexture, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
+import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, ensignStaffs, rigging, salsaClock, salsaTurn, universityFlag, type Company } from './storyBoats';
+import { BIG_RIG, ENSIGN, FLAG, HULL, LOGO_FLAG, SAIL_EASED, bigRig, blendHullPaint, companyFlagTexture, ensignStaff, ensignStaffGeometry, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { BOAT_LOOK, catamaranPaint, deckColours, dinghyPaint, type BoatLook } from './boatLooks';
 
@@ -38,11 +39,9 @@ const MARKS: Record<Company, string | null> = { finocomp: 'finocomp-mark.png', i
 // The university's flag carries its shield, on the same paper.
 const UNIVERSITY_MARK = 'uow-shield.png';
 const texture = (mark: string) => `${import.meta.env.BASE_URL}textures/garden/${mark}`;
-// Where the flags' halyards start, above the booms, on the small masts and the big one.
-const FLAG_FOOT = .4, LOGO_FOOT = BIG_RIG.boom + .55;
-// How far below the masthead the university's flag flies under the company's,
-// on the other side of the mast: staggered, so the two read as two flags.
-const UNDER = FLAG.height * .75;
+// How far a flag runs up its ensign staff, from just clear of the rim to
+// the top; and where the monogram's halyard starts, above the big boom.
+const STAFF_RUN = ENSIGN.height - FLAG.height - .06, LOGO_FOOT = BIG_RIG.boom + .55;
 
 // Disposes every geometry and texture in a set of models.
 const dispose = (part: unknown): void => {
@@ -59,12 +58,12 @@ function useStoryBoatModels(look: BoatLook) {
         hull: storyHull(dinghyPaint(look.dinghy, owner), catamaranPaint(look.catamaran, owner, dinghyPaint(look.dinghy, owner))),
         rig: storyRig(side, look.dinghy, owner),
         // The company's flag flies outboard and the university's inboard,
-        // each mirrored where it flies to the left so its mark reads.
+        // each from its own staff, mirrored where it flies to the left so its mark reads.
         flag: flagGeometry(side < 0), university: flagGeometry(side > 0),
       })),
       companies: Object.fromEntries(COMPANIES.map(company => [company, companyFlagTexture(MARKS[company] && texture(MARKS[company]))])) as Record<Company, THREE.CanvasTexture>,
       university: companyFlagTexture(texture(UNIVERSITY_MARK)),
-      deck, deckColours: deckColours(look.catamaran),
+      deck, deckColours: deckColours(look.catamaran), staff: ensignStaffGeometry(),
       big: { ...bigRig(look.catamaran), flag: logoFlagGeometry(), banner: logoFlagTexture(`${import.meta.env.BASE_URL}logo.png`) },
       wake: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, .5),
       ripples: wakeTexture(),
@@ -87,9 +86,11 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
   const bigJib = useRef<THREE.Mesh>(null);
   const wakes = useRef<(THREE.Mesh | null)[]>([]);
   const deck = useRef<THREE.InstancedMesh>(null);
+  // Each boat's two ensign staffs, outboard then inboard, in one draw.
+  const staffs = useRef<THREE.InstancedMesh>(null);
   const big = useRef<THREE.Group>(null), bigSail = useRef<THREE.Group>(null), bigCloth = useRef<THREE.Mesh>(null);
   const logoFlag = useRef<THREE.Mesh>(null);
-  // Each boat's flags, one per company, on the one halyard.
+  // Each boat's flags, one per company, on the one staff.
   const flags = useRef<Partial<Record<Company, THREE.Mesh | null>>[]>(BOATS.map(() => ({})));
   const universityFlags = useRef<(THREE.Mesh | null)[]>([]);
   const time = useRef(0), last = useRef<number | null>(null), speed = useRef(0);
@@ -100,7 +101,7 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
     university: models.boats.map(({ university }) => Float32Array.from(university.attributes.position.array)),
     logo: Float32Array.from(models.big.flag.attributes.position.array),
   }), [models]);
-  const plank = useMemo(() => ({ matrix: new THREE.Matrix4(), position: new THREE.Vector3(), rotation: new THREE.Quaternion(), euler: new THREE.Euler(), scale: new THREE.Vector3() }), []);
+  const part = useMemo(() => ({ matrix: new THREE.Matrix4(), position: new THREE.Vector3(), rotation: new THREE.Quaternion(), euler: new THREE.Euler(), scale: new THREE.Vector3() }), []);
 
   // r3f sets the geometry after making the mesh, so the morph influences need setting up.
   useLayoutEffect(() => hulls.current.forEach((hull, i) => {
@@ -120,7 +121,7 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
     if (!paused) time.current += step;
     const p = clock.progress, t = time.current;
     const pose = boatPose(p, width), { join } = pose, rig = rigging(p, reduced), flying = companyFlags(p, reduced);
-    const university = universityFlag(p, reduced);
+    const university = universityFlag(p, reduced), stands = ensignStaffs(p, reduced);
     // How fast they're travelling, for the wakes: none while held or cut between stills.
     const z = routeAt(p);
     const moving = last.current === null || reduced || !step ? 0 : Math.min(1, Math.abs(z - last.current) / step / 3);
@@ -142,6 +143,7 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
       const phase = t + i * 1.7, yaw = side * pose.turn;
       boat.position.set(side * pose.gap, Math.sin(phase * 1.7) * .008 * own, 0);
       boat.rotation.set(Math.sin(phase * 1.4) * .025 * own, yaw, Math.sin(phase * 1.1) * .035 * own);
+      boat.updateMatrix();
       const hull = hulls.current[i];
       if (hull?.morphTargetInfluences && hull.morphTargetInfluences[0] !== join.morph) {
         hull.morphTargetInfluences[0] = join.morph;
@@ -164,26 +166,34 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
         cabin.visible = keep > 0;
         cabin.scale.setScalar(Math.max(keep, 1e-3));
       }
-      // The company's flag runs up its halyard to the masthead, and down
-      // again as the sail furls for the change of masts. The flags fly
-      // outwards whichever way the boats turn, so both marks face the camera:
-      // Amelia's to the left, Patrick's to the right.
+      // The staffs stand at the stern quarters, aft with the stern as the
+      // hull grows long, each stepped up from its foot while it has a flag
+      // to carry.
+      const [x, top, z] = ensignStaff(side, join.morph), [ix, , iz] = ensignStaff(-side, join.morph);
+      if (staffs.current) [[x, z, stands.company], [ix, iz, stands.university]].forEach(([sx, sz, stand], k) => {
+        part.position.set(sx, ENSIGN.foot, sz);
+        part.scale.set(stand > 0 ? 1 : 0, Math.max(stand, 1e-3), stand > 0 ? 1 : 0);
+        part.matrix.compose(part.position, part.rotation.identity(), part.scale).premultiply(boat.matrix);
+        staffs.current!.setMatrixAt(i * 2 + k, part.matrix);
+      });
+      // The company's flag runs up the outboard staff, and down again as the
+      // sail furls for the change of masts. The flags fly outwards whichever
+      // way the boats turn, so both marks face the camera: Amelia's to the
+      // left, Patrick's to the right.
       const { company, hoist } = flying[i];
       for (const name of COMPANIES) {
         const flag = flags.current[i][name];
         if (!flag) continue;
         flag.visible = company === name;
-        flag.position.y = -(1 - hoist) * (HULL.mastTop - FLAG_FOOT);
+        flag.position.set(x, top - (1 - hoist) * STAFF_RUN, z);
         flag.rotation.y = (side < 0 ? Math.PI : 0) - pose.yaw - yaw;
       }
       if (company) flutter(models.boats[i].flag, rest.flags[i], FLAG.length, t, i * 2);
-      // The university's runs up the same way, inboard, and drops under the
-      // company's once there is one.
+      // The university's runs up the same way on the inboard staff.
       const cloth = universityFlags.current[i];
       if (cloth) {
-        const under = university.under * UNDER;
-        cloth.visible = university.hoist > 0;
-        cloth.position.y = -under - (1 - university.hoist) * (HULL.mastTop - FLAG_FOOT - under);
+        cloth.visible = university > 0;
+        cloth.position.set(ix, top - (1 - university) * STAFF_RUN, iz);
         cloth.rotation.y = (side > 0 ? Math.PI : 0) - pose.yaw - yaw;
         if (cloth.visible) flutter(models.boats[i].university, rest.university[i], FLAG.length, t, i * 2 + 1);
       }
@@ -191,6 +201,10 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
       (wake.material as THREE.MeshBasicMaterial).opacity = .55 * speed.current;
       wake.visible = speed.current > .01;
     });
+    if (staffs.current) {
+      staffs.current.visible = stands.company > 0 || stands.university > 0;
+      staffs.current.instanceMatrix.needsUpdate = true;
+    }
 
     // The big mast grows up out of the deck, its boom with it, then its sail
     // unrolls from the mast along the boom.
@@ -218,11 +232,11 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
       // A still never catches a plank in mid-air.
       const k = reduced ? Math.round(laying) : laying;
       const beam = i < DECK.beams, settle = ease(k);
-      plank.position.set(0, (beam ? .17 : .215) + (1 - settle) * .4, beam ? BEAM_Z[i] : PLANK_Z(i - DECK.beams));
-      plank.rotation.setFromEuler(plank.euler.set((1 - settle) * .25, 0, (1 - settle) * (i % 2 ? .3 : -.3)));
+      part.position.set(0, (beam ? .17 : .215) + (1 - settle) * .4, beam ? BEAM_Z[i] : PLANK_Z(i - DECK.beams));
+      part.rotation.setFromEuler(part.euler.set((1 - settle) * .25, 0, (1 - settle) * (i % 2 ? .3 : -.3)));
       const size = k > 0 ? .75 + settle * .25 : 0;
-      plank.scale.set((CATAMARAN * 2 + (beam ? .2 : .14)) * size, (beam ? .05 : .028) * size, (beam ? .07 : .1) * size);
-      deck.current!.setMatrixAt(i, plank.matrix.compose(plank.position, plank.rotation, plank.scale));
+      part.scale.set((CATAMARAN * 2 + (beam ? .2 : .14)) * size, (beam ? .05 : .028) * size, (beam ? .07 : .1) * size);
+      deck.current!.setMatrixAt(i, part.matrix.compose(part.position, part.rotation, part.scale));
     });
     deck.current.instanceMatrix.needsUpdate = true;
   });
@@ -250,13 +264,13 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
             <meshStandardMaterial vertexColors map={models.boats[i].rig.jib!.map} side={THREE.DoubleSide} roughness={1} />
           </mesh>
         </group>}
-        {COMPANIES.map(company => <mesh key={company} ref={el => { flags.current[i][company] = el; }} geometry={models.boats[i].flag} visible={false}>
-          <meshStandardMaterial map={models.companies[company]} side={THREE.DoubleSide} roughness={1} />
-        </mesh>)}
-        <mesh ref={el => { universityFlags.current[i] = el; }} geometry={models.boats[i].university} visible={false}>
-          <meshStandardMaterial map={models.university} side={THREE.DoubleSide} roughness={1} />
-        </mesh>
       </group>
+      {COMPANIES.map(company => <mesh key={company} ref={el => { flags.current[i][company] = el; }} geometry={models.boats[i].flag} visible={false}>
+        <meshStandardMaterial map={models.companies[company]} side={THREE.DoubleSide} roughness={1} />
+      </mesh>)}
+      <mesh ref={el => { universityFlags.current[i] = el; }} geometry={models.boats[i].university} visible={false}>
+        <meshStandardMaterial map={models.university} side={THREE.DoubleSide} roughness={1} />
+      </mesh>
       {models.boats[i].rig.cabin && <mesh ref={el => { cabins.current[i] = el; }} geometry={models.boats[i].rig.cabin!.geometry} position-z={models.boats[i].rig.cabin!.z} castShadow>
         <meshStandardMaterial vertexColors roughness={.8} />
       </mesh>}
@@ -291,6 +305,9 @@ export default function VoyageBoats({ paused, reduced, width, look = BOAT_LOOK }
         <meshStandardMaterial map={models.big.banner} side={THREE.DoubleSide} roughness={1} />
       </mesh>
     </group>
+    <instancedMesh ref={staffs} args={[models.staff, undefined, BOATS.length * 2]} frustumCulled={false} visible={false}>
+      <meshStandardMaterial vertexColors roughness={1} />
+    </instancedMesh>
     <instancedMesh ref={deck} args={[models.deck, undefined, DECK.beams + DECK.planks]} castShadow frustumCulled={false}>
       <meshStandardMaterial roughness={1} />
     </instancedMesh>
