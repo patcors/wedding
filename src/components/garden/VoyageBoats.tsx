@@ -15,7 +15,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { routeAt } from './journey';
 import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, ensignStaffs, rigging, salsaClock, salsaTurn, universityFlag, type Company } from './storyBoats';
-import { BIG_RIG, ENSIGN, FLAG, HULL, LOGO_FLAG, SAIL_EASED, bigRig, blendHullPaint, companyFlagTexture, ensignStaff, ensignStaffGeometry, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, storyHull, storyRig, wakeTexture } from './storyBoatGeometry';
+import { BIG_RIG, ENSIGN, FLAGS, HULL, LOGO_FLAG, SAIL_EASED, bigRig, blendHullPaint, companyFlagTexture, ensignStaff, ensignStaffGeometry, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, sharpenFlag, storyHull, storyRig, wakeTexture, type FlagShape } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { BOAT_LOOK, catamaranPaint, deckColours, dinghyPaint, type BoatLook } from './boatLooks';
 import Proposal from './eggs/Proposal';
@@ -33,17 +33,22 @@ const BEAM_Z = [-.56, .56], PLANK_Z = (i: number) => -.66 + i * .12;
 // How far aft each small mast is lowered, to lie along its hull.
 const LOWERED = 1.48;
 const COMPANIES: Company[] = ['finocomp', 'interim', 'heirwealth'];
-// Each flag's mark in public/textures/garden/ (a small PNG on transparency).
+// Each flag's mark in public/textures/garden/ (a 512px PNG on
+// transparency) and the shape its cloth is cut to (FLAGS).
 // The interim flag, for Amelia's months tutoring and selling haircare, is
 // plain paper until she sends their logos: name one here, or for two, add a
 // company to Company and a change to Amelia's FLAG_CHANGES in storyBoats.ts.
-const MARKS: Record<Company, string | null> = { finocomp: 'finocomp-mark.png', interim: null, heirwealth: 'heirwealth-crown.png' };
-// The university's flag carries its shield, on the same paper.
-const UNIVERSITY_MARK = 'uow-shield.png';
-const texture = (mark: string) => `${import.meta.env.BASE_URL}textures/garden/${mark}`;
+const MARKS: Record<Company, { mark: string | null; shape: FlagShape }> = {
+  finocomp: { mark: 'finocomp-mark.png', shape: 'circle' },
+  interim: { mark: null, shape: 'cloth' },
+  heirwealth: { mark: 'heirwealth-crown.png', shape: 'square' },
+};
+// The university's flag is its shield.
+const UNIVERSITY = { mark: 'uow-shield.png', shape: 'shield' } as const;
+const texture = (mark: string | null) => mark && `${import.meta.env.BASE_URL}textures/garden/${mark}`;
 // How far a flag runs up its ensign staff, from just clear of the rim to
 // the top; and where the monogram's halyard starts, above the big boom.
-const STAFF_RUN = ENSIGN.height - FLAG.height - .06, LOGO_FOOT = BIG_RIG.boom + .55;
+const staffRun = (shape: FlagShape) => ENSIGN.height - FLAGS[shape].height - .06, LOGO_FOOT = BIG_RIG.boom + .55;
 
 // Disposes every geometry and texture in a set of models.
 const dispose = (part: unknown): void => {
@@ -61,10 +66,11 @@ function useStoryBoatModels(look: BoatLook) {
         rig: storyRig(side, look.dinghy, owner),
         // The company's flag flies outboard and the university's inboard,
         // each from its own staff, mirrored where it flies to the left so its mark reads.
-        flag: flagGeometry(side < 0), university: flagGeometry(side > 0),
+        flags: Object.fromEntries(COMPANIES.map(company => [company, flagGeometry(side < 0, MARKS[company].shape)])) as Record<Company, THREE.PlaneGeometry>,
+        university: flagGeometry(side > 0, UNIVERSITY.shape),
       })),
-      companies: Object.fromEntries(COMPANIES.map(company => [company, companyFlagTexture(MARKS[company] && texture(MARKS[company]))])) as Record<Company, THREE.CanvasTexture>,
-      university: companyFlagTexture(texture(UNIVERSITY_MARK)),
+      companies: Object.fromEntries(COMPANIES.map(company => [company, companyFlagTexture(texture(MARKS[company].mark), MARKS[company].shape)])) as Record<Company, ReturnType<typeof companyFlagTexture>>,
+      university: companyFlagTexture(texture(UNIVERSITY.mark), UNIVERSITY.shape),
       deck, deckColours: deckColours(look.catamaran), staff: ensignStaffGeometry(),
       big: { ...bigRig(look.catamaran), flag: logoFlagGeometry(), banner: logoFlagTexture(`${import.meta.env.BASE_URL}logo.png`) },
       wake: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, .5),
@@ -99,7 +105,7 @@ export default function VoyageBoats({ paused, reduced, mobile, width, look = BOA
   // Seconds into the salsa turn (see SALSA), or null before it.
   const salsa = useRef<number | null>(null);
   const rest = useMemo(() => ({
-    flags: models.boats.map(({ flag }) => Float32Array.from(flag.attributes.position.array)),
+    flags: models.boats.map(({ flags }) => Object.fromEntries(COMPANIES.map(company => [company, Float32Array.from(flags[company].attributes.position.array)])) as Record<Company, Float32Array>),
     university: models.boats.map(({ university }) => Float32Array.from(university.attributes.position.array)),
     logo: Float32Array.from(models.big.flag.attributes.position.array),
   }), [models]);
@@ -187,17 +193,17 @@ export default function VoyageBoats({ paused, reduced, mobile, width, look = BOA
         const flag = flags.current[i][name];
         if (!flag) continue;
         flag.visible = company === name;
-        flag.position.set(x, top - (1 - hoist) * STAFF_RUN, z);
+        flag.position.set(x, top - (1 - hoist) * staffRun(MARKS[name].shape), z);
         flag.rotation.y = (side < 0 ? Math.PI : 0) - pose.yaw - yaw;
       }
-      if (company) flutter(models.boats[i].flag, rest.flags[i], FLAG.length, t, i * 2);
+      if (company) flutter(models.boats[i].flags[company], rest.flags[i][company], FLAGS[MARKS[company].shape].length, t, i * 2);
       // The university's runs up the same way on the inboard staff.
       const cloth = universityFlags.current[i];
       if (cloth) {
         cloth.visible = university > 0;
-        cloth.position.set(ix, top - (1 - university) * STAFF_RUN, iz);
+        cloth.position.set(ix, top - (1 - university) * staffRun(UNIVERSITY.shape), iz);
         cloth.rotation.y = (side > 0 ? Math.PI : 0) - pose.yaw - yaw;
-        if (cloth.visible) flutter(models.boats[i].university, rest.university[i], FLAG.length, t, i * 2 + 1);
+        if (cloth.visible) flutter(models.boats[i].university, rest.university[i], FLAGS[UNIVERSITY.shape].length, t, i * 2 + 1);
       }
       wake.position.z = HULL.stern.dinghy + (HULL.stern.catamaran - HULL.stern.dinghy) * join.morph - .05;
       (wake.material as THREE.MeshBasicMaterial).opacity = .55 * speed.current;
@@ -267,11 +273,11 @@ export default function VoyageBoats({ paused, reduced, mobile, width, look = BOA
           </mesh>
         </group>}
       </group>
-      {COMPANIES.map(company => <mesh key={company} ref={el => { flags.current[i][company] = el; }} geometry={models.boats[i].flag} visible={false}>
-        <meshStandardMaterial map={models.companies[company]} side={THREE.DoubleSide} roughness={1} />
+      {COMPANIES.map(company => <mesh key={company} ref={el => { flags.current[i][company] = el; }} geometry={models.boats[i].flags[company]} visible={false}>
+        <meshStandardMaterial {...models.companies[company]} alphaTest={.5} alphaToCoverage onBeforeCompile={sharpenFlag} side={THREE.DoubleSide} roughness={1} />
       </mesh>)}
       <mesh ref={el => { universityFlags.current[i] = el; }} geometry={models.boats[i].university} visible={false}>
-        <meshStandardMaterial map={models.university} side={THREE.DoubleSide} roughness={1} />
+        <meshStandardMaterial {...models.university} alphaTest={.5} alphaToCoverage onBeforeCompile={sharpenFlag} side={THREE.DoubleSide} roughness={1} />
       </mesh>
       {models.boats[i].rig.cabin && <mesh ref={el => { cabins.current[i] = el; }} geometry={models.boats[i].rig.cabin!.geometry} position-z={models.boats[i].rig.cabin!.z} castShadow>
         <meshStandardMaterial vertexColors roughness={.8} />

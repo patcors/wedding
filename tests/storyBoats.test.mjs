@@ -3,7 +3,7 @@ import test from 'node:test';
 import { AMELIA_LEFT_FINOCOMP, ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, routeAt, scrolledSince, stillProgress } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, bendShift, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
 import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, SALSA, boatPose, companyFlags, ensignStaffs, hullHalfBeam, joining, rigging, salsaClock, salsaTime, salsaTurn, universityFlag } from '../src/components/garden/storyBoats.ts';
-import { BIG_RIG, ENSIGN, FLAG, HULL, LOGO_FLAG, ensignStaff, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
+import { BIG_RIG, ENSIGN, FLAGS, HULL, LOGO_FLAG, ensignStaff, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
 const widths = [1, MOBILE_RIVER_WIDTH];
@@ -297,11 +297,11 @@ test('the flags fly from ensign staffs at the sterns, the company\'s outboard an
   assert.ok(ensignStaff(1, 0)[0] - ensignStaff(-1, 0)[0] > .2);
   assert.equal(ensignStaff(1, 1)[2], ensignStaff(-1, 1)[2]);
   assert.ok(ensignStaff(1, 1)[2] > ensignStaff(1, 0)[2] + .4);
-  // Alongside, the two inboard flags leave water between them.
+  // Alongside, the two inboard flags, the university's shields, leave water between them.
   const [inboard] = ensignStaff(1, 0);
-  assert.ok(ALONGSIDE - inboard - FLAG.length > .08);
+  assert.ok(ALONGSIDE - inboard - FLAGS.shield.length > .08);
   // Each is hoisted to the top of a staff taller than the flag.
-  assert.ok(ENSIGN.height > FLAG.height * 1.6);
+  for (const [shape, { height }] of Object.entries(FLAGS)) assert.ok(ENSIGN.height > height * 1.6, shape);
 });
 
 test('each staff stands only while it has a flag to carry, so both stand while the university\'s flies beside FinoComp\'s', () => {
@@ -338,7 +338,7 @@ test('the big mast flies their monogram on one flag at its masthead, larger than
   const { min, max } = flag.boundingBox;
   // Hanging from the masthead, flying to starboard, away from the sail eased to port.
   assert.ok(Math.abs(max.y) < 1e-6 && Math.abs(min.x) < 1e-6 && max.x > 0);
-  assert.ok(LOGO_FLAG.length > FLAG.length * 1.4 && LOGO_FLAG.height > FLAG.height * 1.4);
+  for (const [shape, { length, height }] of Object.entries(FLAGS)) assert.ok(LOGO_FLAG.length > length * 1.4 && LOGO_FLAG.height > height * 1.4, shape);
   assert.ok(BIG_RIG.top - LOGO_FLAG.height > BIG_RIG.boom + .5, 'clear of the boom');
   flag.dispose();
 });

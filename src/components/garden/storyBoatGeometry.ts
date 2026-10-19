@@ -320,13 +320,24 @@ export function bigRig(look: CatamaranLook = 'original') {
 }
 
 // The flag on each ensign staff, its hoist on the staff, its top at y 0 and
-// its fly along +x: the mark of the company each works for, on paper, from
-// their internship until they get engaged, and the university's, the same
-// size, while they're there.
-export const FLAG = { length: .32, height: .23, segments: 8 } as const;
-export function flagGeometry(mirrored: boolean) {
-  const geometry = new THREE.PlaneGeometry(FLAG.length, FLAG.height, FLAG.segments, 2);
-  geometry.translate(FLAG.length / 2, -FLAG.height / 2, 0);
+// its fly along +x: the mark of the company each works for, from their
+// internship until they get engaged, and the university's while they're
+// there. Each is cut to its logo's shape: FinoComp's a disc of paper, the
+// university's its shield, HeirWealth's a rounded square of paper round its
+// crown, and the plain interim flag an ordinary flag of paper.
+export type FlagShape = 'cloth' | 'circle' | 'square' | 'shield';
+export const FLAGS: Record<FlagShape, { length: number; height: number }> = {
+  cloth: { length: .32, height: .23 },
+  circle: { length: .26, height: .26 },
+  square: { length: .25, height: .25 },
+  // The shield's own proportions (uow-shield.png).
+  shield: { length: .205, height: .267 },
+};
+export const FLAG_SEGMENTS = 8;
+export function flagGeometry(mirrored: boolean, shape: FlagShape) {
+  const { length, height } = FLAGS[shape];
+  const geometry = new THREE.PlaneGeometry(length, height, FLAG_SEGMENTS, 2);
+  geometry.translate(length / 2, -height / 2, 0);
   // Seen from its back, a flag flying to the left would read backwards.
   if (mirrored) {
     const uv = geometry.attributes.uv;
@@ -334,6 +345,8 @@ export function flagGeometry(mirrored: boolean) {
   }
   return geometry;
 }
+
+const PAPER = '#f7f3e8';
 
 // Paper cloth with a mark (an image on transparency) as large as fits
 // `fill` of its height, centred between `from` and the fly. `heading` adds
@@ -346,7 +359,7 @@ function markedCloth(width: number, height: number, mark: string | null, { fill,
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#f7f3e8'; ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, width, height);
   if (heading) { ctx.fillStyle = '#e4dcc6'; ctx.fillRect(0, 0, width * .04, height); }
   if (!mark) return texture;
   const image = new Image();
@@ -360,11 +373,68 @@ function markedCloth(width: number, height: number, mark: string | null, { fill,
   return texture;
 }
 
-// A company's flag, or the university's: its mark in its own colour on
-// paper, or plain paper without one. Centred, so it sits the same whichever
-// way the flag flies.
-export const companyFlagTexture = (mark: string | null) =>
-  markedCloth(192, Math.round(192 * FLAG.height / FLAG.length), mark, { fill: .82 });
+// A company's flag, or the university's, at 512px across its longer side:
+// its mark in its own colour, filling most of the flag, and an alpha map
+// that cuts the cloth to its shape (drawn with alphaTest). The colour is
+// opaque everywhere, so the cut edge never picks up a dark fringe. The
+// shield is its own cloth: uow-shield.png carries the paper inside it, and
+// its navy rim runs out under the cut. Centred, so it sits the same whichever
+// way the flag flies. The plain interim flag needs no cut.
+const MARK_FILL: Record<FlagShape, number> = { cloth: .82, circle: .84, square: .82, shield: 1 };
+export function companyFlagTexture(mark: string | null, shape: FlagShape) {
+  const { length, height } = FLAGS[shape], scale = 512 / Math.max(length, height);
+  const width = Math.round(length * scale), tall = Math.round(height * scale);
+  const canvas = (fill?: string) => {
+    const element = document.createElement('canvas');
+    element.width = width; element.height = tall;
+    const ctx = element.getContext('2d')!;
+    if (fill) { ctx.fillStyle = fill; ctx.fillRect(0, 0, width, tall); }
+    return { element, ctx };
+  };
+  const texture = (element: HTMLCanvasElement, colour: boolean) => {
+    const made = new THREE.CanvasTexture(element);
+    if (colour) made.colorSpace = THREE.SRGBColorSpace;
+    made.anisotropy = 8;
+    return made;
+  };
+  const cloth = canvas(shape === 'shield' ? '#061b3e' : PAPER), map = texture(cloth.element, true);
+  const cut = shape === 'cloth' ? null : canvas('#000');
+  const alphaMap = cut && texture(cut.element, false);
+  if (cut && shape !== 'shield') {
+    cut.ctx.fillStyle = '#fff';
+    cut.ctx.beginPath();
+    if (shape === 'circle') cut.ctx.arc(width / 2, tall / 2, Math.min(width, tall) / 2, 0, Math.PI * 2);
+    else cut.ctx.roundRect(0, 0, width, tall, Math.min(width, tall) * .14);
+    cut.ctx.fill();
+  }
+  if (!mark) return { map, alphaMap };
+  const image = new Image();
+  image.onload = () => {
+    const fill = MARK_FILL[shape];
+    const w = Math.min(width * fill, tall * fill * image.width / image.height), h = w * image.height / image.width;
+    const x = (width - w) / 2, y = (tall - h) / 2;
+    cloth.ctx.drawImage(image, x, y, w, h);
+    map.needsUpdate = true;
+    if (cut && shape === 'shield') {
+      // The shield's silhouette, white on black, from its own alpha.
+      const silhouette = canvas();
+      silhouette.ctx.drawImage(image, x, y, w, h);
+      silhouette.ctx.globalCompositeOperation = 'source-in';
+      silhouette.ctx.fillStyle = '#fff'; silhouette.ctx.fillRect(0, 0, width, tall);
+      cut.ctx.drawImage(silhouette.element, 0, 0);
+      alphaMap!.needsUpdate = true;
+    }
+  };
+  image.src = mark;
+  return { map, alphaMap };
+}
+
+// A flag is only a few dozen pixels across on screen, where the usual mip
+// level blurs its mark, so its material samples the map a level sharper.
+export function sharpenFlag(shader: THREE.WebGLProgramParametersWithUniforms) {
+  shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+    THREE.ShaderChunk.map_fragment.replace('texture2D( map, vMapUv )', 'texture2D( map, vMapUv, -1.0 )'));
+}
 
 // The flag the big mast flies from its masthead once they are engaged: their
 // monogram on paper, larger than the company flags so it reads at the
