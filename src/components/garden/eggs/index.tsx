@@ -22,6 +22,7 @@ import Careers from './Careers';
 import Rocket from './Rocket';
 import Circus from './Circus';
 import Sydney from './Sydney';
+import Inspectable from '../inspect/Inspectable';
 
 const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: TurkeyGreece, university: University, 'snow-2019': SnowTrip,
   graduation: Graduation, sydney: Sydney, apartments: Birdhouses, 'snow-2025': SecondSnowTrip };
@@ -38,7 +39,7 @@ export default function Eggs(props: SlotProps) {
   return <>{MILESTONES.map(milestone => {
     if (!milestone.egg) return null;
     const Egg = EGGS[milestone.egg];
-    return <Egg key={milestone.id} milestone={milestone} {...props} />;
+    return <Inspectable key={milestone.id} id={milestone.egg} milestone={milestone.id}><Egg milestone={milestone} {...props} /></Inspectable>;
   })}
   {SCENERY.map((Scenery, i) => <Scenery key={i} {...props} />)}</>;
 }
