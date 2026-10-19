@@ -313,10 +313,10 @@ export default function VoyageBoats({ paused, reduced, mobile, width, look = BOA
         <meshStandardMaterial map={models.big.banner} side={THREE.DoubleSide} roughness={1} />
       </mesh>
     </group>
-    <instancedMesh ref={staffs} args={[models.staff, undefined, BOATS.length * 2]} frustumCulled={false} visible={false}>
+    <instancedMesh ref={staffs} name="flag-staffs" args={[models.staff, undefined, BOATS.length * 2]} frustumCulled={false} visible={false}>
       <meshStandardMaterial vertexColors roughness={1} />
     </instancedMesh>
-    <instancedMesh ref={deck} args={[models.deck, undefined, DECK.beams + DECK.planks]} castShadow frustumCulled={false}>
+    <instancedMesh ref={deck} name="deck" args={[models.deck, undefined, DECK.beams + DECK.planks]} castShadow frustumCulled={false}>
       <meshStandardMaterial roughness={1} />
     </instancedMesh>
     <Proposal paused={paused} reduced={reduced} mobile={mobile} />

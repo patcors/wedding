@@ -2,7 +2,7 @@
 // compares visual variants; guests always get the defaults below. The page
 // renders on the server so the opening text is in the HTML before any script;
 // three.js arrives later in its own chunk, behind the cover.
-import { Component, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
@@ -238,6 +238,9 @@ const REVIEW_DATE = 'pa_dev_date_label';
 const REVIEW_TEXT = 'pa_dev_text';
 // Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
 const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
+// Dev only: inspect the scene and leave notes for Claude, and ?at= (inspect/, see docs/VOYAGE.md).
+const InspectLayer = REVIEW ? lazy(() => import('./inspect/InspectTools')) : null;
+const InspectControls = REVIEW ? lazy(() => import('./inspect/InspectTools').then(module => ({ default: module.InspectControls }))) : null;
 
 export default function Garden() {
   const [paused, setPaused] = useState(false);
@@ -569,7 +572,9 @@ export default function Garden() {
       </label>
       </>}
       {readyIn !== null && <span className="garden-review-load">Loaded in {readyIn.toFixed(1)}s</span>}
+      {InspectControls && <Suspense fallback={null}><InspectControls pace={voyage.pace} go={voyage.go} /></Suspense>}
     </aside>}
+    {InspectLayer && <Suspense fallback={null}><InspectLayer go={voyage.go} ready={ready} /></Suspense>}
     <div className="garden-scroll-space" />
   </main>;
 }

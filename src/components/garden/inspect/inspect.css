@@ -1,0 +1,48 @@
+/* Dev only: the Review panel's inspect mode (inspect/InspectTools.tsx,
+   InspectProbe.tsx). In the Review panel's paper and ink. The notes open
+   above the panel, which they are placed in (it is fixed and transformed). */
+.garden-inspect-controls { display: inline-flex; align-items: center; gap: 14px; }
+.garden-inspect-controls > button { font-size: 9px; padding: 4px 0; }
+.garden-inspect-notes { position: absolute; bottom: calc(100% + 14px); left: 50%; transform: translateX(-50%); width: min(460px, calc(100vw - 24px)); max-height: min(60vh, 520px); overflow-y: auto; box-sizing: border-box; padding: 14px 16px; border: 1px solid #fff9; border-radius: 18px; background: #f7f6ee; box-shadow: 0 4px 24px #3d4e3520; white-space: normal; font-size: 11px; line-height: 1.35; text-align: left; }
+.garden-inspect-notes ol { margin: 0 0 10px; padding: 0; list-style: none; display: grid; gap: 10px; }
+.garden-inspect-notes li { display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; }
+.garden-inspect-notes li > .garden-inspect-buttons { grid-column: 2; }
+.garden-inspect-note-text { display: flex; flex-direction: column; gap: 1px; overflow-wrap: anywhere; }
+.garden-inspect-number, .garden-inspect-marker { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #8b6158; color: #fff; font: 600 10px/1 system-ui, sans-serif; }
+.garden-inspect-quiet { color: #6e7464; font-size: .9em; }
+.garden-inspect-buttons, .garden-inspect-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.garden-inspect-layer button, .garden-inspect-notes button { appearance: none; border: 0; background: none; color: inherit; cursor: pointer; font-family: inherit; font-size: 11px; padding: 6px 0; min-height: 28px; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.garden-inspect-notes button:disabled { opacity: .45; cursor: default; text-decoration: none; }
+.garden-inspect-danger { color: #a3412f; }
+.garden-inspect-actions { padding-top: 8px; border-top: 1px solid #747d602a; }
+.garden-inspect-said { display: block; min-height: 1em; color: #5a7a4f; }
+.garden-inspect-manual { width: 100%; box-sizing: border-box; font: 10px/1.3 ui-monospace, monospace; }
+.garden-inspect-empty { margin: 0 0 10px; color: #6e7464; }
+
+/* The label and the note box, above the Review panel. */
+.garden-inspect-layer { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+.garden-inspect-label, .garden-inspect-note { position: fixed; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; max-width: min(320px, calc(100vw - 16px)); padding: 8px 11px; border: 1px solid #fff9; border-radius: 12px; background: #f7f6eef2; box-shadow: 0 4px 18px #3d4e3526; color: var(--garden-ink, #333); font: 11px/1.35 system-ui, sans-serif; }
+.garden-inspect-label.is-touch, .garden-inspect-note { pointer-events: auto; }
+.garden-inspect-name { font-size: 13px; }
+.garden-inspect-label code, .garden-inspect-note code { font: 10px/1.3 ui-monospace, monospace; overflow-wrap: anywhere; color: #5b5f52; }
+.garden-inspect-note { width: 300px; gap: 3px; }
+.garden-inspect-note textarea { margin-top: 4px; width: 100%; box-sizing: border-box; resize: vertical; padding: 6px 8px; border: 1px solid #747d6050; border-radius: 8px; background: #fff; color: inherit; font: 13px/1.35 system-ui, sans-serif; }
+.garden-inspect-note textarea:focus-visible { outline: 2px solid #8b6158; outline-offset: 1px; }
+.garden-inspect-note button[type=submit] { font-weight: 600; }
+.garden-inspect-note button[type=submit]:disabled { opacity: .45; cursor: default; text-decoration: none; }
+/* On a phone the box sits near the top, clear of the keyboard. */
+.garden-inspect-note.is-phone { top: calc(64px + env(safe-area-inset-top)); left: 12px; right: 12px; width: auto; max-width: 480px; margin: 0 auto; }
+@media (max-height: 500px) { .garden-inspect-note.is-phone { top: 8px; } .garden-inspect-note.is-phone textarea { height: 3.4em; } }
+.garden-inspect-note.is-phone textarea { font-size: 16px; }
+.garden-inspect-pin { position: fixed; width: 14px; height: 14px; margin: -9px 0 0 -9px; border: 2px solid #8b6158; border-radius: 50%; background: #fff8; box-shadow: 0 0 0 2px #fff9; }
+.garden-inspect-marker { box-shadow: 0 0 0 2px #fff9; }
+@media (max-width: 700px) {
+  /* In the panel's last row, which makes room for it, so the panel is no
+     taller and the cue and test buttons above it stay where they are. */
+  .garden-inspect-controls { grid-column: span 4; gap: 10px; justify-content: center; }
+  .garden-review:has(.garden-inspect-controls) .garden-material-selector:has(select[aria-label="Texture downloads"], select[aria-label="When the scene prepares"]) { grid-column: span 3; }
+  .garden-review:has(.garden-inspect-controls) .garden-review-load { grid-column: span 2; white-space: normal; line-height: 1.15; }
+  .garden-inspect-controls > button { font-size: 8px; min-height: 32px; }
+  .garden-inspect-notes { bottom: calc(100% + 10px); width: 100%; max-height: 50svh; }
+  .garden-inspect-label { font-size: 12px; }
+}

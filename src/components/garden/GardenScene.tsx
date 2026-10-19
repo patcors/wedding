@@ -1,6 +1,6 @@
 // The Garden's 3D scene: wiring only. Each part lives in its own component,
 // so it can be worked on without touching the others (see docs/VOYAGE.md).
-import { useMemo, type RefObject } from 'react';
+import { Suspense, lazy, useMemo, type RefObject } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { MOBILE_RIVER_WIDTH } from './gardenGeometry';
@@ -23,6 +23,10 @@ import VoyageBoats from './VoyageBoats';
 import NameFlight from './NameFlight';
 import Eggs from './eggs';
 import type { BoatLook } from './boatLooks';
+import Inspectable from './inspect/Inspectable';
+
+// Dev only: the Review panel's inspect mode (inspect/).
+const InspectProbe = import.meta.env.DEV ? lazy(() => import('./inspect/InspectProbe')) : null;
 
 type AssetChoices = { groundStyle: GroundStyle; rockStyle: RockStyle; lightTrees: boolean };
 // Every model and texture the scene needs, with the orientation its maps load in.
@@ -67,19 +71,20 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
   const waterTint = useMemo(createWaterTint, []);
   return <JourneyProvider scroll={progress} pace={pace} paused={paused} reduced={reduced}>
     <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} />
-    <GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} />
+    <Inspectable id="sky"><GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} /></Inspectable>
     <GardenGround width={width} style={groundStyle} />
     <GardenTrees width={width} mobile={mobile} paused={still} lightTrees={lightTrees} />
     <GardenBankDetails width={width} rockStyle={rockStyle} plantStyle={plantStyle} />
     {plantStyle === 'varied' && <GardenPlants width={width} mobile={mobile} paused={still} visible />}
     {rockStyle === 'moss' && <GardenRocks width={width} visible />}
-    <GardenWater paused={still} width={width} mobile={mobile} reeds={plantStyle === 'varied'} launchRequest={boatLaunchRequest} tint={waterTint} />
-    <Petals paused={still} width={width} />
+    <Inspectable id="water"><GardenWater paused={still} width={width} mobile={mobile} reeds={plantStyle === 'varied'} launchRequest={boatLaunchRequest} tint={waterTint} /></Inspectable>
+    <Inspectable id="petals"><Petals paused={still} width={width} /></Inspectable>
     <FallingLeaves paused={still} width={width} />
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
     <Eggs {...slot} />
     {arrival && <NameFlight panel={arrival} width={width} />}
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />
+    {InspectProbe && <Suspense fallback={null}><InspectProbe width={width} /></Suspense>}
   </JourneyProvider>;
 }
