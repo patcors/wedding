@@ -160,9 +160,11 @@ const yearMarks = ax.years.filter(({ p }) => p > 0 && p < 1);
         document.body.dataset.layout = input.value;
         popover.hidden = true;
       }));
-      document.querySelector<HTMLSelectElement>('select[name="zoom"]')!.addEventListener('change', event => {
-        document.body.style.setProperty('--zoom', (event.target as HTMLSelectElement).value);
-      });
+      const zoom = document.querySelector<HTMLSelectElement>('select[name="zoom"]')!;
+      const zoomTo = (value: string) => { zoom.value = value; document.body.style.setProperty('--zoom', value); };
+      zoom.addEventListener('change', () => zoomTo(zoom.value));
+      // A phone's narrow screen starts zoomed in, to scroll along.
+      if (innerWidth < 700) zoomTo('4');
 
       const tooltip = document.querySelector<HTMLElement>('.tooltip')!;
       const showTip = (text: string, x: number, y: number) => {
@@ -187,6 +189,7 @@ const yearMarks = ax.years.filter(({ p }) => p > 0 && p < 1);
       const popover = document.querySelector<HTMLElement>('.popover')!;
       document.addEventListener('click', event => {
         const target = event.target as HTMLElement;
+        tooltip.hidden = true;
         if (target.closest('.popover')) { if (target.closest('.close')) popover.hidden = true; return; }
         const track = target.closest<HTMLElement>('.chart .track');
         if (!track) { popover.hidden = true; return; }
@@ -298,6 +301,12 @@ const yearMarks = ax.years.filter(({ p }) => p > 0 && p < 1);
         .label { padding-left: 8px; padding-right: 6px; font-size: 11px; }
         .legend { font-size: 11px; gap: 2px 10px; }
         .milestone { font-size: 9px; }
+      }
+      /* A short screen (a phone on its side) scrolls the header away and gives the chart the whole screen. */
+      @media (max-height: 500px) {
+        body { height: auto; display: block; }
+        .chart { height: 100svh; }
+        .row.milestones { min-height: 44px; }
       }
     </style>
   </body>

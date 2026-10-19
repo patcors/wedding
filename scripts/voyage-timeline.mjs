@@ -7,7 +7,7 @@
 //   node scripts/voyage-timeline.mjs --layout phone     one layout
 //   node scripts/voyage-timeline.mjs --pieces           also every piece's windows, and what each stretch holds
 //   node scripts/voyage-timeline.mjs --top 20           list more of the busiest moments
-//   node scripts/voyage-timeline.mjs --at 0.62          what is in view at p .62
+//   node scripts/voyage-timeline.mjs --at 0.62          what is in view at p .62 (* competing)
 //   node scripts/voyage-timeline.mjs --json             all of it as JSON
 import { sceneryCatalog } from '../src/components/garden/sceneryCatalog.ts';
 import { CROWDED, LAYOUTS, dateAt, timeline, windowLabel } from '../src/components/garden/voyageTimeline.ts';
@@ -32,7 +32,7 @@ for (const name of layouts) {
     const i = Math.round(at / result.step);
     const seen = result.pieces.filter(piece => within(piece.seen, at));
     console.log(`  p ${at} (${dateAt(at)}): ${result.counts[i]} counted in view`);
-    for (const piece of seen) console.log(`    ${piece.counted ? '*' : ' '} ${piece.name} (${piece.bank})`);
+    for (const piece of seen) console.log(`    ${within(piece.counting, at) ? '*' : ' '} ${piece.name} (${piece.bank})`);
     continue;
   }
   if (args.includes('--pieces')) {
