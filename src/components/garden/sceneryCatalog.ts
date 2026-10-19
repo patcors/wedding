@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { VOYAGE, bankEdge, islandHalfWidth, islandSpan, launchJetties, pointSpot, riverCenter, rockHalfWidth, voyageLandmarks } from './gardenGeometry.ts';
 import { treeBase } from './gardenTreeSpots.ts';
 import { DATES, MILESTONES, ROOM, progressAt, scrolledSince } from './journey.ts';
-import { BOAT_SCALE, SALSA, boatPose, catamaran, companyFlags, joining, rigging, salsaTime, universityFlag, type Company } from './storyBoats.ts';
+import { SALSA, boatPose, catamaran, companyFlags, joining, rigging, salsaTime, universityFlag, type Company } from './storyBoats.ts';
 import { HULL } from './storyBoatGeometry.ts';
 import { rubberDuck } from './rubberDuckGeometry.ts';
 import { DUCKS, duckOnWater, piSpot } from './eggs/campus.ts';
@@ -90,8 +90,8 @@ const monthOf = (id: string) => MILESTONES.find(m => m.id === id)!.month;
 
 // The boats, for whatever rides on them: round both hulls and up to the masthead.
 function boats(p: number, width: number, extra = 0): Sphere[] {
-  const pose = boatPose(p, width), half = HULL.mastTop * BOAT_SCALE / 2;
-  return [sphere(pose.x, half, pose.z, Math.hypot(pose.gap * BOAT_SCALE + .5, half) + extra)];
+  const pose = boatPose(p, width), half = HULL.mastTop * pose.scale / 2;
+  return [sphere(pose.x, half, pose.z, Math.hypot(pose.gap * pose.scale + .5, half) + extra)];
 }
 
 export function sceneryCatalog(width: number): Piece[] {

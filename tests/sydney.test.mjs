@@ -3,8 +3,8 @@ import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, groundHeight, pointInland, pointSpot, riverCenter, rockHalfWidth, voyageClearing } from '../src/components/garden/gardenGeometry.ts';
 import { DATES, MILESTONES, ROOM, STOPS, monthIndex, progressAt, routeAt } from '../src/components/garden/journey.ts';
-import { ALONGSIDE, BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
-import { HULL } from '../src/components/garden/storyBoatGeometry.ts';
+import { ALONGSIDE, boatScale, boatPose } from '../src/components/garden/storyBoats.ts';
+import { HULL, SAIL_EASED } from '../src/components/garden/storyBoatGeometry.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
 import { BRIDGE, HARBOUR_SHOWN, OPERA, archAt, bridgeStems, harbourBridge, harbourShown, onPoint, operaHouseSpot, pointStems } from '../src/components/garden/eggs/harbour.ts';
 import { pointGeometry, pointTop, rockGeometry, rockHeight, rockInland } from '../src/components/garden/voyageRock.ts';
@@ -24,16 +24,35 @@ const p0 = progressAt('2020-08'), p1 = progressAt(DATES.back);
 const range = (from, to, step = .0005) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
 
 // Points round one boat's hull rim in the world at p (Amelia's is −1), and
-// where its mast stands, from the dinghy's sections.
+// where its mast stands, from the dinghy's sections; and its mainsail's
+// tack, head and clew (the toy sloop's, eased out to its side, SAIL_EASED).
 const SECTIONS = [[-.78, .015], [-.55, .23], [-.12, .36], [.30, .33], [.66, .22]];
 const boat = (p, width, side) => {
   const pose = boatPose(p, width), c = Math.cos(pose.yaw), s = Math.sin(pose.yaw);
   const turn = side * pose.turn, ct = Math.cos(turn), st = Math.sin(turn);
-  const at = (u, v) => {
+  const at = (u, v, y = 0) => {
     const bu = side * pose.gap + u * ct + v * st, bv = -u * st + v * ct;
-    return { x: pose.x + (c * bu + s * bv) * BOAT_SCALE, z: pose.z + (-s * bu + c * bv) * BOAT_SCALE };
+    return { x: pose.x + (c * bu + s * bv) * pose.scale, y: -.02 + y * pose.scale, z: pose.z + (-s * bu + c * bv) * pose.scale };
   };
-  return { hull: SECTIONS.flatMap(([v, w]) => [at(-w, v), at(w, v)]), mast: at(0, HULL.mast.dinghy) };
+  const mast = HULL.mast.dinghy + .03, boom = .83, eased = side * SAIL_EASED;
+  return {
+    hull: SECTIONS.flatMap(([v, w]) => [at(-w, v), at(w, v)]), mast: at(0, HULL.mast.dinghy),
+    sail: [at(0, mast, .26), at(0, mast, 1.18), at(boom * Math.sin(eased), mast + boom * Math.cos(eased), .26)],
+  };
+};
+// Degrees right of the middle of the picture and above the horizon of a point from the camera at p.
+const sight = (p, width, { x, y, z }) => {
+  const [cx, cy, cz] = cameraPose(p, width).position;
+  return { bearing: seen(p, width, x, z).bearing, up: degrees(Math.atan2(y - cy, Math.hypot(x - cx, z - cz))) };
+};
+// How far (degrees) a point seen at `at` lies outside a triangle seen at
+// `corners` (negative inside), by the edge it is furthest beyond.
+const outside = (at, corners) => {
+  const spin = Math.sign((corners[1].bearing - corners[0].bearing) * (corners[2].up - corners[0].up) - (corners[1].up - corners[0].up) * (corners[2].bearing - corners[0].bearing));
+  return Math.max(...corners.map((a, i) => {
+    const b = corners[(i + 1) % 3], dx = b.bearing - a.bearing, dy = b.up - a.up;
+    return -spin * (dx * (at.up - a.up) - dy * (at.bearing - a.bearing)) / Math.hypot(dx, dy);
+  }));
 };
 // When the boats reach z.
 const reach = z => { let p = p0; while (routeAt(p) > z) p += 1e-5; return p; };
@@ -159,9 +178,18 @@ test('the Opera House is in the picture through 2022 to August\'s stop on deskto
         assert.ok(Math.abs(at.bearing) < halfView(width) - .6 && at.distance < 26, `${at.bearing.toFixed(1)}°, ${at.distance.toFixed(1)} away at ${p} (width ${width})`);
       }
     }
-    // At August 2022's stop it stands clear of her boat's sails, to their left.
-    const { hull, mast } = boat(interim, width, -1), sails = Math.min(...hull.map(({ x, z }) => seen(interim, width, x, z).bearing), seen(interim, width, mast.x - .5, mast.z).bearing);
-    for (const { x, z } of corners) assert.ok(seen(interim, width, x, z).bearing < sails - .3, `behind her sails at August's stop (width ${width})`);
+    // At August 2022's stop it stands clear of her boat and its sail: left
+    // of her hull or above its rim in the picture, and nowhere behind the
+    // sail, whose clew, out over the water to her left, lies low in the
+    // picture below the house.
+    const { hull, sail } = boat(interim, width, -1), rim = hull.map(point => sight(interim, width, { ...point, y: .2 * boatScale(width) }));
+    const port = Math.min(...rim.map(at => at.bearing)), gunwale = Math.max(...rim.map(at => at.up));
+    const cloth = sail.map(point => sight(interim, width, point));
+    for (const corner of [...corners, ...corners.map(at => ({ ...at, y: top.y }))]) {
+      const at = sight(interim, width, corner);
+      assert.ok(at.bearing < port - .3 || at.up > gunwale + .3, `behind her hull at August's stop (width ${width})`);
+      assert.ok(outside(at, cloth) > .2, `behind her sail at August's stop (width ${width})`);
+    }
     // Amelia's boat passes well clear of the point.
     for (const p of range(progressAt('2022-08'), progressAt('2023-01'))) {
       for (const { x, z } of boat(p, width, -1).hull) assert.ok(pointInland(x, z, width) < -.3, `her boat near the point at ${p} (width ${width})`);
@@ -192,8 +220,8 @@ test('the Harbour Bridge spans Amelia\'s channel from the rock to her bank, and 
 });
 
 test('Amelia\'s boat sails under it between the piers, her masthead well clear of the deck, as Sydney\'s date holds', () => {
-  const masthead = HULL.mastTop * BOAT_SCALE + .02;
   for (const width of widths) {
+    const masthead = HULL.mastTop * boatScale(width) + .02;
     const bridge = harbourBridge(width);
     assert.ok(bridge.deck - masthead > .3, `deck ${bridge.deck} over a masthead at ${masthead}`);
     // Every moment any part of her hull is under the bridge, between its pylons' inner faces.

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ARRIVAL_END, MILESTONES, STOPS } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH } from '../src/components/garden/gardenGeometry.ts';
-import { BOAT_SCALE, boatPose, mastheadAt } from '../src/components/garden/storyBoats.ts';
+import { boatScale, boatPose, mastheadAt } from '../src/components/garden/storyBoats.ts';
 import { HULL } from '../src/components/garden/storyBoatGeometry.ts';
 import { NAME_FLIGHT, NAMES_GONE, flightPoint, landingScale, nameBows, nameFlight, nameLandings, namesAway } from '../src/components/garden/openingNames.ts';
 
@@ -88,10 +88,10 @@ test('the names fly to each boat\'s masthead: Amelia\'s on the left, Patrick\'s 
     // Downstream is −z, so the left bank is −x.
     assert.ok(amelia.x < pose.x && patrick.x > pose.x, `either side at ${p} (width ${width})`);
     for (const [side, top] of [[-1, amelia], [1, patrick]]) {
-      assert.equal(top.y, -.02 + HULL.mastTop * BOAT_SCALE + .5);
+      assert.equal(top.y, -.02 + HULL.mastTop * boatScale(width) + .5);
       // Over its own hull, its mast's length forward of the hull's middle.
-      const c = Math.cos(pose.yaw), s = Math.sin(pose.yaw), hull = { x: pose.x + c * side * pose.gap * BOAT_SCALE, z: pose.z - s * side * pose.gap * BOAT_SCALE };
-      assert.ok(Math.abs(Math.hypot(top.x - hull.x, top.z - hull.z) - Math.abs(HULL.mast.dinghy) * BOAT_SCALE) < 1e-9, `${side} at ${p} (width ${width})`);
+      const c = Math.cos(pose.yaw), s = Math.sin(pose.yaw), hull = { x: pose.x + c * side * pose.gap * boatScale(width), z: pose.z - s * side * pose.gap * boatScale(width) };
+      assert.ok(Math.abs(Math.hypot(top.x - hull.x, top.z - hull.z) - Math.abs(HULL.mast.dinghy) * boatScale(width)) < 1e-9, `${side} at ${p} (width ${width})`);
       assert.ok(top.z < hull.z, 'forward of its middle');
     }
   }

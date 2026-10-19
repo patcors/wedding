@@ -3,7 +3,7 @@ import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, islandHalfWidth, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { MILESTONES, ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
-import { BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
+import { boatScale, boatPose } from '../src/components/garden/storyBoats.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
 import { CANDLES, CANDLESTICKS, ORNAMENTS, PIE, PIE_BED, WEDGES, candleBoxes, groundUnder, ornamentShown, ornamentSpot, pieBedFootprint, wedgeAngles } from '../src/components/garden/eggs/careerSpots.ts';
 import { YEAR_MARKERS, yearMarkerSpot } from '../src/components/garden/eggs/yearMarkerSpots.ts';
@@ -60,7 +60,7 @@ test('at its milestone\'s stop each is clear of the boats and their flags, on a 
       const p = stop(at), spot = ornamentSpot(ornament, width), pose = boatPose(p, width);
       const { bearing } = seen(p, width, spot.x, spot.z);
       for (const side of [-1, 1]) {
-        const hull = seen(p, width, pose.x + side * pose.gap * BOAT_SCALE * Math.cos(pose.yaw), pose.z - side * pose.gap * BOAT_SCALE * Math.sin(pose.yaw));
+        const hull = seen(p, width, pose.x + side * pose.gap * boatScale(width) * Math.cos(pose.yaw), pose.z - side * pose.gap * boatScale(width) * Math.sin(pose.yaw));
         // Outside the boat and the flag flying outboard of its masthead.
         assert.ok(Math.abs(bearing - hull.bearing) > 3.5, `${ornament.facing} behind a boat at ${at} (width ${width})`);
       }

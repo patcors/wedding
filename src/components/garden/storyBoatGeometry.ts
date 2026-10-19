@@ -98,7 +98,7 @@ const flatNormals = (positions: number[]) => {
 // hull's morph aft as it grows long; `ensignStaff` is the top of one at a
 // morph, in the hull's frame, and `ensignStaffGeometry` one staff standing
 // on y 0, to be stood at its foot.
-export const ENSIGN = { foot: .1, height: .46, radius: .011 } as const;
+export const ENSIGN = { foot: .1, height: .58, radius: .013 } as const;
 const staffFoot = ({ sections, quarter }: HullShape, side: number): Point => {
   const [z, w] = sections[sections.length - 1];
   return [side * w * quarter, ENSIGN.foot, z - .05];
@@ -324,14 +324,17 @@ export function bigRig(look: CatamaranLook = 'original') {
 // internship until they get engaged, and the university's while they're
 // there. Each is cut to its logo's shape: FinoComp's a disc of paper, the
 // university's its shield, HeirWealth's a rounded square of paper round its
-// crown, and the plain interim flag an ordinary flag of paper.
+// crown, and the plain interim flag an ordinary flag of paper. On a real
+// phone the marks were too small to make out (Amelia, October 2026), so each
+// is now about 1.4 times the size it was (the disc was .26 across), on a
+// taller staff.
 export type FlagShape = 'cloth' | 'circle' | 'square' | 'shield';
 export const FLAGS: Record<FlagShape, { length: number; height: number }> = {
-  cloth: { length: .32, height: .23 },
-  circle: { length: .26, height: .26 },
-  square: { length: .25, height: .25 },
+  cloth: { length: .44, height: .32 },
+  circle: { length: .36, height: .36 },
+  square: { length: .35, height: .35 },
   // The shield's own proportions (uow-shield.png).
-  shield: { length: .205, height: .267 },
+  shield: { length: .284, height: .37 },
 };
 export const FLAG_SEGMENTS = 8;
 export function flagGeometry(mirrored: boolean, shape: FlagShape) {
@@ -379,8 +382,10 @@ function markedCloth(width: number, height: number, mark: string | null, { fill,
 // opaque everywhere, so the cut edge never picks up a dark fringe. The
 // shield is its own cloth: uow-shield.png carries the paper inside it, and
 // its navy rim runs out under the cut. Centred, so it sits the same whichever
-// way the flag flies. The plain interim flag needs no cut.
-const MARK_FILL: Record<FlagShape, number> = { cloth: .82, circle: .84, square: .82, shield: 1 };
+// way the flag flies. The plain interim flag needs no cut. FinoComp's round
+// mark fills its disc to a thin rim of paper, and the crown nearly fills its
+// square.
+const MARK_FILL: Record<FlagShape, number> = { cloth: .82, circle: .95, square: .9, shield: 1 };
 export function companyFlagTexture(mark: string | null, shape: FlagShape) {
   const { length, height } = FLAGS[shape], scale = 512 / Math.max(length, height);
   const width = Math.round(length * scale), tall = Math.round(height * scale);
@@ -448,7 +453,7 @@ export function logoFlagGeometry() {
   return geometry;
 }
 export const logoFlagTexture = (logo: string) =>
-  markedCloth(384, Math.round(384 * LOGO_FLAG.height / LOGO_FLAG.length), logo, { fill: .84, from: .07, heading: true });
+  markedCloth(512, Math.round(512 * LOGO_FLAG.height / LOGO_FLAG.length), logo, { fill: .84, from: .07, heading: true });
 
 // Waves a flag's cloth about its rest shape, more towards the fly, and lets
 // the fly droop a little. `rest` is its positions as built.

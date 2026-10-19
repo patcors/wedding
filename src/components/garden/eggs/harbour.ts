@@ -31,7 +31,7 @@ export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.1, mobile: 1
 // is `deck` above the water, well clear of Amelia's masthead. A phone's span
 // is shorter, as its river is narrower, so its arch rises less.
 export const BRIDGE = {
-  deck: 2.15, thick: .1,
+  deck: 2.35, thick: .1,
   desktop: { inset: .42, inland: .75, half: .26, pylon: { across: .7, along: .5, above: .62 }, bearing: .4, ends: 2.62, crown: 3.5, chord: .34, member: .05, panels: 14 },
   mobile: { inset: .26, inland: .5, half: .2, pylon: { across: .42, along: .3, above: .5 }, bearing: .4, ends: 2.5, crown: 3.02, chord: .26, member: .035, panels: 9 },
 } as const;

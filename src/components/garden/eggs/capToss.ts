@@ -5,7 +5,7 @@
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt } from '../journey.ts';
-import { BOAT_SCALE, boatPose } from '../storyBoats.ts';
+import { boatPose } from '../storyBoats.ts';
 
 // One cap a boat: Amelia's (the −x boat) and then Patrick's, each tossed `at`
 // shares after the date, while it holds, just after their UOW flags come
@@ -33,7 +33,7 @@ export type Toss = (typeof CAPS.tosses)[number];
 export function capLaunch(month: string, toss: Toss, width: number) {
   const p = progressAt(month) + toss.at * ROOM, pose = boatPose(p, width);
   // The boat's middle, across from the pair's and a little aft, turned with them.
-  const across = toss.side * pose.gap * BOAT_SCALE, aft = .35 * BOAT_SCALE;
+  const across = toss.side * pose.gap * pose.scale, aft = .35 * pose.scale;
   const c = Math.cos(pose.yaw), s = Math.sin(pose.yaw);
   return { x: pose.x + c * across + s * aft, y: .55, z: pose.z - s * across + c * aft };
 }
