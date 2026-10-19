@@ -1,37 +1,77 @@
-/* The scroll cue: once the scene is revealed, "Wander with us" at the foot of
-   the screen says how to move on, over a line with a mark running down it.
-   Touch screens say "Swipe up", with the line above, running upward like the
-   finger. The copy's halo keeps it legible over the bright water. Clicking it goes
-   to the voyage's first milestone. It goes for good once the guest scrolls a little. */
-.garden-prototype .garden-scroll-cue { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 6px 18px;
-  font: italic 25px/1 'Cormorant Garamond', Georgia, serif; white-space: nowrap; transition: opacity .5s ease, visibility .5s; }
-/* The trailing letter-spacing would push the word off centre. */
-.garden-scroll-cue-how { font: 500 9px 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: .3em; margin-right: -.3em; }
-.garden-scroll-cue-touch { display: none; }
-.garden-scroll-cue i { position: relative; width: 1px; height: 40px; margin-top: 3px; overflow: hidden; box-shadow: 0 0 3px 1px color-mix(in srgb, var(--garden-glow) 80%, transparent); }
-.garden-scroll-cue i::before, .garden-scroll-cue i::after { content: ''; position: absolute; left: 0; width: 1px; background: currentColor; }
-.garden-scroll-cue i::before { top: 0; bottom: 0; opacity: .25; }
-.garden-scroll-cue i::after { top: 0; height: 40%; animation: garden-scroll-cue 2.4s cubic-bezier(.65, 0, .35, 1) infinite; }
-@keyframes garden-scroll-cue { from { transform: translateY(-100%); } to { transform: translateY(250%); } }
-.garden-scroll-cue.is-done { opacity: 0; visibility: hidden; }
+/* The scroll helper (scrollGuide.ts, Garden.tsx): Amelia found it wasn't
+   obvious, on a phone above all, that the Garden scrolls (October 2026).
+   Once the opening has settled a large hint comes up over the scene: on a
+   touch screen a hand over the whole screen sweeping a finger up, under a
+   soft shade, with "Swipe up to sail"; with a mouse a scroll wheel turning
+   and chevrons drifting down, low in the middle, with "Scroll to sail". It
+   lets every touch through, fades as soon as the guest moves on and comes
+   back when they are still (at most three times a visit). White, over a
+   shade of the dusk's slate, so it reads over the pale dawn and the trees. */
+.garden-guide-layer { z-index: 3; }
+.garden-guide { --guide-shade: 16, 24, 36; position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 7svh;
+  color: #fff; opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility .45s; pointer-events: none; }
+.garden-guide.is-shown { opacity: 1; visibility: visible; transition-duration: .8s; }
+/* The shade: a soft pool behind the hint, so the scene stays in view round it. */
+.garden-guide::before { content: ''; position: absolute; left: 50%; bottom: 0; width: min(820px, 100%); height: 56svh; transform: translateX(-50%); z-index: -1;
+  background: radial-gradient(ellipse 50% 62% at 50% 68%, rgba(var(--guide-shade), .55), rgba(var(--guide-shade), .28) 55%, transparent 100%); }
+.garden-guide svg { display: block; overflow: visible; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 6px rgba(var(--guide-shade), .45)); }
+.garden-guide p { margin: 10px 0 0; font: italic 400 50px/1.1 'Cormorant Garamond', Georgia, serif; letter-spacing: .01em; text-shadow: 0 1px 10px rgba(var(--guide-shade), .55), 0 0 2px rgba(var(--guide-shade), .35); white-space: nowrap; }
+
+/* With a mouse: the wheel and chevrons. */
+.garden-guide-hand, .garden-guide-touch { display: none !important; }
+.garden-guide-mouse { width: 64px; height: 155px; stroke-width: 2; }
+.garden-guide-wheel { stroke-width: 3; animation: garden-guide-wheel 1.8s cubic-bezier(.5, 0, .4, 1) infinite; }
+.garden-guide-chevron { animation: garden-guide-chevron 1.8s ease-in-out infinite; }
+.garden-guide-chevron + .garden-guide-chevron { animation-delay: .18s; }
+@keyframes garden-guide-wheel { 0% { transform: translateY(0); opacity: 1; } 55% { transform: translateY(12px); opacity: 0; } 56% { transform: translateY(0); opacity: 0; } 100% { opacity: 1; } }
+@keyframes garden-guide-chevron { 0%, 100% { transform: translateY(-4px); opacity: .35; } 50% { transform: translateY(6px); opacity: 1; } }
+
+/* On a touch screen: the hand sweeping a finger up under two chevrons, over the whole screen. */
 @media (hover: none) {
-  .garden-scroll-cue i { order: -1; margin: 0 0 3px; }
-  .garden-scroll-cue-mouse { display: none; }
-  .garden-scroll-cue-touch { display: inline; }
-  .garden-scroll-cue i::after { animation-direction: reverse; }
+  .garden-guide { padding-bottom: 13svh; }
+  .garden-guide::before { inset: 0; width: auto; height: auto; transform: none;
+    background: radial-gradient(ellipse 85% 48% at 50% 58%, rgba(var(--guide-shade), .5), rgba(var(--guide-shade), .26) 62%, rgba(var(--guide-shade), .14)); }
+  .garden-guide-mouse, .garden-guide-wheel-label { display: none !important; }
+  .garden-guide-hand, .garden-guide-touch { display: block !important; }
+  .garden-guide-hand { width: 124px; height: 215px; stroke-width: 2.6; }
+  .garden-guide-finger path { fill: rgba(255, 255, 255, .16); }
+  .garden-guide-finger { animation: garden-guide-swipe 2.2s cubic-bezier(.45, 0, .3, 1) infinite; }
+  .garden-guide-hand .garden-guide-chevron { stroke-width: 3; animation: garden-guide-rise 2.2s ease-in-out infinite; }
+  .garden-guide-hand .garden-guide-chevron + .garden-guide-chevron { animation-delay: .2s; }
+  .garden-guide p { font-size: 42px; margin-top: 4px; }
 }
-@media (max-width: 700px) {
-  .garden-prototype .garden-scroll-cue { font-size: 23px; }
-  .garden-scroll-cue-how { font-size: 8px; }
+@keyframes garden-guide-swipe { 0% { transform: translateY(18px); opacity: 0; } 14% { opacity: 1; } 62% { transform: translateY(-16px); opacity: 1; } 80%, 100% { transform: translateY(-20px); opacity: 0; } }
+@keyframes garden-guide-rise { 0%, 100% { transform: translateY(5px); opacity: .3; } 50% { transform: translateY(-5px); opacity: 1; } }
+@media (max-width: 380px), (max-height: 620px) {
+  .garden-guide p { font-size: 36px; }
+  .garden-guide-hand { width: 104px; height: 180px; }
 }
-/* Phones on their side: a shorter line, so the cue stays below the boats. */
+/* Phones on their side: shorter, beside nothing, still in the middle. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .garden-prototype .garden-scroll-cue { font-size: 20px; gap: 6px; }
-  .garden-scroll-cue i { height: 24px; }
+  .garden-guide { padding-top: 6svh; }
+  .garden-guide-hand { width: 72px; height: 125px; }
+  .garden-guide p { font-size: 32px; margin-top: 0; }
 }
+/* Reduced motion: the same hint, still: the hand, the wheel and the chevrons at rest. */
 @media (prefers-reduced-motion: reduce) {
-  .garden-scroll-cue i::after { display: none; }
-  .garden-scroll-cue i::before { opacity: .5; }
+  .garden-guide-finger, .garden-guide-wheel, .garden-guide-chevron { animation: none !important; }
   /* Opacity alone is not motion: keep the fade. */
-  .garden-prototype .garden-scroll-cue { transition: opacity .5s ease, visibility .5s !important; }
+  .garden-prototype .garden-guide { transition: opacity .45s ease, visibility .45s !important; }
 }
+
+/* "Wander with us": the old scroll cue's words, for screen readers and the
+   keyboard, which take it to the first milestone. Shown only while focused. */
+.garden-prototype .garden-wander { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); padding: 10px 18px; font: italic 24px/1 'Cormorant Garamond', Georgia, serif; white-space: nowrap; }
+.garden-prototype .garden-wander:not(:focus-visible) { width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.garden-wander.is-done { visibility: hidden; }
+
+/* "Sail on" under the date: glides to the dock without stopping, and while
+   it does reads "Pause". Large enough to read on a phone, white on a small
+   pane of the slate shade, so it holds its contrast over the bright sky. */
+.garden-prototype .garden-glide { display: inline-flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 22px 11px 18px; border-radius: 999px;
+  font: italic 400 22px/1 'Cormorant Garamond', Georgia, serif; letter-spacing: .01em; color: #fff; text-shadow: none;
+  background: rgba(16, 24, 36, .46); border: 1px solid rgba(255, 255, 255, .45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.garden-glide svg { flex: none; margin-top: 1px; }
+.garden-glide:hover { background: rgba(16, 24, 36, .58); }
+@media (max-width: 700px) { .garden-prototype .garden-glide { margin-top: 10px; font-size: 21px; padding: 9px 20px 10px 16px; } }
+@media (orientation: landscape) and (max-height: 500px) { .garden-prototype .garden-glide { margin-top: 6px; font-size: 19px; padding: 7px 18px 8px 14px; } }

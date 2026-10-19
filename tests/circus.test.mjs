@@ -8,7 +8,7 @@ import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src
 import { MILESTONES, ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
 import { treePlacements } from '../src/components/garden/gardenTreeSpots.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
-import { BIRD, LYRA, RIGS, SILK, hangSpot, onTree, rigShown, rigTree } from '../src/components/garden/eggs/circusRigs.ts';
+import { LYRA, RIGS, SILK, hangSpot, onTree, rigShown, rigTree } from '../src/components/garden/eggs/circusRigs.ts';
 import { YEAR_MARKERS, yearMarkerSpot } from '../src/components/garden/eggs/yearMarkerSpots.ts';
 
 await MeshoptDecoder.ready;
@@ -29,8 +29,8 @@ const stop = id => STOPS[MILESTONES.findIndex(m => m.id === id) + 1];
 const limb = (rig, width) => width < 1 ? rig.limb.mobile : rig.limb.desktop;
 const inland = (x, z, width) => riverCenter(z, width) - x - bankEdge(z, width);
 // Each one's stretch in the picture: the silk from November 2022 to January
-// 2023's stop, the lyra and the bird from October 2025 to just past salsa's stop.
-const SEEN = [[SILK, '2022-11', stop('amelia-heirwealth')], [LYRA, '2025-10', stop('salsa')], [BIRD, '2025-10', stop('salsa')]];
+// 2023's stop, the lyra from October 2025 to just past salsa's stop.
+const SEEN = [[SILK, '2022-11', stop('amelia-heirwealth')], [LYRA, '2025-10', stop('salsa')]];
 
 test('each hangs on Amelia\'s bank, the left, from a tree standing there', () => {
   for (const [width] of LAYOUTS) {
@@ -57,8 +57,8 @@ test('each hangs from the underside of a real branch, with nothing in the way be
       assert.ok(nearest < .01, `${id}'s limb is on the bark (${nearest})`);
       // Out on a limb, not the trunk, and above the tree's first branches.
       assert.ok(Math.hypot(lx, lz) > 2 && ly > 3, `${id} hangs from a limb`);
-      // The rope, strop or feet drop straight down from it, clear of other branches.
-      const drop = id === 'bird' ? .4 : 1.5;
+      // The rope or strop drops straight down from it, clear of other branches.
+      const drop = 1.5;
       for (let i = 0; i < vertices.length; i += 3) {
         const below = ly - vertices[i + 1];
         if (below > .02 && below < drop) assert.ok(Math.hypot(vertices[i] - lx, vertices[i + 2] - lz) > .1, `${id} hangs clear (width ${width})`);
@@ -66,7 +66,7 @@ test('each hangs from the underside of a real branch, with nothing in the way be
       const spot = hangSpot(rig, width), on = onTree(tree, [lx, ly, lz], width);
       assert.deepEqual([spot.x, spot.y, spot.z], [on.x, on.y, on.z]);
       // Hung high enough to read: the silk's tails reach nearly to the ground from well overhead.
-      assert.ok(spot.y - spot.ground > (id === 'bird' ? 3.5 : 4.5), `${id} hangs ${spot.y - spot.ground} up`);
+      assert.ok(spot.y - spot.ground > 4.5, `${id} hangs ${spot.y - spot.ground} up`);
     }
   }
 });
@@ -98,7 +98,7 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
   const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
   const { ORNAMENTS: WORK, ornamentSpot: workSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
   const { ORNAMENTS: UNI, ornamentSpot: uniSpot } = await import('../src/components/garden/eggs/uniOrnaments.ts');
-  const { rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
+  const { bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
   const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { operaHouseSpot } = await import('../src/components/garden/eggs/harbour.ts');
   for (const [width] of LAYOUTS) {
@@ -111,7 +111,7 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
       ...Object.values(nestSpots(width)).map(house => ['birdhouse', house]),
       ...WORK.map(ornament => [`${ornament.facing} ornament`, workSpot(ornament, width)]),
       ...Object.entries(UNI).map(([name, ornament]) => [name, uniSpot(ornament, width)]),
-      ['rocket', rocketSpot(width)],
+      ['bullet', bulletSpot(width)],
       ['Hagia Sophia', hagiaSophiaSpot('2026-07', width)],
       ['Opera House', operaHouseSpot(width)],
     ];
@@ -119,10 +119,8 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
       const spot = hangSpot(rig, width);
       for (const [name, other] of others) assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${name} crowds the ${id} (width ${width})`);
     }
-    // The lyra and the bird hang together, a little apart; the silk on its own, years before them.
-    const [silk, lyra, bird] = [SILK, LYRA, BIRD].map(rig => hangSpot(rig, width));
-    const apart = Math.hypot(lyra.x - bird.x, lyra.z - bird.z);
-    assert.ok(apart > 1.5 && apart < 4, `the lyra and the bird ${apart} apart`);
+    // The silk on its own, years before the lyra.
+    const [silk, lyra] = [SILK, LYRA].map(rig => hangSpot(rig, width));
     assert.ok(Math.abs(silk.z - lyra.z) > 40);
   }
 });
@@ -161,23 +159,18 @@ test('each dissolves in no earlier than its month, and is gone once the camera h
   }
 });
 
-test('the silk, the lyra and the bird are each one small mesh', async () => {
-  const { SILK_SHAPE, silkGeometry, writeSilk, lyraGeometry, hangingBirdGeometry, writeHangingBird, HANGING_BIRD_TRIANGLES } = await import('../src/components/garden/eggs/circusGeometry.ts');
+test('the silk and the lyra are each one small mesh', async () => {
+  const { SILK_SHAPE, silkGeometry, writeSilk, lyraGeometry } = await import('../src/components/garden/eggs/circusGeometry.ts');
   const triangles = geometry => (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3;
-  const silk = silkGeometry(), bird = hangingBirdGeometry(), lyra = lyraGeometry(2.4);
+  const silk = silkGeometry(), lyra = lyraGeometry(2.4);
   writeSilk(silk, 5, 1.3, 1);
-  writeHangingBird(bird, 1.15, .3);
-  for (const geometry of [silk, bird, lyra]) {
+  for (const geometry of [silk, lyra]) {
     assert.ok(triangles(geometry) < 1500);
     assert.ok([...geometry.attributes.position.array].every(Number.isFinite));
     assert.equal(geometry.groups.length, 0, 'one draw call');
   }
-  assert.equal(triangles(bird), HANGING_BIRD_TRIANGLES);
   // The silk hangs from its limb at y 0 down to its length, its two tails apart at the foot.
   silk.computeBoundingBox();
   assert.ok(Math.abs(silk.boundingBox.max.y) < 1e-9 && Math.abs(silk.boundingBox.min.y + 5) < 1e-9);
   assert.ok(silk.boundingBox.max.x - silk.boundingBox.min.x > SILK_SHAPE.apart);
-  // The bird hangs beneath its feet, only its tail tipped up past them, as in a handstand.
-  bird.computeBoundingBox();
-  assert.ok(bird.boundingBox.max.y < .12 && bird.boundingBox.min.y < -.12);
 });

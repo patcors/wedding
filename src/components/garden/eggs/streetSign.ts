@@ -28,7 +28,7 @@ export const WHITE_UV = [(WHITE.x + WHITE.width / 2) / ATLAS.width, 1 - (WHITE.y
 
 // The blade's size in world units, its proportions the atlas rect's; a
 // phone's wider lens draws it smaller, so it is longer there (`mobile`).
-export const BLADE = { length: 1, mobile: 1.35, thick: .025, colour: '#245f63', edge: '#e9ecea' } as const;
+export const BLADE = { length: 1.1, mobile: 1.32, thick: .025, colour: '#245f63', edge: '#e9ecea' } as const;
 export const bladeHeight = (length: number) => length * SIGN_RECT.height / SIGN_RECT.width;
 // Each plaque's border, in its house's roof colour, darker.
 const PLAQUE_BORDER = { amelia: '#3f6f69', patrick: '#b39a52' } as const;
@@ -73,7 +73,7 @@ export function streetAtlas() {
     roundRect(ctx, { x: r.x + 5, y: r.y + 5, width: r.width - 10, height: r.height - 10 }, 9);
     ctx.fill();
     ctx.fillStyle = INK;
-    fitText(ctx, HOUSE_NUMBERS[owner], size => `700 ${size}px ${SANS}`, { x: r.x + 10, y: r.y + 6, width: r.width - 20, height: r.height - 12 }, 124);
+    fitText(ctx, HOUSE_NUMBERS[owner], size => `700 ${size}px ${SANS}`, { x: r.x + 10, y: r.y + 6, width: r.width - 20, height: r.height - 12 }, 140);
   }
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;

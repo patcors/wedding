@@ -9,14 +9,15 @@ import { useJourney } from './JourneyProvider';
 import { currentSeason } from './GardenSeasons';
 import { leafColour, petalColour, petalShown } from './seasons';
 
-// The season (seasons.ts) turns the leaves amber in autumn and the petals to
-// blossom in spring, and thins the petals through autumn and winter.
-type Seasonal = { seasons?: boolean; reduced?: boolean };
+// The season (seasons.ts) turns a few of the leaves gold and amber in autumn
+// and the petals to blossom in spring, and thins the petals a little through
+// autumn and winter. No more of either, so nothing drifts across an egg.
+type Seasonal = { seasons?: boolean };
 
 // From the opening to a little past the dock. The originals covered 90 and 64 units.
 const DRIFT_LENGTH = 13 - ROUTE.dock + 20;
 
-export function Petals({ paused, width, seasons = false, reduced = false }: { paused: boolean; width: number } & Seasonal) {
+export function Petals({ paused, width, seasons = false }: { paused: boolean; width: number } & Seasonal) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const material = useRef<THREE.MeshStandardMaterial>(null);
   const clock = useJourney();
@@ -33,7 +34,7 @@ export function Petals({ paused, width, seasons = false, reduced = false }: { pa
   useFrame((_, dt) => {
     if (!ref.current) return;
     if (!paused) time.current += Math.min(dt, .05);
-    const season = currentSeason(clock.progress, reduced, seasons);
+    const season = currentSeason(clock.progress, seasons);
     material.current?.color.setRGB(...petalColour(season), THREE.SRGBColorSpace);
     data.forEach((p, i) => {
       const t = time.current * p.speed;
@@ -48,7 +49,7 @@ export function Petals({ paused, width, seasons = false, reduced = false }: { pa
   </instancedMesh>;
 }
 
-export function FallingLeaves({ paused, width, seasons = false, reduced = false }: { paused: boolean; width: number } & Seasonal) {
+export function FallingLeaves({ paused, width, seasons = false }: { paused: boolean; width: number } & Seasonal) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const clock = useJourney();
   const painted = useRef<ReturnType<typeof currentSeason> | null>(null);
@@ -71,14 +72,14 @@ export function FallingLeaves({ paused, width, seasons = false, reduced = false 
     painted.current = season;
   };
   // Painted before the first frame, so the shader is built with instance colours.
-  useLayoutEffect(() => paint(currentSeason(clock.progress, reduced, seasons)), [leaves]);
+  useLayoutEffect(() => paint(currentSeason(clock.progress, seasons)), [leaves]);
   useFrame((_, dt) => {
     if (!ref.current) return;
     if (!paused) time.current += Math.min(dt, .05);
-    const season = currentSeason(clock.progress, reduced, seasons), last = painted.current;
-    const moved = last ? Math.abs(season.turn - last.turn) + Math.abs(season.grey - last.grey) + Math.abs(season.fresh - last.fresh) : 1;
+    const season = currentSeason(clock.progress, seasons), last = painted.current;
+    const moved = last ? Math.abs(season.turn - last.turn) + Math.abs(season.fresh - last.fresh) : 1;
     // Settles exactly on the seasons' plain colours when they come back.
-    if (moved > .01 || (moved > 0 && season.turn + season.grey + season.fresh === 0)) paint(season);
+    if (moved > .01 || (moved > 0 && season.turn + season.fresh === 0)) paint(season);
     leaves.forEach((leaf, i) => {
       const t = time.current, height = 11 - (t * leaf.speed + leaf.phase) % 11;
       dummy.position.set(leaf.x + Math.sin(t * .35 + leaf.phase) * .5, .3 + height,

@@ -1,12 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DATES, ROOM, STOPS, YEAR, progressAt } from '../src/components/garden/journey.ts';
-import { GLIDE, GLIDE_STOPS, MAX_SPEED, OPENING_RUN, PACE, advancePace, createPace, glideAt, glidePlan, leashed, maxSpeedAt, paceToward } from '../src/components/garden/journeyPace.ts';
-import { SALSA } from '../src/components/garden/storyBoats.ts';
-import { PROPOSAL } from '../src/components/garden/eggs/proposal.ts';
-import { CAPS } from '../src/components/garden/eggs/capToss.ts';
-import { NESTS, NEST_EVENTS } from '../src/components/garden/eggs/nesting.ts';
-import { ROCKET, launchProgress } from '../src/components/garden/eggs/rocketLaunch.ts';
+import { ROOM, STOPS, YEAR } from '../src/components/garden/journey.ts';
+
+// Each milestone's date holds for this much of a share (HOLD in journey.ts, not exported).
+const HOLD = .35;
+import { GLIDE, MAX_SPEED, OPENING_RUN, PACE, REST, advancePace, atRest, createPace, glideAt, glidePlan, leashed, maxSpeedAt, paceToward } from '../src/components/garden/journeyPace.ts';
 
 const FRAME = 1 / 60;
 
@@ -74,51 +72,49 @@ function glide(from) {
   return { plan, frames };
 }
 
-test('the glide stops at each milestone, the rocket and the celebration in turn, never faster than a guest may scroll', () => {
+test('the glide sails on to the dock without stopping, steadily and slower than a guest may scroll', () => {
   const { plan, frames } = glide(STOPS[1]);
-  assert.deepEqual(plan.legs.map(leg => leg.to), GLIDE_STOPS.slice(1).map(stop => stop.p));
-  // Every milestone's stop, and one more between the trip and the wedding, where the rocket goes up.
-  assert.deepEqual(GLIDE_STOPS.map(stop => stop.p).filter(p => STOPS.includes(p)), STOPS.slice(1));
-  const rocket = GLIDE_STOPS.findIndex(stop => stop.id === 'rocket');
-  assert.equal(GLIDE_STOPS[rocket - 1].id, 'turkey-greece');
-  assert.equal(GLIDE_STOPS[rocket + 1].id, 'celebration');
+  assert.equal(frames[0].p, STOPS[1]);
   assert.equal(frames.at(-1).p, 1);
+  const cruise = GLIDE.speed * ROOM;
   for (let i = 1; i < frames.length; i++) {
-    const v = (frames[i].p - frames[i - 1].p) / FRAME;
-    assert.ok(v >= -1e-9 && v <= MAX_SPEED * 1.001, `${(v / ROOM).toFixed(2)} shares a second at ${frames[i].t.toFixed(2)}s`);
+    const { t } = frames[i], v = (frames[i].p - frames[i - 1].p) / FRAME;
+    assert.ok(v >= -1e-9 && v <= cruise * 1.001, `${(v / ROOM).toFixed(2)} shares a second at ${t.toFixed(2)}s`);
+    // Between setting off and arriving it never slows, let alone stops.
+    if (t > GLIDE.ramp + FRAME && t < plan.length - GLIDE.ramp) assert.ok(Math.abs(v - cruise) < cruise * 1e-6, `slowed at ${t.toFixed(2)}s`);
   }
-  // It sets off and arrives gently: the first and last frames of a leg barely move.
-  for (const leg of plan.legs) {
-    assert.ok(glideAt(plan, leg.start + FRAME) - leg.from < .01 * ROOM);
-    assert.ok(leg.to - glideAt(plan, leg.start + leg.travel - FRAME) < .01 * ROOM);
-    assert.equal(glideAt(plan, leg.start + leg.travel + leg.hold / 2), leg.to);
-  }
-  // A minute or so from the meeting to the dock.
-  assert.ok(plan.length > 60 && plan.length < 90, `${plan.length.toFixed(1)}s`);
-  // From part way along a leg, it goes on to the next stop.
-  assert.equal(glidePlan((STOPS[3] + STOPS[4]) / 2).legs[0].to, STOPS[4]);
-  assert.deepEqual(glidePlan(1).legs, []);
+  // It sets off and arrives gently.
+  assert.ok(glideAt(plan, FRAME) - STOPS[1] < .01 * ROOM);
+  assert.ok(1 - glideAt(plan, plan.length - FRAME) < .01 * ROOM);
+  // Slower than the most a guest may scroll, so each egg can be taken in,
+  // and each milestone's date still shows for over half a second.
+  assert.ok(GLIDE.speed < PACE.max && GLIDE.speed >= .3);
+  assert.ok(HOLD / GLIDE.speed > .6);
+  // Under a minute from the meeting to the dock.
+  assert.ok(plan.length > 35 && plan.length < 60, `${plan.length.toFixed(1)}s`);
+});
+
+test('a short glide still arrives gently, and one from the dock is already there', () => {
+  const near = glidePlan(1 - .2 * ROOM);
+  assert.ok(near.cruise < GLIDE.speed && near.length > 2 * GLIDE.ramp - 1e-9);
+  for (let t = 0; t < near.length; t += FRAME) assert.ok(glideAt(near, t + FRAME) >= glideAt(near, t));
+  assert.equal(glideAt(near, near.length), 1);
+  assert.equal(glidePlan(1).length, 0);
   assert.equal(glideAt(glidePlan(1), 0), 1);
 });
 
-test('the glide holds long enough at a milestone for what plays out there', () => {
-  const { plan, frames } = glide(STOPS[1]);
-  const held = (start, id) => {
-    const leg = plan.legs.find(leg => leg.to === GLIDE_STOPS.find(stop => stop.id === id).p);
-    const reached = frames.find(frame => frame.p >= start).t;
-    return leg.start + leg.travel + leg.hold - reached;
-  };
-  const scenes = [
-    ['graduation', progressAt('2020-08') + Math.max(...CAPS.tosses.map(toss => toss.at)) * ROOM, CAPS.flight],
-    ['apartments', progressAt('2024-05') + NEST_EVENTS[1].at * ROOM, NESTS.flight],
-    ['rocket', launchProgress(), ROCKET.ignite + ROCKET.flight],
-    ['salsa', progressAt('2026-01') + SALSA.cue * ROOM, SALSA.seconds],
-    ['engaged', progressAt(DATES.engaged) + PROPOSAL.kneel.cue * ROOM, PROPOSAL.kneel.seconds],
-  ];
-  for (const [id, start, seconds] of scenes) {
-    assert.ok(GLIDE.holds[id] > GLIDE.hold, id);
-    assert.ok(held(start, id) >= seconds, `${id}: ${held(start, id).toFixed(2)}s of ${seconds}s`);
-  }
+test('the story is at rest once it has as good as stopped, not while it glides or travels', () => {
+  const pace = createPace();
+  assert.ok(atRest(pace));
+  pace.target = 2 * ROOM;
+  assert.ok(!atRest(pace));
+  // Coasting to a stop, it counts as at rest well before the last of the drift.
+  let now = 0, rested = null;
+  while (pace.progress !== pace.target && now < 20000) { advancePace(pace, now += 1000 / 60); if (rested === null && atRest(pace)) rested = now; }
+  assert.ok(rested !== null && now - rested > 1000, `rested ${((now - rested) / 1000).toFixed(1)}s before stopping`);
+  assert.ok(Math.abs(pace.target - pace.progress) < REST * ROOM);
+  pace.glide = { plan: glidePlan(pace.progress), t: 0 };
+  assert.ok(!atRest(pace));
 });
 
 test('a glide moves the pace itself, and ends at the dock', () => {

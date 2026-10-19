@@ -277,8 +277,8 @@ test('the birds tell the apartments: one house each side of the river, his at he
     const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
     const { PIE_BED, ornamentSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
     const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
-    const { rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
-    const others = [...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ornamentSpot(PIE_BED, width), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width), rocketSpot(width)];
+    const { bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
+    const others = [...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ornamentSpot(PIE_BED, width), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width), bulletSpot(width)];
     for (const owner of ['amelia', 'patrick']) {
       const house = houses[owner];
       assert.ok(onLand(house.x, house.z, width) && Math.sign(house.x - riverCenter(house.z, width)) === NESTS.side[owner], `${owner}'s on ${owner}'s bank`);
@@ -432,13 +432,15 @@ test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark,
       const least = p < STOPS[MILESTONES.findIndex(m => m.id === 'dating') + 1] ? 5 : 6.5;
       assert.ok(pixels(bladeHeight(length) * .55, distance, width) > least, `the sign legible at ${p} (width ${width})`);
     }
-    // The numbers at the apartments' stop: at least 6 pixels tall on desktop,
-    // and as legible as a phone allows, then larger as the boats come up.
+    // The numbers at the apartments' stop: at least 11 pixels tall on
+    // desktop and 8.5 on a 390 × 844 phone (Amelia, October 2026: they were
+    // hard to spot on a real phone; a 375 × 667 one draws them .79 as tall),
+    // then larger as the boats come up.
     const atStop = STOPS[MILESTONES.findIndex(m => m.id === 'apartments') + 1];
     for (const owner of ['amelia', 'patrick']) {
       const figures = PLAQUE.width * NUMBER_RECTS[owner].height / NUMBER_RECTS[owner].width * .65 * houses[owner].scale;
       const { distance } = seen(atStop, width, houses[owner].x, houses[owner].z);
-      assert.ok(pixels(figures, distance, width) > (width < 1 ? 3.5 : 6), `${owner}'s number at the apartments' stop (width ${width})`);
+      assert.ok(pixels(figures, distance, width) > (width < 1 ? 8.5 : 11), `${owner}'s number at the apartments' stop (width ${width})`);
     }
     // Within the egg's budget: both houses, their numbers and the
     // scaffolding in one mesh, the birds in another and the sign a third.
@@ -487,177 +489,123 @@ const above = (p, width, x, y, z) => {
 const halfHeight = width => width < 1 ? 34 : 24;
 const underLabel = width => width < 1 ? 19 : 11;
 
-test('the rocket stands on Patrick\'s bank in October 2026, after the trip and long after the proposal, clear of the heart and the bend\'s scenery', async () => {
-  const { ROCKET, launchProgress, rocketShown, rocketSpot, rocketTime } = await import('../src/components/garden/eggs/rocketLaunch.ts');
-  const { BULLET_LAUNCH, DATES, STOPS, dateLabel, routeAt } = await import('../src/components/garden/journey.ts');
-  const { RIG_CHANGE } = await import('../src/components/garden/storyBoats.ts');
-  const { BALLOON_TIMES, HAGIA_TIMES, hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
-  const { groundHeight, voyageLandmarks } = await import('../src/components/garden/gardenGeometry.ts');
+test('the bullet stands on Patrick\'s bank across the river from the 2025 snowmen, on land, clear of the trees and the other scenery', async () => {
+  const { BULLET, bulletFootprint, bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
+  const { BULLET_MODEL } = await import('../src/components/garden/eggs/bulletGeometry.ts');
+  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const { groundHeight } = await import('../src/components/garden/gardenGeometry.ts');
   const { treePlacements } = await import('../src/components/garden/gardenTreeSpots.ts');
+  const { plantSites } = await import('../src/components/garden/gardenPlantGeometry.ts');
   const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
   const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
-  // Bullet was released in October 2025 and went into production in October
-  // 2026, so it keeps its own time between: as October 2026 shows, once the
-  // balloons have climbed away and the Hagia Sophia has gone, long after the rig change and
-  // the proposal, and before 2027's heart is in.
-  assert.equal(ROCKET.month, BULLET_LAUNCH.month);
-  assert.ok(ROCKET.month >= '2025-10' && ROCKET.month <= '2026-10');
-  assert.match(dateLabel(launchProgress() + 1e-4), /^October 2026$/);
-  const at = progressAt(trip.month);
-  assert.ok(launchProgress() > at + BALLOON_TIMES.gone * ROOM && launchProgress() > at + HAGIA_TIMES.gone * ROOM);
-  assert.ok(launchProgress() > progressAt(DATES.engaged) + (Math.max(...Object.values(RIG_CHANGE).flat()) + 1) * ROOM);
-  assert.ok(launchProgress() < progressAt(YEAR_MARKERS.find(m => m.year === 2027).from));
-  // Out of the haze only once the trip's stop is behind, and back into it long before the dock.
-  assert.equal(rocketShown(rocketTime(STOPS[MILESTONES.indexOf(trip) + 1])), 0);
-  assert.equal(rocketShown(rocketTime(launchProgress() - .1 * ROOM)), 1);
-  assert.equal(rocketShown(rocketTime(launchProgress() + .75 * ROOM)), 0);
-  assert.ok(launchProgress() + .75 * ROOM < VOYAGE_END);
+  const { RIGS, hangSpot } = await import('../src/components/garden/eggs/circusRigs.ts');
+  const { truckSpot } = await import('../src/components/garden/eggs/engagementTruck.ts');
+  const { ORNAMENTS, ornamentSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
+  // Not a milestone: Bullet was released in October 2025, and it stands
+  // there from about the snow trip's stretch, with the snowmen.
+  assert.equal(BULLET.from, snowAgain.month);
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const { x, z, scale } = rocketSpot(width), [cx, , cz] = cameraPose(launchProgress(), width).position;
-    assert.ok(onLand(x, z, width) && x > riverCenter(z, width), 'on the right bank');
-    assert.ok(groundHeight(x, z, width) > 0, 'above the waterline');
-    // On the point of the bank before the headland, ahead of the boats: further
-    // off than it stood at New Year 2025 (about 19 units) and half the size it
-    // looked then.
-    assert.ok(z < routeAt(launchProgress()) - 8, 'well ahead of the boats');
-    const distance = Math.hypot(x - cx, z - cz);
-    assert.ok(distance > 22, `${distance} from the camera`);
-    assert.ok(degrees(Math.atan(.97 * scale / distance)) < 3, 'small in the picture');
-    // Clear of 2027's heart across the river, the year markers, the old tree
-    // and the jetty, the Hagia Sophia, and every tree's trunk, the headland's too.
-    for (const marker of YEAR_MARKERS) {
-      const spot = yearMarkerSpot(marker, width);
-      assert.ok(Math.hypot(spot.x - x, spot.z - z) > 4, `clear of ${marker.year}`);
-    }
-    const { tree, jetty } = voyageLandmarks(width), hagia = hagiaSophiaSpot(trip.month, width);
-    for (const other of [tree, jetty, hagia]) assert.ok(Math.hypot(other.x - x, other.z - z) > 10);
-    for (const tree of treePlacements(width, width < 1)) assert.ok(Math.hypot(tree.x - x, tree.z - z) > .8, 'clear of the trunks');
-    for (const house of Object.values(nestSpots(width))) assert.ok(Math.hypot(house.x - x, house.z - z) > 4, 'clear of the birdhouses');
+    const spot = bulletSpot(width), snow = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
+    assert.ok(onLand(spot.x, spot.z, width) && spot.x > riverCenter(spot.z, width), 'on Patrick\'s bank, the right');
+    // Its whole plinth on the bank above the waterline, whichever way it turns.
+    const corner = BULLET_MODEL.plinth * Math.SQRT2 * spot.scale;
+    assert.ok(spot.x - corner - riverCenter(spot.z, width) > bankEdge(spot.z, width), 'its plinth clear of the water');
+    assert.ok(spot.y > .02, `above the waterline (${spot.y})`);
+    for (let k = 0; k < 8; k++) assert.ok(groundHeight(spot.x + Math.cos(k) * corner, spot.z + Math.sin(k) * corner, width) >= spot.y - 1e-9, 'no corner floats');
+    // Across the river from the snowmen, a little further on.
+    assert.ok(snow.x < riverCenter(snow.z, width), 'the snowmen on the other bank');
+    assert.ok(spot.z < snow.z && snow.z - spot.z < 2.5, `opposite the snowmen (${snow.z - spot.z} on)`);
+    // Clear of every trunk, and of the other scenery on the banks.
+    for (const tree of treePlacements(width, width < 1)) assert.ok(Math.hypot(tree.x - spot.x, tree.z - spot.z) > 2.5, `a tree at ${tree.x}, ${tree.z} (width ${width})`);
+    const others = [
+      ...YEAR_MARKERS.map(marker => [marker.year, yearMarkerSpot(marker, width)]),
+      ...Object.entries(nestSpots(width)).map(([owner, house]) => [`${owner}'s birdhouse`, house]),
+      ...Object.entries(RIGS).map(([name, rig]) => [name, hangSpot(rig, width)]),
+      ...ORNAMENTS.map(ornament => [`${ornament.facing} ornament`, ornamentSpot(ornament, width)]),
+      ['truck', truckSpot(width)],
+    ];
+    for (const [name, other] of others) assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${name} crowds the bullet (width ${width})`);
+    assert.ok(Math.hypot(snow.x - spot.x, snow.z - spot.z) > 4, 'the river between it and the snowmen');
+    // Nothing grows up through its plinth, nor stands on it.
+    const under = bulletFootprint(width);
+    for (const kind of ['grass', 'clover', 'fern', 'meadow', 'reed', 'cattail']) assert.ok(plantSites(kind, width, width < 1).every(site => !under(site.x, site.z)), `${kind} through its plinth (width ${width})`);
   }
 });
 
-test('the rocket waits on its stand, then fires as the scroll passes and climbs away down the river in real time', async () => {
-  const { EXHAUST, ROCKET, exhaust, launchProgress, rocketCourse, rocketInFlight, rocketSpot, rocketTime } = await import('../src/components/garden/eggs/rocketLaunch.ts');
-  assert.equal(rocketTime(launchProgress()), 0);
-  assert.ok(rocketTime(launchProgress() - .01) < 0);
-  const end = ROCKET.ignite + ROCKET.flight;
+test('the bullet is whole in the picture beside the snowmen from the snow trip\'s date through its stop, and stands there until the camera has passed', async () => {
+  const { BULLET, bulletShown, bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
+  const { BULLET_MODEL } = await import('../src/components/garden/eggs/bulletGeometry.ts');
+  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const at = progressAt(snowAgain.month), stop = STOPS[MILESTONES.indexOf(snowAgain) + 1];
+  const dating = STOPS[MILESTONES.findIndex(m => m.id === 'dating') + 1];
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const course = rocketCourse(width), spot = rocketSpot(width);
-    // On its stand before it fires, and while it ignites, with no smoke before.
-    for (const air of [null, 0, ROCKET.ignite - .01]) assert.deepEqual(rocketInFlight(course, air).position, course.from);
-    assert.ok(exhaust(course, null).every(puff => puff.size === 0));
-    assert.ok(rocketInFlight(course, ROCKET.ignite - .01).burn > 0);
-    // Its course is a function of seconds since it fired, not of the scroll:
-    // rising all the way, first straight up off the stand, then turning away
-    // up the river, and out of sight by the end of its flight.
-    let last = -Infinity;
-    for (let air = ROCKET.ignite; air <= end; air += .05) {
-      const { position: [, y, z], gone } = rocketInFlight(course, air);
-      assert.ok(y >= last - 1e-9, `rising at ${air}`);
-      last = y;
-      if (!gone) assert.ok(z <= spot.z + 1e-9, 'never back towards the camera');
+    const mobile = width < 1, spot = bulletSpot(width), snow = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
+    const shown = p => bulletShown(spot, p, cameraPose(p, width).position[2], mobile);
+    // Not there at dating's stop or long before the trip; dissolving in just before its date.
+    assert.equal(shown(dating), 0);
+    assert.equal(shown(at - BULLET.arrive * ROOM - 1e-9), 0);
+    assert.ok(shown(at - BULLET.arrive * ROOM / 2) > 0 && shown(at - BULLET.arrive * ROOM / 2) < 1);
+    // Fully in at the date and the still under reduced motion.
+    assert.equal(shown(stillProgress(at + .2 * ROOM)), 1);
+    // Whole in the picture with a margin, right of the boats while the
+    // snowmen stand left of them, from the date to the trip's stop on a
+    // phone, whose narrow lens loses Patrick's bank soon after, and on
+    // through most of the share on desktop.
+    const until = mobile ? stop : at + .75 * ROOM, margin = mobile ? 1.4 : 3;
+    for (let p = at; p <= until; p += .001) {
+      const pose = cameraPose(p, width), [cx, cy, cz] = pose.position;
+      assert.equal(shown(p), 1, `shown at ${p}`);
+      const { bearing, distance } = seen(p, width, spot.x, spot.z), half = degrees(Math.atan(BULLET_MODEL.radius * spot.scale / distance));
+      assert.ok(bearing - half > 0 && bearing + half < halfView(width) - margin, `bearing ${bearing.toFixed(1)}° at ${p} (width ${width})`);
+      assert.ok(seen(p, width, snow.x, snow.z).bearing < 0, 'the snowmen left of the middle');
+      // Plinth to tip within the picture's height, and large enough to read.
+      const tilt = degrees(Math.atan2(pose.target[1] - cy, Math.hypot(pose.target[0] - cx, pose.target[2] - cz)));
+      const top = degrees(Math.atan2(spot.y + spot.scale - cy, distance)) - tilt, foot = degrees(Math.atan2(spot.y - cy, distance)) - tilt;
+      assert.ok(top < halfHeight(width) - 3 && foot > -halfHeight(width) + 3, `plinth to tip in the picture at ${p}`);
+      // At least 70 pixels tall on a 390 × 844 phone, 110 on a 1440 × 900 desktop.
+      const pixels = (top - foot) / (2 * halfHeight(width)) * (mobile ? 844 : 900);
+      assert.ok(pixels > (mobile ? 70 : 110), `${pixels.toFixed(0)} pixels tall at ${p}`);
     }
-    const early = rocketInFlight(course, ROCKET.ignite + ROCKET.flight * .08).position;
-    assert.ok(early[1] - course.from[1] > 3 * Math.hypot(early[0] - course.from[0], early[2] - course.from[2]), 'straight up at first');
-    assert.ok(!rocketInFlight(course, end - .05).gone && rocketInFlight(course, end).gone);
-    // Smoke round the stand as it fires, and left along its climb.
-    assert.ok(exhaust(course, .3).slice(0, EXHAUST.pad).every(puff => puff.size > 0));
-    assert.ok(exhaust(course, end).slice(EXHAUST.pad).filter(puff => puff.size > 0).length >= 3);
-    assert.ok(exhaust(course, end + EXHAUST.linger + .1).every(puff => puff.size === 0), 'the smoke clears');
+    // Gone once the camera has passed it.
+    let p = at;
+    while (cameraPose(p, width).position[2] > spot.z - 4) p += .001;
+    assert.equal(shown(p), 0);
   }
 });
 
-test('the rocket is in the picture as it fires and climbs away down the open corridor of mist, below the date label, while the glide waits', async () => {
-  const { EXHAUST, ROCKET, exhaust, launchProgress, rocketCourse, rocketInFlight, rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
-  const { ROCKET_MODEL } = await import('../src/components/garden/eggs/rocketGeometry.ts');
-  const { GLIDE_STOPS } = await import('../src/components/garden/journeyPace.ts');
-  const { routeAt } = await import('../src/components/garden/journey.ts');
-  const p = launchProgress(), stop = GLIDE_STOPS.find(s => s.id === 'rocket').p;
-  for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const spot = rocketSpot(width), course = rocketCourse(width);
-    // On its stand, in the picture, from when it is out of the haze until it fires.
-    for (let q = p - .25 * ROOM; q <= p; q += .05 * ROOM) assert.ok(Math.abs(seen(q, width, spot.x, spot.z).bearing) < halfView(width) - 4, `stand at ${q}`);
-    // Near the middle as it fires and where the glide waits for it, right of
-    // the boats, so their sail doesn't hide it.
-    for (const q of [p, stop]) {
-      const { bearing } = seen(q, width, spot.x, spot.z), boats = seen(q, width, riverCenter(routeAt(q), width), routeAt(q)).bearing;
-      assert.ok(Math.abs(bearing) < 4, `well inside the picture at ${q}`);
-      assert.ok(bearing > boats + 3, 'right of the boats');
-    }
-    // Every point of its climb, from where the glide waits, in the picture,
-    // above its stand and under the date label, a gentle arc away to the left
-    // into the mist, over three times as far off as it stood, so it melts into
-    // the haze rather than vanishing.
-    for (const q of [p, stop]) {
-      for (let air = 0; air < ROCKET.ignite + ROCKET.flight; air += .05) {
-        const { position: [x, y, z], gone } = rocketInFlight(course, air);
-        if (gone) break;
-        const { bearing } = seen(q, width, x, z);
-        assert.ok(bearing < halfView(width) - 6 && bearing > -halfView(width) + 6, `bearing at ${air}`);
-        assert.ok(bearing < seen(q, width, spot.x, spot.z).bearing + .5, 'never off to the right, into the headland');
-        assert.ok(above(q, width, x, y + ROCKET_MODEL.height * spot.scale, z) < underLabel(width) - 3, `under the date label at ${air}`);
-      }
-    }
-    const [cx, , cz] = cameraPose(p, width).position;
-    assert.ok(Math.hypot(course.to[0] - cx, course.to[2] - cz) > 3 * seen(p, width, spot.x, spot.z).distance);
-    // Its trail is thin: a streak a few hundredths of a unit across.
-    assert.ok(EXHAUST.trailSize * spot.scale < .08);
-    for (const puff of exhaust(course, ROCKET.ignite + ROCKET.flight).filter(puff => puff.size > 0)) {
-      assert.ok(Math.abs(seen(stop, width, puff.x, puff.z).bearing) < halfView(width) - 4);
-    }
+test('the bullet is as large as a garden sculpture beside the snowmen, in two small meshes that cast no shadow', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { BULLET } = await import('../src/components/garden/eggs/bulletOrnament.ts');
+  const { BULLET_MODEL, bulletGeometry, bulletPlinthGeometry } = await import('../src/components/garden/eggs/bulletGeometry.ts');
+  const { SNOWMAN } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+  const { COMPONENT } = await import('../src/components/garden/sceneryCatalog.ts');
+  // Taller than the snowmen across the river (as SecondSnowTrip.tsx sizes them), but not towering.
+  for (const [size, snowmen] of [[BULLET.size.desktop, SNOWMAN.height * COMPONENT.snowScale], [BULLET.size.mobile, SNOWMAN.height * COMPONENT.snowScale * COMPONENT.snowMobile]]) {
+    assert.ok(size > snowmen * 1.05 && size < snowmen * 1.5, `${size} beside snowmen ${snowmen} tall`);
   }
-});
-
-test('nothing is part way through a dissolve as the rocket fires and while the glide waits for it, and 2027\'s heart dissolves in only after', async () => {
-  const { EXHAUST, FLOWN, ROCKET, exhaust, launchProgress, rocketCourse, rocketShown, rocketTime } = await import('../src/components/garden/eggs/rocketLaunch.ts');
-  const { GLIDE_STOPS, glideAt, glidePlan } = await import('../src/components/garden/journeyPace.ts');
-  const { BALLOON_TIMES, hagiaShown, tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
-  const { YEAR_MARKERS, yearMarkerShown, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
-  const heart = YEAR_MARKERS.find(m => m.year === 2027), stop = GLIDE_STOPS.find(s => s.id === 'rocket').p;
-  const at = progressAt(trip.month), board = (p, width) => yearMarkerShown(heart, yearMarkerSpot(heart, width).z, p, cameraPose(p, width).position[2], width < 1);
-  // From as it fires to where the glide waits: the balloons and the Hagia
-  // Sophia long gone, the stand fully shown, and the heart not yet begun to
-  // dissolve in.
-  for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    for (let p = launchProgress(); p <= stop + .04 * ROOM; p += .01 * ROOM) {
-      assert.equal(rocketShown(rocketTime(p)), 1, `stand at ${p}`);
-      assert.ok((p - at) / ROOM > BALLOON_TIMES.gone && hagiaShown((p - at) / ROOM) === 0, `balloons or Hagia Sophia at ${p}`);
-      assert.equal(board(p, width), 0, `heart at ${p} (width ${width})`);
-    }
+  const triangles = geometry => (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3;
+  const bullet = bulletGeometry(), plinth = bulletPlinthGeometry();
+  assert.ok(triangles(bullet) + triangles(plinth) < 1500, `${triangles(bullet) + triangles(plinth)} triangles`);
+  for (const geometry of [bullet, plinth]) {
+    assert.equal(geometry.groups.length, 0, 'one draw call each');
+    assert.ok([...geometry.attributes.position.array].every(Number.isFinite));
+    geometry.computeBoundingBox();
   }
-  // Gliding on from the trip's stop: the heart first shows once the glide has
-  // moved on, after the rocket has flown and its trail is thinning away, and
-  // is fully in well before December 2026 shows, the frame of the two hearts.
-  const plan = glidePlan(tripStop(trip.month)), leg = plan.legs.find(leg => leg.to === stop);
-  let fired = null, first = null;
-  for (let t = 0; t < plan.length; t += 1 / 60) {
-    const p = glideAt(plan, t);
-    if (fired === null && p >= launchProgress()) fired = t;
-    if (first === null && board(p, 1) > 0) first = t;
+  // Upright, its tip 1 above the ground, standing on the plinth's top, the plinth sunk a little into the lawn.
+  assert.ok(Math.abs(bullet.boundingBox.max.y - 1) < 1e-6 && Math.abs(bullet.boundingBox.min.y - BULLET_MODEL.top) < 1e-6);
+  assert.ok(Math.abs(plinth.boundingBox.max.y - BULLET_MODEL.top) < 1e-6 && plinth.boundingBox.min.y < 0);
+  assert.ok(Math.abs(plinth.boundingBox.max.x - BULLET_MODEL.plinth) < 1e-6 && bullet.boundingBox.max.x <= BULLET_MODEL.radius + 1e-6);
+  // Brass below and copper at the tip.
+  const colours = bullet.attributes.color, positions = bullet.attributes.position;
+  let brass = 0, copper = 0;
+  for (let i = 0; i < positions.count; i++) {
+    const [r, g, b] = [colours.getX(i), colours.getY(i), colours.getZ(i)];
+    if (positions.getY(i) < .5) brass += g / r > .7 && r > b ? 1 : 0;
+    if (positions.getY(i) > .62) copper += g / r < .7 && r > b ? 1 : 0;
   }
-  assert.ok(first > leg.start + leg.travel + leg.hold, 'not while the glide waits');
-  assert.ok(first - fired > ROCKET.ignite + ROCKET.flight, 'after it has flown');
-  for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const course = rocketCourse(width), full = EXHAUST.trailSize * course.scale * 1.2;
-    assert.ok(exhaust(course, first - fired).every(puff => puff.size < full / 3), `its trail thinned ${(first - fired).toFixed(2)}s after it fired`);
-  }
-  for (const width of [1, MOBILE_RIVER_WIDTH]) assert.equal(board(progressAt('2026-12') - .05 * ROOM, width), 1);
-  // The empty stand goes back into the haze once the glide has moved on, by
-  // when the rocket has flown, and is gone well before December too.
-  let faded = null;
-  for (let t = fired; t < plan.length && faded === null; t += 1 / 60) if (rocketShown(rocketTime(glideAt(plan, t))) < 1) faded = t;
-  assert.ok(faded > leg.start + leg.travel + leg.hold && faded - fired > ROCKET.ignite + ROCKET.flight);
-  assert.equal(rocketShown(rocketTime(progressAt('2026-12') - .05 * ROOM)), 0);
-  // Once fired, it flies on and its trail thins away whether or not its stand has gone.
-  assert.ok(FLOWN >= ROCKET.ignite + ROCKET.flight + EXHAUST.linger);
-});
-
-test('the rocket and its stand keep to the egg budget', async () => {
-  const { EXHAUST_COUNT } = await import('../src/components/garden/eggs/rocketLaunch.ts');
-  const { launchStandGeometry, puffGeometry, rocketGeometry } = await import('../src/components/garden/eggs/rocketGeometry.ts');
-  const triangles = g => (g.index ? g.index.count : g.attributes.position.count) / 3;
-  // Three draw calls: the stand, the rocket, and the smoke and flame instanced.
-  assert.ok(triangles(rocketGeometry()) + triangles(launchStandGeometry()) + triangles(puffGeometry()) * (EXHAUST_COUNT + 1) < 1000);
+  assert.ok(brass > 0 && copper > 0);
+  const source = readFileSync(new URL('../src/components/garden/eggs/BulletOrnament.tsx', import.meta.url), 'utf8');
+  assert.ok(!source.includes('castShadow'), 'casts no shadow');
 });
 
 test('the Hagia Sophia stands far off past the S-bend, on level ground back from the left bank, under the balloon at the trip\'s stop', async () => {

@@ -29,7 +29,7 @@ const RIDGE = BODY.floor + BODY.height + .14, PITCH = (RIDGE - BODY.floor - BODY
 const onRoof = (x: number, z: number): Point => [x, RIDGE + .025 - Math.abs(x) * PITCH, z];
 // The number plaque on the front of the post, under the house: its middle's
 // height, and its width (its height follows from the atlas).
-export const PLAQUE = { y: .6, width: .22, thick: .012 } as const;
+export const PLAQUE = { y: .6, width: .36, thick: .012 } as const;
 export const BIRDHOUSE = { perches: { home: onRoof(-.07, .03), guest: onRoof(.08, 0) }, height: RIDGE, post: .06 };
 
 function painter() {

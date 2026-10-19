@@ -9,8 +9,7 @@
 //   a thin seep, a warble, a rising whistle), each a single tone swept
 //   through its notes, sung in little bouts from somewhere in the trees.
 // - The chimes: a soft additive bell, mostly its fundamental.
-// - The touches: a whoosh for the rocket, a balloon's burner, the Church St
-//   birds' calls, and a quiet warm chord under the festoons at dusk.
+// - The touches: a balloon's burner, the Church St birds' calls, and a quiet warm chord under the festoons at dusk.
 //
 // Everything runs through a soft limiter, and the master level is kept low. Levels were checked on rendered samples
 // (docs/VOYAGE.md, "Sound").
@@ -22,7 +21,7 @@ export const LEVELS = {
   // The river's noise bed and its bubbles.
   rush: .42, brook: .5,
   birds: .065, chime: .2, warmth: .028,
-  rocket: .45, burner: .45, call: .21,
+  burner: .45, call: .21,
   reverb: .55,
 } as const;
 
@@ -61,7 +60,7 @@ function pinkNoise(ctx: BaseAudioContext, random: () => number, seconds: number)
   return buffer;
 }
 
-// White noise for the whoosh and the burner.
+// White noise for the burner.
 function whiteNoise(ctx: BaseAudioContext, random: () => number, seconds: number) {
   const buffer = ctx.createBuffer(1, seconds * LOW_RATE, LOW_RATE), data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (random() * 2 - 1) * .5;
@@ -247,27 +246,6 @@ export function createSoundEngine(ctx: BaseAudioContext, seed = 1) {
     });
   });
 
-  const rocket = (at: number, place: number) => {
-    // A low hiss as it ignites, then a rising whoosh as it climbs away down
-    // the river, closing as it goes into the haze.
-    const length = 5, source = noiseBurst(at, length);
-    const band = new BiquadFilterNode(ctx, { type: 'bandpass', frequency: 250, Q: .9 }), envelope = gain(0);
-    const where = pan(place, touches);
-    source.connect(band).connect(filter('lowpass', 2600, envelope));
-    envelope.connect(where);
-    band.frequency.setValueAtTime(250, at);
-    band.frequency.linearRampToValueAtTime(420, at + .5);
-    band.frequency.exponentialRampToValueAtTime(1500, at + 1.1);
-    band.frequency.exponentialRampToValueAtTime(550, at + 4.2);
-    const g = envelope.gain;
-    g.setValueAtTime(0, at);
-    g.linearRampToValueAtTime(LEVELS.rocket * .3, at + .35);
-    g.linearRampToValueAtTime(LEVELS.rocket, at + 1);
-    g.setTargetAtTime(0, at + 1, .8);
-    where.pan.setValueAtTime(place, at + .5);
-    where.pan.linearRampToValueAtTime(place * .2, at + 4);
-  };
-
   const burner = (at: number, place: number) => {
     // A balloon's burner: a soft roar with a flutter, brighter than the
     // river so it isn't lost in it, then another further off.
@@ -290,8 +268,7 @@ export function createSoundEngine(ctx: BaseAudioContext, seed = 1) {
 
   const touch = (cue: Cue, at: number) => {
     const start = at + (cue.delay ?? 0);
-    if (cue.kind === 'rocket') rocket(start, cue.pan);
-    else if (cue.kind === 'burner') burner(start, cue.pan);
+    if (cue.kind === 'burner') burner(start, cue.pan);
     else bird(cue, start);
   };
 

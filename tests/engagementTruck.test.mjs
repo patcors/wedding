@@ -3,7 +3,7 @@ import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, groundHeight, islandHalfWidth, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { DATES, MILESTONES, ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
-import { BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
+import { boatScale, boatPose } from '../src/components/garden/storyBoats.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
 import { TRUCK, TRUCK_SIZE, TRUCK_TIMES, TRUCK_WHEELS, truckFootprint, truckPoint, truckShown, truckSpot, truckWheelContacts } from '../src/components/garden/eggs/engagementTruck.ts';
 
@@ -34,10 +34,11 @@ test('it stands on Patrick\'s bank past the start of the S-bend, a little back f
     const spot = truckSpot(width);
     assert.equal(Math.sign(spot.x - riverCenter(spot.z, width)), 1, `on the right bank (width ${width})`);
     assert.equal(islandHalfWidth(spot.z, width), 0);
-    // Every corner a little back from the water, and the whole of it not far back.
+    // Every corner a little back from the water, and the whole of it not far
+    // back: its furthest corner no further than its own width beyond 3.3.
     const reach = footprint(spot).map(point => toWater(point, width));
     assert.ok(Math.min(...reach) > 1.5, `its nearest corner ${Math.min(...reach)} from the water (width ${width})`);
-    assert.ok(Math.max(...reach) < 4.5, `its furthest corner ${Math.max(...reach)} from the water (width ${width})`);
+    assert.ok(Math.max(...reach) < 3.3 + TRUCK_SIZE.width * spot.scale, `its furthest corner ${Math.max(...reach)} from the water (width ${width})`);
   }
 });
 
@@ -46,7 +47,8 @@ test('each tyre rests on the ground, tilted no more than the grass beneath it, a
     const spot = truckSpot(width);
     for (const contact of truckWheelContacts(spot)) {
       const off = contact.y - groundHeight(contact.x, contact.z, width);
-      assert.ok(Math.abs(off) < .03, `a tyre ${off} off the ground (width ${width})`);
+      // Within .15 of its tyre's radius, so the grass hides it.
+      assert.ok(Math.abs(off) < .15 * TRUCK_WHEELS.radius * spot.scale, `a tyre ${off} off the ground (width ${width})`);
     }
     assert.ok(Math.abs(spot.pitch) < .07 && Math.abs(spot.roll) < .07, `tilted ${degrees(spot.pitch)}°, ${degrees(spot.roll)}° (width ${width})`);
     // The frame and the fenders' skirts, from front to back between the wheels, clear the grass.
@@ -92,7 +94,7 @@ test('it is in the picture, wholly and fully shown, from the engagement\'s date 
 test('at the engagement\'s stop it is beside the catamaran, right of its starboard hull, not behind the proposal on the deck', () => {
   for (const [width] of LAYOUTS) {
     const spot = truckSpot(width), pose = boatPose(stop, width);
-    const hulls = [-1, 1].map(side => seen(stop, width, pose.x + side * pose.gap * BOAT_SCALE * Math.cos(pose.yaw), pose.z - side * pose.gap * BOAT_SCALE * Math.sin(pose.yaw)).bearing);
+    const hulls = [-1, 1].map(side => seen(stop, width, pose.x + side * pose.gap * boatScale(width) * Math.cos(pose.yaw), pose.z - side * pose.gap * boatScale(width) * Math.sin(pose.yaw)).bearing);
     const deck = seen(stop, width, pose.x, pose.z).bearing;
     const nearest = Math.min(...corners(spot).map(corner => seen(stop, width, corner.x, corner.z).bearing));
     assert.ok(nearest > Math.max(...hulls) + 1, `its nearest corner ${nearest}° against the hull at ${Math.max(...hulls)}° (width ${width})`);
@@ -106,7 +108,7 @@ test('it keeps clear of the other scenery round the engagement, the trees and th
   const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
   const { RIGS, hangSpot } = await import('../src/components/garden/eggs/circusRigs.ts');
   const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
-  const { rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
+  const { bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
   const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
   const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { treePlacements } = await import('../src/components/garden/gardenTreeSpots.ts');
@@ -117,7 +119,7 @@ test('it keeps clear of the other scenery round the engagement, the trees and th
       ...YEAR_MARKERS.map(marker => [marker.year, yearMarkerSpot(marker, width)]),
       ...Object.entries(RIGS).map(([name, rig]) => [name, hangSpot(rig, width)]),
       ['2025 snowmen', snowSpot(SNOW_SPOTS[2025], '2025-08', width)],
-      ['rocket', rocketSpot(width)],
+      ['bullet', bulletSpot(width)],
       ['Hagia Sophia', hagiaSophiaSpot('2026-07', width)],
       ...Object.values(nestSpots(width)).map(house => ['birdhouse', house]),
     ];

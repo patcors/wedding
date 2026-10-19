@@ -8,7 +8,7 @@
 import { DATES, ROOM, progressAt, scrolledSince } from '../journey.ts';
 import { bankEdge, random, riverCenter } from '../gardenGeometry.ts';
 import { BIG_RIG } from '../storyBoatGeometry.ts';
-import { BOAT_SCALE, CATAMARAN, HULL_HALF_BEAM, RIG_CHANGE, boatPose, rigging } from '../storyBoats.ts';
+import { CATAMARAN, HULL_HALF_BEAM, RIG_CHANGE, boatPose, boatScale, rigging } from '../storyBoats.ts';
 
 // In milestone shares since the engagement's date: the wake's petals are
 // released from `from` to `to`, thinning out towards the end, and the sail's
@@ -89,8 +89,8 @@ export const petalScale = (age: number) => {
 
 // From the catamaran's frame at p into the world, in world units.
 function aboard(p: number, width: number, [u, y, v]: Point): Point {
-  const { x, z, yaw } = boatPose(p, width), c = Math.cos(yaw), s = Math.sin(yaw);
-  return [x + (c * u + s * v) * BOAT_SCALE, y * BOAT_SCALE, z + (-s * u + c * v) * BOAT_SCALE];
+  const { x, z, yaw, scale } = boatPose(p, width), c = Math.cos(yaw), s = Math.sin(yaw);
+  return [x + (c * u + s * v) * scale, y * scale, z + (-s * u + c * v) * scale];
 }
 const onWater = ([x, y, z]: Point, width: number): Point => {
   const middle = riverCenter(z, width), reach = bankEdge(z, width) * .85;
@@ -108,7 +108,7 @@ export function petalCourse(petal: Petal, width: number): Course {
 // Where it floats `age` shares after its release: spreading out sideways in
 // the wake, across the catamaran's heading as it was let go.
 export function floatPoint(petal: Petal, { to: [x, y, z], yaw }: Course, age: number, width: number): Point {
-  const out = petal.spread * BOAT_SCALE * (1 - Math.exp(-Math.max(0, age) / .12));
+  const out = petal.spread * boatScale(width) * (1 - Math.exp(-Math.max(0, age) / .12));
   return onWater([x + Math.cos(yaw) * out, y, z - Math.sin(yaw) * out], width);
 }
 

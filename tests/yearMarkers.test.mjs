@@ -3,7 +3,7 @@ import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, islandHalfWidth, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
 import { ROOM, VOYAGE_END, dateLabel, routeAt, scrolledSince } from '../src/components/garden/journey.ts';
-import { BOAT_SCALE, HULL_HALF_BEAM, boatPose } from '../src/components/garden/storyBoats.ts';
+import { boatScale, HULL_HALF_BEAM, boatPose } from '../src/components/garden/storyBoats.ts';
 import { MARKER_REACH, YEAR_MARKERS, markerShown, yearMarkerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
 import { hagiaShown, tripStop } from '../src/components/garden/eggs/balloonCourse.ts';
 import { yearMarkerModel } from '../src/components/garden/eggs/yearMarkerGeometry.ts';
@@ -58,8 +58,8 @@ test('markers on the banks stand on land and those in the river keep clear of th
       while (routeAt(p) > spot.z) p += 1e-4;
       const pose = boatPose(p, width);
       for (const side of [-1, 1]) {
-        const hull = pose.x + side * pose.gap * BOAT_SCALE * Math.cos(pose.yaw);
-        assert.ok(Math.abs(hull - spot.x) > HULL_HALF_BEAM.dinghy * BOAT_SCALE + .4 * spot.scale, `${marker.year} clear of the hull (width ${width})`);
+        const hull = pose.x + side * pose.gap * boatScale(width) * Math.cos(pose.yaw);
+        assert.ok(Math.abs(hull - spot.x) > HULL_HALF_BEAM.dinghy * boatScale(width) + .4 * spot.scale, `${marker.year} clear of the hull (width ${width})`);
       }
     }
   }

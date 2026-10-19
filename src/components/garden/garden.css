@@ -147,6 +147,10 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
   .garden-voyage { top: 11%; }
   .garden-voyage-month { font-size: 42px; }
+  /* The running date read small on a real phone (Amelia, October 2026):
+     larger and a touch heavier than desktop's smallest, still clear of the
+     screen's sides on the narrowest. */
+  .garden-voyage-digits { font-size: min(46px, 12.6vw); font-weight: 400; }
   .garden-voyage-year { font-size: 18px; }
   .garden-voyage .garden-text-link { margin-top: 4px; }
   .garden-celebrate { top: 23%; padding: 0 25px; }

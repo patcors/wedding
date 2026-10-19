@@ -5,7 +5,7 @@ import { GUEST_ARRIVAL, GUEST_BOAT, GUEST_CARD, GUEST_SCALE, cormorantWidth, gue
 import { cameraPose, dockView } from '../src/components/garden/cameraRig.ts';
 import { DOCKED, VOYAGE_END, progressAt, DATES } from '../src/components/garden/journey.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
-import { CATAMARAN, HULL_HALF_BEAM, BOAT_SCALE, boatPose, mooredStems } from '../src/components/garden/storyBoats.ts';
+import { CATAMARAN, HULL_HALF_BEAM, boatPose, mooredStems } from '../src/components/garden/storyBoats.ts';
 import { underJetty } from '../src/components/garden/voyageDock.ts';
 import { parties } from '../src/data/parties.ts';
 
@@ -131,12 +131,13 @@ test('they come up the river as the catamaran rounds the bend and are settled in
 });
 
 test('on the way in they keep to the water, clear of the jetty, the catamaran coming in and each other, with no jumps', () => {
-  const half = (CATAMARAN + HULL_HALF_BEAM.catamaran) * BOAT_SCALE, ends = [-1.5 * BOAT_SCALE, 1.15 * BOAT_SCALE];
   for (const screen of SCREENS.slice(0, 3)) for (let n = 1; n <= 4; n++) {
     const { width, h } = screen, length = GUEST_BOAT.halfLength * guestScale(width, h, n), beam = GUEST_BOAT.halfBeam * guestScale(width, h, n);
     let last = guestFleetPoses(GUEST_ARRIVAL.from, n, width, h);
     for (let p = GUEST_ARRIVAL.from; p <= DOCKED; p += .0005) {
       const poses = guestFleetPoses(p, n, width, h), cat = boatPose(p, width);
+      // The catamaran at its size there (bigger through the voyage, easing back as it moors).
+      const half = (CATAMARAN + HULL_HALF_BEAM.catamaran) * cat.scale, ends = [-1.5 * cat.scale, 1.15 * cat.scale];
       poses.forEach((pose, i) => {
         if (!pose.shown) return;
         assert.ok(Math.hypot(pose.x - last[i].x, pose.z - last[i].z) < .5, `no jumps (${screen.w}, ${n}, ${p.toFixed(4)})`);

@@ -7,7 +7,7 @@
 // Pure (no DOM), so it runs in Node and in the page's frontmatter.
 //
 // Real-time pieces (the ducks' and caps' tosses, the birds' flights, the
-// salsa turn, the proposal's steps, the rocket) play in seconds once the
+// salsa turn, the proposal's steps) play in seconds once the
 // scroll reaches their cue, so at a fixed p the timeline shows where they come
 // to rest, and counts the event itself from its cue to its own `late`, past
 // which a guest arriving finds it done.
@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { VOYAGE, bankEdge, islandHalfWidth, islandSpan, launchJetties, pointSpot, riverCenter, rockHalfWidth, voyageLandmarks } from './gardenGeometry.ts';
 import { treeBase } from './gardenTreeSpots.ts';
 import { DATES, MILESTONES, ROOM, progressAt, scrolledSince } from './journey.ts';
-import { BOAT_SCALE, SALSA, boatPose, catamaran, companyFlags, joining, rigging, salsaTime, universityFlag, type Company } from './storyBoats.ts';
+import { SALSA, boatPose, catamaran, companyFlags, joining, rigging, salsaTime, universityFlag, type Company } from './storyBoats.ts';
 import { HULL } from './storyBoatGeometry.ts';
 import { rubberDuck } from './rubberDuckGeometry.ts';
 import { DUCKS, duckOnWater, piSpot } from './eggs/campus.ts';
@@ -33,7 +33,7 @@ import { mortarboardGeometry } from './eggs/mortarboardGeometry.ts';
 import { harbourShown } from './eggs/harbour.ts';
 import { harbourGeometry } from './eggs/sydneyGeometry.ts';
 import { RIGS, hangSpot, rigShown, type RigId } from './eggs/circusRigs.ts';
-import { LYRA_SHAPE, hangingBirdGeometry, writeHangingBird } from './eggs/circusGeometry.ts';
+import { LYRA_SHAPE } from './eggs/circusGeometry.ts';
 import { NEST_EVENTS, nestSpots, nestTriggers, signTree, SIGN } from './eggs/nesting.ts';
 import { BIRDHOUSE } from './eggs/birdhouseGeometry.ts';
 import { BLADE } from './eggs/streetSign.ts';
@@ -45,19 +45,18 @@ import { PROPOSAL, proposalTime } from './eggs/proposal.ts';
 import { BALLOONS, BALLOON_TIMES, HAGIA_TIMES, balloonSpot, hagiaShown, hagiaSophiaSpot } from './eggs/balloonCourse.ts';
 import { balloonGeometry } from './eggs/balloonGeometry.ts';
 import { hagiaSophiaGeometry } from './eggs/hagiaSophiaGeometry.ts';
-import { ROCKET, rocketCourse, rocketShown, rocketSpot, rocketTime } from './eggs/rocketLaunch.ts';
-import { ROCKET_MODEL, STAND } from './eggs/rocketGeometry.ts';
+import { bulletShown, bulletSpot } from './eggs/bulletOrnament.ts';
 import type { Bank, Piece, Sphere } from './voyageTimeline.ts';
 
 // Numbers the scene keeps inside its components, copied here and checked
 // against their source by the test: the snow trips' size (`scale` in
 // SnowTrip.tsx and SecondSnowTrip.tsx, and SnowReveal's portrait factor), the
 // flurry's box (half extents, SnowReveal.tsx), and how far the silk and the
-// lyra hang clear of the ground and how the bird hangs (Circus.tsx).
+// lyra hang clear of the ground (Circus.tsx).
 export const COMPONENT = {
   snowScale: 1.25, snowMobile: .9,
   flurryBox: { across: 3.4, up: 3.4, along: 3.4 },
-  silkClear: .15, lyraClear: 1.1, birdTip: 1.15, birdOpen: .3,
+  silkClear: .15, lyraClear: 1.1,
 } as const;
 
 type Spot = { x: number; y: number; z: number; yaw?: number; scale?: number };
@@ -91,8 +90,8 @@ const monthOf = (id: string) => MILESTONES.find(m => m.id === id)!.month;
 
 // The boats, for whatever rides on them: round both hulls and up to the masthead.
 function boats(p: number, width: number, extra = 0): Sphere[] {
-  const pose = boatPose(p, width), half = HULL.mastTop * BOAT_SCALE / 2;
-  return [sphere(pose.x, half, pose.z, Math.hypot(pose.gap * BOAT_SCALE + .5, half) + extra)];
+  const pose = boatPose(p, width), half = HULL.mastTop * pose.scale / 2;
+  return [sphere(pose.x, half, pose.z, Math.hypot(pose.gap * pose.scale + .5, half) + extra)];
 }
 
 export function sceneryCatalog(width: number): Piece[] {
@@ -187,7 +186,7 @@ export function sceneryCatalog(width: number): Piece[] {
       shown: p => hagiaShown(scrolledSince(month, p)), spheres: () => [s] });
   }
 
-  // --- Ornaments: the university years, working lives, the circus, the truck, the rocket
+  // --- Ornaments: the university years, working lives, the circus, the truck, the bullet
   for (const id of ['mobius', 'bench'] as const) {
     const footprint = id === 'mobius' ? MOBIUS_PLINTH.width / 2 : BENCH.length / 2, spot = uniSpot(UNI[id], width, footprint);
     const s = placed(local(id, id === 'mobius' ? mobiusGeometry : parkBenchGeometry), spot);
@@ -205,21 +204,17 @@ export function sceneryCatalog(width: number): Piece[] {
     }
   }
   {
-    const names: Record<RigId, string> = { silk: 'Aerial silk', lyra: 'Lyra', bird: 'Bird hanging upside down' };
+    const names: Record<RigId, string> = { silk: 'Aerial silk', lyra: 'Lyra' };
     for (const id of Object.keys(RIGS) as RigId[]) {
       const rig = RIGS[id], spot = hangSpot(rig, width);
       let s: Sphere;
       if (id === 'silk') {
         const bottom = spot.ground + COMPONENT.silkClear;
         s = sphere(spot.x, (spot.y + bottom) / 2, spot.z, (spot.y - bottom) / 2 + .2);
-      } else if (id === 'lyra') {
+      } else {
         const drop = Math.max(.4, (spot.y - spot.ground - COMPONENT.lyraClear) / spot.scale - LYRA_SHAPE.radius * 2);
         s = sphere(spot.x, spot.y - (drop + LYRA_SHAPE.radius) * spot.scale, spot.z, LYRA_SHAPE.radius * spot.scale * 1.1);
-      } else s = placed(local('hanging-bird', () => {
-        const bird = hangingBirdGeometry();
-        writeHangingBird(bird, COMPONENT.birdTip, COMPONENT.birdOpen);
-        return bird;
-      }), spot);
+      }
       add({ id, name: names[id], group: 'Ornaments', file: 'eggs/Circus.tsx', bank: bankOf(spot.x, spot.z, width), counts: true,
         shown: (p, cameraZ) => rigShown(rig, spot, p, cameraZ, mobile), spheres: () => [s] });
     }
@@ -230,14 +225,10 @@ export function sceneryCatalog(width: number): Piece[] {
       shown: p => truckShown(p), spheres: () => [s] });
   }
   {
-    const spot = rocketSpot(width), course = rocketCourse(width), tall = (STAND.rod + ROCKET_MODEL.height) * spot.scale;
-    const stand = sphere(spot.x, spot.y + tall / 2, spot.z, tall / 2 + .1), bank = bankOf(spot.x, spot.z, width);
-    add({ id: 'rocket', name: 'Rocket on its stand', group: 'Ornaments', file: 'eggs/Rocket.tsx', bank, counts: p => rocketTime(p) < 0,
-      shown: p => rocketShown(rocketTime(p)), spheres: () => [stand] });
-    const lift = course.controls[1];
-    add({ id: 'rocket-launch', name: 'Rocket fires', group: 'Ornaments', file: 'eggs/Rocket.tsx', bank, counts: true,
-      note: `Fires ${ROCKET.at} of a share after ${ROCKET.month} shows and flies for seconds; counted to .25 of a share on.`,
-      shown: p => { const t = rocketTime(p); return on(t >= 0 && t <= .25); }, spheres: () => [stand, sphere(lift[0], lift[1], lift[2], tall)] });
+    // Upright, 1 tall in its own units, plinth to tip.
+    const spot = bulletSpot(width), s = sphere(spot.x, spot.y + spot.scale / 2, spot.z, spot.scale * .52);
+    add({ id: 'bullet', name: 'Bullet garden ornament', group: 'Ornaments', file: 'eggs/BulletOrnament.tsx', bank: bankOf(spot.x, spot.z, width), counts: true,
+      shown: (p, cameraZ) => bulletShown(spot, p, cameraZ, mobile), spheres: () => [s] });
   }
 
   // --- Carvings in the bark -------------------------------------------------

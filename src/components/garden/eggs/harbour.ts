@@ -11,16 +11,18 @@
 import { VOYAGE, bankEdge, groundHeight, pointInland, pointSpot, riverCenter, rockHalfWidth } from '../gardenGeometry.ts';
 import { ROOM, progressAt } from '../journey.ts';
 import { pointTop, rockHeight } from '../voyageRock.ts';
-import { markerShown } from './yearMarkerSpots.ts';
+import { SILK } from './circusRigs.ts';
+import { MARKER_REACH, markerShown } from './yearMarkerSpots.ts';
 
 // The Opera House stands on the point's flat top, its long axis turned
 // `turn` (radians about +y) from the river's, so its harbour front, the
 // shells' open mouths, faces out over the river and from the camera behind
 // the boats its shells show side on, rising one behind another. Its model is
 // a unit long and `width` wide (its podium); `scale` sizes it on each
-// composition, smaller on a phone's narrower river, where the point is
-// smaller too, and fits it on the point.
-export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.1, mobile: 1.05 } } as const;
+// composition so that it fills the point's top but for a narrow ledge, as
+// the real one fills Bennelong Point; larger on a phone, where it stands
+// further down the river (see pointSpot).
+export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.9, mobile: 3.35 } } as const;
 
 // The bridge crosses the river at VOYAGE.rock.bridge, from a pair of granite
 // pylons on the rock, `inset` in from its waterline, to a pair on Amelia's
@@ -31,7 +33,7 @@ export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.1, mobile: 1
 // is `deck` above the water, well clear of Amelia's masthead. A phone's span
 // is shorter, as its river is narrower, so its arch rises less.
 export const BRIDGE = {
-  deck: 2.15, thick: .1,
+  deck: 2.35, thick: .1,
   desktop: { inset: .42, inland: .75, half: .26, pylon: { across: .7, along: .5, above: .62 }, bearing: .4, ends: 2.62, crown: 3.5, chord: .34, member: .05, panels: 14 },
   mobile: { inset: .26, inland: .5, half: .2, pylon: { across: .42, along: .3, above: .5 }, bearing: .4, ends: 2.5, crown: 3.02, chord: .26, member: .035, panels: 9 },
 } as const;
@@ -109,18 +111,31 @@ export const onPoint = (x: number, z: number, width: number) => pointInland(x, z
 // it fades away quickly as the camera comes `leave` units from it (from the
 // first to the second), just after Sydney's stop. The Opera House comes in
 // with 2022, fully in as its `from` shows, and goes once the camera has
-// passed it. Both fade evenly (Sydney.tsx), so neither is grainy part way.
+// passed it. On a phone it stands further down the river than the year
+// markers' reach (`MARKER_REACH`) as 2022 comes in, so it has a reach of
+// its own there (`reach`, the markers' on desktop), held back by its month
+// rather than its distance. There it is beyond the circus's silk, which
+// comes in on the same bank late in 2022 and would hang in front of it, so
+// on a phone it goes once August's stop is past, fading over the `leave`
+// of a share before the silk starts to come in. Both fade evenly
+// (Sydney.tsx), so neither is grainy part way.
 export const HARBOUR_SHOWN = {
   bridge: { from: '2020-10', arrive: .3, leave: [10.9, 9.7] },
-  opera: { from: '2022-01', arrive: .35 },
+  opera: { from: '2022-01', arrive: .35, reach: { desktop: MARKER_REACH.desktop, mobile: 38 }, leave: .2 },
 } as const;
 const arrived = (p: number, { from, arrive }: { from: string; arrive: number }) => Math.min(1, Math.max(0, (p - progressAt(from)) / (arrive * ROOM) + 1));
+// As markerShown, with a reach of its own: in over the last `fade` of it, gone once passed.
+const withinReach = (z: number, cameraZ: number, reach: number) => {
+  const ahead = cameraZ - z;
+  return ahead < -MARKER_REACH.behind || ahead > reach ? 0 : Math.min(1, (reach - ahead) / MARKER_REACH.fade);
+};
 const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * (3 - 2 * x); };
 export function harbourShown(p: number, cameraZ: number, mobile: boolean) {
   const { bridge, opera } = HARBOUR_SHOWN, [from, to] = bridge.leave;
   const left = smooth((cameraZ - VOYAGE.rock.bridge - to) / (from - to));
   return {
-    opera: Math.min(smooth(arrived(p, opera)), markerShown(mobile ? VOYAGE.point.mobile.z : VOYAGE.point.z, cameraZ, mobile)),
+    opera: Math.min(smooth(arrived(p, opera)), withinReach(mobile ? VOYAGE.point.mobile.z : VOYAGE.point.z, cameraZ, opera.reach[mobile ? 'mobile' : 'desktop']),
+      mobile ? smooth((progressAt(SILK.from) - SILK.arrive * ROOM - p) / (opera.leave * ROOM)) : 1),
     bridge: Math.min(left, smooth(arrived(p, bridge)), markerShown(VOYAGE.rock.bridge, cameraZ, mobile)),
   };
 }

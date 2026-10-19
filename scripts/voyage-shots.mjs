@@ -182,6 +182,8 @@ async function openPage(cdp, viewport, { dpr, reduced, review }) {
   }
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduced ? 'reduce' : 'no-preference' }] });
   if (!review) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.setItem('pa_dev_review_hidden', '1'); } catch {}` });
+  // The scroll helper (scrollGuide.ts) would come up over a still once the page has been idle: count it as spent.
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { sessionStorage.setItem('pa_scroll_guide_shown', '3'); } catch {}` });
   const evaluate = async (expression, timeout) => {
     const { result, exceptionDetails } = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, timeout);
     if (exceptionDetails) throw new Error(exceptionDetails.exception?.description ?? exceptionDetails.text);
@@ -218,7 +220,7 @@ async function waitReady(page, url, timeout) {
 const SCROLLER = `document.querySelector('main.garden-prototype')`;
 const scrollTo = p => `(() => { const m = ${SCROLLER}; const span = Math.max(1, m.scrollHeight - m.clientHeight); m.scrollTop = ${p} * span; return m.scrollTop / span; })()`;
 const frames = `new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => done(true))))`;
-// Until the page's fades (the scroll cue's, the copy's) have finished, or 5s:
+// Until the page's fades (the copy's) have finished, or 5s:
 // no finite animation running for ten frames in a row, since React can start
 // one a few frames after the scroll.
 const fadesDone = `new Promise(done => {

@@ -6,7 +6,7 @@ import { groundHeight, riverChunks } from './gardenGeometry';
 import { TREE_SINK, oldTreePlacement, treePlacements, type Placement } from './gardenTreeSpots';
 import { useGardenTextures } from './gardenTextures';
 import { useRiverReach } from './useRiverReach';
-import { SEASON_UNIFORMS, seasonalLeaves } from './GardenSeasons';
+import { seasonRoles, seasonalLeaves } from './GardenSeasons';
 
 const BASE = `${import.meta.env.BASE_URL}models/garden/`;
 // The four ash models, the old tree at Jasper's Berry where the boats dock, a
@@ -39,10 +39,12 @@ function TreeBatch({ geometry, material, depthMaterial, placements, leaves, mobi
       mesh.current!.setMatrixAt(i, dummy.matrix);
     });
     mesh.current.instanceMatrix.needsUpdate = true;
+    // Which trees turn, thin or blossom with the seasons (GardenSeasons.tsx).
+    if (leaves) seasonRoles(mesh.current, placements, width, mobile);
     mesh.current.computeBoundingSphere();
     // Account for the small shader displacement when frustum culling.
     if (mesh.current.boundingSphere) mesh.current.boundingSphere.radius += .3;
-  }, [placements, width]);
+  }, [placements, width, leaves, mobile]);
   useEffect(() => {
     const instance = mesh.current;
     return () => { instance?.dispose(); };
@@ -134,7 +136,7 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
       animate(shader, renderer);
       seasonalLeaves(shader);
     };
-    leaves.customProgramCacheKey = depth.customProgramCacheKey = () => 'garden-leaf-wind-seasons-v1';
+    leaves.customProgramCacheKey = depth.customProgramCacheKey = () => 'garden-leaf-wind-seasons-v3';
     return { bark, leaves, depth };
     // Built once, so the meshes keep them; the palette's maps are set below.
   }, [windTime]);
@@ -153,7 +155,6 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
     return [0, 1, 2, 3, 5].map(type => riverChunks(all.filter(p => p.type === type)));
   }, [width, mobile]);
   const oldTree = useMemo(() => [oldTreePlacement(width, mobile)], [width, mobile]);
-  useLayoutEffect(() => { SEASON_UNIFORMS.seasonEvergreen.value.set(oldTree[0].x, oldTree[0].z); }, [oldTree]);
   const [ash1, ash2, ash1Distant, ash2Distant, old, bush, ash1Far, ash2Far] = models;
   const far = [undefined, undefined, ash1Far, ash2Far, undefined];
 

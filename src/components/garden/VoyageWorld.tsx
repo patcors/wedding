@@ -11,7 +11,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ROUTE } from './journey';
 import { VOYAGE, riverCenter, voyageLandmarks } from './gardenGeometry';
-import { BOAT_SCALE, berth, castingOff } from './storyBoats';
+import { berth, boatScale, castingOff } from './storyBoats';
 import { lampsAt } from './skyCycle';
 import { useGroundMaterial } from './GardenGround';
 import { plantMaterial } from './GardenPlants';
@@ -186,7 +186,7 @@ function Launch({ width, mobile }: SlotProps) {
   const group = useRef<THREE.Group>(null), lines = useRef<THREE.Mesh>(null);
   const jetties = useMemo(() => launchJettyGeometry(width), [width]);
   // The hulls' bow and stern ends, a little in from the tips, in world units.
-  const tied = useMemo(() => mooringLines(width, side => ({ x: riverCenter(ROUTE.start, width) + side * berth(width) * BOAT_SCALE, z: ROUTE.start }), -.62, .55), [width]);
+  const tied = useMemo(() => mooringLines(width, side => ({ x: riverCenter(ROUTE.start, width) + side * berth(width) * boatScale(width), z: ROUTE.start }), -.62, .55), [width]);
   const lanterns = useMemo(() => new THREE.BufferGeometry().setFromPoints(launchLanterns(width)), [width]);
   const glow = useMemo(glowTexture, []);
   const materials = useMemo(() => ({
