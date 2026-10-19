@@ -18,6 +18,8 @@ import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitD
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
+import { GUEST_SOUND, GUEST_SOUND_MODE, REVIEW_SOUND, SOUND_MODES, soundMode, type SoundMode } from './soundChoices';
+import { useSoundscape } from './useSoundscape';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -370,6 +372,18 @@ export default function Garden() {
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   const easedMonth = useCallback(() => storyMonth(voyage.pace.progress), [voyage.pace]);
+  // Optional sound (soundChoices.ts), off by default: the Review panel's
+  // choice while developing, remembered, and a speaker button for guests
+  // once GUEST_SOUND is set. Either starts only from a tap, click or key.
+  const [sound, setSound] = useState<SoundMode>('off');
+  useEffect(() => { if (REVIEW) setSound(soundMode(localStorage.getItem(REVIEW_SOUND))); }, []);
+  const easedProgress = useCallback(() => voyage.pace.progress, [voyage.pace]);
+  const unlockSound = useSoundscape({ mode: sound, paused, reduced, ready: ready && !failed, progress: easedProgress });
+  const chooseSound = (mode: SoundMode) => {
+    if (mode !== 'off') unlockSound();
+    if (REVIEW) localStorage.setItem(REVIEW_SOUND, mode);
+    setSound(mode);
+  };
   // The scene already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
   const goToProgress = voyage.go;
@@ -395,6 +409,13 @@ export default function Garden() {
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
         <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0, true)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
         <div className="garden-header-links">
+          {GUEST_SOUND && <button className="garden-sound-toggle" aria-label="Sound" aria-pressed={sound !== 'off'}
+            onClick={() => chooseSound(sound === 'off' ? GUEST_SOUND_MODE : 'off')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+              {sound === 'off' ? <path d="m16 9.5 5 5m0-5-5 5" /> : <path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" />}
+            </svg>
+          </button>}
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
           <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
         </div>
@@ -551,7 +572,7 @@ export default function Garden() {
         </select>
       </label>
       {loadChoices && <>
-      <label className="garden-material-selector">Textures
+      <label className="garden-material-selector garden-load-selector">Textures
         <select aria-label="Texture downloads" value={loadChoices.textures} onChange={event => {
           localStorage.setItem(REVIEW_TEXTURES, event.target.value);
           location.reload();
@@ -559,7 +580,7 @@ export default function Garden() {
           {Object.entries(TEXTURE_WEIGHTS).map(([weight, label]) => <option key={weight} value={weight}>{label}</option>)}
         </select>
       </label>
-      <label className="garden-material-selector">Prepare
+      <label className="garden-material-selector garden-load-selector">Prepare
         <select aria-label="When the scene prepares" value={loadChoices.prepare} onChange={event => {
           localStorage.setItem(REVIEW_PREPARE, event.target.value);
           location.reload();
@@ -568,6 +589,11 @@ export default function Garden() {
         </select>
       </label>
       </>}
+      <label className="garden-material-selector garden-sound-selector">Sound
+        <select aria-label="Sound" value={sound} onChange={event => chooseSound(soundMode(event.target.value))}>
+          {Object.entries(SOUND_MODES).map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
+        </select>
+      </label>
       {readyIn !== null && <span className="garden-review-load">Loaded in {readyIn.toFixed(1)}s</span>}
     </aside>}
     <div className="garden-scroll-space" />

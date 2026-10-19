@@ -94,3 +94,10 @@
    the date, gone by a third of the way down. */
 .garden-prototype[data-state=ready][data-text=scrim] .garden-wash { background: linear-gradient(180deg, #18202c40, #18202c26 16%, #18202c0d 28%, transparent 38%); }
 .garden-review-load { font-size: 10px; color: #6e7464; white-space: nowrap; }
+/* Sound: on phones it shares the last row with the load choices and the
+   load time, wide enough to read "With chimes", the time on two lines. */
+@media (max-width: 700px) {
+  .garden-review > .garden-load-selector { grid-column: span 3; }
+  .garden-review > .garden-sound-selector { grid-column: span 4; }
+  .garden-review > .garden-review-load { grid-column: span 2; white-space: normal; }
+}
