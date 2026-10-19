@@ -6,9 +6,9 @@
 // at up to PACE.opening shares a second, settling to PACE.max by the
 // meeting's date. The scroll itself is kept within PACE.lead of it, so a fling
 // carries the story on a little way, as momentum does, rather than leaving
-// the page far ahead. "The next chapter" glides the rest of the way to the
-// dock on its own (glidePlan). Pure, so it can be tested.
-import { ARRIVAL_END, MILESTONES, ROOM, STOPS, progressAt } from './journey.ts';
+// the page far ahead. "Sail on" glides the rest of the way to the dock on
+// its own, without stopping (glidePlan). Pure, so it can be tested.
+import { ARRIVAL_END, MILESTONES, ROOM, progressAt } from './journey.ts';
 
 // `ease` is the old damping's rate, per second; `max` the most shares a
 // second the story travels, and `opening` the most under the title;
@@ -38,61 +38,33 @@ export function paceToward(p: number, target: number, dt: number) {
 // The furthest the scroll may be from the eased progress p, either way.
 export const leashed = (scroll: number, p: number) => clamp(scroll, p - PACE.lead * ROOM, p + PACE.lead * ROOM);
 
-// The glide to the dock stops at each milestone (STOPS) and at the
-// celebration. Each leg sets off from rest, eases up over `ramp` seconds to
-// `cruise` shares a second (the most a guest can scroll),
-// travels on and eases into the next stop over another `ramp`, where it holds
-// for `hold` seconds, or longer where something plays out there: the caps
-// tossed at graduation, the birds flying in as they buy their apartments,
-// the catamaran's turn as they start salsa and the proposal on its deck.
-export const GLIDE = {
-  cruise: .8, ramp: 1, hold: 1.8,
-  holds: { graduation: 2.6, apartments: 2.6, salsa: 3.2, engaged: 2.6 } as Partial<Record<string, number>>,
-} as const;
+// "Sail on" glides the rest of the way to the dock in one continuous run
+// (Amelia, October 2026: the old glide stopped and started at each
+// milestone). It sets off from rest, eases up over `ramp` seconds to `speed`
+// shares a second, steady and slower than the most a guest may scroll, so
+// each egg can be taken in as it passes, and eases into the dock over another
+// `ramp`. It slows for nothing on the way.
+export const GLIDE = { speed: .5, ramp: 1.5 } as const;
 
-// Where the glide stops, in order: each milestone's stop (STOPS, by its
-// milestone's id), and the celebration.
-export const GLIDE_STOPS: readonly { p: number; id: string }[] = STOPS.slice(1).map((p, i) => ({ p, id: MILESTONES[i]?.id ?? 'celebration' }));
+// `cruise` is slower than GLIDE.speed only on a run too short to reach it.
+export type GlidePlan = { from: number; cruise: number; length: number };
 
-export type GlideLeg = { from: number; to: number; start: number; travel: number; hold: number; cruise: number };
-export type GlidePlan = { legs: GlideLeg[]; length: number };
-
-// The legs from progress `from` to the celebration, with when each starts, in
-// seconds, how long it travels and holds, and its cruising speed (slower on
-// a leg too short to reach `cruise`).
+// The glide from progress `from` to the dock (p 1), and how long it takes, in seconds.
 export function glidePlan(from: number): GlidePlan {
-  const legs: GlideLeg[] = [];
-  let at = from, start = 0;
-  for (const [i, { p: stop, id }] of GLIDE_STOPS.entries()) {
-    if (stop <= at + 5e-4) continue;
-    const distance = (stop - at) / ROOM, ramp = GLIDE.ramp;
-    const cruise = Math.min(GLIDE.cruise, distance / ramp);
-    const travel = distance / cruise + ramp;
-    const hold = i === GLIDE_STOPS.length - 1 ? 0 : GLIDE.holds[id] ?? GLIDE.hold;
-    legs.push({ from: at, to: stop, start, travel, hold, cruise });
-    start += travel + hold;
-    at = stop;
-  }
-  return { legs, length: start };
+  const distance = Math.max(0, 1 - from) / ROOM;
+  const cruise = Math.min(GLIDE.speed, distance / GLIDE.ramp);
+  return { from, cruise, length: distance > 0 ? distance / cruise + GLIDE.ramp : 0 };
 }
 
-// Shares covered `t` seconds into a leg: its speed rises as half a cosine
-// over the ramp, cruises, and falls the same way into the stop.
-function covered(leg: GlideLeg, t: number) {
-  const ramp = GLIDE.ramp, v = leg.cruise, distance = (leg.to - leg.from) / ROOM;
-  const rising = (s: number) => v * (s / 2 - ramp / (2 * Math.PI) * Math.sin(Math.PI * s / ramp));
-  if (t <= 0) return 0;
-  if (t >= leg.travel) return distance;
-  if (t < ramp) return rising(t);
-  if (t > leg.travel - ramp) return distance - rising(leg.travel - t);
-  return v * ramp / 2 + v * (t - ramp);
-}
-
-// Where the glide is `t` seconds after it set off.
+// Where the glide is `t` seconds after it set off: its speed rises as half a
+// cosine over the ramp, cruises, and falls the same way into the dock.
 export function glideAt(plan: GlidePlan, t: number) {
-  const leg = plan.legs.findLast(leg => leg.start <= t) ?? plan.legs[0];
-  if (!leg) return 1;
-  return leg.from + covered(leg, t - leg.start) * ROOM;
+  if (t >= plan.length) return 1;
+  if (t <= 0) return plan.from;
+  const ramp = GLIDE.ramp, v = plan.cruise, distance = (1 - plan.from) / ROOM;
+  const rising = (s: number) => v * (s / 2 - ramp / (2 * Math.PI) * Math.sin(Math.PI * s / ramp));
+  const covered = t < ramp ? rising(t) : t > plan.length - ramp ? distance - rising(plan.length - t) : v * ramp / 2 + v * (t - ramp);
+  return plan.from + covered * ROOM;
 }
 
 // The one eased progress, shared by the page and the scene, each of which
@@ -114,3 +86,9 @@ export function advancePace(pace: Pace, now: number) {
     if (glide.t >= glide.plan.length) pace.glide = null;
   } else pace.progress = paceToward(pace.progress, pace.target, dt);
 }
+
+// Whether the story has as good as come to rest: no glide, and less than
+// `REST` of a share left to coast, a drift too slow to notice. The scroll
+// helper waits for it (scrollGuide.ts), not for the last of the coasting.
+export const REST = .05;
+export const atRest = (pace: Pace) => !pace.glide && Math.abs(pace.target - pace.progress) < REST * ROOM;

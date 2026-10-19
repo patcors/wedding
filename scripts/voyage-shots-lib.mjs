@@ -137,8 +137,8 @@ export function parseShotArgs(argv) {
   };
 }
 
-// The stops: the opening, each milestone (where the arrow keys and scroll cue
-// land, journey.ts's STOPS) and the dock, plus any --at progresses, in scroll
+// The stops: the opening, each milestone (where the arrow keys land,
+// journey.ts's STOPS) and the dock, plus any --at progresses, in scroll
 // order. `date` is the label the page shows there: under reduced motion the
 // still's (stillProgress), otherwise the scroll's own.
 export function stopList({ stops, milestones, dateLabel, stillProgress, only = null, at = [], live = false }) {

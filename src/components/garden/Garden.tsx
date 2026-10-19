@@ -12,7 +12,7 @@ import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
-import { advancePace, createPace, glidePlan, leashed } from './journeyPace';
+import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
 import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
@@ -21,6 +21,7 @@ import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasons';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import { GUEST_SOUND, GUEST_SOUND_MODE, REVIEW_SOUND, SOUND_MODES, soundMode, type SoundMode } from './soundChoices';
 import { useSoundscape } from './useSoundscape';
+import { useScrollGuide } from './useScrollGuide';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -41,8 +42,9 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
 // still mid-river. A rolling date changes at most this often, so it reads as
 // a gentle count rather than a flicker; a milestone is announced once the
 // guest has stayed on it a moment. Here too the scroll is kept within reach
-// of the story, the arrow keys and scroll cue send it to a stop, and "The
-// next chapter" glides on to the dock until the guest takes over.
+// of the story, the arrow keys send it to a stop, and "Sail on" glides on to
+// the dock until the guest takes over. `still`: the story has as good as
+// come to rest (atRest).
 const DATE_EVERY = 400, ANNOUNCE_AFTER = 700;
 function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   const pace = useMemo(createPace, []);
@@ -52,6 +54,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   const [date, setDate] = useState<string | null>(null);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [gliding, setGliding] = useState(false);
+  const [still, setStill] = useState(true);
   // Whether the opening title's names have left it for their boats.
   const [away, setAway] = useState(false);
   const controls = useRef({ go: (_next: number, _jump?: boolean) => {}, glide: () => {} });
@@ -78,6 +81,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       if (pace.glide) element.scrollTop = pace.progress * span();
       setGliding(pace.glide !== null);
       const settled = !pace.glide && pace.progress === pace.target;
+      setStill(atRest(pace));
       if (!show(pace.progress, settled, now) || !settled) frame = requestAnimationFrame(tick);
     };
     const wake = () => { if (!frame && !reduced) frame = requestAnimationFrame(tick); };
@@ -166,7 +170,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   }, [milestone, reduced]);
   const go = useCallback((next: number, jump?: boolean) => controls.current.go(next, jump), []);
   const glide = useCallback(() => controls.current.glide(), []);
-  return { pace, progress, chapter, date, announced, gliding, away, go, glide };
+  return { pace, progress, chapter, date, announced, gliding, still, away, go, glide };
 }
 
 // The month and year each crossfade between two layers. A change mid-fade
@@ -329,9 +333,13 @@ export default function Garden() {
   }, []);
   const voyage = useVoyage(scroller, reduced);
   const { progress } = voyage;
-  // The scroll cue goes for good once the guest has scrolled a little.
+  // Screen readers' and keyboards' "Wander with us" goes for good once the guest has scrolled a little.
   const [explored, setExplored] = useState(false);
   useEffect(() => { if (progress > .01 && !explored) setExplored(true); }, [progress, explored]);
+  // The scroll helper (scrollGuide.ts): once the opening has settled, never at
+  // the dock, over the scene-only view, a failed scene or the Review panel.
+  const guiding = useScrollGuide(scroller, { open: ready && openingReleased && !failed && !sceneOnly && !(REVIEW && showReview),
+    atDock: voyage.chapter === 'dock', moving: !voyage.still || voyage.gliding });
   const chapter = { arrival: 0, voyage: 1, dock: 2 }[voyage.chapter];
   // Once the scene is up, the opening names fly to their boats as the guest
   // scrolls (NameFlight.tsx); before it, without it, or under reduced
@@ -412,6 +420,25 @@ export default function Garden() {
     <p className="garden-visually-hidden" role="status">{chapter === 1 && voyage.announced ? `${dateLabel(progressAt(voyage.announced.month))}. ${voyage.announced.description}` : ''}</p>
     {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
       openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
+    {/* The scroll helper over the scene (scrollGuide.ts): decorative, letting every touch through. */}
+    <div className="garden-chrome-layer garden-guide-layer" aria-hidden="true">
+      <div className={`garden-guide ${guiding ? 'is-shown' : ''}`}>
+        <svg className="garden-guide-hand" viewBox="0 -16 90 156" fill="none">
+          <path className="garden-guide-chevron" d="m25 16 11-10 11 10" />
+          <path className="garden-guide-chevron" d="m25 0 11-10 11 10" />
+          <g className="garden-guide-finger">
+            <path d="M30 100V54a6 6 0 0 1 12 0v32-6a6 6 0 0 1 12 0v8-4a5.5 5.5 0 0 1 11 0v8-2a5 5 0 0 1 10 0v18c0 14-7 24-19 26H42c-8 0-12-4-16-10l-12-18a5.5 5.5 0 0 1 8.5-7l7.5 8Z" />
+          </g>
+        </svg>
+        <svg className="garden-guide-mouse" viewBox="0 0 48 116" fill="none">
+          <rect x="7" y="2" width="34" height="54" rx="17" />
+          <path className="garden-guide-wheel" d="M24 13v9" />
+          <path className="garden-guide-chevron" d="m14 72 10 9 10-9" />
+          <path className="garden-guide-chevron" d="m14 88 10 9 10-9" />
+        </svg>
+        <p><span className="garden-guide-touch">Swipe up to sail</span><span className="garden-guide-wheel-label">Scroll to sail</span></p>
+      </div>
+    </div>
     {/* The chrome sits in pinned layers inside the scroller, so a drag that starts on it still scrolls. */}
     <div className="garden-chrome-layer">
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
@@ -451,9 +478,12 @@ export default function Garden() {
             <Crossfade className="garden-voyage-year" value={year} />
           </>}
         </p>
-        {/* Glides on to the dock at an easy pace; while it does, it pauses the glide. */}
-        <button className="garden-text-link garden-glide" onClick={voyage.glide}>
-          {voyage.gliding ? <>Pause <span aria-hidden="true">‖</span></> : <>The next chapter <span aria-hidden="true">→</span></>}
+        {/* Glides on to the dock without stopping; while it does, it pauses the glide. */}
+        <button className="garden-glide" onClick={voyage.glide} data-gliding={voyage.gliding ? '' : undefined}>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            {voyage.gliding ? <path d="M3 1.5v9M9 1.5v9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : <path d="M3 1.2 10.4 6 3 10.8Z" fill="currentColor" />}
+          </svg>
+          {voyage.gliding ? 'Pause' : 'Sail on'}
         </button>
       </section>
 
@@ -484,11 +514,8 @@ export default function Garden() {
           <span>Release a butterfly</span>
         </button>
         </div>}
-        <button className={`garden-scroll-cue ${explored ? 'is-done' : ''}`} onClick={() => goToProgress(nextStop(progress))}>
-          Wander with us
-          <span className="garden-scroll-cue-how" aria-hidden="true"><span className="garden-scroll-cue-mouse">Scroll</span><span className="garden-scroll-cue-touch">Swipe up</span></span>
-          <i aria-hidden="true" />
-        </button>
+        {/* Shown only when focused from the keyboard: the scroll helper says it to everyone else. */}
+        <button className={`garden-wander ${explored ? 'is-done' : ''}`} onClick={() => goToProgress(nextStop(progress))}>Wander with us</button>
       </div>
     </div>
     {REVIEW && showReview && <aside className="garden-review" aria-label="Review panel">
