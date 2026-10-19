@@ -242,7 +242,13 @@ async function shootViewport(cdp, base, viewport, stops, options, dir) {
     const { errorText } = await page.send('Page.navigate', { url });
     if (errorText) throw new Error(`Couldn't open ${url}: ${errorText}`);
     await waitReady(page, url, options.timeout);
-    page.reloads.length = 0;
+    // Code swapped in while the page loaded (an edit saved just before the
+    // run) leaves it part old, part new, and remounted parts of the scene
+    // may not draw as a fresh page does: load it again. Its own first
+    // navigation doesn't count.
+    const own = page.reloads.findIndex(reason => reason.startsWith('navigated to'));
+    if (own >= 0) page.reloads.splice(own, 1);
+    if (page.reloads.length) throw new Reloaded(`while loading: ${page.reloads[0]}`);
     if (viewport.mobile && !await page.evaluate(`matchMedia('(hover: none)').matches`)) console.warn(`  ${viewport.name}: the emulated phone still reports hover, so phone-only styles won't show`);
     // The cover fades (1.2s even under reduced motion); live, the butterflies
     // also land on the names.
