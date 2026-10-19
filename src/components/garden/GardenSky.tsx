@@ -8,7 +8,6 @@ import { riverCenter } from './gardenGeometry';
 import { routeAt } from './journey';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import type { WaterTint } from './GardenWater';
-import { FINALE } from './cameraRig';
 import { MIST_KEYS, SKY_KEYS, hex, skyAt, waterIn, type Rgb, type Sky, type WaterStyle } from './skyCycle';
 import { currentSeason } from './GardenSeasons';
 import { seasonLight } from './seasons';
@@ -131,8 +130,7 @@ export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint,
     if (background.current) background.current.copy(dome.horizon);
     if (fog.current) {
       fog.current.color.copy(dome.horizon);
-      // The finale's aerial view sees further, so its haze starts further off.
-      fog.current.near = FOG.clear[device] + (FOG.mist[device] - FOG.clear[device]) * sky.haze + FINALE.haze * clock.lift;
+      fog.current.near = FOG.clear[device] + (FOG.mist[device] - FOG.clear[device]) * sky.haze;
     }
     // The season's small share of the light (seasons.ts).
     const season = seasonLight(currentSeason(clock.progress, reduced, seasons));

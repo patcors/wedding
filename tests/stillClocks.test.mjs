@@ -13,7 +13,6 @@ const GARDEN = new URL('../src/components/garden/', import.meta.url).pathname;
 // Clocks that step with frames but never run in a still, and why.
 const EXEMPT = {
   'GardenButterfly.tsx': 'the page\'s butterflies, which reduced motion doesn\'t release',
-  'VoyageCamera.tsx': 'the finale\'s flight, which never starts under reduced motion',
   'journeyPace.ts': '"The next chapter"\'s glide, a cut under reduced motion',
   'boatPhysics.ts': 'guest-launched boats, whose advance() returns at once while paused',
 };

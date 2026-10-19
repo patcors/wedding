@@ -1,63 +1,90 @@
-// The guest's own paper boat at the dock, with their Party's names on its
-// card sail (guestBoat.ts). Only on a Personal link, or once one has been
-// opened on this device (GardenPage remembers it as pa_party); the plain
-// Garden shows no boat.
+// The guests' own paper boats, one for each guest with their first name on
+// its card sail (guestBoat.ts), coming in to the dock with the catamaran.
+// Only on a Personal link, or once one has been opened on this device
+// (GardenPage remembers it as pa_party); the plain Garden shows none.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { readParty } from '../details/rsvp';
 import { useJourney, type SlotProps } from './JourneyProvider';
-import { GUEST_ARRIVAL, GUEST_BOAT, guestBoatPose, guestScale } from './guestBoat';
+import { GUEST_ARRIVAL, guestBerths, guestFleetPoses, guestNames, guestRig, guestScale } from './guestBoat';
 import { cardGeometry, cardTexture, guestHull } from './guestBoatGeometry';
 import { sharpenFlag } from './storyBoatGeometry';
 
 export function rememberedParty() {
   try { return readParty(localStorage.getItem('pa_party')); } catch { return null; }
 }
+// The first names the remembered Party's boats carry, or none.
+export const rememberedNames = () => guestNames(rememberedParty()?.guests ?? []);
 
-// `height` is the visible height in px, for its size on a short screen (guestScale).
+// `height` is the visible height in px, for their size on a short screen (guestScale).
 export default function GuestBoat(slot: SlotProps & { height?: number }) {
-  const [party] = useState(rememberedParty);
-  return party ? <Boat greeting={party.greeting} {...slot} /> : null;
+  const [names] = useState(rememberedNames);
+  return names.length ? <Fleet names={names} {...slot} /> : null;
 }
 
-function Boat({ greeting, width, height, paused }: SlotProps & { greeting: string; height?: number }) {
+// Each boat's own rocking: a phase and a pace a little apart, so they bob out of step.
+const ROCK = [{ phase: 0, pace: 1 }, { phase: 2.1, pace: .87 }, { phase: 4.3, pace: 1.12 }, { phase: 1.2, pace: .94 }];
+
+function Fleet({ names, width, height, paused }: SlotProps & { names: string[]; height?: number }) {
   const clock = useJourney();
-  const group = useRef<THREE.Group>(null), card = useRef<THREE.Group>(null);
-  const model = useMemo(() => ({ ...guestHull(), card: cardGeometry(), names: cardTexture(greeting) }), [greeting]);
-  useEffect(() => () => { model.geometry.dispose(); model.creases.dispose(); model.card.dispose(); model.names.dispose(); }, [model]);
-  // The card's names go up to the GPU now, not as the boat first shows near the wedding.
+  const boats = useRef<(THREE.Group | null)[]>([]), cards = useRef<(THREE.Group | null)[]>([]);
+  // Each boat's mast and card: every other one stands on a tall mast (guestBerths).
+  const rigs = useMemo(() => guestBerths(names.length, width, height).map(({ tall }) => guestRig(tall, width, height, names.length)), [names, width, height]);
+  // The hull (one for each height of mast), its creases and the card, shared
+  // by every boat, and each one's name.
+  const model = useMemo(() => {
+    const tops = [...new Set(rigs.map(rig => rig.top))], built = tops.map(top => guestHull(top));
+    for (const { creases } of built.slice(1)) creases.dispose();
+    return {
+      hulls: rigs.map(rig => built[tops.indexOf(rig.top)].geometry), creases: built[0].creases, card: cardGeometry(), names: names.map(name => cardTexture(name)),
+      hull: new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 1 }),
+      lines: new THREE.LineBasicMaterial({ color: '#8b795a', transparent: true, opacity: .32 }),
+    };
+  }, [names, rigs]);
+  // Each card a little of its own light, so the names still read in the dusk.
+  const faces = useMemo(() => model.names.map(({ texture: map }) => {
+    const material = new THREE.MeshStandardMaterial({ map, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: .18, side: THREE.DoubleSide, roughness: 1 });
+    material.onBeforeCompile = sharpenFlag;
+    return material;
+  }), [model]);
+  useEffect(() => () => {
+    for (const hull of new Set(model.hulls)) hull.dispose();
+    model.creases.dispose(); model.card.dispose(); model.hull.dispose(); model.lines.dispose();
+    for (const { texture } of model.names) texture.dispose();
+    for (const face of faces) face.dispose();
+  }, [model, faces]);
+  // The names go up to the GPU now, not as the boats first show near the wedding.
   const gl = useThree(state => state.gl);
-  useEffect(() => gl.initTexture(model.names), [gl, model]);
+  useEffect(() => { for (const { texture } of model.names) gl.initTexture(texture); }, [gl, model]);
   const time = useRef(0);
   useFrame((_, dt) => {
-    const boat = group.current;
-    if (!boat || !card.current) return;
-    // Most of the voyage it hasn't set off: nothing to place.
-    if (clock.progress < GUEST_ARRIVAL.from) { boat.visible = false; return; }
-    const pose = guestBoatPose(clock.progress, width, height);
-    boat.visible = pose.shown;
-    if (!pose.shown) return;
+    // Most of the voyage they haven't set off: nothing to place.
+    if (clock.progress < GUEST_ARRIVAL.from) {
+      for (const boat of boats.current) if (boat) boat.visible = false;
+      return;
+    }
     if (!paused) time.current += Math.min(dt, .05);
     const t = time.current;
-    // A gentle bob, keel just under the water as the guests' boats keep it.
-    boat.position.set(pose.x, -.02 + Math.sin(t * 1.5) * .008, pose.z);
-    boat.rotation.set(Math.sin(t * 1.2) * .02, pose.yaw, Math.sin(t * .95 + 1) * .03);
-    card.current.rotation.y = pose.card;
+    guestFleetPoses(clock.progress, names.length, width, height).forEach((pose, i) => {
+      const boat = boats.current[i], card = cards.current[i];
+      if (!boat || !card) return;
+      boat.visible = pose.shown;
+      if (!pose.shown) return;
+      // A gentle bob, keel just under the water as the guests' boats keep it.
+      const { phase, pace } = ROCK[i % ROCK.length], s = t * pace + phase;
+      boat.position.set(pose.x, -.02 + Math.sin(s * 1.5) * .008, pose.z);
+      boat.rotation.set(Math.sin(s * 1.2) * .02, pose.yaw, Math.sin(s * .95 + 1) * .03);
+      card.rotation.y = pose.card;
+    });
   });
-  return <group ref={group} name="guest-boat" visible={false} scale={guestScale(width, height)}>
-    <mesh geometry={model.geometry}>
-      <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1} />
-    </mesh>
-    <lineSegments geometry={model.creases}>
-      <lineBasicMaterial color="#8b795a" transparent opacity={.32} />
-    </lineSegments>
-    <group ref={card} position={[0, GUEST_BOAT.foot, 0]}>
-      <mesh geometry={model.card}>
-        {/* A little of its own light, so the names still read in the dusk. */}
-        <meshStandardMaterial map={model.names} emissive="#ffffff" emissiveMap={model.names} emissiveIntensity={.18}
-          side={THREE.DoubleSide} roughness={1} onBeforeCompile={sharpenFlag} />
-      </mesh>
+  const scale = guestScale(width, height, names.length);
+  return <>{names.map((name, i) => <group key={`${i}-${name}`} ref={el => { boats.current[i] = el; }} name="guest-boat" visible={false} scale={scale}>
+    <mesh geometry={model.hulls[i]} material={model.hull} />
+    <lineSegments geometry={model.creases} material={model.lines} />
+    <group ref={el => { cards.current[i] = el; }} position={[0, rigs[i].foot, 0]} scale={rigs[i].card}>
+      {/* Just in front of the mast, so the mast never shows through the name. */}
+      <mesh geometry={model.card} material={faces[i]} position={[0, 0, .02]} scale={[model.names[i].width, 1, 1]} />
     </group>
-  </group>;
+  </group>)}</>;
 }
