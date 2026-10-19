@@ -67,3 +67,16 @@ test('at the top the camera has risen and pulled back over the bend, the moored 
     }
   }
 });
+
+test('a flight coming down while the guest scrolls back off the mooring eases down where the camera is, not back to the dock', () => {
+  for (const { width } of SCREENS) {
+    const aerial = aerialView(width), dock = dockView(width);
+    for (const p of [VOYAGE_END, (VOYAGE_END + DOCKED) / 2, DOCKED]) {
+      const base = cameraPose(p, width), lifted = finalePose(p, width, .5);
+      for (let i = 0; i < 3; i++) {
+        assert.ok(Math.abs(lifted.position[i] - base.position[i] - (aerial.position[i] - dock.position[i]) / 2) < 1e-9);
+        assert.ok(Math.abs(lifted.target[i] - base.target[i] - (aerial.target[i] - dock.target[i]) / 2) < 1e-9);
+      }
+    }
+  }
+});

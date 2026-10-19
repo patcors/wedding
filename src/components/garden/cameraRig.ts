@@ -100,10 +100,14 @@ export function finaleLift(t: number) {
   if (t <= delay + rise + hold) return 1;
   return 1 - smootherstep((t - delay - rise - hold) / settle);
 }
-// The camera at progress p with the flight `lift` of the way up.
+// The camera at progress p with the flight `lift` of the way up: the climb
+// from the dock's view to the aerial, added to wherever the camera is, so a
+// flight coming down while the guest scrolls back eases down where they are
+// rather than swooping back to the dock.
 export function finalePose(p: number, width: number, lift: number): CameraPose {
   const pose = cameraPose(p, width);
   if (lift <= 0) return pose;
-  const aerial = aerialView(width);
-  return { position: mix(pose.position, aerial.position, lift), target: mix(pose.target, aerial.target, lift) };
+  const aerial = aerialView(width), dock = dockView(width);
+  const climb = (from: Point, to: Point, at: Point): Point => [at[0] + (to[0] - from[0]) * lift, at[1] + (to[1] - from[1]) * lift, at[2] + (to[2] - from[2]) * lift];
+  return { position: climb(dock.position, aerial.position, pose.position), target: climb(dock.target, aerial.target, pose.target) };
 }

@@ -41,7 +41,8 @@ function useSize<T extends HTMLElement>() {
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const observer = new ResizeObserver(() => setSize({ width: element.offsetWidth, height: element.offsetHeight }));
+    // Only a real change re-renders: the observer reports once as it starts, and the element may mount late, so it is observed afresh each render.
+    const observer = new ResizeObserver(() => setSize(was => was.width === element.offsetWidth && was.height === element.offsetHeight ? was : { width: element.offsetWidth, height: element.offsetHeight }));
     observer.observe(element);
     return () => observer.disconnect();
   });

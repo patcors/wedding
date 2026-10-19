@@ -27,7 +27,8 @@ export default function VoyageCamera({ mobile, width, visibleHeight, reduced }: 
   }, [camera, mobile, size.width, size.height, visibleHeight]);
   useFrame((_, delta) => {
     const p = clock.progress, f = flight.current, dt = Math.min(delta, .05);
-    if (p < VOYAGE_END) f.played = false;
+    // Back in the voyage (a jump to the start, say) the flight is simply over.
+    if (p < VOYAGE_END) Object.assign(f, { played: false, t: -1, fall: null });
     if (reduced) f.t = -1;
     else if (f.t < 0 && !f.played && p >= DOCKED) Object.assign(f, { t: 0, played: true, fall: null });
     let lift = 0;

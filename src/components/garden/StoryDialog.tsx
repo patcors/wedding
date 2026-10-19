@@ -31,7 +31,9 @@ export default function StoryDialog({ opener, onClose, onSee }: {
     const element = dialog.current;
     if (!element || !opener || element.open) return;
     element.scrollTop = 0;
-    element.showModal();
+    // Browsers without <dialog> (Safari before 15.4) would throw and take the page with it; there it simply opens in place.
+    if (typeof element.showModal === 'function') element.showModal();
+    else element.setAttribute('open', '');
   }, [opener]);
   const closed = () => {
     onClose();

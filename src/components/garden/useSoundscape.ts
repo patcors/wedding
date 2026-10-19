@@ -24,12 +24,12 @@ export function useSoundscape({ mode, paused, reduced, ready, progress }: {
   const [unlocked, setUnlocked] = useState(false);
   const unlock = useCallback(() => {
     if (!context.current) {
-      const Context = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Context) return;
-      context.current = new Context({ latencyHint: 'playback' });
+      // The player builds nodes with their constructors (Safari 14.1 on), so older browsers simply stay quiet.
+      if (typeof AudioContext !== 'function' || typeof GainNode !== 'function' || typeof StereoPannerNode !== 'function') return;
+      context.current = new AudioContext({ latencyHint: 'playback' });
     }
     const ctx = context.current;
-    void ctx.resume().then(() => { if (ctx.state === 'running') setUnlocked(true); });
+    ctx.resume().then(() => { if (ctx.state === 'running') setUnlocked(true); }, () => {});
   }, []);
   // A remembered choice waits for the guest's first gesture.
   useEffect(() => {
@@ -51,7 +51,7 @@ export function useSoundscape({ mode, paused, reduced, ready, progress }: {
     if (!ctx) return;
     let cancelled = false, interval: ReturnType<typeof setInterval> | undefined, timer: ReturnType<typeof setTimeout> | undefined;
     if (audible) {
-      void (async () => {
+      (async () => {
         const { createSoundPlayer } = await import('./soundPlayer');
         if (cancelled) return;
         await ctx.resume();
@@ -63,13 +63,16 @@ export function useSoundscape({ mode, paused, reduced, ready, progress }: {
         tick();
         sound.fade(1, FADE_IN);
         interval = setInterval(tick, EVERY);
-      })();
+      })().catch(() => {});
     } else if (player.current) {
       player.current.fade(0, FADE_OUT);
-      timer = setTimeout(() => void ctx.suspend(), FADE_OUT * 1000 + 100);
-    } else void ctx.suspend();
+      timer = setTimeout(() => void ctx.suspend().catch(() => {}), FADE_OUT * 1000 + 100);
+    } else void ctx.suspend().catch(() => {});
     return () => { cancelled = true; clearInterval(interval); clearTimeout(timer); };
   }, [audible, mode, reduced, progress]);
-  useEffect(() => () => { void context.current?.close(); }, []);
+  useEffect(() => () => {
+    void context.current?.close().catch(() => {});
+    context.current = null; player.current = null;
+  }, []);
   return unlock;
 }

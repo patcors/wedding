@@ -3,11 +3,11 @@
 // opened on this device (GardenPage remembers it as pa_party); the plain
 // Garden shows no boat.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { readParty } from '../details/rsvp';
 import { useJourney, type SlotProps } from './JourneyProvider';
-import { GUEST_BOAT, guestBoatPose, guestScale } from './guestBoat';
+import { GUEST_ARRIVAL, GUEST_BOAT, guestBoatPose, guestScale } from './guestBoat';
 import { cardGeometry, cardTexture, guestHull } from './guestBoatGeometry';
 import { sharpenFlag } from './storyBoatGeometry';
 
@@ -26,10 +26,15 @@ function Boat({ greeting, width, height, paused }: SlotProps & { greeting: strin
   const group = useRef<THREE.Group>(null), card = useRef<THREE.Group>(null);
   const model = useMemo(() => ({ ...guestHull(), card: cardGeometry(), names: cardTexture(greeting) }), [greeting]);
   useEffect(() => () => { model.geometry.dispose(); model.creases.dispose(); model.card.dispose(); model.names.dispose(); }, [model]);
+  // The card's names go up to the GPU now, not as the boat first shows near the wedding.
+  const gl = useThree(state => state.gl);
+  useEffect(() => gl.initTexture(model.names), [gl, model]);
   const time = useRef(0);
   useFrame((_, dt) => {
     const boat = group.current;
     if (!boat || !card.current) return;
+    // Most of the voyage it hasn't set off: nothing to place.
+    if (clock.progress < GUEST_ARRIVAL.from) { boat.visible = false; return; }
     const pose = guestBoatPose(clock.progress, width, height);
     boat.visible = pose.shown;
     if (!pose.shown) return;

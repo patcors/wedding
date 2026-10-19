@@ -390,7 +390,7 @@ export default function Garden() {
   // once GUEST_SOUND is set. Either starts only from a tap, click or key.
   const [sound, setSound] = useState<SoundMode>('off');
   useEffect(() => { if (REVIEW) setSound(soundMode(localStorage.getItem(REVIEW_SOUND))); }, []);
-  const easedProgress = useCallback(() => reduced ? stillProgress(voyage.pace.progress) : voyage.pace.progress, [voyage.pace, reduced]);
+  const easedProgress = useCallback(() => voyage.pace.progress, [voyage.pace]);
   const unlockSound = useSoundscape({ mode: sound, paused, reduced, ready: ready && !failed, progress: easedProgress });
   const chooseSound = (mode: SoundMode) => {
     if (mode !== 'off') unlockSound();
