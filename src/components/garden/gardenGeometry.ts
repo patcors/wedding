@@ -66,7 +66,7 @@ export const VOYAGE = {
   meet: MEET_Z,
   sydney: { from: routeAtMonth(DATES.sydney), to: routeAtMonth(DATES.back), widen: 2.2 },
   rock: { from: -53.6, to: -61.3, halfWidth: 1.25, mobileHalfWidth: .64, bridge: -60.1 },
-  point: { z: -77.5, side: -1, out: 1.7, back: .72, wide: 1.95, mobile: { z: -78.3, out: .2, back: 1.1, wide: 1.15 } },
+  point: { z: -77.6, side: -1, out: 1.7, back: 1.5, wide: 2.31, top: .36, mobile: { z: -92, out: .2, back: 3.45, wide: 2.61, top: .42 } },
   bend: { from: -135, to: -164, swing: -12 },
   dock: { z: ROUTE.dock, side: 1, jetty: 2.4 },
   tree: { z: ROUTE.dock - 3.5, inland: 3.5 },
@@ -216,7 +216,7 @@ export function groundHeight(x: number, z: number, width = 1) {
   // boats held at the bank stay clear of visible land.
   const wobble = .4 + .6 * Math.min(1, Math.max(0, inland / 1.2));
   const ground = bankRise(inland) + (Math.sin(x * 1.1 + z * .31) * .10 + Math.sin(z * 1.7 + x * 2.4) * .045) * wobble;
-  return onLawn(x, z, width, inland, ground);
+  return underPoint(x, z, width, onLawn(x, z, width, inland, ground));
 }
 
 // The level lawn (`VOYAGE.lawn`): its middle, how far round it is level, how
@@ -236,18 +236,33 @@ export function lawnSpot(width = 1) {
 // takes a smaller point (`mobile`), a little further down, where its narrow
 // lens still sees the bank as August 2022 shows. Built in voyageRock.ts.
 export function pointSpot(width = 1) {
-  const { side, mobile, ...desktop } = VOYAGE.point, { z, out, back, wide } = width < 1 ? mobile : desktop;
-  return { x: riverCenter(z, width) + side * bankEdge(z, width), z, side, out, back, wide };
+  const { side, mobile, ...desktop } = VOYAGE.point, { z, out, back, wide, top } = width < 1 ? mobile : desktop;
+  return { x: riverCenter(z, width) + side * bankEdge(z, width), z, side, out, back, wide, top };
 }
 // How far in from the point's waterline a spot is (negative off it): its
 // outline is a rectangle with corners rounded `POINT_ROUND` of its width, so planting and guests' boats
 // keep off it.
-export const POINT_ROUND = .2;
+export const POINT_ROUND = .12;
 export function pointInland(x: number, z: number, width = 1) {
   const point = pointSpot(width), round = point.wide * POINT_ROUND;
   const u = (x - point.x) * point.side - (point.back - point.out) / 2, v = z - point.z;
   const qu = Math.abs(u) - ((point.back + point.out) / 2 - round), qv = Math.abs(v) - (point.wide / 2 - round);
   return round - Math.hypot(Math.max(qu, 0), Math.max(qv, 0)) - Math.min(Math.max(qu, qv), 0);
+}
+
+// The point runs well back into the bank (Amelia, October 2026: it may go
+// into the shore but not further into the river), back where the bank has
+// risen above its low `top`; so the ground is let down round it, as a
+// cutting: `under` below its top under it and out to `from` beyond its
+// outline, rising back to the bank's own height at `rise` a unit, so the
+// grass meets its edge rather than the point standing up out of the bank
+// as a block. The water's edge keeps its shore (the ground there is lower).
+export const POINT_CUT = { under: .1, from: .25, rise: .7 } as const;
+function underPoint(x: number, z: number, width: number, ground: number) {
+  const point = pointSpot(width);
+  if (Math.abs(z - point.z) > point.wide / 2 + 2) return ground;
+  const outside = -pointInland(x, z, width);
+  return Math.min(ground, point.top - POINT_CUT.under + Math.max(0, outside - POINT_CUT.from) * POINT_CUT.rise);
 }
 
 // The ground eases from the bank's into the lawn's level over `ease` round
