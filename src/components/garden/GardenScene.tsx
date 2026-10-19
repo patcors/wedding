@@ -14,6 +14,7 @@ import { FallingLeaves, Petals } from './GardenDrift';
 import GardenSeasons from './GardenSeasons';
 import GardenWater, { WATER_NORMALS, createWaterTint } from './GardenWater';
 import GardenSky, { type SkyStyle } from './GardenSky';
+import GardenPlaces from './GardenPlaces';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { preloadGardenTextures, useGardenTextures } from './gardenTextures';
 import { JourneyProvider, type SlotProps } from './JourneyProvider';
@@ -59,10 +60,12 @@ function useGardenAssets(choices: AssetChoices) {
 type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook;
   // The year turning in the canopy, grass and light (seasons.ts).
   seasons?: boolean;
+  // Far-off landscapes of where they were (places.ts).
+  places?: boolean;
   // The opening title's panel, while its names are to fly to their boats.
   arrival?: RefObject<HTMLElement | null> };
 
-export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook, arrival, seasons = false }: SceneProps) {
+export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook, arrival, seasons = false, places = false }: SceneProps) {
   useGardenAssets({ groundStyle, rockStyle, lightTrees });
   const size = useThree(state => state.size);
   // On touch screens the canvas runs on under Safari's toolbar (see
@@ -76,7 +79,8 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
   return <JourneyProvider scroll={progress} pace={pace} paused={paused} reduced={reduced}>
     <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} reduced={reduced} />
     <GardenSeasons on={seasons} reduced={reduced} />
-    <Inspectable id="sky"><GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} seasons={seasons} /></Inspectable>
+    <Inspectable id="sky"><GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} seasons={seasons} places={places} /></Inspectable>
+    <Inspectable id="places"><GardenPlaces on={places} mobile={mobile} /></Inspectable>
     <GardenGround width={width} style={groundStyle} />
     <GardenTrees width={width} mobile={mobile} paused={still} lightTrees={lightTrees} />
     <GardenBankDetails width={width} rockStyle={rockStyle} plantStyle={plantStyle} />

@@ -12,6 +12,7 @@ import { FINALE } from './cameraRig';
 import { MIST_KEYS, SKY_KEYS, hex, skyAt, waterIn, type Rgb, type Sky, type WaterStyle } from './skyCycle';
 import { currentSeason } from './GardenSeasons';
 import { seasonLight } from './seasons';
+import { placeLight } from './places';
 
 // Review options: the clear day, or the Garden's old misty one to compare,
 // over any of the rivers in WATERS. The clear day is the site's.
@@ -99,7 +100,7 @@ function usePageColors() {
 // distance crisp, to the old mist's (1); the far end always fades.
 const FOG = { clear: { desktop: 38, mobile: 22 }, mist: { desktop: 16, mobile: 8 }, far: { desktop: 110, mobile: 85 } };
 
-export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint, seasons = false }: SlotProps & { skyStyle: SkyStyle; waterTint: WaterTint; seasons?: boolean }) {
+export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint, seasons = false, places = false }: SlotProps & { skyStyle: SkyStyle; waterTint: WaterTint; seasons?: boolean; places?: boolean }) {
   const keys = skyStyle.sky === 'mist' ? MIST_KEYS : SKY_KEYS;
   const clock = useJourney();
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -112,6 +113,18 @@ export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint,
   useSunFollowsVoyage(sun, sunOffset, width);
   const writePage = usePageColors();
   const device = mobile ? 'mobile' : 'desktop';
+  // The background and fog belong to the scene itself, not to whatever group
+  // this is mounted in: on the dev server Inspectable wraps the sky in one,
+  // and attach="fog" there gave the group a fog and the scene none.
+  const scene = useThree(state => state.scene);
+  const onScene = useMemo(() => {
+    const target = scene as unknown as Record<'fog' | 'background', unknown>;
+    const to = (key: 'fog' | 'background') => (_: unknown, self: THREE.Fog | THREE.Color) => {
+      target[key] = self;
+      return () => { if (target[key] === self) target[key] = null; };
+    };
+    return { fog: to('fog'), background: to('background') };
+  }, [scene]);
   useFrame(({ clock: time }) => {
     const sky = skyAt(clock.progress, keys);
     set(dome.horizon, sky.horizon);
@@ -124,6 +137,8 @@ export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint,
     }
     // The season's small share of the light (seasons.ts).
     const season = seasonLight(currentSeason(clock.progress, reduced, seasons));
+    // Sydney's harbour light, while its heads are up (places.ts).
+    const place = placeLight(clock.progress, places);
     const light = hemisphere.current;
     if (light) {
       set(light.color, sky.hemiSky);
@@ -131,18 +146,18 @@ export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint,
       light.intensity = sky.hemi * season.hemi;
     }
     if (sun.current) {
-      set(sun.current.color, sky.sunColor.map((v, i) => v * season.sunColor[i]) as Rgb);
+      set(sun.current.color, sky.sunColor.map((v, i) => v * season.sunColor[i] * place.sun[i]) as Rgb);
       sun.current.intensity = sky.sunIntensity * season.sunIntensity;
     }
     sunOffset.set(...sky.sun);
     set(waterTint.water, waterIn(sky, skyStyle.water));
-    set(waterTint.glint, sky.glint);
+    set(waterTint.glint, sky.glint.map(v => v * place.glint) as Rgb);
     writePage(sky, time.elapsedTime);
   });
   return <>
-    <color ref={background} attach="background" args={[hex(opening.horizon)]} />
+    <color ref={background} attach={onScene.background} args={[hex(opening.horizon)]} />
     <SkyDome colors={dome} />
-    <fog ref={fog} attach="fog" args={[hex(opening.horizon), FOG.clear[device], FOG.far[device]]} />
+    <fog ref={fog} attach={onScene.fog} args={[hex(opening.horizon), FOG.clear[device], FOG.far[device]]} />
     <hemisphereLight ref={hemisphere} args={[hex(opening.hemiSky), hex(opening.hemiGround), opening.hemi]} />
     <directionalLight ref={sun} position={opening.sun} intensity={opening.sunIntensity} color={hex(opening.sunColor)} castShadow
       shadow-mapSize={[SHADOW.map, SHADOW.map]} shadow-camera-left={SHADOW.left} shadow-camera-right={SHADOW.right}

@@ -18,6 +18,7 @@ import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitD
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasons';
+import { PLACES, REVIEW_PLACES, placesOn } from './places';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import StoryDialog, { STORY_LINK } from './StoryDialog';
 import { GUEST_SOUND, GUEST_SOUND_MODE, REVIEW_SOUND, SOUND_MODES, soundMode, type SoundMode } from './soundChoices';
@@ -258,6 +259,8 @@ export default function Garden() {
   const [boatStyle, setBoatStyle] = useState<BoatLook>(BOAT_LOOK);
   // The year turning in the canopy, grass and light; the Review panel can turn it off (seasons.ts).
   const [seasons, setSeasons] = useState(SEASONS);
+  // Far-off landscapes of where they were; the Review panel can turn them off (places.ts).
+  const [places, setPlaces] = useState(PLACES);
   const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [openingReleased, setOpeningReleased] = useState(false);
@@ -378,6 +381,7 @@ export default function Garden() {
   useEffect(() => { if (REVIEW) setText(textLook(localStorage.getItem(REVIEW_TEXT))); }, []);
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   useEffect(() => { if (REVIEW) setSeasons(seasonsOn(localStorage.getItem(REVIEW_SEASONS))); }, []);
+  useEffect(() => { if (REVIEW) setPlaces(placesOn(localStorage.getItem(REVIEW_PLACES))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   // Under reduced motion the scene shows each milestone's still, so the date shows its day too.
   const easedMonth = useCallback(() => storyMonth(reduced ? stillProgress(voyage.pace.progress) : voyage.pace.progress), [voyage.pace, reduced]);
@@ -404,7 +408,7 @@ export default function Garden() {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} seasons={seasons} arrival={flight ? arrival : undefined} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} seasons={seasons} places={places} arrival={flight ? arrival : undefined} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
@@ -551,6 +555,12 @@ export default function Garden() {
         setSeasons(!seasons);
       }} aria-pressed={seasons} title={seasons ? 'Show the garden the same all year' : 'Turn the year in the canopy, grass and light'}>
         Seasons: {seasons ? 'On' : 'Off'}
+      </button>
+      <button onClick={() => {
+        localStorage.setItem(REVIEW_PLACES, places ? 'off' : 'on');
+        setPlaces(!places);
+      }} aria-pressed={places} title={places ? 'Hide the far-off escarpment, heads and hills' : 'Show the far-off places they lived in on the horizon'}>
+        Places: {places ? 'On' : 'Off'}
       </button>
       <button onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={paused || reduced}>
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}

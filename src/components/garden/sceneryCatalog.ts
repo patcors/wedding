@@ -47,6 +47,8 @@ import { balloonGeometry } from './eggs/balloonGeometry.ts';
 import { hagiaSophiaGeometry } from './eggs/hagiaSophiaGeometry.ts';
 import { ROCKET, rocketCourse, rocketShown, rocketSpot, rocketTime } from './eggs/rocketLaunch.ts';
 import { ROCKET_MODEL, STAND } from './eggs/rocketGeometry.ts';
+import { PLACE_IDS, PLACE_RING, placeShown } from './places.ts';
+import { cameraPose } from './cameraRig.ts';
 import type { Bank, Piece, Sphere } from './voyageTimeline.ts';
 
 // Numbers the scene keeps inside its components, copied here and checked
@@ -328,6 +330,26 @@ export function sceneryCatalog(width: number): Piece[] {
     // The old tree is large; its crown is about this wide (GardenTrees.tsx).
     const crown = sphere(tree.x, 5, tree.z, 6);
     add({ id: 'old-tree', name: 'The old tree', group: 'World', file: 'GardenTrees.tsx', bank: sideBank(jetty.side), counts: false, shown: always, spheres: () => [crown] });
+  }
+  // --- Places along the way (drawn, not counted) ---------------------------
+  // Far-off ridgelines on a ring round the camera (places.ts), taking their
+  // own haze: a sphere every 20° of bearing along the ring, low over the
+  // horizon, so whichever way the camera turns some of each is in the picture.
+  {
+    const ring = mobile ? PLACE_RING.mobile : PLACE_RING.desktop, r = ring.radius * .95;
+    const names = { illawarra: 'Illawarra escarpment (far off)', sydney: "Sydney's heads (far off)", berry: 'Berry hills and Coolangatta (far off)' };
+    for (const id of PLACE_IDS) {
+      add({ id: `place-${id}`, name: names[id], group: 'World', file: 'GardenPlaces.tsx', bank: 'river', counts: false, fog: false,
+        note: 'A backdrop on a ring round the camera, beyond the trees.',
+        shown: p => placeShown(id, p),
+        spheres: p => {
+          const [x, y, z] = cameraPose(p, width).position;
+          return [-60, -40, -20, 0, 20, 40, 60].map(b => {
+            const a = b * ring.squeeze * Math.PI / 180;
+            return sphere(x + r * Math.sin(a), y + r * Math.tan(1.2 * Math.PI / 180), z - r * Math.cos(a), r * Math.tan(2 * Math.PI / 180));
+          });
+        } });
+    }
   }
   return pieces;
 }
