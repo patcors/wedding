@@ -4,6 +4,7 @@
 // the scene first commits. A bitmap uploads in a few milliseconds.
 import * as THREE from 'three';
 import { useLoader } from '@react-three/fiber';
+import { PHONE_SCREEN, TEXTURE_WEIGHT, textureUrl } from './loadChoices.ts';
 
 // The same cutoff as three's GLTFLoader: Safari before 17 mishandles
 // createImageBitmap's options, so it keeps the <img> loader.
@@ -33,12 +34,15 @@ function textureLoader(flipY: boolean) {
 }
 const FlippedTextureLoader = textureLoader(true), TextureLoader = textureLoader(false);
 
+// Callers name the original maps; guests get their light copies (loadChoices.ts).
+const sources = (urls: string[]) => urls.map(url => textureUrl(url, import.meta.env.BASE_URL, TEXTURE_WEIGHT, PHONE_SCREEN));
+
 // Suspends like drei's useTexture. Not a React hook, so it may be called
 // conditionally. flipY matches three's TextureLoader default.
 export function useGardenTextures(urls: string[], { flipY = true } = {}) {
-  return useLoader(flipY ? FlippedTextureLoader : TextureLoader, urls) as THREE.Texture[];
+  return useLoader(flipY ? FlippedTextureLoader : TextureLoader, sources(urls)) as THREE.Texture[];
 }
 // Starts the same download without suspending.
 export function preloadGardenTextures(urls: string[], { flipY = true } = {}) {
-  useLoader.preload(flipY ? FlippedTextureLoader : TextureLoader, urls);
+  useLoader.preload(flipY ? FlippedTextureLoader : TextureLoader, sources(urls));
 }

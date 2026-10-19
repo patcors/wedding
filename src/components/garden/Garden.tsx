@@ -16,6 +16,7 @@ import { advancePace, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
 import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
+import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
 import './gardenScrollCue.css';
@@ -255,6 +256,11 @@ export default function Garden() {
   const [failed, setFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [slow, setSlow] = useState(false);
+  // Dev only: seconds from navigation to the cover lifting, for comparing the Review's load choices.
+  const [readyIn, setReadyIn] = useState<number | null>(null);
+  // Dev only: the Review's load choices (loadChoices.ts), read after hydration as the page renders on the server.
+  const [loadChoices, setLoadChoices] = useState<{ textures: TextureWeight; prepare: PrepareWhen } | null>(null);
+  useEffect(() => { if (REVIEW) setLoadChoices({ textures: TEXTURE_WEIGHT, prepare: PREPARE }); }, []);
   const [boatLaunchRequest, setBoatLaunchRequest] = useState(0);
   const [showReview, setShowReview] = useState(REVIEW);
   const cover = useRef<HTMLDivElement>(null);
@@ -309,6 +315,7 @@ export default function Garden() {
   }, [prepared, failed]);
   useEffect(() => {
     document.documentElement.dataset.gardenState = failed ? 'error' : ready ? 'ready' : 'loading';
+    if (REVIEW && ready) setReadyIn(performance.now() / 1000);
   }, [ready, failed]);
   useEffect(() => {
     if (!ready || failed) return;
@@ -367,7 +374,7 @@ export default function Garden() {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} arrival={flight ? arrival : undefined} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE === 'downloaded' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} arrival={flight ? arrival : undefined} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
@@ -539,6 +546,25 @@ export default function Garden() {
           {Object.entries(DATE_LABEL_MODES).map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
         </select>
       </label>
+      {loadChoices && <>
+      <label className="garden-material-selector">Textures
+        <select aria-label="Texture downloads" value={loadChoices.textures} onChange={event => {
+          localStorage.setItem(REVIEW_TEXTURES, event.target.value);
+          location.reload();
+        }}>
+          {Object.entries(TEXTURE_WEIGHTS).map(([weight, label]) => <option key={weight} value={weight}>{label}</option>)}
+        </select>
+      </label>
+      <label className="garden-material-selector">Prepare
+        <select aria-label="When the scene prepares" value={loadChoices.prepare} onChange={event => {
+          localStorage.setItem(REVIEW_PREPARE, event.target.value);
+          location.reload();
+        }}>
+          {Object.entries(PREPARE_WHEN).map(([when, label]) => <option key={when} value={when}>{label}</option>)}
+        </select>
+      </label>
+      </>}
+      {readyIn !== null && <span className="garden-review-load">Loaded in {readyIn.toFixed(1)}s</span>}
     </aside>}
     <div className="garden-scroll-space" />
   </main>;

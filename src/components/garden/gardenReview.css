@@ -24,17 +24,19 @@
   .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
 }
 @media (max-width: 700px) {
-  /* Four rows, so it stays clear of the scroll cue above it: the five
+  /* Five rows, so it stays clear of the scroll cue above it: the five
      selectors and the colours three to a row, the three buttons and the Text,
-     then the Boats, the Catamaran and the Date. */
+     the Boats, the Catamaran and the Date, then the Textures, Prepare and
+     the load time. */
   .garden-review { bottom: calc(16px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px 8px; padding: 8px 12px; width: min(410px, calc(100vw - 24px)); border-radius: 22px; }
   .garden-review > button, .garden-material-selector { grid-column: span 4; }
-  .garden-review > button, .garden-review > .garden-text-selector, .garden-review > .garden-material-selector:last-child { grid-column: span 3; }
+  .garden-review > button, .garden-review > .garden-text-selector { grid-column: span 3; }
   .garden-material-selector { flex-direction: column; gap: 0; font-size: 8px; }
   .garden-material-selector select { font-size: 10px; }
   .garden-review .garden-study-label, .garden-review .garden-review-divider { display: none; }
   .garden-review button { font-size: 8px; min-height: 32px; }
   .garden-study-label { font-size: 7px; }
+  .garden-review-load { grid-column: span 4; align-self: center; text-align: center; font-size: 8px; }
 }
 @media (max-width: 700px) and (max-height: 700px) {
   .garden-review { bottom: 12px; }
@@ -62,9 +64,9 @@
 @media (max-width: 700px) {
   .garden-creature-actions { position: absolute; left: 0; right: 0; bottom: 0; justify-content: center; gap: 20px; }
   .garden-bottom:has(.garden-scroll-cue:not(.is-done)) .garden-creature-actions { bottom: 110px; }
-  .garden-prototype:has(.garden-review) .garden-bottom .garden-creature-actions { bottom: 134px; }
+  .garden-prototype:has(.garden-review) .garden-bottom .garden-creature-actions { bottom: 204px; }
   .garden-prototype:has(.garden-review) .garden-bottom:has(.garden-scroll-cue:not(.is-done)) .garden-creature-actions { visibility: hidden; }
-  .garden-prototype:has(.garden-review) .garden-scroll-cue { bottom: 132px; }
+  .garden-prototype:has(.garden-review) .garden-scroll-cue { bottom: 202px; }
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }
 }
@@ -91,3 +93,4 @@
 /* The scrim takes the top wash's place: a soft shade behind the header and
    the date, gone by a third of the way down. */
 .garden-prototype[data-state=ready][data-text=scrim] .garden-wash { background: linear-gradient(180deg, #18202c40, #18202c26 16%, #18202c0d 28%, transparent 38%); }
+.garden-review-load { font-size: 10px; color: #6e7464; white-space: nowrap; }
