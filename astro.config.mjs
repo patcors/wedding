@@ -19,4 +19,7 @@ export default defineConfig({
   devToolbar: { enabled: false },
 
   integrations: [react()],
+
+  // The dev server needn't watch screenshot runs (pnpm shots, git-ignored).
+  vite: { server: { watch: { ignored: ['**/.shots/**'] } } },
 });
