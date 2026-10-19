@@ -45,7 +45,7 @@ export type Owner = 'amelia' | 'patrick';
 // portrait's wider lens, so the birds and the house numbers read.
 export const NESTS = {
   side: { amelia: -1, patrick: 1 },
-  desktop: { amelia: { lead: 4.9, inland: .55 }, patrick: { lead: 5.9, inland: .6 }, scale: 1.75 },
+  desktop: { amelia: { lead: 4.9, inland: .55 }, patrick: { lead: 5.9, inland: .6 }, scale: 1.9 },
   mobile: { amelia: { lead: 5.1, inland: .12 }, patrick: { lead: 7.9, inland: .12 }, scale: 2.2 },
   turn: .55,
   // Seconds: the houses going up (the scaffolding with them), a bird's
@@ -154,7 +154,7 @@ export function birdPoses(since: readonly (number | null)[], houses: Record<Owne
 // fixed flat to the face of its trunk turned to the camera as his bird flies
 // home, `height` up the trunk in world units. Shown, like the carvings,
 // while its tree is near the camera, as street signs are always there.
-export const SIGN = { height: { desktop: 2.45, mobile: 3 } } as const;
+export const SIGN = { height: { desktop: 2.7, mobile: 3 } } as const;
 export function signTree(width: number): Placement {
   const mobile = width < 1, { x, z } = nestSpots(width).amelia;
   const left = treePlacements(width, mobile).filter(t => t.type < 4 && t.y === undefined && t.x < riverCenter(t.z, width) - bankEdge(t.z, width));

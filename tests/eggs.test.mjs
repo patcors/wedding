@@ -432,13 +432,15 @@ test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark,
       const least = p < STOPS[MILESTONES.findIndex(m => m.id === 'dating') + 1] ? 5 : 6.5;
       assert.ok(pixels(bladeHeight(length) * .55, distance, width) > least, `the sign legible at ${p} (width ${width})`);
     }
-    // The numbers at the apartments' stop: at least 6 pixels tall on desktop,
-    // and as legible as a phone allows, then larger as the boats come up.
+    // The numbers at the apartments' stop: at least 11 pixels tall on
+    // desktop and 8.5 on a 390 × 844 phone (Amelia, October 2026: they were
+    // hard to spot on a real phone; a 375 × 667 one draws them .79 as tall),
+    // then larger as the boats come up.
     const atStop = STOPS[MILESTONES.findIndex(m => m.id === 'apartments') + 1];
     for (const owner of ['amelia', 'patrick']) {
       const figures = PLAQUE.width * NUMBER_RECTS[owner].height / NUMBER_RECTS[owner].width * .65 * houses[owner].scale;
       const { distance } = seen(atStop, width, houses[owner].x, houses[owner].z);
-      assert.ok(pixels(figures, distance, width) > (width < 1 ? 3.5 : 6), `${owner}'s number at the apartments' stop (width ${width})`);
+      assert.ok(pixels(figures, distance, width) > (width < 1 ? 8.5 : 11), `${owner}'s number at the apartments' stop (width ${width})`);
     }
     // Within the egg's budget: both houses, their numbers and the
     // scaffolding in one mesh, the birds in another and the sign a third.

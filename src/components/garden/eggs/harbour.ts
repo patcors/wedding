@@ -19,8 +19,9 @@ import { MARKER_REACH, markerShown } from './yearMarkerSpots.ts';
 // shells' open mouths, faces out over the river and from the camera behind
 // the boats its shells show side on, rising one behind another. Its model is
 // a unit long and `width` wide (its podium); `scale` sizes it on each
-// composition, smaller on a phone's narrower river, where the point is
-// smaller too, and fits it on the point.
+// composition so that it fills the point's top but for a narrow ledge, as
+// the real one fills Bennelong Point; larger on a phone, where it stands
+// further down the river (see pointSpot).
 export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.9, mobile: 3.35 } } as const;
 
 // The bridge crosses the river at VOYAGE.rock.bridge, from a pair of granite

@@ -25,6 +25,10 @@ import { ornamentSpot, type BankOrnament, type OrnamentSpot } from './careerSpot
 // phone sees only about 17° either side of the middle, so there it stands
 // nearer the water, and smaller, between the catamaran and the edge of the
 // picture.
+// On desktop it is larger and so a little further down and back (`ahead`,
+// `inland`), to stay in the picture to the proposal's end; a phone keeps its
+// own `mobileAhead`, where it already all but fills the band between the
+// catamaran's starboard hull and flag and the edge of the picture.
 // It is parked along the bank, as the truck stood along the clifftop, so its
 // deck's railed side looks out over the water. `turn` swings it from facing
 // the camera so its nose points up the river: three-quarters on, so the

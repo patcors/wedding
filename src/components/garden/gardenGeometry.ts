@@ -231,10 +231,11 @@ export function lawnSpot(width = 1) {
 }
 // Bennelong Point (`VOYAGE.point`): where it meets the water's edge on its
 // bank, how far it juts `out` into the river and runs `back` into the bank
-// from there (only a little, where the bank is still low, so the point can
-// be low too), and how `wide` it is along the river; a phone's narrower river
-// takes a smaller point (`mobile`), a little further down, where its narrow
-// lens still sees the bank as August 2022 shows. Built in voyageRock.ts.
+// from there (well back, the bank cut down round it, see underPoint, so the
+// point can be low), how `wide` it is along the river, and how high its
+// `top` stands; on a phone (`mobile`) it juts only a little and stands
+// further down, so the Opera House on it is seen over Amelia's sails as
+// August 2022 shows. Built in voyageRock.ts.
 export function pointSpot(width = 1) {
   const { side, mobile, ...desktop } = VOYAGE.point, { z, out, back, wide, top } = width < 1 ? mobile : desktop;
   return { x: riverCenter(z, width) + side * bankEdge(z, width), z, side, out, back, wide, top };
