@@ -52,3 +52,58 @@ export function dockView(width: number): CameraPose {
     target: [mooring.x + (tree.x - mooring.x) * view.look, view.lookY, mooring.z + (tree.z - mooring.z) * view.look],
   };
 }
+
+// The finale (see docs/VOYAGE.md): once the catamaran is moored, the camera
+// rises slowly and pulls back upstream over the end of the bend to a
+// three-quarter view down on the dock: the river coming round, the jetty
+// with the catamaran moored at it and the guest's boat by the bank, the old
+// tree with its lights, and the river running on into the dusk. Then it
+// settles back on `dockView` for the copy. Placed like `dockView`: `across`
+// towards the far bank from the mooring and `back` upstream, at `height`,
+// looking `ahead` downstream of the mooring and `over` towards the jetty's
+// bank, at `lookY`. A truly high view of the whole river showed the end of
+// the land and bare ground beyond the planted banks, and looking back
+// upstream saw only the canopy, so it stops here, low enough that the
+// trees and the haze still close the picture. Portrait stays lower and
+// nearer, under the branches of the trees over the bend.
+const AERIAL_VIEW = {
+  desktop: { across: 4.7, back: 15, height: 13, ahead: 16, over: 3.3, lookY: 0 },
+  mobile: { across: 1.2, back: 12, height: 7.6, ahead: 13, over: 1, lookY: .8 },
+};
+export function aerialView(width: number): CameraPose {
+  const { jetty, mooring } = voyageLandmarks(width);
+  const view = width < 1 ? AERIAL_VIEW.mobile : AERIAL_VIEW.desktop;
+  return {
+    position: [mooring.x - jetty.side * view.across, view.height, mooring.z + view.back],
+    target: [mooring.x + jetty.side * view.over, view.lookY, mooring.z - view.ahead],
+  };
+}
+
+// The flight's timing, in seconds from when the boats are moored (DOCKED):
+// a beat to settle, the rise, a hold at the top and the slow return. It
+// plays once each time they moor, after the copy has shown (from
+// VOYAGE_END), and never moves the scroll, so the copy and its timing are
+// untouched and p 1 is the dock's view as it was. A guest who scrolls back
+// off the mooring brings it down over `abort`. Reduced motion has no flight.
+// At the top the haze starts `haze` further off, so the river reads.
+export const FINALE = { delay: .8, rise: 4.5, hold: 2.2, settle: 4.5, abort: 1.2, haze: 14 } as const;
+export const FINALE_LENGTH = FINALE.delay + FINALE.rise + FINALE.hold + FINALE.settle;
+const smootherstep = (t: number) => {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * x * (x * (x * 6 - 15) + 10);
+};
+// How far up the flight is, 0 at the dock's view to 1 at the top, `t` seconds in.
+export function finaleLift(t: number) {
+  const { delay, rise, hold, settle } = FINALE;
+  if (t <= delay || t >= FINALE_LENGTH) return 0;
+  if (t < delay + rise) return smootherstep((t - delay) / rise);
+  if (t <= delay + rise + hold) return 1;
+  return 1 - smootherstep((t - delay - rise - hold) / settle);
+}
+// The camera at progress p with the flight `lift` of the way up.
+export function finalePose(p: number, width: number, lift: number): CameraPose {
+  const pose = cameraPose(p, width);
+  if (lift <= 0) return pose;
+  const aerial = aerialView(width);
+  return { position: mix(pose.position, aerial.position, lift), target: mix(pose.target, aerial.target, lift) };
+}

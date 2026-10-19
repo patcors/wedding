@@ -24,6 +24,7 @@ const E = `${G}eggs/`;
 // each component), so nothing deep in the scene needs touching.
 const NAMED: Readonly<Record<string, InspectEntry>> = {
   'amelia-boat': { name: 'Amelia’s boat', file: `${G}VoyageBoats.tsx` },
+  'guest-boat': { name: 'The guest’s paper boat', file: `${G}GuestBoat.tsx` },
   'patrick-boat': { name: 'Patrick’s boat', file: `${G}VoyageBoats.tsx` },
   'big-mast': { name: 'the catamaran’s big mast and sail', file: `${G}VoyageBoats.tsx`, milestone: 'engaged' },
   'voyage-boats': { name: 'the boats', file: `${G}VoyageBoats.tsx` },

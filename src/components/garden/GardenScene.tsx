@@ -21,6 +21,7 @@ import type { Pace } from './journeyPace';
 import VoyageCamera from './VoyageCamera';
 import VoyageWorld from './VoyageWorld';
 import VoyageBoats from './VoyageBoats';
+import GuestBoat from './GuestBoat';
 import NameFlight from './NameFlight';
 import Eggs from './eggs';
 import type { BoatLook } from './boatLooks';
@@ -73,7 +74,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
   const slot: SlotProps = { paused: still, reduced, mobile, width };
   const waterTint = useMemo(createWaterTint, []);
   return <JourneyProvider scroll={progress} pace={pace} paused={paused} reduced={reduced}>
-    <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} />
+    <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} reduced={reduced} />
     <GardenSeasons on={seasons} reduced={reduced} />
     <Inspectable id="sky"><GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} seasons={seasons} /></Inspectable>
     <GardenGround width={width} style={groundStyle} />
@@ -86,6 +87,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
     <FallingLeaves paused={still} width={width} seasons={seasons} reduced={reduced} />
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
+    <GuestBoat {...slot} />
     <Eggs {...slot} />
     {arrival && <NameFlight panel={arrival} width={width} />}
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />
