@@ -22,7 +22,7 @@ import { MARKER_REACH, markerShown } from './yearMarkerSpots.ts';
 // composition so that it fills the point's top but for a narrow ledge, as
 // the real one fills Bennelong Point; larger on a phone, where it stands
 // further down the river (see pointSpot).
-export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.9, mobile: 3.35 } } as const;
+export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.9, mobile: 4.1 } } as const;
 
 // The bridge crosses the river at VOYAGE.rock.bridge, from a pair of granite
 // pylons on the rock, `inset` in from its waterline, to a pair on Amelia's
@@ -121,7 +121,7 @@ export const onPoint = (x: number, z: number, width: number) => pointInland(x, z
 // (Sydney.tsx), so neither is grainy part way.
 export const HARBOUR_SHOWN = {
   bridge: { from: '2020-10', arrive: .3, leave: [10.9, 9.7] },
-  opera: { from: '2022-01', arrive: .35, reach: { desktop: MARKER_REACH.desktop, mobile: 38 }, leave: .2 },
+  opera: { from: '2022-01', arrive: .35, reach: { desktop: MARKER_REACH.desktop, mobile: 40 }, leave: .2 },
 } as const;
 const arrived = (p: number, { from, arrive }: { from: string; arrive: number }) => Math.min(1, Math.max(0, (p - progressAt(from)) / (arrive * ROOM) + 1));
 // As markerShown, with a reach of its own: in over the last `fade` of it, gone once passed.
