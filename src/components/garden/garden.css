@@ -199,3 +199,11 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-prototype *, .garden-prototype *::before { transition: none !important; scroll-behavior: auto !important; }
   .garden-digit > span { animation: none !important; }
 }
+/* The guests' speaker button (GUEST_SOUND in soundChoices.ts, off for now):
+   a small outline speaker before the header's links, in the copy's ink with
+   the same halo as the monogram, a 36px target round an 18px mark. Pressed,
+   its waves show; off, a small cross. Lifted to the links' text, above
+   their underlines. */
+.garden-sound-toggle { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin: -9px -14px -9px 0; padding: 0; opacity: .85; transform: translateY(-4px); }
+.garden-sound-toggle svg { display: block; filter: drop-shadow(0 0 1px var(--garden-glow)) drop-shadow(0 0 4px color-mix(in srgb, var(--garden-glow) 80%, transparent)); }
+.garden-sound-toggle[aria-pressed=true] { opacity: 1; }
