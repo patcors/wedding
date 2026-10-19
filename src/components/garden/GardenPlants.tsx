@@ -5,6 +5,7 @@ import { plantGeometry, plantSites, type PlantKind } from './gardenPlantGeometry
 import { configureGrassMaterial } from './gardenGrassMaterial';
 import { riverChunks } from './gardenGeometry';
 import { useRiverReach } from './useRiverReach';
+import { seasonalWash } from './GardenSeasons';
 
 type PlantSite = ReturnType<typeof plantSites>[number];
 
@@ -25,6 +26,14 @@ export function plantMaterial(kind: PlantKind, wind: { value: number }, mobile: 
   };
   result.customProgramCacheKey = () => 'garden-plant-wind-1';
   if (kind === 'meadow') configureGrassMaterial(result, wind, mobile);
+  // Every kind takes the season's wash (GardenSeasons.tsx) over its colours.
+  const { onBeforeCompile: sway, customProgramCacheKey: key } = result;
+  result.onBeforeCompile = (shader, renderer) => {
+    sway(shader, renderer);
+    seasonalWash(shader);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = seasonGround(diffuseColor.rgb);');
+  };
+  result.customProgramCacheKey = () => `${key()}-seasons-v1`;
   return result;
 }
 
