@@ -403,12 +403,16 @@ export default function Garden() {
   // "Our story" (StoryDialog): the link that opened it, while it is open.
   const [storyOpener, setStoryOpener] = useState<HTMLElement | null>(null);
   const openStory = (event: MouseEvent<HTMLElement>) => setStoryOpener(event.currentTarget);
+  // While the sheet covers the scene, the scene holds its motion and draws
+  // only on demand (after a resize, say), as the guest's "Pause motion" does,
+  // to spare a phone's battery; the guest's own choice is left as it was.
+  const reading = storyOpener !== null;
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
   return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-text={text === 'glow' ? undefined : text} data-golden={REVIEW && inkTurnsWhite(progress) ? '' : undefined} aria-busy={state === 'loading'}>
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} seasons={seasons} places={places} arrival={flight ? arrival : undefined} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced || reading ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused || reading} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} seasons={seasons} places={places} arrival={flight ? arrival : undefined} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
