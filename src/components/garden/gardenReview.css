@@ -70,25 +70,21 @@
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }
 }
-/* Dev only (Review "Text"): the copy over the scene without the glow, to
-   compare. White, white with a soft drop shadow like a photograph's caption,
+/* Dev only (Review "Text"): the copy over the scene in other looks, to
+   compare with the guests' white (garden.css): white with a soft drop shadow like a photograph's caption,
    the sky's dark ink with nothing round it, or white over a faint darkening
    at the top of the screen. Ink turns white with the soft shadow once the
    light turns golden (data-golden, see inkTurnsWhite). The white ones keep
    the ink until the scene is revealed, as the cover behind the opening copy
    is pale. */
-.garden-prototype[data-state=ready]:is([data-text=white], [data-text=shadow], [data-text=scrim], [data-text=ink][data-golden]) {
-  --garden-on-sky: #fff; --garden-on-sky-soft: #ffffffe8; --garden-on-sky-line: #ffffffa6; --garden-halo: none; }
 .garden-prototype[data-state=ready]:is([data-text=shadow], [data-text=scrim], [data-text=ink][data-golden]) {
   --garden-caption-shade: #18202c;
   --garden-halo: 0 clamp(1px, .04em, 3px) clamp(2px, .1em, 8px) color-mix(in srgb, var(--garden-caption-shade) 55%, transparent),
     0 0 clamp(6px, .3em, 22px) color-mix(in srgb, var(--garden-caption-shade) 24%, transparent); }
 .garden-prototype[data-text=ink]:not([data-state=ready][data-golden]) { --garden-halo: none; }
 .garden-prototype[data-text=ink]:not([data-state=ready][data-golden]) .garden-monogram img { filter: none; }
-.garden-prototype[data-state=ready][data-text=white] .garden-monogram img { filter: brightness(0) invert(1); }
 .garden-prototype[data-state=ready]:is([data-text=shadow], [data-text=scrim], [data-text=ink][data-golden]) .garden-monogram img {
   filter: brightness(0) invert(1) drop-shadow(0 1px 3px color-mix(in srgb, var(--garden-caption-shade) 60%, transparent)); }
-.garden-prototype[data-text] .garden-scroll-cue i { box-shadow: none; }
 .garden-prototype[data-state=ready]:is([data-text=shadow], [data-text=scrim], [data-text=ink][data-golden]) .garden-scroll-cue i { box-shadow: 0 1px 3px color-mix(in srgb, var(--garden-caption-shade) 35%, transparent); }
 /* The scrim takes the top wash's place: a soft shade behind the header and
    the date, gone by a third of the way down. */

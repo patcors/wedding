@@ -207,3 +207,12 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-sound-toggle { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin: -9px -14px -9px 0; padding: 0; opacity: .85; transform: translateY(-4px); }
 .garden-sound-toggle svg { display: block; filter: drop-shadow(0 0 1px var(--garden-glow)) drop-shadow(0 0 4px color-mix(in srgb, var(--garden-glow) 80%, transparent)); }
 .garden-sound-toggle[aria-pressed=true] { opacity: 1; }
+
+/* The copy over the scene is plain white once the scene is revealed (Amelia,
+   October 2026: data-text=white, the default in textLook.ts); until then it
+   keeps the ink, as the cover behind the opening copy is pale. The Review
+   panel's other looks (gardenReview.css) share the white's colours. */
+.garden-prototype[data-state=ready]:is([data-text=white], [data-text=shadow], [data-text=scrim], [data-text=ink][data-golden]) {
+  --garden-on-sky: #fff; --garden-on-sky-soft: #ffffffe8; --garden-on-sky-line: #ffffffa6; --garden-halo: none; }
+.garden-prototype[data-state=ready][data-text=white] .garden-monogram img { filter: brightness(0) invert(1); }
+.garden-prototype[data-text] .garden-scroll-cue i { box-shadow: none; }

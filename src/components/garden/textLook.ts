@@ -1,14 +1,15 @@
-// Dev only (the Review panel): how the Garden's copy over the scene is set,
-// to choose what replaces the glow round it. Guests see the glow until Amelia
-// picks; the styles are in gardenReview.css. Pure, so it can be tested.
+// How the Garden's copy over the scene is set. Guests see plain white (Amelia's
+// choice, October 2026; its styles in garden.css); the Review panel (dev only)
+// can compare the glow and the other looks, styled in gardenReview.css. Pure,
+// so it can be tested.
 import { progressAt } from './journey.ts';
 
 export const TEXT_LOOKS = { glow: 'Glow', white: 'White', shadow: 'White, soft shadow', ink: 'Ink', scrim: 'White over a scrim' } as const;
 export type TextLook = keyof typeof TEXT_LOOKS;
 
-// A remembered choice, or the glow for anything else.
+// A remembered choice, or white for anything else.
 export const textLook = (stored: string | null): TextLook =>
-  stored !== null && Object.hasOwn(TEXT_LOOKS, stored) ? stored as TextLook : 'glow';
+  stored !== null && Object.hasOwn(TEXT_LOOKS, stored) ? stored as TextLook : 'white';
 
 // Ink keeps the sky's dark ink until the trip's date shows, as the late
 // afternoon turns golden: from there to the dock the trees close over the

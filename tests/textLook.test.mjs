@@ -3,11 +3,11 @@ import test from 'node:test';
 import { INK_TURNS_WHITE, TEXT_LOOKS, inkTurnsWhite, textLook } from '../src/components/garden/textLook.ts';
 import { DATES, STOPS, VOYAGE_END, progressAt } from '../src/components/garden/journey.ts';
 
-test('the copy keeps its glow unless the Review panel chose another look', () => {
+test('the copy is white unless the Review panel chose another look', () => {
   assert.deepEqual(Object.keys(TEXT_LOOKS), ['glow', 'white', 'shadow', 'ink', 'scrim']);
-  assert.equal(textLook(null), 'glow');
+  assert.equal(textLook(null), 'white');
   for (const look of Object.keys(TEXT_LOOKS)) assert.equal(textLook(look), look);
-  for (const stored of ['', 'halo', 'toString', 'constructor']) assert.equal(textLook(stored), 'glow');
+  for (const stored of ['', 'halo', 'toString', 'constructor']) assert.equal(textLook(stored), 'white');
 });
 
 test('ink turns white as the light turns golden, as the trip\'s date shows, through to the dock', () => {
