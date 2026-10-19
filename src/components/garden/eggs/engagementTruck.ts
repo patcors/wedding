@@ -29,9 +29,9 @@ import { ornamentSpot, type BankOrnament, type OrnamentSpot } from './careerSpot
 // deck's railed side looks out over the water. `turn` swings it from facing
 // the camera so its nose points up the river: three-quarters on, so the
 // rounded cab, the grille and the platform all show.
-export const TRUCK: BankOrnament & { turn: number } = {
-  facing: '2026-04', from: '2026-04', ahead: 14.75, side: 1, inland: 4, mobileInland: 2.7,
-  scale: { desktop: 1.15, mobile: 1 }, turn: .8,
+export const TRUCK: BankOrnament & { turn: number; mobileAhead: number } = {
+  facing: '2026-04', from: '2026-04', ahead: 15.25, mobileAhead: 14.75, side: 1, inland: 4.6, mobileInland: 2.7,
+  scale: { desktop: 1.7, mobile: 1 }, turn: .75,
 };
 
 // The wheels in the model's own frame (it faces +z, the cab at the front,
@@ -55,7 +55,7 @@ export function truckPoint(spot: TruckSpot, [lx, ly, lz]: readonly [number, numb
 // under its four wheels, so each tyre rests on the grass however the
 // ground wobbles beneath it.
 export function truckSpot(width: number): TruckSpot {
-  const base = ornamentSpot(TRUCK, width);
+  const base = ornamentSpot(width < 1 ? { ...TRUCK, ahead: TRUCK.mobileAhead } : TRUCK, width);
   const flat: TruckSpot = { ...base, yaw: base.yaw + TRUCK.turn, pitch: 0, roll: 0 };
   const ground = WHEELS.map(([side, z]) => {
     const { x, z: wz } = truckPoint(flat, [side * TRUCK_WHEELS.track, 0, z]);

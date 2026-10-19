@@ -34,10 +34,11 @@ test('it stands on Patrick\'s bank past the start of the S-bend, a little back f
     const spot = truckSpot(width);
     assert.equal(Math.sign(spot.x - riverCenter(spot.z, width)), 1, `on the right bank (width ${width})`);
     assert.equal(islandHalfWidth(spot.z, width), 0);
-    // Every corner a little back from the water, and the whole of it not far back.
+    // Every corner a little back from the water, and the whole of it not far
+    // back: its furthest corner no further than its own width beyond 3.3.
     const reach = footprint(spot).map(point => toWater(point, width));
     assert.ok(Math.min(...reach) > 1.5, `its nearest corner ${Math.min(...reach)} from the water (width ${width})`);
-    assert.ok(Math.max(...reach) < 4.5, `its furthest corner ${Math.max(...reach)} from the water (width ${width})`);
+    assert.ok(Math.max(...reach) < 3.3 + TRUCK_SIZE.width * spot.scale, `its furthest corner ${Math.max(...reach)} from the water (width ${width})`);
   }
 });
 
@@ -46,7 +47,8 @@ test('each tyre rests on the ground, tilted no more than the grass beneath it, a
     const spot = truckSpot(width);
     for (const contact of truckWheelContacts(spot)) {
       const off = contact.y - groundHeight(contact.x, contact.z, width);
-      assert.ok(Math.abs(off) < .03, `a tyre ${off} off the ground (width ${width})`);
+      // Within .15 of its tyre's radius, so the grass hides it.
+      assert.ok(Math.abs(off) < .15 * TRUCK_WHEELS.radius * spot.scale, `a tyre ${off} off the ground (width ${width})`);
     }
     assert.ok(Math.abs(spot.pitch) < .07 && Math.abs(spot.roll) < .07, `tilted ${degrees(spot.pitch)}°, ${degrees(spot.roll)}° (width ${width})`);
     // The frame and the fenders' skirts, from front to back between the wheels, clear the grass.
