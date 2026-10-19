@@ -2,23 +2,35 @@
 // the copy all follow one eased progress, which chases the scroll as the old
 // damping did but never faster than PACE.max shares (ROOM) a second, however
 // hard the guest scrolls or flings, so each milestone's scene and date still
-// register. The scroll itself is kept within PACE.lead of it, so a fling
+// register. The opening has no milestone to miss, so there the story may run
+// at up to PACE.opening shares a second, settling to PACE.max by the
+// meeting's date. The scroll itself is kept within PACE.lead of it, so a fling
 // carries the story on a little way, as momentum does, rather than leaving
 // the page far ahead. "The next chapter" glides the rest of the way to the
 // dock on its own (glidePlan). Pure, so it can be tested.
-import { BULLET_LAUNCH, MILESTONES, ROOM, STOPS, progressAt } from './journey.ts';
+import { ARRIVAL_END, BULLET_LAUNCH, MILESTONES, ROOM, STOPS, progressAt } from './journey.ts';
 
 // `ease` is the old damping's rate, per second; `max` the most shares a
-// second the story travels; `lead` how many shares the scroll may run ahead
-// of it, or behind going back.
-export const PACE = { ease: 2, max: .8, lead: 1.5 } as const;
+// second the story travels, and `opening` the most under the title;
+// `lead` how many shares the scroll may run ahead of it, or behind going back.
+export const PACE = { ease: 2, max: .8, opening: 4, lead: 1.5 } as const;
 export const MAX_SPEED = PACE.max * ROOM;
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 
+// Where the opening's speed starts to settle, at the voyage's first date, and
+// where it has settled, at the meeting's.
+export const OPENING_RUN = [ARRIVAL_END, progressAt(MILESTONES[0].month)] as const;
+
+// The most progress a second the story may travel at p.
+export function maxSpeedAt(p: number) {
+  const k = clamp((p - OPENING_RUN[0]) / (OPENING_RUN[1] - OPENING_RUN[0]), 0, 1);
+  return (PACE.opening + (PACE.max - PACE.opening) * k * k * (3 - 2 * k)) * ROOM;
+}
+
 // The eased progress a frame of `dt` seconds on from p, chasing `target`.
 export function paceToward(p: number, target: number, dt: number) {
-  const most = MAX_SPEED * dt;
+  const most = maxSpeedAt(p) * dt;
   const next = p + clamp((target - p) * (1 - Math.exp(-PACE.ease * dt)), -most, most);
   return Math.abs(target - next) < 1e-5 ? target : next;
 }

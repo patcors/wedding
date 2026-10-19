@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DATES, ROOM, STOPS, YEAR, progressAt } from '../src/components/garden/journey.ts';
-import { GLIDE, GLIDE_STOPS, MAX_SPEED, PACE, advancePace, createPace, glideAt, glidePlan, leashed, paceToward } from '../src/components/garden/journeyPace.ts';
+import { GLIDE, GLIDE_STOPS, MAX_SPEED, OPENING_RUN, PACE, advancePace, createPace, glideAt, glidePlan, leashed, maxSpeedAt, paceToward } from '../src/components/garden/journeyPace.ts';
 import { SALSA } from '../src/components/garden/storyBoats.ts';
 import { PROPOSAL } from '../src/components/garden/eggs/proposal.ts';
 import { CAPS } from '../src/components/garden/eggs/capToss.ts';
@@ -27,6 +27,22 @@ test('the story eases after a small scroll as before, and never travels faster t
   assert.ok(YEAR / PACE.max >= 1.5 && YEAR / PACE.max <= 2.5);
 });
 
+test('a hard scroll leaves the opening briskly, and is at the story\'s pace by the meeting', () => {
+  // Under the title the cap is above anything the eased chase reaches.
+  assert.ok(maxSpeedAt(0) / ROOM >= PACE.ease * PACE.lead);
+  assert.ok(Math.abs(maxSpeedAt(OPENING_RUN[1]) - MAX_SPEED) < 1e-12);
+  assert.ok(OPENING_RUN[1] < STOPS[1]);
+  // The guest keeps scrolling hard: the leash holds the scroll ahead of the story.
+  const pace = createPace(), reached = {};
+  for (let t = 0; t < 10 && pace.progress < STOPS[1]; t += FRAME) {
+    pace.target = leashed(1, pace.progress);
+    advancePace(pace, t * 1000);
+    for (const [name, p] of [['voyage', OPENING_RUN[0]], ['meeting', STOPS[1]]]) if (reached[name] === undefined && pace.progress >= p) reached[name] = t;
+  }
+  assert.ok(reached.voyage < .6, `the title took ${reached.voyage.toFixed(2)}s to clear`);
+  assert.ok(reached.meeting < 2, `the meeting took ${reached.meeting.toFixed(2)}s to reach`);
+});
+
 test('the scroll stays within reach of the story either way', () => {
   const lead = PACE.lead * ROOM;
   assert.equal(leashed(.5, .3), .3 + lead);
@@ -38,17 +54,17 @@ test('the scroll stays within reach of the story either way', () => {
 
 test('the page and the scene moving the pace in the same frame move it once', () => {
   const once = createPace(), twice = createPace();
-  for (const pace of [once, twice]) pace.target = 1;
+  for (const pace of [once, twice]) pace.progress = .5, pace.target = 1;
   for (let frame = 0; frame <= 60; frame++) {
     const now = frame * 1000 / 60;
     advancePace(once, now);
     advancePace(twice, now), advancePace(twice, now);
   }
   assert.equal(twice.progress, once.progress);
-  assert.ok(Math.abs(once.progress - MAX_SPEED) < 1e-9);
+  assert.ok(Math.abs(once.progress - .5 - MAX_SPEED) < 1e-9);
   // A stalled second counts as a single frame.
   advancePace(once, 3000);
-  assert.ok(Math.abs(once.progress - MAX_SPEED * 1.05) < 1e-9);
+  assert.ok(Math.abs(once.progress - .5 - MAX_SPEED * 1.05) < 1e-9);
 });
 
 // The glide sampled each frame from progress `from`.
