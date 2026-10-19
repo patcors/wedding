@@ -41,3 +41,27 @@ test('the dock view looks across the river at the jetty and the tree, from upstr
     assert.ok(Math.abs(position[0] - riverCenter(position[2], width)) < bankEdge(position[2], width), 'over the water');
   }
 });
+
+// Where a world point lands in a screen's picture at the dock, x and y from 0 to 1 (y down).
+async function dockPicture(screen, point) {
+  const THREE = await import('three');
+  const { position, target } = dockView(screen.width);
+  const camera = new THREE.PerspectiveCamera(screen.fov, screen.w / screen.h, .2, 200);
+  camera.position.set(...position);
+  camera.lookAt(new THREE.Vector3(...target));
+  camera.updateMatrixWorld();
+  const v = new THREE.Vector3(...point).project(camera);
+  return { x: (v.x + 1) / 2, y: (1 - v.y) / 2 };
+}
+
+test('the dock view turns right enough to show the old tree\'s trunk whole on a phone, with the catamaran left of the middle and the jetty between', async () => {
+  for (const screen of [{ width: 1, w: 1440, h: 900, fov: GARDEN_CAMERA.fov }, { width: MOBILE_RIVER_WIDTH, w: 390, h: 844, fov: GARDEN_CAMERA.mobileFov }, { width: 1, w: 844, h: 390, fov: GARDEN_CAMERA.fov }]) {
+    const { tree, mooring, jetty } = voyageLandmarks(screen.width);
+    const trunk = await dockPicture(screen, [tree.x, 1.5, tree.z]), catamaran = await dockPicture(screen, [mooring.x, .3, mooring.z]);
+    const head = await dockPicture(screen, [jetty.x - jetty.side * jetty.reach, .36, jetty.z]);
+    // The trunk is about a unit and a half across here: its middle well inside the right edge.
+    assert.ok(trunk.x > .55 && trunk.x < .85, `the trunk in the picture on ${screen.w}: ${trunk.x.toFixed(2)}`);
+    assert.ok(catamaran.x > .2 && catamaran.x < .45 && catamaran.y > .75, `the catamaran left of the middle, low, on ${screen.w}: ${catamaran.x.toFixed(2)}`);
+    assert.ok(head.x > catamaran.x && head.x < trunk.x);
+  }
+});

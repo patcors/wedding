@@ -1,16 +1,17 @@
-// The guest's paper boat (guestBoat.ts): the guests' folded paper boat with a
-// toothpick mast, and a card sail with the Party's names on it, at full size
-// (GuestBoat scales it for the layout, guestScale).
+// A guest's paper boat (guestBoat.ts): the guests' folded paper boat with a
+// toothpick mast, and a card sail with their first name on it, at full size
+// (GuestBoat scales it for the layout, guestScale). Every boat shares the
+// hull, creases and card; only the name's texture is each boat's own.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { foldedPaper } from './paperBoatGeometry.ts';
-import { CARD_TYPE, GUEST_BOAT, fitGreeting } from './guestBoat.ts';
+import { GUEST_BOAT, GUEST_CARD, cormorantWidth, guestCard } from './guestBoat.ts';
 
-// The hull and its mast in one mesh, coloured per vertex, and the hull's
-// creases. In the boat's frame: bow to −z, the water at y 0.
-export function guestHull() {
+// The hull and its mast, up to `top`, in one mesh, coloured per vertex, and
+// the hull's creases. In the boat's frame: bow to −z, the water at y 0.
+export function guestHull(top: number) {
   const { geometry: paper, creases } = foldedPaper();
-  const { top } = GUEST_BOAT, foot = .06;
+  const foot = .06;
   const mast = new THREE.CylinderGeometry(.011, .013, top - foot, 6, 1, true).toNonIndexed();
   mast.translate(0, (top + foot) / 2, -.012);
   mast.deleteAttribute('uv');
@@ -23,29 +24,31 @@ export function guestHull() {
 }
 
 // The card, threaded on the mast at its middle, bowed a little back at its
-// edges like a sail; its front faces +z. Its foot is at y 0.
+// edges like a sail; its front faces +z. Its foot is at y 0. One unit wide:
+// each boat stretches it to its name's width (guestCard).
 export function cardGeometry() {
-  const { width, height } = GUEST_BOAT.card;
-  const geometry = new THREE.PlaneGeometry(width, height, 8, 1);
+  const { height } = GUEST_BOAT.card;
+  const geometry = new THREE.PlaneGeometry(1, height, 8, 1);
   const position = geometry.attributes.position;
   for (let i = 0; i < position.count; i++) {
-    const u = position.getX(i) / (width / 2);
-    position.setZ(i, u * u * .045);
+    const u = position.getX(i) * 2;
+    position.setZ(i, u * u * .035);
     position.setY(i, position.getY(i) + height / 2);
   }
   geometry.computeVertexNormals();
   return geometry;
 }
 
-// The card's paper and the names in the Garden's ink, at 1024px across:
-// Cormorant Garamond, as the celebration's copy and the invitations, set as
-// large as fits in one to three lines (fitGreeting). Drawn once the font is in.
+// The card's paper and the name in the Garden's ink, at CARD_PIXELS a unit:
+// Cormorant Garamond, as the celebration's copy and the invitations, at the
+// size guestCard gives (measured with Cormorant's own widths, so the card is
+// the same width before the font has loaded). Drawn again once it is in.
 const PAPER = '#f8f4e9', INK = '#384135', FONT = (size: number) => `500 ${size}px "Cormorant Garamond", Georgia, serif`;
-export const CARD_PIXELS = 1024;
-export function cardTexture(greeting: string) {
-  const { width, height } = GUEST_BOAT.card;
+export const CARD_PIXELS = 1400;
+export function cardTexture(name: string) {
+  const { height } = GUEST_BOAT.card, card = guestCard(name, cormorantWidth);
   const canvas = document.createElement('canvas');
-  canvas.width = CARD_PIXELS; canvas.height = Math.round(CARD_PIXELS * height / width);
+  canvas.width = Math.round(CARD_PIXELS * card.width); canvas.height = Math.round(CARD_PIXELS * height);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
@@ -54,16 +57,18 @@ export function cardTexture(greeting: string) {
     ctx.fillStyle = PAPER; ctx.fillRect(0, 0, canvas.width, canvas.height);
     // A fine ruled border, as on a place card.
     ctx.strokeStyle = '#b9b29c'; ctx.lineWidth = 5;
-    ctx.strokeRect(26, 26, canvas.width - 52, canvas.height - 52);
-    const measure = (text: string) => { ctx.font = FONT(100); return ctx.measureText(text).width / 100; };
-    const { lines, size } = fitGreeting(greeting, measure, { width: canvas.width, height: canvas.height });
+    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+    let size = card.size * CARD_PIXELS;
+    ctx.font = FONT(size);
+    // Georgia, before Cormorant is in, runs wider: kept inside the card.
+    const room = canvas.width - 2 * GUEST_CARD.margin * GUEST_CARD.em * CARD_PIXELS;
+    size *= Math.min(1, room / ctx.measureText(name).width);
     ctx.font = FONT(size); ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const step = size * CARD_TYPE.lineHeight;
     // Optically centred: lowercase sits a little above the line's middle.
-    lines.forEach((line, i) => ctx.fillText(line, canvas.width / 2, canvas.height / 2 + (i - (lines.length - 1) / 2) * step + size * .04));
+    ctx.fillText(name, canvas.width / 2, canvas.height / 2 + size * .04);
     texture.needsUpdate = true;
   };
   draw();
-  void document.fonts?.load(FONT(100), greeting).then(draw, () => {});
-  return texture;
+  void document.fonts?.load(FONT(100), name).then(draw, () => {});
+  return { texture, width: card.width };
 }

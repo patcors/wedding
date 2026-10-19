@@ -9,8 +9,7 @@ import { advancePace, type Pace } from './journeyPace';
 // so boats, sky and eggs stay in step with the camera rather than the raw
 // scroll. It is mutated each frame, never React state, so reading it doesn't
 // re-render anything.
-// `lift` is how far up the finale's flight the camera is (VoyageCamera), 0 to 1.
-export type JourneyClock = { progress: number; scroll: number; lift: number };
+export type JourneyClock = { progress: number; scroll: number };
 const JourneyContext = createContext<JourneyClock | null>(null);
 
 export function useJourney() {
@@ -25,7 +24,7 @@ export function useJourney() {
 export type SlotProps = { paused: boolean; reduced: boolean; mobile: boolean; width: number };
 
 export function JourneyProvider({ scroll, pace, paused, reduced, children }: { scroll: number; pace: Pace; paused: boolean; reduced: boolean; children: ReactNode }) {
-  const clock = useMemo<JourneyClock>(() => ({ progress: 0, scroll: 0, lift: 0 }), []);
+  const clock = useMemo<JourneyClock>(() => ({ progress: 0, scroll: 0 }), []);
   // Reduced motion cuts between still views, and renders only on demand.
   const still = reduced ? stillProgress(scroll) : null;
   const invalidate = useThree(state => state.invalidate);

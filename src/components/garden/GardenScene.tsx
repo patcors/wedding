@@ -74,7 +74,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
   const slot: SlotProps = { paused: still, reduced, mobile, width };
   const waterTint = useMemo(createWaterTint, []);
   return <JourneyProvider scroll={progress} pace={pace} paused={paused} reduced={reduced}>
-    <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} reduced={reduced} />
+    <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} />
     <GardenSeasons on={seasons} />
     <Inspectable id="sky"><GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} seasons={seasons} /></Inspectable>
     <GardenGround width={width} style={groundStyle} />
