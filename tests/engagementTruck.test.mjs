@@ -3,7 +3,7 @@ import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, groundHeight, islandHalfWidth, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { DATES, MILESTONES, ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
-import { BOAT_SCALE, boatPose } from '../src/components/garden/storyBoats.ts';
+import { boatScale, boatPose } from '../src/components/garden/storyBoats.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
 import { TRUCK, TRUCK_SIZE, TRUCK_TIMES, TRUCK_WHEELS, truckFootprint, truckPoint, truckShown, truckSpot, truckWheelContacts } from '../src/components/garden/eggs/engagementTruck.ts';
 
@@ -94,7 +94,7 @@ test('it is in the picture, wholly and fully shown, from the engagement\'s date 
 test('at the engagement\'s stop it is beside the catamaran, right of its starboard hull, not behind the proposal on the deck', () => {
   for (const [width] of LAYOUTS) {
     const spot = truckSpot(width), pose = boatPose(stop, width);
-    const hulls = [-1, 1].map(side => seen(stop, width, pose.x + side * pose.gap * BOAT_SCALE * Math.cos(pose.yaw), pose.z - side * pose.gap * BOAT_SCALE * Math.sin(pose.yaw)).bearing);
+    const hulls = [-1, 1].map(side => seen(stop, width, pose.x + side * pose.gap * boatScale(width) * Math.cos(pose.yaw), pose.z - side * pose.gap * boatScale(width) * Math.sin(pose.yaw)).bearing);
     const deck = seen(stop, width, pose.x, pose.z).bearing;
     const nearest = Math.min(...corners(spot).map(corner => seen(stop, width, corner.x, corner.z).bearing));
     assert.ok(nearest > Math.max(...hulls) + 1, `its nearest corner ${nearest}° against the hull at ${Math.max(...hulls)}° (width ${width})`);

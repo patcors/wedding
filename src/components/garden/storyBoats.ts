@@ -6,9 +6,22 @@ import { VOYAGE, bankEdge, channelOffset, launchJetties, riverCenter, voyageLand
 import { HULL } from './storyBoatGeometry.ts';
 
 // The models are built in their own units; this sizes them in the world so
-// they read as the protagonists on a portrait phone, where the camera's lens
-// is wider (see GARDEN_CAMERA).
-export const BOAT_SCALE = 1.2;
+// they read as the protagonists. On a real phone they and their flags were
+// too small to make out (Amelia, October 2026), so a portrait phone, with
+// its narrower river and wider lens (see GARDEN_CAMERA), draws them a good
+// deal larger, and desktop (and a phone on its side, which shares desktop's
+// composition) a little larger than the 1.2 both had. Everything aboard
+// scales with them; `boatScale(width)` is the size for a composition.
+export const BOAT_SCALE = { desktop: 1.3, mobile: 1.4 } as const;
+export const boatScale = (width: number) => width < 1 ? BOAT_SCALE.mobile : BOAT_SCALE.desktop;
+// The size they had on both before, which what flies round them in world
+// units (the dating butterflies) was placed for: it grows with them by
+// `pose.scale / SCALE_BEFORE`. The dock's picture was composed round the
+// catamaran at this size (its monogram's flag just below the copy's button
+// on a phone, clear of the copy beside it on desktop), so it settles back
+// to it as it comes in to moor, while the camera swings round onto the
+// dock and the change is lost in the move (`pose.scale`).
+export const SCALE_BEFORE = 1.2;
 // Half the distance between the two hulls' centres, in model units: side by
 // side with room between, then as the catamaran with the deck across.
 export const ALONGSIDE = .62, CATAMARAN = .48;
@@ -177,14 +190,15 @@ export function salsaClock(turn: number | null, p: number, step: number, reduced
 // The catamaran's turn `s` seconds in: how far round (radians of yaw, negative
 // to the right), heeled (radians of roll) and risen (model units). At rest
 // before and after, so it ends on the heading it started on. `shift` is how
-// far the pair's middle moves (world x, z) to turn about the pivot, heading `yaw`.
-export function salsaTurn(s: number | null, yaw = 0) {
+// far the pair's middle moves (world x, z) to turn about the pivot, heading
+// `yaw`, at the boats' size on `width`'s composition.
+export function salsaTurn(s: number | null, yaw = 0, width = 1) {
   const u = (s ?? 0) / SALSA.seconds;
   if (!(u > 0 && u < 1)) return { spin: 0, heel: 0, rise: 0, shift: [0, 0] as [number, number] };
   // Up and back down between a and b, gently at both ends.
   const swell = (a: number, b: number) => Math.sin(Math.PI * clamp((u - a) / (b - a))) ** 2;
   const round = clamp((u - .1) / .72), turned = round ** 3 * (round * (round * 6 - 15) + 10);
-  const spin = -2 * Math.PI * turned + SALSA.prep * swell(0, .3) - SALSA.overshoot * swell(.7, 1), pivot = SALSA.pivot * BOAT_SCALE;
+  const spin = -2 * Math.PI * turned + SALSA.prep * swell(0, .3) - SALSA.overshoot * swell(.7, 1), pivot = SALSA.pivot * boatScale(width);
   return {
     spin, heel: SALSA.heel * swell(.1, .82), rise: SALSA.rise * swell(.1, .82),
     shift: [pivot * (Math.sin(yaw) - Math.sin(yaw + spin)), pivot * (Math.cos(yaw) - Math.cos(yaw + spin))] as [number, number],
@@ -201,14 +215,14 @@ export const hullHalfBeam = (morph: number) => HULL_HALF_BEAM.dinghy + (HULL_HAL
 export const CAST_OFF = { from: .004, to: ARRIVAL_END * .85 } as const;
 export const castingOff = (p: number) => ease((p - CAST_OFF.from) / (CAST_OFF.to - CAST_OFF.from));
 export const berth = (width: number) => Math.min(...launchJetties(width).map(jetty =>
-  Math.abs(jetty.x - riverCenter(ROUTE.start, width)) - jetty.reach - .1)) / BOAT_SCALE - HULL_HALF_BEAM.dinghy;
+  Math.abs(jetty.x - riverCenter(ROUTE.start, width)) - jetty.reach - .1)) / boatScale(width) - HULL_HALF_BEAM.dinghy;
 
 // Half the distance between the hulls' centres at p, in model units.
 export function boatGap(p: number, width: number) {
   const z = routeAt(p);
   // Each in its own channel beside the island, closing in once it ends; at
   // its jetty before that.
-  const channel = channelOffset(z, width) / BOAT_SCALE;
+  const scale = boatScale(width), channel = channelOffset(z, width) / scale;
   const apart = berth(width) + (channel - berth(width)) * castingOff(p);
   const met = ease((VOYAGE.island.to - z) / (VOYAGE.island.to - VOYAGE.meet));
   let gap = apart + (ALONGSIDE - apart) * met;
@@ -222,7 +236,7 @@ export function boatGap(p: number, width: number) {
   // and never less than twice as far apart as alongside, where a phone's
   // river runs narrow. Story months rush between dates, so this goes by scroll.
   const away = Math.max(0, ease((scrolledSince(DATES.sydney, p) + 1) / .9) - ease((scrolledSince(DATES.back, p) + .7) / .7));
-  gap += (Math.max(ALONGSIDE * 2, bankEdge(z, width) * .4 / BOAT_SCALE) - gap) * away;
+  gap += (Math.max(ALONGSIDE * 2, bankEdge(z, width) * .4 / scale) - gap) * away;
   return gap + (CATAMARAN - gap) * catamaran(joining(p)).close;
 }
 
@@ -241,7 +255,9 @@ const STEP = .001;
 const heading = (dx: number, dz: number) => Math.atan2(-dx, -dz);
 
 export type BoatPose = {
-  x: number; z: number; yaw: number;
+  // `scale` is the models' size in the world: boatScale's for the
+  // composition, settling to SCALE_BEFORE as they moor.
+  x: number; z: number; yaw: number; scale: number;
   // Half the distance between the hulls (model units), and how far each boat
   // turns in towards the other (+) or away while that changes.
   gap: number; turn: number;
@@ -258,9 +274,10 @@ export function boatPose(p: number, width: number): BoatPose {
   const a = middle(q - STEP, width), b = middle(q + STEP, width);
   const yaw = heading(b.x - a.x, b.z - a.z);
   const gap = boatGap(p, width);
-  const run = Math.hypot(b.x - a.x, b.z - a.z) / BOAT_SCALE;
+  const docking = ease((p - VOYAGE_END) / (DOCKED - VOYAGE_END)), scale = boatScale(width) + (SCALE_BEFORE - boatScale(width)) * docking;
+  const run = Math.hypot(b.x - a.x, b.z - a.z) / scale;
   const turn = Math.max(-.22, Math.min(.22, -Math.atan((boatGap(q + STEP, width) - boatGap(q - STEP, width)) / run)));
-  return { x, z, yaw, gap, turn, join: catamaran(joining(p)), docking: ease((p - VOYAGE_END) / (DOCKED - VOYAGE_END)), berthed: 1 - castingOff(p) };
+  return { x, z, yaw, scale, gap, turn, join: catamaran(joining(p)), docking, berthed: 1 - castingOff(p) };
 }
 
 // The top of a boat's small mast in the world at p, `side` −1 for Amelia's
@@ -268,12 +285,12 @@ export function boatPose(p: number, width: number): BoatPose {
 // title's names fly to (openingNames.ts). It leaves out the boats' gentle
 // bobbing, a hundredth of a unit, and holds while the masts stand.
 export function mastheadAt(p: number, width: number, side: -1 | 1, above = 0) {
-  const { x, z, yaw, gap, turn, join } = boatPose(p, width);
+  const { x, z, yaw, scale, gap, turn, join } = boatPose(p, width);
   // In the boat, turned in or out about its middle, then across to its place in the pair.
   const along = HULL.mast.dinghy + (HULL.mast.catamaran - HULL.mast.dinghy) * join.morph, t = side * turn;
   const u = side * gap + along * Math.sin(t), v = along * Math.cos(t);
   const c = Math.cos(yaw), s = Math.sin(yaw);
-  return { x: x + (c * u + s * v) * BOAT_SCALE, y: -.02 + HULL.mastTop * BOAT_SCALE + above, z: z + (-s * u + c * v) * BOAT_SCALE };
+  return { x: x + (c * u + s * v) * scale, y: -.02 + HULL.mastTop * scale + above, z: z + (-s * u + c * v) * scale };
 }
 
 // The moored catamaran's footprint on the water, as posts round its edge for
@@ -283,15 +300,15 @@ export function mastheadAt(p: number, width: number, side: -1 | 1, above = 0) {
 // towards open water rather than lodging between it and the jetty. In model units.
 const MOORED_HULLS = { bow: -1.5, stern: 1.15, half: CATAMARAN + HULL_HALF_BEAM.catamaran, point: 1 };
 export function mooredStems(width: number) {
-  const { x, z, yaw } = boatPose(DOCKED, width), c = Math.cos(yaw), s = Math.sin(yaw);
+  const { x, z, yaw, scale } = boatPose(DOCKED, width), c = Math.cos(yaw), s = Math.sin(yaw);
   const { bow, stern, half, point } = MOORED_HULLS;
   const side = VOYAGE.dock.side;
   const corners = [[-half, bow], [half, bow], [half, stern], [-half, stern], [-half, bow]].map(([u, v]) => [u, v === stern && u * side < 0 ? stern - point : v]);
   const stems: { x: number; z: number; radius: number; grip: number }[] = [];
   for (let i = 1; i < corners.length; i++) {
-    const [ax, az] = corners[i - 1], [bx, bz] = corners[i], steps = Math.ceil(Math.hypot(bx - ax, bz - az) * BOAT_SCALE / .1);
+    const [ax, az] = corners[i - 1], [bx, bz] = corners[i], steps = Math.ceil(Math.hypot(bx - ax, bz - az) * scale / .1);
     for (let k = 0; k < steps; k++) {
-      const u = (ax + (bx - ax) * k / steps) * BOAT_SCALE, v = (az + (bz - az) * k / steps) * BOAT_SCALE;
+      const u = (ax + (bx - ax) * k / steps) * scale, v = (az + (bz - az) * k / steps) * scale;
       stems.push({ x: x + c * u + s * v, z: z - s * u + c * v, radius: .1, grip: 0 });
     }
   }

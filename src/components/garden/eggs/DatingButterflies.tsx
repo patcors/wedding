@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { BUTTERFLY_COLORS } from '../butterflyColors';
 import { butterflyMotion } from '../butterflyMotion';
 import { WING } from '../butterflyWing';
-import { BOAT_SCALE, boatPose } from '../storyBoats';
+import { SCALE_BEFORE, boatPose } from '../storyBoats';
 import { useJourney, type SlotProps } from '../JourneyProvider';
 import { FLYERS, courtshipTime, flightPoint, flying, perch } from './datingFlight';
 
@@ -90,16 +90,18 @@ export default function DatingButterflies({ paused, reduced, mobile, width }: Sl
     const s = idle.current, pose = boatPose(clock.progress, width);
     group.position.set(pose.x, 0, pose.z);
     group.rotation.y = pose.yaw;
-    group.scale.setScalar(1);
+    // Their circles and perches grow with the boats; the butterflies keep their size.
+    const grow = pose.scale / SCALE_BEFORE;
+    group.scale.setScalar(grow);
     // Lit like the morning around them: a touch of the haze's colour.
     if (scene.fog instanceof THREE.Fog) material.color.copy(light.set('#ffffff').lerp(scene.fog.color, .25));
     FLYERS.forEach((flyer, i) => {
       const body = bodies.current[i], left = lefts.current[i], right = rights.current[i];
       if (!body || !left || !right) return;
-      const rest = still ? perch(flyer, pose.gap * BOAT_SCALE) : null;
+      const rest = still ? perch(flyer, pose.gap * SCALE_BEFORE) : null;
       body.visible = still ? !!rest : flying(flyer, t);
       if (!body.visible) return;
-      body.scale.setScalar(mobile ? SIZE.mobile : SIZE.desktop);
+      body.scale.setScalar((mobile ? SIZE.mobile : SIZE.desktop) / grow);
       if (rest) {
         // Side by side on the bows, facing forward, wings half raised.
         body.position.set(...rest);

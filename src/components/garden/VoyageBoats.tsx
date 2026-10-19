@@ -14,7 +14,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { routeAt } from './journey';
-import { BOAT_SCALE, CATAMARAN, DECK, boatPose, companyFlags, ensignStaffs, rigging, salsaClock, salsaTurn, universityFlag, type Company } from './storyBoats';
+import { CATAMARAN, DECK, boatPose, boatScale, companyFlags, ensignStaffs, rigging, salsaClock, salsaTurn, universityFlag, type Company } from './storyBoats';
 import { BIG_RIG, ENSIGN, FLAGS, HULL, LOGO_FLAG, SAIL_EASED, bigRig, blendHullPaint, companyFlagTexture, ensignStaff, ensignStaffGeometry, flagGeometry, flutter, logoFlagGeometry, logoFlagTexture, sharpenFlag, storyHull, storyRig, wakeTexture, type FlagShape } from './storyBoatGeometry';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { BOAT_LOOK, catamaranPaint, deckColours, dinghyPaint, type BoatLook } from './boatLooks';
@@ -142,8 +142,9 @@ export default function VoyageBoats({ paused, reduced, mobile, width, look = BOA
     // to the heading, not the spin.
     const own = 1 - join.rigid;
     salsa.current = salsaClock(salsa.current, p, paused ? 0 : step, reduced);
-    const dance = salsaTurn(salsa.current, pose.yaw);
-    pair.current.position.set(pose.x + dance.shift[0], -.02 + Math.sin(t * 1.5) * .011 * join.rigid + dance.rise * BOAT_SCALE, pose.z + dance.shift[1]);
+    const dance = salsaTurn(salsa.current, pose.yaw, width);
+    pair.current.scale.setScalar(pose.scale);
+    pair.current.position.set(pose.x + dance.shift[0], -.02 + Math.sin(t * 1.5) * .011 * join.rigid + dance.rise * pose.scale, pose.z + dance.shift[1]);
     pair.current.rotation.set(Math.sin(t * 1.2) * .018 * join.rigid, pose.yaw + dance.spin, Math.sin(t * .9) * .022 * join.rigid + dance.heel, 'YXZ');
     BOATS.forEach(({ side }, i) => {
       const boat = boats.current[i], mast = rigs.current[i], wake = wakes.current[i];
@@ -250,7 +251,7 @@ export default function VoyageBoats({ paused, reduced, mobile, width, look = BOA
   });
 
   // Keyed by look, so a new look's materials are built afresh for its maps.
-  return <group key={`${look.dinghy}-${look.catamaran}`} ref={pair} name="voyage-boats" scale={BOAT_SCALE}>
+  return <group key={`${look.dinghy}-${look.catamaran}`} ref={pair} name="voyage-boats" scale={boatScale(width)}>
     {BOATS.map(({ name }, i) => <group key={name} name={name} ref={el => { boats.current[i] = el; }}>
       <mesh ref={el => { hulls.current[i] = el; }} geometry={models.boats[i].hull} castShadow>
         <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1} />

@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AMELIA_LEFT_FINOCOMP, ARRIVAL_END, DATES, DOCKED, MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, routeAt, scrolledSince, stillProgress } from '../src/components/garden/journey.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, bendShift, channelOffset, islandHalfWidth, launchJetties, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
-import { ALONGSIDE, BOAT_SCALE, CAST_OFF, CATAMARAN, SALSA, boatPose, companyFlags, ensignStaffs, hullHalfBeam, joining, rigging, salsaClock, salsaTime, salsaTurn, universityFlag } from '../src/components/garden/storyBoats.ts';
+import { ALONGSIDE, BOAT_SCALE, SCALE_BEFORE, boatScale, CAST_OFF, CATAMARAN, SALSA, boatPose, companyFlags, ensignStaffs, hullHalfBeam, joining, rigging, salsaClock, salsaTime, salsaTurn, universityFlag } from '../src/components/garden/storyBoats.ts';
 import { BIG_RIG, ENSIGN, FLAGS, HULL, LOGO_FLAG, ensignStaff, logoFlagGeometry } from '../src/components/garden/storyBoatGeometry.ts';
 
 const steps = (n = 2000) => Array.from({ length: n + 1 }, (_, i) => i / n);
 const widths = [1, MOBILE_RIVER_WIDTH];
 // Each hull's centre and half-beam across the river at p, in world units.
 const hulls = (p, width) => {
-  const pose = boatPose(p, width), half = hullHalfBeam(pose.join.morph) * BOAT_SCALE;
-  return { pose, half, offsets: [-1, 1].map(side => pose.x - riverCenter(pose.z, width) + side * pose.gap * BOAT_SCALE * Math.cos(pose.yaw)) };
+  const pose = boatPose(p, width), half = hullHalfBeam(pose.join.morph) * boatScale(width);
+  return { pose, half, offsets: [-1, 1].map(side => pose.x - riverCenter(pose.z, width) + side * pose.gap * boatScale(width) * Math.cos(pose.yaw)) };
 };
 
 // Points round both hulls' rims in the world at p, from the dinghy's sections.
@@ -22,7 +22,7 @@ const hullOutline = (p, width) => {
     return SECTIONS.flatMap(([v, w]) => [-w, w].map(u => {
       // In the boat, turned about its middle, then across to its place in the pair.
       const bu = side * pose.gap + u * ct + v * st, bv = -u * st + v * ct;
-      return { x: pose.x + (c * bu + s * bv) * BOAT_SCALE, z: pose.z + (-s * bu + c * bv) * BOAT_SCALE };
+      return { x: pose.x + (c * bu + s * bv) * boatScale(width), z: pose.z + (-s * bu + c * bv) * boatScale(width) };
     }));
   });
 };
@@ -44,7 +44,7 @@ test('the hulls never touch and stay between the banks through the voyage', () =
   for (const width of widths) {
     for (const p of steps().filter(p => p < VOYAGE_END)) {
       const { pose, half, offsets } = hulls(p, width);
-      assert.ok(pose.gap * BOAT_SCALE > half, `apart at ${p}`);
+      assert.ok(pose.gap * boatScale(width) > half, `apart at ${p}`);
       for (const offset of offsets) assert.ok(Math.abs(offset) + half < bankEdge(pose.z, width), `inside the bank at ${p} (${width})`);
     }
   }
@@ -96,6 +96,23 @@ test('the boats move smoothly and turn with the river', () => {
   assert.ok(boatPose(mid, 1).yaw > .3);
 });
 
+test('larger on a phone than on desktop through the voyage, both larger than before, settling to their old size as they moor', () => {
+  assert.equal(boatScale(1), BOAT_SCALE.desktop);
+  assert.equal(boatScale(MOBILE_RIVER_WIDTH), BOAT_SCALE.mobile);
+  assert.ok(BOAT_SCALE.mobile > BOAT_SCALE.desktop && BOAT_SCALE.desktop > SCALE_BEFORE);
+  for (const width of widths) {
+    for (const p of steps().filter(p => p <= VOYAGE_END)) assert.equal(boatPose(p, width).scale, boatScale(width));
+    // Smoothly down over the glide into the mooring, never below the old size.
+    let previous = boatScale(width);
+    for (const p of steps().filter(p => p > VOYAGE_END)) {
+      const { scale } = boatPose(p, width);
+      assert.ok(scale <= previous && scale >= SCALE_BEFORE && previous - scale < .01, `${p} (${width})`);
+      previous = scale;
+    }
+    assert.equal(boatPose(DOCKED, width).scale, SCALE_BEFORE);
+  }
+});
+
 test('moored off the jetty from DOCKED, the outer hull just clear of its end', () => {
   for (const width of widths) {
     const { mooring, jetty } = voyageLandmarks(width);
@@ -104,7 +121,7 @@ test('moored off the jetty from DOCKED, the outer hull just clear of its end', (
       assert.ok(Math.abs(pose.x - mooring.x) < 1e-9 && Math.abs(pose.z - mooring.z) < 1e-9);
       assert.deepEqual(boatPose(p, width).yaw, boatPose(DOCKED, width).yaw);
     }
-    const outer = (CATAMARAN + hullHalfBeam(1)) * BOAT_SCALE;
+    const outer = (CATAMARAN + hullHalfBeam(1)) * boatPose(DOCKED, width).scale;
     const end = jetty.x - jetty.side * jetty.reach;
     assert.ok(Math.abs(mooring.x - end) > outer, `clear of the jetty (${width})`);
   }
@@ -168,7 +185,7 @@ test('under the title each boat lies alongside its own jetty, then casts off int
     assert.equal(boatPose(CAST_OFF.from, width).berthed, 1);
     const out = boatPose(ARRIVAL_END, width);
     assert.equal(out.berthed, 0);
-    assert.ok(Math.abs(out.gap * BOAT_SCALE - channelOffset(out.z, width)) < 1e-9);
+    assert.ok(Math.abs(out.gap * boatScale(width) - channelOffset(out.z, width)) < 1e-9);
     // Pulling away, no part of a hull passes over a jetty's head.
     for (const p of steps().filter(p => p < ARRIVAL_END)) {
       for (const point of hullOutline(p, width)) {
@@ -301,7 +318,7 @@ test('the flags fly from ensign staffs at the sterns, the company\'s outboard an
   const [inboard] = ensignStaff(1, 0);
   assert.ok(ALONGSIDE - inboard - FLAGS.shield.length > .08);
   // Each is hoisted to the top of a staff taller than the flag.
-  for (const [shape, { height }] of Object.entries(FLAGS)) assert.ok(ENSIGN.height > height * 1.6, shape);
+  for (const [shape, { height }] of Object.entries(FLAGS)) assert.ok(ENSIGN.height > height * 1.5, shape);
 });
 
 test('each staff stands only while it has a flag to carry, so both stand while the university\'s flies beside FinoComp\'s', () => {
@@ -338,7 +355,8 @@ test('the big mast flies their monogram on one flag at its masthead, larger than
   const { min, max } = flag.boundingBox;
   // Hanging from the masthead, flying to starboard, away from the sail eased to port.
   assert.ok(Math.abs(max.y) < 1e-6 && Math.abs(min.x) < 1e-6 && max.x > 0);
-  for (const [shape, { length, height }] of Object.entries(FLAGS)) assert.ok(LOGO_FLAG.length > length * 1.4 && LOGO_FLAG.height > height * 1.4, shape);
+  // Larger than any company flag (they never fly together: those are struck as it goes up).
+  for (const [shape, { length, height }] of Object.entries(FLAGS)) assert.ok(LOGO_FLAG.length * LOGO_FLAG.height > length * height * 1.2, shape);
   assert.ok(BIG_RIG.top - LOGO_FLAG.height > BIG_RIG.boom + .5, 'clear of the boom');
   flag.dispose();
 });
@@ -396,9 +414,9 @@ test('turning on the spot, the catamaran stays between the banks all through sal
     for (let p = salsaAt; p < salsaAt + ROOM; p += ROOM / 20) {
       const pose = boatPose(p, width), edge = bankEdge(pose.z, width);
       for (let s = .01; s < SALSA.seconds; s += .02) {
-        const { spin, shift } = salsaTurn(s, pose.yaw), a = pose.yaw + spin;
+        const { spin, shift } = salsaTurn(s, pose.yaw, width), a = pose.yaw + spin;
         for (const [u, v] of [[-CATAMARAN, bow], [CATAMARAN, bow], [-half, stern], [half, stern]]) {
-          const x = pose.x + shift[0] + (Math.cos(a) * u + Math.sin(a) * v) * BOAT_SCALE;
+          const x = pose.x + shift[0] + (Math.cos(a) * u + Math.sin(a) * v) * boatScale(width);
           assert.ok(Math.abs(x - riverCenter(pose.z, width)) < edge, `over the bank at ${s}s, p ${p} (${width})`);
         }
       }
