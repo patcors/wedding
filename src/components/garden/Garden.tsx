@@ -379,13 +379,14 @@ export default function Garden() {
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   useEffect(() => { if (REVIEW) setSeasons(seasonsOn(localStorage.getItem(REVIEW_SEASONS))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
-  const easedMonth = useCallback(() => storyMonth(voyage.pace.progress), [voyage.pace]);
+  // Under reduced motion the scene shows each milestone's still, so the date shows its day too.
+  const easedMonth = useCallback(() => storyMonth(reduced ? stillProgress(voyage.pace.progress) : voyage.pace.progress), [voyage.pace, reduced]);
   // Optional sound (soundChoices.ts), off by default: the Review panel's
   // choice while developing, remembered, and a speaker button for guests
   // once GUEST_SOUND is set. Either starts only from a tap, click or key.
   const [sound, setSound] = useState<SoundMode>('off');
   useEffect(() => { if (REVIEW) setSound(soundMode(localStorage.getItem(REVIEW_SOUND))); }, []);
-  const easedProgress = useCallback(() => voyage.pace.progress, [voyage.pace]);
+  const easedProgress = useCallback(() => reduced ? stillProgress(voyage.pace.progress) : voyage.pace.progress, [voyage.pace, reduced]);
   const unlockSound = useSoundscape({ mode: sound, paused, reduced, ready: ready && !failed, progress: easedProgress });
   const chooseSound = (mode: SoundMode) => {
     if (mode !== 'off') unlockSound();
