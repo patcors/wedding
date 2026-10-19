@@ -1,13 +1,9 @@
-// The circus on Amelia's bank (see circusRigs.ts): an aerial silk, a lyra and a
-// bird hanging upside down. Each hangs from y 0, where it meets the limb, and
-// faces +z. The silk is two long tails of purple fabric from one rigging point
+// The circus on Amelia's bank (see circusRigs.ts): an aerial silk and a lyra.
+// Each hangs from y 0, where it meets the limb, and faces +z. The silk is two long tails of purple fabric from one rigging point
 // under a short rope, rewritten each frame as it sways (about 90 triangles).
-// The lyra is a cream-taped hoop on a teal strop and swivel (about 420). The
-// bird is the birdhouses' teal bird (birdhouseGeometry.ts) upside down, its
-// feet gripping the limb (15).
+// The lyra is a cream-taped hoop on a teal strop and swivel (about 420).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { BIRD_COLOURS, BIRD_TRIANGLES, writeBird } from './birdhouseGeometry.ts';
 
 // A soft, rich aerial-silk purple, a deeper plum where it folds.
 const FABRIC = '#8a68a6', FOLD = '#674a83', ROPE = '#4b423a';
@@ -106,43 +102,4 @@ export function lyraGeometry(drop: number) {
   const loop = new THREE.BoxGeometry(tube * 2.4, tab, tube * 2.4);
   loop.translate(0, -drop + tab / 2, 0);
   return painted([[hoop, HOOP], [line, STROP], [turn, STEEL], [loop, HOOP]]);
-}
-
-// The bird's feet on the limb: two short legs from its belly, then the bird
-// upside down beneath them, its head down and its tail up.
-const LEG = .035, LEGS = '#5b4c3f';
-export const HANGING_BIRD_TRIANGLES = BIRD_TRIANGLES + 2;
-export function hangingBirdGeometry() {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(HANGING_BIRD_TRIANGLES * 9), 3).setUsage(THREE.DynamicDrawUsage));
-  const { body, wings } = BIRD_COLOURS.amelia;
-  const BEAK = '#c27b34';
-  const faces = [...Array(BIRD_TRIANGLES - 4).fill(body), BEAK, BEAK, wings, wings, LEGS, LEGS];
-  geometry.setAttribute('color', new THREE.BufferAttribute(colourArray(HANGING_BIRD_TRIANGLES * 3, i => faces[Math.floor(i / 3)]), 3));
-  return geometry;
-}
-
-const flip = new THREE.Matrix4(), point = new THREE.Vector3();
-const roll = new THREE.Matrix4().makeRotationZ(Math.PI), lift = new THREE.Matrix4().makeTranslation(0, -LEG, 0);
-// Writes the hanging bird: drawn standing (as writeBird draws it) on two
-// short legs, then turned upside down so it hangs from its feet at y 0, and
-// tipped head down by `tip` radians. `open` spreads its
-// wings a little, as a bird steadies itself.
-export function writeHangingBird(geometry: THREE.BufferGeometry, tip: number, open: number) {
-  const positions = geometry.attributes.position.array as Float32Array;
-  writeBird(positions, 0, { x: 0, y: 0, z: 0 }, 0, 1, open, 0, true);
-  let i = BIRD_TRIANGLES * 9;
-  for (const side of [-1, 1]) {
-    for (const [x, y, z] of [[side * .012, .01, -.012], [side * .012, .01, .012], [side * .008, -LEG, 0]]) {
-      positions[i++] = x; positions[i++] = y; positions[i++] = z;
-    }
-  }
-  // Upside down: a half turn about its length puts its belly and feet up,
-  // its feet to y 0, and it tips about them so its head hangs down.
-  flip.makeRotationX(tip).multiply(lift).multiply(roll);
-  for (let v = 0; v < HANGING_BIRD_TRIANGLES * 3; v++) {
-    point.fromArray(positions, v * 3).applyMatrix4(flip).toArray(positions, v * 3);
-  }
-  geometry.attributes.position.needsUpdate = true;
-  geometry.computeVertexNormals();
 }

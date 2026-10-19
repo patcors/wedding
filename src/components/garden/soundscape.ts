@@ -7,7 +7,7 @@
 // A few scenery touches play as the scroll passes their moments, as the
 // scenes themselves do. soundEngine.ts makes the sounds; soundPlayer.ts ties
 // them to the page.
-import { BULLET_LAUNCH, MILESTONES, ROOM, chapterAt, monthIndex, progressAt, type Milestone } from './journey.ts';
+import { MILESTONES, ROOM, chapterAt, monthIndex, progressAt, type Milestone } from './journey.ts';
 import { AFTERNOON, DAWN, DUSK, GOLDEN, LATE, MIDDAY, MORNING, SKY_KEYS, lampsAt, type SkyKey } from './skyCycle.ts';
 import { NEST_EVENTS, NESTS, type Owner } from './eggs/nesting.ts';
 
@@ -86,7 +86,7 @@ export function chimeNotes(id: string): [number, number] {
 // The scenery's touches, each at the progress where its scene starts to play.
 // `pan` runs from the left bank (−1) to the right (1), `to` where it ends
 // (a bird's flight); `delay` staggers two at once, in seconds.
-export type CueKind = 'rocket' | 'burner' | 'bird';
+export type CueKind = 'burner' | 'bird';
 export type Cue = { id: string; kind: CueKind; at: number; pan: number; to?: number; owner?: Owner; delay?: number };
 // Each bird on its own bank, the other's house a little nearer the middle,
 // as it is in the picture.
@@ -99,12 +99,10 @@ const birdCues = (): Cue[] => {
     return { id: `bird-${i}-${owner}`, kind: 'bird', at: progressAt(month) + at * ROOM, pan: from, to, owner, delay: k * .3 } as Cue;
   }));
 };
-// The rocket fires on the right bank (rocketLaunch.ts); the first balloon's
-// burner sounds once the balloons have faded in over the trip's date, before
-// its stop (balloonCourse.ts, BALLOON_TIMES.arrive), left of the middle; the
-// birds call as they take off for each flight on Church St (nesting.ts).
+// The first balloon's burner sounds once the balloons have faded in over the
+// trip's date, before its stop (balloonCourse.ts, BALLOON_TIMES.arrive), left
+// of the middle; the birds call as they take off for each flight on Church St (nesting.ts).
 export const CUES: readonly Cue[] = [
-  { id: 'rocket', kind: 'rocket', at: progressAt(BULLET_LAUNCH.month) + BULLET_LAUNCH.at * ROOM, pan: .35 },
   { id: 'burner', kind: 'burner', at: progressAt('2026-07') + .3 * ROOM, pan: -.3 },
   ...birdCues(),
 ];

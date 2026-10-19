@@ -19,7 +19,7 @@ import BarkCarvings from './BarkCarvings';
 import MobiusSculpture from './MobiusSculpture';
 import ParkBench from './ParkBench';
 import Careers from './Careers';
-import Rocket from './Rocket';
+import BulletOrnament from './BulletOrnament';
 import Circus from './Circus';
 import Sydney from './Sydney';
 import Inspectable from '../inspect/Inspectable';
@@ -31,9 +31,10 @@ const EGGS: Record<EggId, ComponentType<EggProps>> = { balloon: TurkeyGreece, un
 // boats' joining, the rose petals in the catamaran's wake as they get engaged
 // and the old truck they got engaged on, parked on the bank (see
 // engagementTruck.ts), the university years' ornaments (see uniOrnaments.ts),
-// ornaments on the banks for their working lives, 2025's rocket, and Amelia's
+// ornaments on the banks for their working lives, the bullet ornament on
+// Patrick's bank (see bulletOrnament.ts), and Amelia's
 // aerial circus hung from the trees on her bank (see circusRigs.ts).
-const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies, EngagementPetals, EngagementTruck, BarkCarvings, MobiusSculpture, ParkBench, Careers, Rocket, Circus];
+const SCENERY: ComponentType<SlotProps>[] = [YearMarkers, DatingButterflies, EngagementPetals, EngagementTruck, BarkCarvings, MobiusSculpture, ParkBench, Careers, BulletOrnament, Circus];
 
 export default function Eggs(props: SlotProps) {
   return <>{MILESTONES.map(milestone => {

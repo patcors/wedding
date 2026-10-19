@@ -78,8 +78,8 @@ export function ornamentSpot(ornament: Ornament, width: number, footprint = .5):
 // - A heart with P + A cut inside it on the headland in the S-bend, nearest
 //   as the wedding comes, across the river from 2027's heart. Its tree is
 //   near the middle of the picture from the trip on, so it is held back
-//   (`after`) and dissolves in with 2027's heart, as November 2026 shows once
-//   the rocket has flown, so the two hearts arrive as a pair.
+//   (`after`) and dissolves in with 2027's heart, as November 2026 shows, so
+//   the two hearts arrive as a pair.
 // `after`, if set, holds a carving back until that month shows, however near
 // its tree is, as a year marker's `from` does (heldBack in yearMarkerSpots.ts).
 export type BarkCarving = { side: -1 | 1; z: { desktop: number; mobile: number | null }; facing: string; arc: number; from: number; to: number; after?: string };

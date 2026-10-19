@@ -32,8 +32,7 @@ export const BALLOONS: readonly { lag: number; desktop: BalloonView; mobile: Bal
 ];
 // Their course in milestone shares since the date: they fade in over ARRIVE,
 // climb until CLIMB, by when the first is out of the top of the picture, and
-// are gone by GONE, as October 2026 shows, before Bullet's rocket fires
-// (rocketLaunch.ts), so none is still fading while the glide waits for it.
+// are gone by GONE, as October 2026 shows.
 // Under reduced motion they rest just risen, at SETTLED.
 export const BALLOON_TIMES = { arrive: .35, climb: 1.6, gone: 1.7, settled: .3 };
 // Where balloon `index` is at progress p, `t` shares after its date: the spot

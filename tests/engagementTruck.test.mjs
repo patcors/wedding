@@ -106,7 +106,7 @@ test('it keeps clear of the other scenery round the engagement, the trees and th
   const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
   const { RIGS, hangSpot } = await import('../src/components/garden/eggs/circusRigs.ts');
   const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
-  const { rocketSpot } = await import('../src/components/garden/eggs/rocketLaunch.ts');
+  const { bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
   const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
   const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { treePlacements } = await import('../src/components/garden/gardenTreeSpots.ts');
@@ -117,7 +117,7 @@ test('it keeps clear of the other scenery round the engagement, the trees and th
       ...YEAR_MARKERS.map(marker => [marker.year, yearMarkerSpot(marker, width)]),
       ...Object.entries(RIGS).map(([name, rig]) => [name, hangSpot(rig, width)]),
       ['2025 snowmen', snowSpot(SNOW_SPOTS[2025], '2025-08', width)],
-      ['rocket', rocketSpot(width)],
+      ['bullet', bulletSpot(width)],
       ['Hagia Sophia', hagiaSophiaSpot('2026-07', width)],
       ...Object.values(nestSpots(width)).map(house => ['birdhouse', house]),
     ];

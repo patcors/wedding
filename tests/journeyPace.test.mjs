@@ -6,7 +6,6 @@ import { SALSA } from '../src/components/garden/storyBoats.ts';
 import { PROPOSAL } from '../src/components/garden/eggs/proposal.ts';
 import { CAPS } from '../src/components/garden/eggs/capToss.ts';
 import { NESTS, NEST_EVENTS } from '../src/components/garden/eggs/nesting.ts';
-import { ROCKET, launchProgress } from '../src/components/garden/eggs/rocketLaunch.ts';
 
 const FRAME = 1 / 60;
 
@@ -74,14 +73,13 @@ function glide(from) {
   return { plan, frames };
 }
 
-test('the glide stops at each milestone, the rocket and the celebration in turn, never faster than a guest may scroll', () => {
+test('the glide stops at each milestone and the celebration in turn, never faster than a guest may scroll', () => {
   const { plan, frames } = glide(STOPS[1]);
   assert.deepEqual(plan.legs.map(leg => leg.to), GLIDE_STOPS.slice(1).map(stop => stop.p));
-  // Every milestone's stop, and one more between the trip and the wedding, where the rocket goes up.
-  assert.deepEqual(GLIDE_STOPS.map(stop => stop.p).filter(p => STOPS.includes(p)), STOPS.slice(1));
-  const rocket = GLIDE_STOPS.findIndex(stop => stop.id === 'rocket');
-  assert.equal(GLIDE_STOPS[rocket - 1].id, 'turkey-greece');
-  assert.equal(GLIDE_STOPS[rocket + 1].id, 'celebration');
+  // Every milestone's stop, then the celebration's.
+  assert.deepEqual(GLIDE_STOPS.map(stop => stop.p), STOPS.slice(1));
+  assert.equal(GLIDE_STOPS.at(-2).id, 'turkey-greece');
+  assert.equal(GLIDE_STOPS.at(-1).id, 'celebration');
   assert.equal(frames.at(-1).p, 1);
   for (let i = 1; i < frames.length; i++) {
     const v = (frames[i].p - frames[i - 1].p) / FRAME;
@@ -111,7 +109,6 @@ test('the glide holds long enough at a milestone for what plays out there', () =
   const scenes = [
     ['graduation', progressAt('2020-08') + Math.max(...CAPS.tosses.map(toss => toss.at)) * ROOM, CAPS.flight],
     ['apartments', progressAt('2024-05') + NEST_EVENTS[1].at * ROOM, NESTS.flight],
-    ['rocket', launchProgress(), ROCKET.ignite + ROCKET.flight],
     ['salsa', progressAt('2026-01') + SALSA.cue * ROOM, SALSA.seconds],
     ['engaged', progressAt(DATES.engaged) + PROPOSAL.kneel.cue * ROOM, PROPOSAL.kneel.seconds],
   ];

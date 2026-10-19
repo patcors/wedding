@@ -20,11 +20,6 @@ export const AMELIA_LEFT_FINOCOMP = '2022-08';
 // houses are in view (MOVE_SHOWN in eggs/nesting.ts); she liked the whole
 // sequence told in 2024 and 2025.
 export const AMELIA_MOVED_IN = '2026-03';
-// When Bullet, the product Patrick worked on, goes up as a little rocket on
-// his bank (eggs/rocketLaunch.ts): `at` shares after the month shows, as it
-// went into production. It isn't a milestone; it is here so the glide
-// (journeyPace.ts) can wait for it without loading the scene.
-export const BULLET_LAUNCH = { month: '2026-10', at: .05 } as const;
 
 export const MILESTONES: readonly Milestone[] = [
   // The channels join: room to come together and travel on side by side.
