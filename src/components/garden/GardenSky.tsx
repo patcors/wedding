@@ -111,6 +111,18 @@ export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint,
   useSunFollowsVoyage(sun, sunOffset, width);
   const writePage = usePageColors();
   const device = mobile ? 'mobile' : 'desktop';
+  // The background and fog belong to the scene itself, not to whatever group
+  // this is mounted in: on the dev server Inspectable wraps the sky in one,
+  // and attach="fog" there gave the group a fog and the scene none.
+  const scene = useThree(state => state.scene);
+  const onScene = useMemo(() => {
+    const target = scene as unknown as Record<'fog' | 'background', unknown>;
+    const to = (key: 'fog' | 'background') => (_: unknown, self: THREE.Fog | THREE.Color) => {
+      target[key] = self;
+      return () => { if (target[key] === self) target[key] = null; };
+    };
+    return { fog: to('fog'), background: to('background') };
+  }, [scene]);
   useFrame(({ clock: time }) => {
     const sky = skyAt(clock.progress, keys);
     set(dome.horizon, sky.horizon);
@@ -138,9 +150,9 @@ export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint,
     writePage(sky, time.elapsedTime);
   });
   return <>
-    <color ref={background} attach="background" args={[hex(opening.horizon)]} />
+    <color ref={background} attach={onScene.background} args={[hex(opening.horizon)]} />
     <SkyDome colors={dome} />
-    <fog ref={fog} attach="fog" args={[hex(opening.horizon), FOG.clear[device], FOG.far[device]]} />
+    <fog ref={fog} attach={onScene.fog} args={[hex(opening.horizon), FOG.clear[device], FOG.far[device]]} />
     <hemisphereLight ref={hemisphere} args={[hex(opening.hemiSky), hex(opening.hemiGround), opening.hemi]} />
     <directionalLight ref={sun} position={opening.sun} intensity={opening.sunIntensity} color={hex(opening.sunColor)} castShadow
       shadow-mapSize={[SHADOW.map, SHADOW.map]} shadow-camera-left={SHADOW.left} shadow-camera-right={SHADOW.right}
