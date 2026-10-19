@@ -104,9 +104,12 @@ test('Sydney carries on down the river: the Opera House stands on a sandstone po
     assert.equal(point.side, -1);
     assert.ok(Math.abs(point.x - (riverCenter(point.z, width) - bankEdge(point.z, width))) < 1e-9);
     assert.ok(point.out > .15 && point.out < bankEdge(point.z, width) * .25, 'a little point, not across the river');
-    // Downstream of the rock and across the river from 2022's pile, past where the boats are as 2022 turns.
+    // Downstream of the rock and across the river from 2022's pile, past where the boats are as 2022 turns;
+    // on a phone further down, so that it is seen over her sails rather than squeezed beside them.
     const across = yearMarkerSpot(pile, width);
-    assert.ok(across.x > riverCenter(across.z, width) && Math.abs(spot.z - across.z) < 7, `across from the pile (width ${width})`);
+    assert.ok(across.x > riverCenter(across.z, width), 'the pile on the other bank');
+    if (width < 1) assert.ok(spot.z < across.z && across.z - spot.z < 20, 'down the river from the pile on a phone');
+    else assert.ok(Math.abs(spot.z - across.z) < 7, 'across from the pile');
     assert.ok(spot.z < VOYAGE.rock.to - 10 && spot.z < routeAt(yearTurns(2022)));
     // Its podium's corners on the point, its foot down into the point's top.
     for (const corner of corners) assert.ok(pointInland(corner.x, corner.z, width) > .1, `a corner off the point (width ${width})`);
@@ -114,6 +117,26 @@ test('Sydney carries on down the river: the Opera House stands on a sandstone po
     // Side on to the camera, its harbour front facing out over the river.
     assert.ok(Math.abs(Math.abs(spot.yaw) - Math.PI / 2) < .3);
     assert.ok(-Math.sin(spot.yaw) > .9, 'its front to the river');
+  }
+});
+
+test('the Opera House is larger and takes up the whole point, which runs back into the bank rather than further into the river', () => {
+  // Amelia, October 2026: significantly larger on desktop and a phone; the
+  // point juts no further than it did (1.7 on desktop, .2 on a phone).
+  assert.equal(VOYAGE.point.out, 1.7);
+  assert.equal(VOYAGE.point.mobile.out, .2);
+  assert.ok(OPERA.scale.desktop >= 2.1 * 1.35 && OPERA.scale.mobile >= 1.05 * 3, 'larger than it was');
+  for (const width of widths) {
+    const point = pointSpot(width), { spot } = house(width);
+    assert.ok(point.back > point.out * .8, 'back into the bank');
+    // Its podium fills the point's top, but for a narrow ledge all round.
+    const across = spot.scale, along = OPERA.width * spot.scale;
+    assert.ok(point.out + point.back - across < .4 && point.wide - along < .45, `the point's top shows round it (width ${width})`);
+    // The bank is cut down round it, under its top over it and rising back to the bank's height behind.
+    for (let v = -point.wide / 2; v <= point.wide / 2; v += .1) {
+      assert.ok(groundHeight(point.x + point.side * (point.back + .1), point.z + v, width) < pointTop(width) - .05, 'the ground at its back');
+      assert.ok(groundHeight(point.x + point.side * (point.back + 1.8), point.z + v, width) > pointTop(width) + .1, 'the bank behind it');
+    }
   }
 });
 
@@ -156,12 +179,25 @@ test('the Opera House is in the picture through 2022 to August\'s stop on deskto
       assert.equal(harbourShown(p, cameraPose(p, width).position[2], width < 1).opera, 1, `shown at ${p}`);
       for (const { x, z } of [...corners, top]) {
         const at = seen(p, width, x, z);
-        assert.ok(Math.abs(at.bearing) < halfView(width) - .6 && at.distance < 26, `${at.bearing.toFixed(1)}°, ${at.distance.toFixed(1)} away at ${p} (width ${width})`);
+        assert.ok(Math.abs(at.bearing) < halfView(width) - .6 && at.distance < (width < 1 ? 37 : 26), `${at.bearing.toFixed(1)}°, ${at.distance.toFixed(1)} away at ${p} (width ${width})`);
       }
     }
-    // At August 2022's stop it stands clear of her boat's sails, to their left.
+    // At August 2022's stop it stands clear of her boat's sails: to their
+    // left on desktop; on a phone, where the band left of them is too narrow
+    // for it to be any larger, beyond and above them, the point's waterline
+    // and the house's podium higher in the picture than her masthead.
     const { hull, mast } = boat(interim, width, -1), sails = Math.min(...hull.map(({ x, z }) => seen(interim, width, x, z).bearing), seen(interim, width, mast.x - .5, mast.z).bearing);
-    for (const { x, z } of corners) assert.ok(seen(interim, width, x, z).bearing < sails - .3, `behind her sails at August's stop (width ${width})`);
+    if (width < 1) {
+      const [cx, cy, cz] = cameraPose(interim, width).position, rise = (x, y, z) => degrees(Math.atan2(y - cy, Math.hypot(x - cx, z - cz)));
+      const masthead = rise(mast.x, HULL.mastTop * BOAT_SCALE, mast.z), point = pointSpot(width);
+      for (const { x, z } of corners) assert.ok(rise(x, pointTop(width), z) > masthead + .4, 'the house over her masthead');
+      // The foot of the point's near side, where it meets the water or the bank, over the masthead.
+      const over = seen(interim, width, mast.x, mast.z).bearing;
+      for (let u = -point.out; u <= point.back; u += .05) {
+        const x = point.x + point.side * u, z = point.z + point.wide / 2;
+        if (Math.abs(seen(interim, width, x, z).bearing - over) < 1) assert.ok(rise(x, Math.max(0, groundHeight(x, z, width)), z) > masthead + .3, 'the point over her masthead');
+      }
+    } else for (const { x, z } of corners) assert.ok(seen(interim, width, x, z).bearing < sails - .3, `behind her sails at August's stop (width ${width})`);
     // Amelia's boat passes well clear of the point.
     for (const p of range(progressAt('2022-08'), progressAt('2023-01'))) {
       for (const { x, z } of boat(p, width, -1).hull) assert.ok(pointInland(x, z, width) < -.3, `her boat near the point at ${p} (width ${width})`);
@@ -311,4 +347,15 @@ test('guests\' boats bump off the bridge\'s pylons, and the two cost two draw ca
     assert.ok(triangles < 1500, `${triangles} triangles`);
   }
   assert.ok(BRIDGE.deck > 2);
+});
+
+test('on a phone the Opera House goes after August\'s stop, before the circus\'s silk comes in in front of it', async () => {
+  const { SILK } = await import('../src/components/garden/eggs/circusRigs.ts');
+  const shown = p => harbourShown(p, cameraPose(p, MOBILE_RIVER_WIDTH).position[2], true).opera;
+  assert.equal(shown(interim), 1);
+  const silk = progressAt(SILK.from) - SILK.arrive * ROOM;
+  assert.equal(shown(silk), 0);
+  assert.ok(silk - interim > .2 * ROOM, 'whole well past the stop');
+  // On desktop it stays until the camera has passed it, as before.
+  assert.equal(harbourShown(silk, cameraPose(silk, 1).position[2], false).opera, 1);
 });

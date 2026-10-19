@@ -141,7 +141,9 @@ const BOULDERS = [[.5, 1, .2], [.62, -1, .16], [.75, 1, .14], [.9, 1, .18], [.97
 // with a ledge, as the rock does, its sides running on down under the water
 // and into the bank, so it is seated with no gap.
 const POINT_PROFILE = [{ in: -.14, y: -.45 }, { in: 0, y: -.12 }, { in: .02, up: .45 }, { in: .08, up: .52 }, { in: .1, up: 1 }] as const;
-// The height of its top: just above the highest ground under it.
+// The height of its top: its own `top`, low, the bank cut down under and
+// round it (see underPoint in gardenGeometry.ts), or just above the highest
+// ground under it, if that were higher.
 export function pointTop(width = 1) {
   const point = pointSpot(width);
   let top = 0;
@@ -149,7 +151,7 @@ export function pointTop(width = 1) {
     const x = point.x + point.side * u, z = point.z + v;
     if (pointInland(x, z, width) > -.15) top = Math.max(top, groundHeight(x, z, width));
   }
-  return top + .05;
+  return Math.max(top + .05, point.top);
 }
 // Boulders fallen from its cliffs, half in the water round its end: how far
 // round its outline (0 to 1, from its upstream corner on the bank), and how
