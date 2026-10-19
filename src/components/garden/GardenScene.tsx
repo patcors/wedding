@@ -20,6 +20,7 @@ import type { Pace } from './journeyPace';
 import VoyageCamera from './VoyageCamera';
 import VoyageWorld from './VoyageWorld';
 import VoyageBoats from './VoyageBoats';
+import GuestBoat from './GuestBoat';
 import NameFlight from './NameFlight';
 import Eggs from './eggs';
 import type { BoatLook } from './boatLooks';
@@ -78,6 +79,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
     <FallingLeaves paused={still} width={width} />
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
+    <GuestBoat {...slot} />
     <Eggs {...slot} />
     {arrival && <NameFlight panel={arrival} width={width} />}
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />
