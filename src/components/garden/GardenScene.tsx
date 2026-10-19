@@ -86,12 +86,12 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
     <GardenBankDetails width={width} rockStyle={rockStyle} plantStyle={plantStyle} />
     {plantStyle === 'varied' && <GardenPlants width={width} mobile={mobile} paused={still} visible />}
     {rockStyle === 'moss' && <GardenRocks width={width} visible />}
-    <Inspectable id="water"><GardenWater paused={still} width={width} mobile={mobile} reeds={plantStyle === 'varied'} launchRequest={boatLaunchRequest} tint={waterTint} /></Inspectable>
+    <Inspectable id="water"><GardenWater paused={still} width={width} mobile={mobile} reeds={plantStyle === 'varied'} launchRequest={boatLaunchRequest} tint={waterTint} height={visibleHeight} /></Inspectable>
     <Inspectable id="petals"><Petals paused={still} width={width} seasons={seasons} reduced={reduced} /></Inspectable>
     <FallingLeaves paused={still} width={width} seasons={seasons} reduced={reduced} />
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
-    <GuestBoat {...slot} />
+    <GuestBoat {...slot} height={visibleHeight} />
     <Eggs {...slot} />
     {arrival && <NameFlight panel={arrival} width={width} />}
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as THREE from 'three';
-import { CARD_TYPE, GUEST_ARRIVAL, GUEST_BOAT, fitGreeting, greetingLines, guestBerth, guestBoatPose, guestBoatStems, guestScale } from '../src/components/garden/guestBoat.ts';
+import { CARD_TYPE, GUEST_ARRIVAL, GUEST_BOAT, GUEST_SCALE, fitGreeting, greetingLines, guestBerth, guestBoatPose, guestBoatStems, guestScale } from '../src/components/garden/guestBoat.ts';
 import { dockView } from '../src/components/garden/cameraRig.ts';
 import { DOCKED, VOYAGE_END, progressAt, DATES } from '../src/components/garden/journey.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
@@ -15,7 +15,11 @@ const WIDTHS = { a: .42, b: .512, c: .415, d: .512, e: .411, f: .305, g: .447, h
 const measure = text => [...text].reduce((sum, ch) => sum + (WIDTHS[ch] ?? .8), 0);
 const CARD = { width: 1024, height: Math.round(1024 * GUEST_BOAT.card.height / GUEST_BOAT.card.width) };
 
-const SCREENS = [{ width: 1, w: 1440, h: 900, fov: GARDEN_CAMERA.fov }, { width: MOBILE_RIVER_WIDTH, w: 390, h: 844, fov: GARDEN_CAMERA.mobileFov }];
+// Desktop, a portrait phone, and phones on their side, which keep desktop's
+// framing. `button`: where the dock copy's button ends, as a share of the
+// height down the screen (measured in the browser); the card stays below it.
+const SCREENS = [{ width: 1, w: 1440, h: 900, fov: GARDEN_CAMERA.fov, button: .7 }, { width: MOBILE_RIVER_WIDTH, w: 390, h: 844, fov: GARDEN_CAMERA.mobileFov, button: .7 },
+  { width: 1, w: 844, h: 390, fov: GARDEN_CAMERA.fov, button: .6 }, { width: 1, w: 667, h: 375, fov: GARDEN_CAMERA.fov, button: .61 }, { width: 1, w: 932, h: 430, fov: GARDEN_CAMERA.fov, button: .6 }];
 const lens = (screen) => {
   const { position, target } = dockView(screen.width);
   const camera = new THREE.PerspectiveCamera(screen.fov, screen.w / screen.h, .2, 200);
@@ -25,8 +29,8 @@ const lens = (screen) => {
   return camera;
 };
 // The card's middle and top in the world when moored.
-function cardAt(width) {
-  const { x, z } = guestBerth(width), scale = guestScale(width), { foot, card } = GUEST_BOAT;
+function cardAt(width, height) {
+  const { x, z } = guestBerth(width, height), scale = guestScale(width, height), { foot, card } = GUEST_BOAT;
   return { middle: new THREE.Vector3(x, (foot + card.height / 2) * scale, z), top: new THREE.Vector3(x, (foot + card.height) * scale, z) };
 }
 
@@ -56,34 +60,47 @@ test('every Party\'s names fit the card, set larger on fewer lines where they ca
   assert.equal(fitGreeting('Paula', measure, CARD).lines.length, 1);
 });
 
-test('every Party\'s names read at the dock on a phone: a dozen pixels to the em or more', () => {
+test('the boat grows only on short screens: desktop and portrait phones keep their sizes', () => {
+  assert.equal(guestScale(1), GUEST_SCALE.desktop);
+  for (const height of [900, 800, 720, GUEST_SCALE.short]) assert.equal(guestScale(1, height), GUEST_SCALE.desktop);
+  for (const height of [844, 667, 568, 390]) assert.equal(guestScale(MOBILE_RIVER_WIDTH, height), GUEST_SCALE.mobile);
+  let last = GUEST_SCALE.desktop;
+  for (let height = GUEST_SCALE.short; height >= 300; height -= 10) {
+    const scale = guestScale(1, height);
+    assert.ok(scale >= last && scale <= GUEST_SCALE.most, `grows steadily as the screen gets shorter (${height})`);
+    last = scale;
+  }
+  assert.ok(guestScale(1, 390) > 1.3);
+});
+
+test('every Party\'s names read at the dock on a phone, upright or on its side: a dozen pixels to the em or more', () => {
   for (const screen of SCREENS) {
-    const camera = lens(screen), { middle } = cardAt(screen.width);
+    const camera = lens(screen), { middle } = cardAt(screen.width, screen.h);
     const distance = camera.position.distanceTo(middle);
     const pixelsPerUnit = screen.h / 2 / Math.tan(screen.fov / 2 * Math.PI / 180) / distance;
     let smallest = Infinity;
     for (const { greeting } of parties) {
       const { size } = fitGreeting(greeting, measure, CARD);
-      smallest = Math.min(smallest, size / CARD.width * GUEST_BOAT.card.width * guestScale(screen.width) * pixelsPerUnit);
+      smallest = Math.min(smallest, size / CARD.width * GUEST_BOAT.card.width * guestScale(screen.width, screen.h) * pixelsPerUnit);
     }
-    assert.ok(smallest >= 12, `${smallest.toFixed(1)}px to the em on ${screen.w}`);
+    assert.ok(smallest >= 12, `${smallest.toFixed(1)}px to the em on ${screen.w} × ${screen.h}`);
   }
 });
 
 test('moored, it lies on the water by the jetty\'s bank, clear of the catamaran and the jetty, low in the dock\'s picture below the copy', () => {
   for (const screen of SCREENS) {
-    const { width } = screen, berth = guestBerth(width), scale = guestScale(width);
-    const hull = guestBoatStems(width);
+    const { width, h } = screen, berth = guestBerth(width, h), scale = guestScale(width, h);
+    const hull = guestBoatStems(width, h);
     for (const point of hull) {
       assert.ok(Math.abs(point.x - riverCenter(point.z, width)) < bankEdge(point.z, width) + .1, `on the water (${screen.w})`);
       assert.ok(!underJetty(point.x, point.z, width), `clear of the jetty (${screen.w})`);
       for (const stem of mooredStems(width)) assert.ok(Math.hypot(point.x - stem.x, point.z - stem.z) > .3, `clear of the catamaran (${screen.w})`);
     }
     assert.ok(Math.abs(berth.x - riverCenter(berth.z, width)) < bankEdge(berth.z, width) - GUEST_BOAT.halfBeam * scale * .5);
-    const camera = lens(screen), { middle, top } = cardAt(width);
+    const camera = lens(screen), { middle, top } = cardAt(width, h);
     const at = middle.clone().project(camera), high = top.clone().project(camera);
     assert.ok(at.x > -.9 && at.x < .9, `card across the picture (${screen.w})`);
-    assert.ok((1 - high.y) / 2 > .7 && (1 - at.y) / 2 < .95, `card low, below the copy's button (${screen.w}): ${((1 - high.y) / 2).toFixed(2)}`);
+    assert.ok((1 - high.y) / 2 > screen.button + .02 && (1 - at.y) / 2 < .95, `card low, below the copy's button (${screen.w}): ${((1 - high.y) / 2).toFixed(2)}`);
     // Its names face the camera.
     const facing = berth.yaw + berth.card, toCamera = Math.atan2(camera.position.x - berth.x, camera.position.z - berth.z);
     assert.ok(Math.abs(facing - toCamera) < 1e-9);

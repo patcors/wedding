@@ -36,7 +36,7 @@ function reedStems(width: number, mobile: boolean): Stem[] {
     .map(site => ({ x: site.x, z: site.z, radius: (kind === 'reed' ? .07 : .05) * site.scale })));
 }
 
-export default function GardenWater({ paused, width, mobile, reeds, launchRequest, tint }: { paused: boolean; width: number; mobile: boolean; reeds: boolean; launchRequest: number; tint: WaterTint }) {
+export default function GardenWater({ paused, width, mobile, reeds, launchRequest, tint, height }: { paused: boolean; width: number; mobile: boolean; reeds: boolean; launchRequest: number; tint: WaterTint; height?: number }) {
   const camera = useThree(s => s.camera);
   const [simulation] = useState(() => new BoatSimulation(boatRiver, width));
   const clock = useJourney();
@@ -44,8 +44,8 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
   // catamaran once it is tied up there, and the guest's own boat beside it.
   const stems = useMemo(() => {
     const fixed = [...reeds ? reedStems(width, mobile) : [], ...launchJettyStems(width), ...jettyStems(width), ...bridgeStems(width), ...pointStems(width)];
-    return { fixed, moored: [...fixed, ...mooredStems(width), ...rememberedParty() ? guestBoatStems(width) : []] };
-  }, [reeds, width, mobile]);
+    return { fixed, moored: [...fixed, ...mooredStems(width), ...rememberedParty() ? guestBoatStems(width, height) : []] };
+  }, [reeds, width, mobile, height]);
   const moored = useRef(false);
   useLayoutEffect(() => {
     moored.current = clock.progress >= DOCKED;

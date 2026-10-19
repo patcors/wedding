@@ -14,9 +14,14 @@ import { JETTY } from './voyageDock.ts';
 // tall, its foot `foot` above the water; the mast runs from inside the hull
 // to `top`. All of it is drawn at `guestScale`: full size on a phone, where
 // the names need it to read, and smaller on desktop's nearer, larger view.
+// A short landscape screen (a phone on its side, 844 × 390) keeps desktop's
+// framing in less height, so everything in it is drawn smaller: there the boat
+// grows with how short the visible height is, from `short` px down, so the
+// names keep about 12px to the em, up to `most` times full size.
 export const GUEST_BOAT = { halfLength: .82, halfBeam: .43, card: { width: .92, height: .66 }, foot: .62, top: 1.42 } as const;
-export const GUEST_SCALE = { desktop: .8, mobile: 1 } as const;
-export const guestScale = (width: number) => width < 1 ? GUEST_SCALE.mobile : GUEST_SCALE.desktop;
+export const GUEST_SCALE = { desktop: .8, mobile: 1, short: 650, most: 1.4 } as const;
+export const guestScale = (width: number, height = Infinity) => width < 1 ? GUEST_SCALE.mobile
+  : Math.min(GUEST_SCALE.most, Math.max(GUEST_SCALE.desktop, GUEST_SCALE.desktop * GUEST_SCALE.short / height));
 
 // Where it lies: alongside the jetty's bank, `off` the bank's edge, its bow
 // `gap` upstream of the jetty's upstream face, pointing downstream, so it
@@ -49,9 +54,9 @@ export type GuestPose = { x: number; z: number; yaw: number; card: number; shown
 // Where the boat's middle lies when moored, its yaw (0 is bow downstream,
 // −z, as the story boats), and the card's turn about the mast so its names
 // face the dock's camera.
-export function guestBerth(width: number) {
+export function guestBerth(width: number, height = Infinity) {
   const { jetty } = voyageLandmarks(width);
-  const scale = guestScale(width);
+  const scale = guestScale(width, height);
   const z = jetty.z + JETTY.breadth / 2 + GUEST_BERTH.gap[width < 1 ? 'mobile' : 'desktop'] + GUEST_BOAT.halfLength * scale;
   const bank = bankAt(z, width);
   const x = bank.x - bank.side * GUEST_BERTH.off * scale;
@@ -66,8 +71,8 @@ export function guestBerth(width: number) {
 
 // The boat at progress p: hidden before it sets off; drifting down along the
 // bank, slowing as it comes, and nudging the last little way into its berth.
-export function guestBoatPose(p: number, width: number): GuestPose {
-  const berth = guestBerth(width);
+export function guestBoatPose(p: number, width: number, height = Infinity): GuestPose {
+  const berth = guestBerth(width, height);
   const { from, to, drift } = GUEST_ARRIVAL;
   const t = clamp((p - from) / (to - from));
   if (t >= 1) return { ...berth, shown: true, settled: 1 };
@@ -75,7 +80,7 @@ export function guestBoatPose(p: number, width: number): GuestPose {
   const along = 1 - (1 - t) ** 2.4;
   const z = berth.z + drift * (1 - along);
   const bank = bankAt(z, width);
-  const x = bank.x - bank.side * GUEST_BERTH.off * guestScale(width);
+  const x = bank.x - bank.side * GUEST_BERTH.off * guestScale(width, height);
   // Heading down the bank, swinging a little out and back as it comes in.
   const swing = Math.sin(t * Math.PI) * .22 * VOYAGE.dock.side;
   const yaw = berth.yaw + swing;
@@ -87,9 +92,9 @@ export function guestBoatPose(p: number, width: number): GuestPose {
 // The moored guest boat's footprint, as posts round its hull for the "Float a
 // boat" boats to bump off once it is in (see boatPhysics' stems), as the
 // moored catamaran has (mooredStems).
-export function guestBoatStems(width: number) {
-  const { x, z, yaw } = guestBerth(width), c = Math.cos(yaw), s = Math.sin(yaw);
-  const scale = guestScale(width), halfLength = GUEST_BOAT.halfLength * scale, halfBeam = GUEST_BOAT.halfBeam * scale;
+export function guestBoatStems(width: number, height = Infinity) {
+  const { x, z, yaw } = guestBerth(width, height), c = Math.cos(yaw), s = Math.sin(yaw);
+  const scale = guestScale(width, height), halfLength = GUEST_BOAT.halfLength * scale, halfBeam = GUEST_BOAT.halfBeam * scale;
   const outline = [[0, -halfLength], [halfBeam, 0], [0, halfLength], [-halfBeam, 0], [0, -halfLength]];
   const stems: { x: number; z: number; radius: number; grip: number }[] = [];
   for (let i = 1; i < outline.length; i++) {

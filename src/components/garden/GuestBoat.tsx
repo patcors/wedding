@@ -15,12 +15,13 @@ export function rememberedParty() {
   try { return readParty(localStorage.getItem('pa_party')); } catch { return null; }
 }
 
-export default function GuestBoat(slot: SlotProps) {
+// `height` is the visible height in px, for its size on a short screen (guestScale).
+export default function GuestBoat(slot: SlotProps & { height?: number }) {
   const [party] = useState(rememberedParty);
   return party ? <Boat greeting={party.greeting} {...slot} /> : null;
 }
 
-function Boat({ greeting, width, paused }: SlotProps & { greeting: string }) {
+function Boat({ greeting, width, height, paused }: SlotProps & { greeting: string; height?: number }) {
   const clock = useJourney();
   const group = useRef<THREE.Group>(null), card = useRef<THREE.Group>(null);
   const model = useMemo(() => ({ ...guestHull(), card: cardGeometry(), names: cardTexture(greeting) }), [greeting]);
@@ -29,7 +30,7 @@ function Boat({ greeting, width, paused }: SlotProps & { greeting: string }) {
   useFrame((_, dt) => {
     const boat = group.current;
     if (!boat || !card.current) return;
-    const pose = guestBoatPose(clock.progress, width);
+    const pose = guestBoatPose(clock.progress, width, height);
     boat.visible = pose.shown;
     if (!pose.shown) return;
     if (!paused) time.current += Math.min(dt, .05);
@@ -39,7 +40,7 @@ function Boat({ greeting, width, paused }: SlotProps & { greeting: string }) {
     boat.rotation.set(Math.sin(t * 1.2) * .02, pose.yaw, Math.sin(t * .95 + 1) * .03);
     card.current.rotation.y = pose.card;
   });
-  return <group ref={group} name="guest-boat" visible={false} scale={guestScale(width)}>
+  return <group ref={group} name="guest-boat" visible={false} scale={guestScale(width, height)}>
     <mesh geometry={model.geometry}>
       <meshStandardMaterial vertexColors side={THREE.DoubleSide} roughness={1} />
     </mesh>
