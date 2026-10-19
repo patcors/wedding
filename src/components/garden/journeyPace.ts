@@ -8,7 +8,7 @@
 // carries the story on a little way, as momentum does, rather than leaving
 // the page far ahead. "The next chapter" glides the rest of the way to the
 // dock on its own (glidePlan). Pure, so it can be tested.
-import { ARRIVAL_END, BULLET_LAUNCH, MILESTONES, ROOM, STOPS, progressAt } from './journey.ts';
+import { ARRIVAL_END, MILESTONES, ROOM, STOPS, progressAt } from './journey.ts';
 
 // `ease` is the old damping's rate, per second; `max` the most shares a
 // second the story travels, and `opening` the most under the title;
@@ -45,19 +45,14 @@ export const leashed = (scroll: number, p: number) => clamp(scroll, p - PACE.lea
 // for `hold` seconds, or longer where something plays out there: the caps
 // tossed at graduation, the birds flying in as they buy their apartments,
 // the catamaran's turn as they start salsa and the proposal on its deck.
-// Between the trip and the wedding it also stops for the rocket, `rocket`
-// shares after it fires (BULLET_LAUNCH), and waits while it climbs away.
 export const GLIDE = {
-  cruise: .8, ramp: 1, hold: 1.8, rocket: .05,
-  holds: { graduation: 2.6, apartments: 2.6, salsa: 3.2, engaged: 2.6, rocket: 4.4 } as Partial<Record<string, number>>,
+  cruise: .8, ramp: 1, hold: 1.8,
+  holds: { graduation: 2.6, apartments: 2.6, salsa: 3.2, engaged: 2.6 } as Partial<Record<string, number>>,
 } as const;
 
 // Where the glide stops, in order: each milestone's stop (STOPS, by its
-// milestone's id), the rocket's, and the celebration.
-export const GLIDE_STOPS: readonly { p: number; id: string }[] = [
-  ...STOPS.slice(1).map((p, i) => ({ p, id: MILESTONES[i]?.id ?? 'celebration' })),
-  { p: progressAt(BULLET_LAUNCH.month) + (BULLET_LAUNCH.at + GLIDE.rocket) * ROOM, id: 'rocket' },
-].sort((a, b) => a.p - b.p);
+// milestone's id), and the celebration.
+export const GLIDE_STOPS: readonly { p: number; id: string }[] = STOPS.slice(1).map((p, i) => ({ p, id: MILESTONES[i]?.id ?? 'celebration' }));
 
 export type GlideLeg = { from: number; to: number; start: number; travel: number; hold: number; cruise: number };
 export type GlidePlan = { legs: GlideLeg[]; length: number };

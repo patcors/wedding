@@ -57,7 +57,6 @@ try {
       midday: () => steady(journey.progressAt('2020-08'), 'ambience'),
       dusk: () => steady(1, 'ambience'),
       chimes: quiet => { steady(journey.progressAt('2021-02'), 'chimes', quiet); chimeAt(['graduation', 'sydney', 'interim'], 2, 4); },
-      rocket: quiet => { steady(cue('rocket').at, 'chimes', quiet); engine.touch(cue('rocket'), 1.5); },
       burner: quiet => { steady(cue('burner').at, 'chimes', quiet); engine.touch(cue('burner'), 1); },
       birds: quiet => {
         steady(journey.progressAt('2024-05'), 'chimes', quiet);
@@ -103,7 +102,6 @@ try {
   const samples = [
     ['ambience-morning', 30, 'morning'], ['ambience-midday', 30, 'midday'], ['ambience-dusk', 30, 'dusk'],
     ['chimes-three-milestones', 14, 'chimes'], ['chimes-three-milestones-alone', 14, 'chimes:alone'],
-    ['touch-rocket-whoosh', 9, 'rocket'], ['touch-rocket-whoosh-alone', 9, 'rocket:alone'],
     ['touch-balloon-burner', 7, 'burner'], ['touch-balloon-burner-alone', 7, 'burner:alone'],
     ['touch-church-st-birds', 14, 'birds'], ['touch-church-st-birds-alone', 14, 'birds:alone'],
     ['touch-festoon-warmth', 30, 'festoons'], ['touch-festoon-warmth-alone', 30, 'festoons:alone'],

@@ -19,7 +19,6 @@ test('the numbers copied from components match their source', () => {
   assert.match(reveal, new RegExp(`size \\* \\(mobile \\? ${String(COMPONENT.snowMobile).replace(/^0/, '')} : 1\\)`));
   const circus = source('eggs/Circus.tsx').replace(/0\./g, '.');
   assert.match(circus, new RegExp(`SILK_CLEAR = ${String(COMPONENT.silkClear).replace(/^0/, '')}, LYRA_CLEAR = ${COMPONENT.lyraClear}`));
-  assert.match(circus, new RegExp(`BIRD_TIP = ${COMPONENT.birdTip}, BIRD_OPEN = ${String(COMPONENT.birdOpen).replace(/^0/, '')}`));
   const sky = source('GardenSky.tsx');
   assert.match(sky, new RegExp(`const FOG = \\{ clear: \\{ desktop: ${FOG.clear.desktop}, mobile: ${FOG.clear.mobile} \\}, mist: \\{ desktop: ${FOG.mist.desktop}, mobile: ${FOG.mist.mobile} \\}, far: \\{ desktop: ${FOG.far.desktop}, mobile: ${FOG.far.mobile} \\} \\}`));
 });

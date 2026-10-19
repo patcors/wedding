@@ -1,9 +1,8 @@
 // Amelia's aerial circus, on her bank (the left): a purple aerial silk hung
-// from a riverside ash late in 2022, a lyra hung from a tree as her circus
-// show comes round in October 2025, and beside it a little teal bird hanging
-// upside down from a branch, for all her handstands. Where and when each
-// hangs; drawn by Circus.tsx with the models in circusGeometry.ts. Pure, so
-// it can be tested.
+// from a riverside ash late in 2022 and a lyra hung from a tree as her
+// circus show comes round in October 2025. Where and when each hangs; drawn
+// by Circus.tsx with the models in circusGeometry.ts. Pure, so it can be
+// tested.
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt } from '../journey.ts';
@@ -16,9 +15,8 @@ type Point = readonly [number, number, number];
 // limbs, `limb`, a point on the bark in the tree model's own frame, so it
 // turns and scales with the tree. It is fully in as `from` shows, dissolving
 // in over the `arrive` shares before, turns its face to the camera then, and
-// goes once the camera has passed it. Larger than life (`scale`), the bird
-// most of all, so each reads; a phone's narrower lens draws them smaller, so
-// larger again there. A phone sees only about 17° either side of the middle,
+// goes once the camera has passed it. Larger than life (`scale`), so each
+// reads; a phone's narrower lens draws them smaller, so larger again there. A phone sees only about 17° either side of the middle,
 // so anything on a bank lines up along it with whatever else stands on that
 // bank nearby: each keeps to a stretch of Amelia's bank of its own.
 // - The silk hangs from a limb reaching out over the water's edge from an
@@ -30,23 +28,20 @@ type Point = readonly [number, number, number];
 //   after August 2022's stop, once Amelia's interim flag is up, as the Opera
 //   House slips out of the picture (on a phone it is still leaving the left
 //   edge), and is in the picture from November 2022 to January 2023's stop.
-// - The lyra and the bird hang from two ashes standing together past 2025's
-//   snowmen, the lyra from the one further back and the bird from the tip
-//   of a low limb of the one by the water, where the leaves thin out,
-//   upside down, its head down and its tail up. Amelia asked for the lyra
-//   about 2024, but that year her bank already holds the flower bed, her
-//   birdhouse and its street sign, and 2025's oar, and on a phone it would
-//   hang in front of her birdhouse. They come in as October 2025 shows, her circus show
-//   that year, hang past the snowmen and short of 2026's arch, and are in
-//   the picture until salsa's stop and passed soon after.
+// - The lyra hangs from the further back of two ashes standing together
+//   past 2025's snowmen. Amelia asked for it about 2024, but that year her
+//   bank already holds the flower bed, her birdhouse and its street sign,
+//   and 2025's oar, and on a phone it would hang in front of her birdhouse.
+//   It comes in as October 2025 shows, her circus show that year, hangs past
+//   the snowmen and short of 2026's arch, and is in the picture until
+//   salsa's stop and passed soon after.
 export type Rig = {
   tree: { desktop: number; mobile: number }; limb: { desktop: Point; mobile: Point };
   from: string; arrive: number; scale: { desktop: number; mobile: number };
 };
 export const SILK: Rig = { tree: { desktop: -85, mobile: -85 }, limb: { desktop: [3.038, 4.72, .449], mobile: [3.386, 4.526, .678] }, from: '2022-11', arrive: .3, scale: { desktop: 1.25, mobile: 1.4 } };
 export const LYRA: Rig = { tree: { desktop: -126.1, mobile: -126.62 }, limb: { desktop: [-.726, 4.42, 2.655], mobile: [2.674, 4.772, 2.162] }, from: '2025-10', arrive: .25, scale: { desktop: 1.25, mobile: 1.35 } };
-export const BIRD: Rig = { tree: { desktop: -127, mobile: -127 }, limb: { desktop: [-3.332, 4.056, -.182], mobile: [-3.332, 4.056, -.182] }, from: '2025-10', arrive: .25, scale: { desktop: 3.6, mobile: 4.6 } };
-export const RIGS = { silk: SILK, lyra: LYRA, bird: BIRD } as const;
+export const RIGS = { silk: SILK, lyra: LYRA } as const;
 export type RigId = keyof typeof RIGS;
 
 // The tree it hangs from: the tree on the left bank standing nearest `tree`

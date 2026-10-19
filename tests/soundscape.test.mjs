@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AMBIENCE_KEYS, CHIME, CUE, CUES, ambienceAt, chimeNotes, chimeStep, createChimes, createCues, cuesCrossed, heldMilestone, pentatonic } from '../src/components/garden/soundscape.ts';
 import { GUEST_SOUND, REVIEW_SOUND, SOUND_MODES, soundMode } from '../src/components/garden/soundChoices.ts';
-import { ARRIVAL_END, BULLET_LAUNCH, DATES, MILESTONES, ROOM, VOYAGE_END, monthIndex, progressAt, stillProgress } from '../src/components/garden/journey.ts';
+import { ARRIVAL_END, DATES, MILESTONES, ROOM, VOYAGE_END, monthIndex, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { SKY_KEYS, lampsAt } from '../src/components/garden/skyCycle.ts';
 import { nestTriggers } from '../src/components/garden/eggs/nesting.ts';
 
@@ -121,7 +121,6 @@ test('the chimes keep to a gentle pentatonic', () => {
 
 test('the touches sit on their scenes\' moments', () => {
   const at = id => CUES.find(cue => cue.id === id).at;
-  assert.ok(Math.abs(at('rocket') - (progressAt(BULLET_LAUNCH.month) + BULLET_LAUNCH.at * ROOM)) < 1e-12);
   const trip = progressAt('2026-07');
   assert.ok(at('burner') > trip && at('burner') < progressAt(monthIndex('2026-07') + 1e-3));
   const triggers = nestTriggers();
@@ -137,17 +136,17 @@ test('the touches sit on their scenes\' moments', () => {
 });
 
 test('a touch plays once as the scroll passes it going forward', () => {
-  const state = createCues(), rocket = CUES.find(cue => cue.id === 'rocket').at;
-  assert.deepEqual(cuesCrossed(state, rocket - .01, rocket - .001, 0), []);
-  assert.deepEqual(cuesCrossed(state, rocket - .001, rocket + .001, 0).map(cue => cue.id), ['rocket']);
+  const state = createCues(), burner = CUES.find(cue => cue.id === 'burner').at;
+  assert.deepEqual(cuesCrossed(state, burner - .01, burner - .001, 0), []);
+  assert.deepEqual(cuesCrossed(state, burner - .001, burner + .001, 0).map(cue => cue.id), ['burner']);
   // Back and forth over it soon after: not again.
-  assert.deepEqual(cuesCrossed(state, rocket + .001, rocket - .001, 1), []);
-  assert.deepEqual(cuesCrossed(state, rocket - .001, rocket + .001, 2), []);
+  assert.deepEqual(cuesCrossed(state, burner + .001, burner - .001, 1), []);
+  assert.deepEqual(cuesCrossed(state, burner - .001, burner + .001, 2), []);
   // Long after, it may play again, as the scene does.
-  assert.deepEqual(cuesCrossed(state, rocket - .001, rocket + .001, 2 + CUE.again).map(cue => cue.id), ['rocket']);
+  assert.deepEqual(cuesCrossed(state, burner - .001, burner + .001, 2 + CUE.again).map(cue => cue.id), ['burner']);
   // Going backwards never plays it; a jump far past it finds it done.
-  assert.deepEqual(cuesCrossed(createCues(), rocket + .001, rocket - .001, 0), []);
-  assert.deepEqual(cuesCrossed(createCues(), rocket - .001, rocket + CUE.window + .001, 0), []);
+  assert.deepEqual(cuesCrossed(createCues(), burner + .001, burner - .001, 0), []);
+  assert.deepEqual(cuesCrossed(createCues(), burner - .001, burner + CUE.window + .001, 0), []);
   // At the story's fastest pace an update every 120ms passes nothing by.
   assert.ok(.8 * ROOM * .12 < CUE.window);
 });

@@ -48,11 +48,8 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // at it: in the open across from the headland that hides the old tree, and
 // passed before the dock comes into view. It would be in reach at the trip's
 // stop, just left of the far-off Hagia Sophia in the picture, so it waits
-// until the Hagia Sophia has sunk back into the haze. Bullet's rocket goes up
-// across the river as October 2026 shows, and "The next chapter" waits for
-// it, so the heart waits too, until it has flown and its trail has thinned,
-// and dissolves in as November 2026 shows, well before December's frame of
-// the two hearts.
+// until the Hagia Sophia has sunk back into the haze, and dissolves in as
+// November 2026 shows, well before December's frame of the two hearts.
 export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45 },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },

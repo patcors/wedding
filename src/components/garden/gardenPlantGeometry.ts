@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { bankEdge, groundHeight, random, riverCenter, voyageClearing, RIVER_REACH } from './gardenGeometry.ts';
 import { truckFootprint } from './eggs/engagementTruck.ts';
+import { bulletFootprint } from './eggs/bulletOrnament.ts';
 
 export type PlantKind = 'grass' | 'clover' | 'fern' | 'meadow' | 'reed' | 'cattail';
 export type PlantStyle = 'original' | 'varied';
@@ -116,6 +117,8 @@ const REED_BEDS_DOWNSTREAM = [-101, -119, -142, -158, -186, -210, -236].map((z, 
 export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
   // Nothing grows up through the engagement's truck, so its wheels show.
   const underTruck = truckFootprint(width);
+  // Nor through the bullet's plinth.
+  const underBullet = bulletFootprint(width);
   if (kind === 'reed' || kind === 'cattail') {
     const rand = random(kind === 'reed' ? 3107 : 4129);
     // Portrait's bend at the start (see gardenGeometry) brings the first bed
@@ -173,7 +176,7 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
       const x = riverCenter(z, width) + (i % 2 ? 1 : -1) * (bankEdge(z, width) + inland);
       return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
         scale: .65 + rand() * .65, tint: .8 + rand() * .3 };
-    }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2) && !underTruck(site.x, site.z, .25));
+    }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2) && !underTruck(site.x, site.z, .25) && !underBullet(site.x, site.z, .08));
   }
   const counts = Object.fromEntries(Object.entries(mobile ? { grass: 1530, clover: 650, fern: 100 } : { grass: 3000, clover: 1250, fern: 220 })
     .map(([kind, count]) => [kind, Math.round(count * PLANTED_LENGTH / 138)])) as Record<'grass' | 'clover' | 'fern', number>;
@@ -194,7 +197,7 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
     const x = riverCenter(z, width) + side * (bankEdge(z, width) + inland);
     return { x, y: groundHeight(x, z, width) - .025, z, angle: rand() * Math.PI * 2,
       scale: .65 + rand() * .6, tint: .85 + rand() * .25 };
-  }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2) && !underTruck(site.x, site.z, .25));
+  }).filter(site => aboveWater(site) && !voyageClearing(site.x, site.z, width, .2) && !underTruck(site.x, site.z, .25) && !underBullet(site.x, site.z, .08));
 }
 
 // The bank's height wobbles, so near the edge the waterline wanders inland.
