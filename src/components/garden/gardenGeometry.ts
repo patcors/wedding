@@ -29,8 +29,18 @@ function bankSwing(z: number, amount: number, peak: number, near: number, far: n
 // In portrait the start of the river would run off both sides of a narrow
 // screen, so both banks come into frame in a bend: the right bank swings well
 // in, the left a little nearer the camera. The bottom of the screen stays open.
-const rightSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 2.8, 11, 2.7, 5) : 0;
-const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 1, 12, 2.2, 2.2) : 0;
+const rightSwing = (z: number, width: number) => width < 1 ? bankSwing(z, 2.24, 11, 2.7, 5) : 0;
+const leftSwing = (z: number, width: number) => width < 1 ? bankSwing(z, .8, 12, 2.2, 2.2) : 0;
+// Even so, at a phone's scale the opening looked squashed (Amelia, October
+// 2026), so there the river opens out by `amount` each side, enough that
+// both jetties stand at the screen's edges under the title, easing back to
+// its usual width over `ease` units downstream of `from`, by the island's head.
+export const OPENING_WIDEN = { amount: .8, from: 7, ease: 6 } as const;
+export const openingWiden = (z: number, width = 1) => {
+  if (width >= 1) return 0;
+  const { amount, from, ease } = OPENING_WIDEN;
+  return z >= from ? amount : amount * Math.exp(-(((z - from) / ease) ** 2));
+};
 
 // Where the Voyage's scenery sits along the river; z falls downstream, so each
 // stretch runs `from` its upstream end `to` its downstream end. The island
@@ -86,7 +96,7 @@ export function riverCenter(z: number, width = 1) {
 
 export function bankEdge(z: number, width = 1) {
   return (5.5 + Math.sin(z * .17) * 1.15 + Math.sin(z * .48) * .38) * width
-    - (leftSwing(z, width) + rightSwing(z, width)) / 2 + sydneyWiden(z, width);
+    - (leftSwing(z, width) + rightSwing(z, width)) / 2 + openingWiden(z, width) + sydneyWiden(z, width);
 }
 
 // Where the island runs on each composition.
@@ -143,10 +153,9 @@ export function voyageLandmarks(width = 1) {
 // head, as his and hers. Each runs `reach` out over the water to a head
 // `head` long along the bank, where its boat lies alongside, stern to the
 // head and bow free downstream, ready to leave: in portrait the river's
-// middle drifts towards Patrick's bank as they set off. In portrait the
-// channels are only just wider than a boat beside a jetty, so each is a
-// landing stage along the bank and its boat lies about mid-channel, setting
-// off straight down it.
+// middle drifts towards Patrick's bank as they set off. In portrait each is
+// a short landing stage along the bank, where the river opens out under the
+// title (OPENING_WIDEN), so its boat lies out by the bank there too.
 export const LAUNCH_JETTY = { reach: 1.05, mobileReach: .27, headDepth: .4, neck: .5, landing: .5 } as const;
 export function launchJetties(width = 1) {
   const middle = riverCenter(ROUTE.start, width);

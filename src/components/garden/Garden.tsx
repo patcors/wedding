@@ -292,28 +292,6 @@ export default function Garden() {
     return () => clearTimeout(timer);
   }, [ready, failed]);
   useEffect(() => {
-    if (!prepared || failed) return;
-    let cancelled = false, frame = 0;
-    const hold = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('slow')) || 0 : 0;
-    void document.fonts.ready.then(() => {
-      if (cancelled) return;
-      // The scene starts moving behind the cover first. Its first live frames
-      // can be slow on phones, and a fade started then jumps in partway, so
-      // wait for a few smooth frames (a second at most) before it begins.
-      setRunning(true);
-      const start = performance.now();
-      let previous = 0, smooth = 0;
-      const wait = (now: number) => {
-        smooth = previous && now - previous < 50 ? smooth + 1 : 0;
-        previous = now;
-        if ((smooth >= 3 || now - start > 1000) && now >= hold) setReady(true);
-        else frame = requestAnimationFrame(wait);
-      };
-      frame = requestAnimationFrame(wait);
-    });
-    return () => { cancelled = true; cancelAnimationFrame(frame); };
-  }, [prepared, failed]);
-  useEffect(() => {
     document.documentElement.dataset.gardenState = failed ? 'error' : ready ? 'ready' : 'loading';
     if (REVIEW && ready) setReadyIn(performance.now() / 1000);
   }, [ready, failed]);
@@ -354,6 +332,32 @@ export default function Garden() {
   const flight = ready && !failed && !reduced;
   const arrival = useRef<HTMLElement>(null);
   const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready, away: flight && voyage.away });
+  // Prepared early, the scene still waits for the opening flock to land on
+  // the names before it starts behind the cover and fades in (loadChoices.ts),
+  // so their flight isn't hitched by the scene's first frames.
+  const revealable = PREPARE !== 'early' || butterflies.settled;
+  useEffect(() => {
+    if (!prepared || failed || !revealable) return;
+    let cancelled = false, frame = 0;
+    const hold = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('slow')) || 0 : 0;
+    void document.fonts.ready.then(() => {
+      if (cancelled) return;
+      // The scene starts moving behind the cover first. Its first live frames
+      // can be slow on phones, and a fade started then jumps in partway, so
+      // wait for a few smooth frames (a second at most) before it begins.
+      setRunning(true);
+      const start = performance.now();
+      let previous = 0, smooth = 0;
+      const wait = (now: number) => {
+        smooth = previous && now - previous < 50 ? smooth + 1 : 0;
+        previous = now;
+        if ((smooth >= 3 || now - start > 1000) && now >= hold) setReady(true);
+        else frame = requestAnimationFrame(wait);
+      };
+      frame = requestAnimationFrame(wait);
+    });
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
+  }, [prepared, failed, revealable]);
   // The date stays on through the voyage panel's fade out.
   const [lastDate, setLastDate] = useState<string | null>(null);
   if (voyage.date && voyage.date !== lastDate) setLastDate(voyage.date);
@@ -374,7 +378,7 @@ export default function Garden() {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE === 'downloaded' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} arrival={flight ? arrival : undefined} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} arrival={flight ? arrival : undefined} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />

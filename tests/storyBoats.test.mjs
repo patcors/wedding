@@ -160,10 +160,9 @@ test('under the title each boat lies alongside its own jetty, then casts off int
       assert.ok(outer < head && outer > head - .15, `${jetty.side} lies alongside its jetty (${width})`);
       assert.ok(Math.abs(jetty.z - pose.z) < jetty.head / 2);
       // Out of the middle of its channel, so it has somewhere to pull out to.
-      // Portrait's channels are only just wider than a boat beside a jetty,
-      // so there it lies about mid-channel and sets off straight down it.
+      // Portrait's river opens out under the title, so there is room there too.
       const channel = channelOffset(pose.z, width);
-      assert.ok(width < 1 ? Math.abs(Math.abs(offset) - channel) < .15 : Math.abs(offset) > channel + .8, `${jetty.side} moored out by the bank (${width})`);
+      assert.ok(Math.abs(offset) > channel + (width < 1 ? .3 : .8), `${jetty.side} moored out by the bank (${width})`);
     });
     // Still tied up until the guest scrolls, out in the channels by the end of the opening.
     assert.equal(boatPose(CAST_OFF.from, width).berthed, 1);

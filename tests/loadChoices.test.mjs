@@ -8,12 +8,13 @@ const pub = new URL('../public/', import.meta.url).pathname;
 const maps = dir => readdirSync(dir, { withFileTypes: true }).flatMap(entry =>
   entry.isDirectory() ? maps(join(dir, entry.name)) : /\.(webp|jpg)$/.test(entry.name) ? [join(dir, entry.name)] : []);
 
-test('guests get the light textures, and the scene prepares once downloaded', () => {
+test('guests get the light textures, and the scene prepares once downloaded but waits for the butterflies to fade in', () => {
   assert.equal(TEXTURE_WEIGHT, 'light');
-  assert.equal(PREPARE, 'downloaded');
+  assert.equal(PREPARE, 'early');
   assert.equal(textureWeight(null), 'light');
   assert.equal(textureWeight('original'), 'original');
-  assert.equal(prepareWhen('nonsense'), 'downloaded');
+  assert.equal(prepareWhen('nonsense'), 'early');
+  assert.equal(prepareWhen('downloaded'), 'downloaded');
   assert.equal(prepareWhen('butterflies'), 'butterflies');
 });
 
