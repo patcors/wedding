@@ -358,14 +358,15 @@ test('the carvings further down the river are on real trees of their own, on the
 });
 
 test('the heart with P + A waits for the rocket\'s moment to be over, then dissolves in with 2027\'s heart across the river; the others aren\'t held back', async () => {
-  const { GLIDE_STOPS } = await import('../src/components/garden/journeyPace.ts');
   const { tripStop } = await import('../src/components/garden/eggs/balloonCourse.ts');
-  const hold = GLIDE_STOPS.find(stop => stop.id === 'rocket').p, board = YEAR_MARKERS.find(m => m.year === 2027);
+  const { launchProgress } = await import('../src/components/garden/eggs/rocketLaunch.ts');
+  // A moment after the rocket fires, where the old stop-to-stop glide waited for it.
+  const hold = launchProgress() + .05 * ROOM, board = YEAR_MARKERS.find(m => m.year === 2027);
   for (const id of FOUND.filter(id => id !== 'heart')) assert.equal(CARVINGS[id].after, undefined);
   for (const width of WIDTHS) {
     const tree = trees(width).heart, spot = yearMarkerSpot(board, width);
     // Hidden as the Hagia Sophia comes and at the trip's stop, and through the
-    // rocket's moment and the glide's wait for it, near as its tree is.
+    // rocket's moment, near as its tree is.
     for (const p of span(progressAt('2026-05'), hold + .05 * ROOM)) assert.equal(shown(tree, p, width), 0, `heart carving at ${p} (width ${width})`);
     assert.ok(markerShown(tree.z, cameraPose(tripStop('2026-07'), width).position[2], false) === 1, 'its tree in reach at the trip\'s stop');
     // In step with the board: never more in than it, and in full with it.
