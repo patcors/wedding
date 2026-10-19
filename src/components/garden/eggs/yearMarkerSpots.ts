@@ -84,7 +84,7 @@ export function yearCarving(marker: YearMarker & { carved: YearCarving }, width:
   return { tree: carvedTree(carving, width), carving };
 }
 // The trunk's radius, near enough, in the tree's own units, where the years are carved.
-const TRUNK_RADIUS = .38;
+export const TRUNK_RADIUS = .38;
 // Where a year's marker stands in the world, and its yaw (about +y) so its
 // face (+z in its own frame) turns to the camera as its year turns. A
 // carving's spot is the middle of the year on its trunk's face.

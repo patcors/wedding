@@ -1,0 +1,313 @@
+---
+// Dev-only: the whole voyage on one chart, every scenery piece's time in the
+// picture on desktop and on a phone, and where more than two compete (see
+// "Timeline" in docs/VOYAGE.md). getStaticPaths returns nothing in a
+// production build, so this page never reaches patrickandamelia.com. The
+// numbers come from voyageTimeline.ts and sceneryCatalog.ts, worked out here
+// in the frontmatter; the script below only hovers, clicks and switches.
+import { sceneryCatalog } from '../../components/garden/sceneryCatalog.ts';
+import { CROWDED, LAYOUTS, axis, dateAt, samples, timeline, windowLabel, type LayoutName } from '../../components/garden/voyageTimeline.ts';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { timeline: 'timeline' } }] : [];
+}
+
+const GROUPS = ['Milestone eggs', 'Ornaments', 'Carvings', 'Year markers', 'On the boats', 'World'];
+const BANKS = { left: "Amelia's bank (left)", right: "Patrick's bank (right)", river: 'River, or both' } as const;
+const ax = axis();
+const layouts = (Object.keys(LAYOUTS) as LayoutName[]).map(name => {
+  const result = timeline(sceneryCatalog(LAYOUTS[name].width), LAYOUTS[name]);
+  const first = (piece: (typeof result.pieces)[number]) => (piece.seen[0] ?? piece.drawn[0] ?? [2])[0];
+  const groups = GROUPS.map(group => ({ group, pieces: result.pieces.filter(piece => piece.group === group).sort((a, b) => first(a) - first(b)) }));
+  const max = Math.max(...result.counts, CROWDED + 1);
+  // The count as a step line over 0 to 1000 across and `max` up.
+  const path = result.counts.map((n, i) => `${i ? 'L' : 'M'}${(i * result.step * 1000).toFixed(1)} ${(max - n).toFixed(2)}`).join('');
+  const crowded = result.crowded.map(({ from, to, peak }) => ({ from, to, peak }));
+  // Where more than CROWDED are in view, shaded deeper the more there are.
+  const shades: { from: number; to: number; n: number }[] = [];
+  result.counts.forEach((n, i) => {
+    const p = i * result.step, last = shades.at(-1);
+    if (n <= CROWDED) return;
+    if (last && last.n === n && Math.abs(last.to + result.step - p) < 1e-9) last.to = p;
+    else shades.push({ from: p, to: p, n });
+  });
+  const client = { step: result.step, counts: result.counts, pieces: result.pieces.map(piece => ({ name: piece.name, bank: piece.bank, counting: piece.counting, seen: piece.seen })) };
+  return { name, result, groups, max, path, crowded, shades, client };
+});
+const pct = (p: number) => `${(p * 100).toFixed(3)}%`;
+const span = ([a, b]: [number, number]) => `left:${pct(a)};width:calc(${pct(b - a)} + 2px)`;
+const tip = (piece: (typeof layouts)[number]['result']['pieces'][number]) => [
+  piece.name,
+  `${BANKS[piece.bank as keyof typeof BANKS]}${piece.counted ? '' : ' · not counted'}`,
+  piece.seen.length ? `In the picture: ${piece.seen.map(([a, b]) => windowLabel(a, b)).join('; ')}` : 'Never in the picture',
+  piece.drawn.length ? `Drawn: ${piece.drawn.map(([a, b]) => windowLabel(a, b)).join('; ')}` : 'Never drawn',
+  `src/components/garden/${piece.file}`,
+  ...(piece.note ? [piece.note] : []),
+].join('\n');
+const yearMarks = ax.years.filter(({ p }) => p > 0 && p < 1);
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Voyage timeline · dev</title>
+  </head>
+  <body data-layout="desktop">
+    <header class="top">
+      <h1>Voyage timeline</h1>
+      <p>When each scenery piece is really in the picture · dev only, never deployed</p>
+      <div class="controls">
+        <div class="toggle" role="radiogroup" aria-label="Layout">
+          <label><input type="radio" name="layout" value="desktop" checked /> Desktop 1440 × 900</label>
+          <label><input type="radio" name="layout" value="phone" /> Phone 390 × 844</label>
+        </div>
+        <label class="zoom">Zoom <select name="zoom"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></label>
+      </div>
+      <ul class="legend">
+        <li><i class="swatch left"></i>Amelia's bank (left)</li>
+        <li><i class="swatch right"></i>Patrick's bank (right)</li>
+        <li><i class="swatch river"></i>River, or both</li>
+        <li><i class="key solid"></i>In the picture, competing</li>
+        <li><i class="key quiet"></i>In the picture, not counted</li>
+        <li><i class="key faint"></i>Fading, or mostly fogged</li>
+        <li><i class="key drawn"></i>Drawn, out of the picture</li>
+        <li><i class="key crowd"></i>More than {CROWDED} competing</li>
+      </ul>
+    </header>
+
+    {layouts.map(({ name, groups, max, path, shades, crowded }) => (
+      <section class="chart" data-for={name} aria-label={`${name} timeline`}>
+        <div class="inner">
+          <div class="axis">
+            <div class="row thin"><div class="label">Chapter</div><div class="track">
+              {ax.chapters.map(c => <div class={`chapter ${c.name}`} style={span([c.from, c.to])}>{c.name}</div>)}
+            </div></div>
+            <div class="row thin"><div class="label">Sky</div><div class="track sky" style={`background:linear-gradient(to right, ${ax.sky.map(s => `${s.zenith} ${pct(s.p)}`).join(', ')})`}>
+              <div class="horizon" style={`background:linear-gradient(to right, ${ax.sky.map(s => `${s.horizon} ${pct(s.p)}`).join(', ')})`}></div>
+              {ax.keys.filter((k, i) => i === 0 || k.name !== ax.keys[i - 1].name).map(k => <span class="key-name" style={`left:${pct(k.p)}`} title={`${k.name}: zenith ${k.zenith}, horizon ${k.horizon}, p ${k.p.toFixed(3)}`}>{k.name}</span>)}
+            </div></div>
+            <div class="row thin"><div class="label">January</div><div class="track">
+              {yearMarks.map(y => <span class="year" style={`left:${pct(y.p)}`}>{y.year}</span>)}
+            </div></div>
+            <div class="row milestones"><div class="label">Milestones</div><div class="track">
+              {ax.milestones.map((m, i) => <span class={`milestone row-${i % 3}`} style={`left:${pct(m.p)}`}
+                title={`${m.date}: ${m.description}\nDate shows at p ${m.p.toFixed(3)}; its stop is p ${m.stop.toFixed(3)}`}><b></b>{m.id}</span>)}
+              {ax.milestones.map(m => <span class="stop" style={`left:${pct(m.stop)}`} title={`${m.id}'s stop, p ${m.stop.toFixed(3)}`}></span>)}
+            </div></div>
+          </div>
+
+          <div class="rows">
+            <div class="guides" aria-hidden="true">
+              {yearMarks.map(y => <span class="guide year-guide" style={`left:${pct(y.p)}`}></span>)}
+              {ax.milestones.map(m => <span class="guide milestone-guide" style={`left:${pct(m.p)}`}></span>)}
+              <span class="guide cursor" hidden></span>
+            </div>
+            {groups.map(({ group, pieces }) => pieces.length > 0 && <>
+              <div class="row group"><div class="label">{group}</div><div class="track"></div></div>
+              {pieces.map(piece => (
+                <div class={`row piece ${piece.bank} ${piece.counted ? '' : 'uncounted'}`} data-tip={tip(piece)}>
+                  <div class="label"><i class={`swatch ${piece.bank}`}></i>{piece.name}</div>
+                  <div class="track">
+                    {piece.drawn.map(s => <span class="bar drawn" style={span(s)}></span>)}
+                    {piece.faint.map(s => <span class="bar faint" style={span(s)}></span>)}
+                    {piece.seen.map(s => <span class="bar quiet" style={span(s)}></span>)}
+                    {piece.counting.map(s => <span class="bar solid" style={span(s)}></span>)}
+                  </div>
+                </div>
+              ))}
+            </>)}
+          </div>
+
+          <div class="row crowd" data-crowd>
+            <div class="label">In view, competing<small>{crowded.length} stretches over {CROWDED}; most {max}</small></div>
+            <div class="track">
+              <svg viewBox={`0 0 1000 ${max}`} preserveAspectRatio="none" aria-hidden="true">
+                {shades.map(s => <rect class="shade" x={s.from * 1000} width={(s.to - s.from) * 1000 + layouts[0].result.step * 1000} y="0" height={max} opacity={Math.min(1, .2 + (s.n - CROWDED - 1) * .13)} />)}
+                <line x1="0" x2="1000" y1={max - CROWDED} y2={max - CROWDED} class="limit" />
+                <path d={path} />
+              </svg>
+              <span class="tick" style={`bottom:${(CROWDED / max * 100).toFixed(1)}%`}>{CROWDED}</span>
+              <span class="tick" style="top:0">{max}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    ))}
+
+    <div class="tooltip" role="tooltip" hidden></div>
+    <div class="popover" hidden>
+      <p class="where"></p>
+      <a class="open" href="/">Open the Garden here</a>
+      <p class="needs">Needs the <code>?at=</code> parameter from the <code>voyage-c-inspect</code> branch.</p>
+      <p class="list-title">Counted in view:</p>
+      <ul class="list"></ul>
+      <button type="button" class="close" aria-label="Close">×</button>
+    </div>
+
+    <script is:inline type="application/json" id="timeline-data" set:html={JSON.stringify({ dates: samples(.001).map(dateAt), layouts: Object.fromEntries(layouts.map(l => [l.name, l.client])) })} />
+    <script>
+      type Client = { step: number; counts: number[]; pieces: { name: string; bank: string; counting: [number, number][]; seen: [number, number][] }[] };
+      const { dates, layouts: data } = JSON.parse(document.getElementById('timeline-data')!.textContent!) as { dates: string[]; layouts: Record<string, Client> };
+      // The date at p, from the page's own labels every .001.
+      const dateAt = (p: number) => dates[Math.round(p * 1000)];
+      const layout = () => document.body.dataset.layout!;
+      const pAt = (track: HTMLElement, x: number) => { const box = track.getBoundingClientRect(); return Math.min(1, Math.max(0, (x - box.left) / box.width)); };
+      const inside = (spans: [number, number][], p: number) => spans.some(([a, b]) => p >= a && p <= b);
+      const counted = (p: number) => data[layout()].pieces.filter(piece => inside(piece.counting, p));
+
+      document.querySelectorAll<HTMLInputElement>('input[name="layout"]').forEach(input => input.addEventListener('change', () => {
+        document.body.dataset.layout = input.value;
+        popover.hidden = true;
+      }));
+      const zoom = document.querySelector<HTMLSelectElement>('select[name="zoom"]')!;
+      const zoomTo = (value: string) => { zoom.value = value; document.body.style.setProperty('--zoom', value); };
+      zoom.addEventListener('change', () => zoomTo(zoom.value));
+      // A phone's narrow screen starts zoomed in, to scroll along.
+      if (innerWidth < 700) zoomTo('4');
+
+      const tooltip = document.querySelector<HTMLElement>('.tooltip')!;
+      const showTip = (text: string, x: number, y: number) => {
+        tooltip.textContent = text;
+        tooltip.hidden = false;
+        const box = tooltip.getBoundingClientRect();
+        tooltip.style.left = `${Math.min(innerWidth - box.width - 8, x + 14)}px`;
+        tooltip.style.top = `${y + 18 + box.height > innerHeight ? y - box.height - 10 : y + 18}px`;
+      };
+      document.addEventListener('pointermove', event => {
+        const target = event.target as HTMLElement;
+        const row = target.closest<HTMLElement>('.row.piece');
+        const crowd = target.closest<HTMLElement>('[data-crowd] .track');
+        if (row) showTip(row.dataset.tip!, event.clientX, event.clientY);
+        else if (crowd) {
+          const p = pAt(crowd, event.clientX), d = data[layout()], n = d.counts[Math.round(p / d.step)];
+          showTip(`p ${p.toFixed(3)} · ${dateAt(p)}\n${n} competing in view\n${counted(p).map(piece => `· ${piece.name}`).join('\n')}`, event.clientX, event.clientY);
+        } else tooltip.hidden = true;
+      });
+
+      // Clicking a track offers the Garden at that moment.
+      const popover = document.querySelector<HTMLElement>('.popover')!;
+      document.addEventListener('click', event => {
+        const target = event.target as HTMLElement;
+        tooltip.hidden = true;
+        if (target.closest('.popover')) { if (target.closest('.close')) popover.hidden = true; return; }
+        const track = target.closest<HTMLElement>('.chart .track');
+        if (!track) { popover.hidden = true; return; }
+        const p = pAt(track, event.clientX), at = p.toFixed(4);
+        popover.querySelector('.where')!.textContent = `p ${at} · ${dateAt(p)}`;
+        popover.querySelector<HTMLAnchorElement>('.open')!.href = `/?at=${at}`;
+        const list = popover.querySelector('.list')!;
+        list.replaceChildren(...counted(p).map(piece => Object.assign(document.createElement('li'), { textContent: piece.name, className: piece.bank })));
+        popover.querySelector<HTMLElement>('.list-title')!.textContent = `Counted in view (${list.children.length}):`;
+        popover.hidden = false;
+        const box = popover.getBoundingClientRect();
+        popover.style.left = `${Math.max(8, Math.min(innerWidth - box.width - 8, event.clientX - box.width / 2))}px`;
+        popover.style.top = `${Math.max(8, Math.min(innerHeight - box.height - 8, event.clientY + 12))}px`;
+        document.querySelectorAll<HTMLElement>('.cursor').forEach(cursor => { cursor.hidden = false; cursor.style.left = `${p * 100}%`; });
+      });
+    </script>
+    <style is:global>
+      :root { --ink: #384135; --muted: #66715e; --paper: #f7f3e8; --page: #eeeee5; --line: #38413522;
+        --left: #2f8780; --right: #b98b1d; --river: #6f7a86; --crowd: #c0573e; --label: 230px; --zoom: 1; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.4 system-ui, sans-serif; height: 100svh; display: flex; flex-direction: column; }
+      .top { padding: 16px 20px 10px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+      h1 { margin: 0; font-size: 20px; }
+      .top > p { margin: 0; color: var(--muted); }
+      .controls { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+      .toggle { display: flex; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--paper); }
+      .toggle label { padding: 4px 12px; cursor: pointer; }
+      .toggle input { position: absolute; opacity: 0; }
+      .toggle label:has(input:checked) { background: var(--ink); color: var(--paper); }
+      .toggle label:has(input:focus-visible) { outline: 2px solid var(--left); outline-offset: -2px; }
+      select { font: inherit; }
+      .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; width: 100%; color: var(--muted); font-size: 12px; }
+      .legend li { display: flex; align-items: center; gap: 6px; }
+      .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; flex: none; }
+      .swatch.left, .left { --bank: var(--left); } .swatch.right, .right { --bank: var(--right); } .swatch.river, .river { --bank: var(--river); }
+      .swatch { background: var(--bank); }
+      .key { display: inline-block; width: 22px; height: 8px; border-radius: 4px; --bank: var(--river); }
+      .key.solid { background: var(--bank); } .key.quiet { background: color-mix(in srgb, var(--bank) 45%, transparent); }
+      .key.faint { border: 1px solid color-mix(in srgb, var(--bank) 60%, transparent); }
+      .key.drawn { height: 2px; background: color-mix(in srgb, var(--bank) 50%, transparent); }
+      .key.crowd { background: color-mix(in srgb, var(--crowd) 55%, transparent); }
+
+      .chart { flex: 1; min-height: 0; overflow: auto; background: var(--paper); border-top: 1px solid var(--line); display: none; }
+      body[data-layout="desktop"] .chart[data-for="desktop"], body[data-layout="phone"] .chart[data-for="phone"] { display: block; }
+      .inner { width: calc(var(--label) + (100% - var(--label)) * var(--zoom)); min-width: 100%; position: relative; }
+      .row { display: grid; grid-template-columns: var(--label) 1fr; min-height: 18px; }
+      .label { position: sticky; left: 0; z-index: 2; background: var(--paper); padding: 1px 10px 1px 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 7px; border-right: 1px solid var(--line); }
+      .track { position: relative; min-width: 0; margin-right: 12px; }
+      .axis { position: sticky; top: 0; z-index: 4; background: var(--paper); border-bottom: 1px solid var(--line); }
+      .axis .label { color: var(--muted); font-size: 11px; }
+      .row.thin { min-height: 18px; }
+      .chapter { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; background: #38413512; color: var(--muted); font-size: 11px; padding-left: 6px; overflow: hidden; line-height: 12px; }
+      .chapter.voyage { background: #38413508; }
+      .sky { margin-top: 2px; margin-bottom: 2px; border-radius: 3px; overflow: hidden; }
+      .horizon { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; }
+      .key-name { position: absolute; top: 0; font-size: 10px; padding-left: 3px; border-left: 1px solid #38413560; height: 100%; color: #2b3336; line-height: 14px; }
+      .year { position: absolute; top: 2px; font-size: 11px; padding-left: 3px; border-left: 1px solid var(--ink); line-height: 13px; font-variant-numeric: tabular-nums; }
+      .row.milestones { min-height: 50px; }
+      .milestone { position: absolute; top: 2px; font-size: 10.5px; white-space: nowrap; line-height: 12px; color: var(--ink); cursor: default; }
+      .milestone.row-1 { top: 15px; } .milestone.row-2 { top: 28px; }
+      .milestone b { display: inline-block; width: 7px; height: 7px; background: var(--ink); transform: translateX(-3.5px) rotate(45deg); margin-right: 1px; }
+      .stop { position: absolute; bottom: 1px; width: 5px; height: 5px; border-radius: 50%; border: 1px solid var(--ink); transform: translateX(-2.5px); background: var(--paper); }
+
+      .rows { position: relative; padding-bottom: 6px; }
+      .guides { position: absolute; top: 0; bottom: 0; left: var(--label); right: 12px; pointer-events: none; z-index: 0; }
+      .guide { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid #38413514; }
+      .milestone-guide { border-left: 1px dashed #38413530; }
+      .cursor { border-left: 1.5px solid var(--crowd); z-index: 1; }
+      .row.group .label { font-weight: 600; padding-top: 10px; font-size: 12px; }
+      .row.group { min-height: 26px; }
+      .row.piece:hover .label, .row.piece:hover .track { background-color: #38413509; }
+      .row.piece.uncounted .label { color: var(--muted); font-style: italic; }
+      .bar { position: absolute; top: 50%; border-radius: 4px; }
+      .bar.drawn { height: 2px; margin-top: -1px; background: color-mix(in srgb, var(--bank) 40%, transparent); border-radius: 1px; }
+      .bar.faint { height: 10px; margin-top: -5px; border: 1px solid color-mix(in srgb, var(--bank) 55%, transparent); background: var(--paper); }
+      .bar.quiet { height: 10px; margin-top: -5px; background: color-mix(in srgb, var(--bank) 42%, var(--paper)); }
+      .bar.solid { height: 10px; margin-top: -5px; background: var(--bank); }
+
+      .row.crowd { position: sticky; bottom: 0; z-index: 4; background: var(--paper); border-top: 1px solid var(--line); min-height: 64px; }
+      .row.crowd .label { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; font-weight: 600; }
+      .row.crowd small { font-weight: 400; color: var(--muted); font-size: 11px; }
+      .row.crowd .track { margin-top: 6px; margin-bottom: 6px; }
+      .shade { fill: color-mix(in srgb, var(--crowd) 60%, transparent); }
+      .row.crowd svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+      .row.crowd path { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+      .row.crowd .limit { stroke: var(--crowd); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+      .tick { position: absolute; right: -10px; font-size: 10px; color: var(--muted); line-height: 1; transform: translateY(50%); }
+      .tick[style^="top"] { transform: none; }
+
+      .tooltip { position: fixed; z-index: 10; max-width: 440px; padding: 8px 10px; background: var(--ink); color: var(--paper); border-radius: 6px; font-size: 12px; white-space: pre-line; pointer-events: none; box-shadow: 0 4px 16px #0003; }
+      .tooltip::first-line { font-weight: 600; }
+      .popover { position: fixed; z-index: 11; width: 280px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 24px #0002; }
+      .popover p { margin: 0 0 6px; }
+      .popover .where { font-weight: 600; padding-right: 20px; }
+      .popover .open { display: inline-block; margin-bottom: 6px; padding: 4px 12px; border-radius: 20px; background: var(--ink); color: var(--paper); text-decoration: none; }
+      .popover .needs { color: var(--muted); font-size: 11px; }
+      .popover .list-title { margin-top: 8px; font-size: 12px; color: var(--muted); }
+      .popover ul { margin: 0; padding: 0; list-style: none; max-height: 180px; overflow: auto; }
+      .popover li { display: flex; align-items: center; gap: 6px; }
+      .popover li::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--bank); }
+      .popover .close { position: absolute; top: 6px; right: 8px; border: none; background: none; font-size: 18px; cursor: pointer; color: var(--muted); }
+
+      @media (max-width: 700px) {
+        :root { --label: 124px; }
+        body { font-size: 12px; }
+        .top { padding: 12px 12px 8px; }
+        .top > p { display: none; }
+        .controls { margin-left: 0; }
+        .label { padding-left: 8px; padding-right: 6px; font-size: 11px; }
+        .legend { font-size: 11px; gap: 2px 10px; }
+        .milestone { font-size: 9px; }
+      }
+      /* A short screen (a phone on its side) scrolls the header away and gives the chart the whole screen. */
+      @media (max-height: 500px) {
+        body { height: auto; display: block; }
+        .chart { height: 100svh; }
+        .row.milestones { min-height: 44px; }
+      }
+    </style>
+  </body>
+</html>
