@@ -2,7 +2,7 @@
 // compares visual variants; guests always get the defaults below. The page
 // renders on the server so the opening text is in the HTML before any script;
 // three.js arrives later in its own chunk, behind the cover.
-import { Component, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { Component, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
@@ -18,6 +18,7 @@ import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitD
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
+import StoryDialog, { STORY_LINK } from './StoryDialog';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -133,7 +134,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
     const onKey = (event: KeyboardEvent) => {
       takeOver(event);
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return;
-      if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review')) return;
+      if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review, dialog')) return;
       const at = element.scrollTop / span();
       event.preventDefault();
       go(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
@@ -373,6 +374,9 @@ export default function Garden() {
   // The scene already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
   const goToProgress = voyage.go;
+  // "Our story" (StoryDialog): the link that opened it, while it is open.
+  const [storyOpener, setStoryOpener] = useState<HTMLElement | null>(null);
+  const openStory = (event: MouseEvent<HTMLElement>) => setStoryOpener(event.currentTarget);
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
   return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-text={text === 'glow' ? undefined : text} data-golden={REVIEW && inkTurnsWhite(progress) ? '' : undefined} aria-busy={state === 'loading'}>
     <div className="garden-stage">
@@ -395,6 +399,7 @@ export default function Garden() {
       <header className="garden-header garden-copy garden-chrome" inert={state !== 'ready'}>
         <button className="garden-monogram" onClick={REVIEW ? toggleReview : () => goToProgress(0, true)} aria-label={REVIEW ? 'Toggle the Review panel' : 'Back to the beginning'}><img src={`${BASE}logo.png`} alt="" width={284} height={192} draggable={false} /></button>
         <div className="garden-header-links">
+          <button className={`garden-invitation-link ${STORY_LINK}`} aria-haspopup="dialog" onClick={openStory}>Our story</button>
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
           <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
         </div>
@@ -409,6 +414,8 @@ export default function Garden() {
         <div className="garden-arrival-actions">
           <a className={`garden-skip ${slow && state === 'loading' ? 'is-visible' : ''}`} href={`${BASE}details/`}>Skip to the details <span aria-hidden="true">→</span></a>
           <a className={`garden-button garden-details-fallback ${failed ? 'is-visible' : ''}`} href={`${BASE}details/`}>See the details <span aria-hidden="true">→</span></a>
+          {/* While the scene is slow or has failed, the story can still be read. */}
+          <button className={`garden-skip garden-arrival-story ${STORY_LINK} ${(slow && state === 'loading') || failed ? 'is-visible' : ''}`} aria-haspopup="dialog" onClick={openStory}>Read our story</button>
         </div>
       </section>
 
@@ -570,6 +577,7 @@ export default function Garden() {
       </>}
       {readyIn !== null && <span className="garden-review-load">Loaded in {readyIn.toFixed(1)}s</span>}
     </aside>}
+    {mounted && <StoryDialog opener={storyOpener} onClose={() => setStoryOpener(null)} onSee={state === 'ready' && !sceneOnly ? goToProgress : undefined} />}
     <div className="garden-scroll-space" />
   </main>;
 }
