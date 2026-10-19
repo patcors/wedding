@@ -25,6 +25,7 @@ pnpm install
 cp .env.example .env         # paste the Apps Script URL (optional in dev)
 pnpm dev                     # http://localhost:4321
 node --test tests/*.test.mjs
+pnpm shots                   # screenshots of every voyage stop (docs/VOYAGE.md, Tools)
 pnpm build && pnpm preview   # check the production build
 ```
 

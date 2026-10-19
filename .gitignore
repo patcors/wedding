@@ -3,6 +3,9 @@ dist/
 # generated types
 .astro/
 
+# voyage screenshots (pnpm shots)
+.shots/
+
 # invitation images (pnpm invites)
 invites/out/
 
