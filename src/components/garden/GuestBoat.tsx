@@ -7,7 +7,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { readParty } from '../details/rsvp';
 import { useJourney, type SlotProps } from './JourneyProvider';
-import { GUEST_ARRIVAL, guestBerths, guestFleetPoses, guestNames, guestRig, guestScale } from './guestBoat';
+import { GUEST_ARRIVAL, guestArrivalCap, guestBerths, guestFleetPosesAt, guestNames, guestRig, guestScale } from './guestBoat';
 import { cardGeometry, cardTexture, guestHull } from './guestBoatGeometry';
 import { sharpenFlag } from './storyBoatGeometry';
 
@@ -26,7 +26,7 @@ export default function GuestBoat(slot: SlotProps & { height?: number }) {
 // Each boat's own rocking: a phase and a pace a little apart, so they bob out of step.
 const ROCK = [{ phase: 0, pace: 1 }, { phase: 2.1, pace: .87 }, { phase: 4.3, pace: 1.12 }, { phase: 1.2, pace: .94 }];
 
-function Fleet({ names, width, height, paused }: SlotProps & { names: string[]; height?: number }) {
+function Fleet({ names, width, height, paused, reduced }: SlotProps & { names: string[]; height?: number }) {
   const clock = useJourney();
   const boats = useRef<(THREE.Group | null)[]>([]), cards = useRef<(THREE.Group | null)[]>([]);
   // Each boat's mast and card: every other one stands on a tall mast (guestBerths).
@@ -58,19 +58,28 @@ function Fleet({ names, width, height, paused }: SlotProps & { names: string[]; 
   const gl = useThree(state => state.gl);
   useEffect(() => { for (const { texture } of model.names) gl.initTexture(texture); }, [gl, model]);
   const time = useRef(0);
+  // How far into their arrival they are, in seconds (guestFleetPosesAt), and the progress last frame.
+  const scene = useRef({ time: 0, last: -1 });
   useFrame((_, dt) => {
+    const p = clock.progress, arrival = scene.current;
     // Most of the voyage they haven't set off: nothing to place.
-    if (clock.progress < GUEST_ARRIVAL.from) {
+    if (p < GUEST_ARRIVAL.cue) {
       for (const boat of boats.current) if (boat) boat.visible = false;
+      Object.assign(arrival, { time: 0, last: p });
       return;
     }
-    if (!paused) time.current += Math.min(dt, .05);
+    // Their scene plays in real time, as far as the scroll allows. A still, or
+    // a jump (the monogram's "Back to the beginning", say), finds it as far in
+    // as the scroll allows; scrolling back takes them back with it.
+    const step = paused ? 0 : Math.min(dt, .05), cap = guestArrivalCap(p, names.length, width, height);
+    arrival.time = reduced || Math.abs(p - arrival.last) > .02 ? cap : Math.min(arrival.time + step, cap);
+    arrival.last = p;
+    time.current += step;
     const t = time.current;
-    guestFleetPoses(clock.progress, names.length, width, height).forEach((pose, i) => {
+    guestFleetPosesAt(arrival.time, names.length, width, height).forEach((pose, i) => {
       const boat = boats.current[i], card = cards.current[i];
       if (!boat || !card) return;
       boat.visible = pose.shown;
-      if (!pose.shown) return;
       // A gentle bob, keel just under the water as the guests' boats keep it.
       const { phase, pace } = ROCK[i % ROCK.length], s = t * pace + phase;
       boat.position.set(pose.x, -.02 + Math.sin(s * 1.5) * .008, pose.z);

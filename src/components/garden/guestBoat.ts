@@ -3,7 +3,8 @@
 // comes up the river from beyond the dock as the catamaran rounds the bend to
 // Jasper's, and pulls up at the jetty as the catamaran moors. Pure, so it can
 // be tested; drawn by GuestBoat.tsx with the model in guestBoatGeometry.ts.
-import { DOCKED } from './journey.ts';
+import { DATES, DOCKED, progressAt } from './journey.ts';
+import { CATAMARAN, HULL_HALF_BEAM, boatPose } from './storyBoats.ts';
 import { VOYAGE, bankEdge, riverCenter, voyageLandmarks } from './gardenGeometry.ts';
 import { dockView } from './cameraRig.ts';
 import { JETTY } from './voyageDock.ts';
@@ -40,14 +41,14 @@ export const guestNames = (guests: readonly string[]) => guests.map(name => name
 // Where they lie, for a Party of n: each boat's middle `out` from the jetty's
 // bank and `up` the river from the jetty's middle, in units at the layout's
 // own size (desktop's .8, a phone's 1), a little turn of its own off lying
-// along the bank, bow upstream as it came in, and whether it has a tall mast.
+// along the bank, bow downstream as the catamaran lies (they come down to
+// their berths from above it), and whether it has a tall mast.
 // They lie abreast just upstream of the jetty's T-head, between the bank and
 // the moored catamaran's stern, a little staggered, every other card raised
 // on a tall mast, so in the dock's picture, where they lie nearly in line
 // with the camera, each name stands clear of its neighbours'. On a phone a
-// Party of three or four lies closer, every other boat a little further up
-// beside the next, and one nosed in below the T-head's end, bow downstream,
-// as it came round the head. Listed from the
+// Party of two or more lies closer, every other boat a little further up
+// beside the next, and one tucked in below the T-head's end. Listed from the
 // bank out; the Party's guests take them the other way, so their names read
 // left to right in the picture in the Party's order.
 type Slot = readonly [out: number, up: number, turn: number, tall: 0 | 1];
@@ -60,9 +61,9 @@ export const GUEST_BERTHS: Record<'desktop' | 'mobile', readonly (readonly Slot[
   ],
   mobile: [
     [[.8, 2.4, 0, 0]],
-    [[.62, 1.4, Math.PI, 1], [1.2, 2.1, -.06, 0]],
-    [[.6, 2.8, .08, 0], [.66, 1.45, Math.PI, 1], [1.21, 2.15, -.06, 0]],
-    [[.64, 2.8, .08, 0], [.66, 1.45, Math.PI, 1], [1.21, 2.15, -.06, 0], [1.36, 3.4, -.1, 1]],
+    [[.62, 1.4, 0, 1], [1.2, 2.1, -.06, 0]],
+    [[.6, 2.8, .08, 0], [.66, 1.45, 0, 1], [1.21, 2.15, -.06, 0]],
+    [[.64, 2.8, .08, 0], [.66, 1.45, 0, 1], [1.21, 2.15, -.06, 0], [1.36, 3.4, -.1, 1]],
   ],
 };
 
@@ -75,15 +76,19 @@ export function guestRig(tall: 0 | 1, width: number, height = Infinity, count = 
   return { card, foot: foot + lift, top: foot + lift + GUEST_BOAT.card.height * card + above };
 }
 
-// When they come in, in progress: they come out of the haze far down the
-// river (`run` units beyond the jetty) as the catamaran rounds the bend's last
-// curve, before the wedding's date shows, each `lag` behind the one before,
-// steadily up the river and round the T-head's end, each inside it by
-// `inside` (`lag` apart again), before the catamaran comes alongside the
-// head; then they ease the last little way up into their berths as the
-// catamaran glides in, all settled at `to`, just before it is tied up
-// (DOCKED), the first to arrive `settle` before the next.
-export const GUEST_ARRIVAL = { from: .88, inside: .926, to: DOCKED - .004, lag: .005, settle: .003, run: 12 } as const;
+// When they come in: a little scene in real time. As the wedding's date is
+// about to show (`cue`), with the catamaran coming round the bend's last
+// curve, they come out of the haze far down the river (`run` units beyond the
+// jetty), in file, `lag` seconds apart, and sail up the river towards the
+// catamaran for `up` seconds; then each passes it on its far side, comes
+// back across above its stern and drifts down into its berth beside it, over
+// `across` seconds. They go at their own pace (guestArrivalCap), never faster
+// than real time, so a guest who scrolls fast, or sails on, still sees the
+// whole scene and finds them still coming in as the catamaran moors; one who
+// scrolls slowly keeps them in step with the catamaran, and they wait below
+// the jetty, in sight, until it is tied up. Scrolling back takes them back,
+// and back before the cue they are gone.
+export const GUEST_ARRIVAL = { cue: progressAt(DATES.wedding) - .004, up: 2.8, across: 3.8, lag: .45, run: 9 } as const;
 
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
 const smootherstep = (t: number) => {
@@ -118,9 +123,9 @@ export function guestBerths(count: number, width: number, height = Infinity): Gu
     // Bigger or smaller hulls spread or close up across the river, and lie
     // further up or down it by their extra length, so they still clear the T-head.
     const { x, z } = offBank(out * scale / full, jetty.z + up + GUEST_BOAT.halfLength * (scale - full), width);
-    // Lies along the bank, bow upstream: its heading follows the bank.
-    const ahead = bankAt(z + .5, width), behind = bankAt(z - .5, width);
-    const yaw = heading(ahead.x - behind.x, 1) + turn;
+    // Lies along the bank, bow downstream as the catamaran lies: its heading follows the bank.
+    const ahead = bankAt(z - .5, width), behind = bankAt(z + .5, width);
+    const yaw = heading(ahead.x - behind.x, -1) + turn;
     // Turned to face the camera: the card's front faces +z in the boat's frame.
     const card = wrap(Math.atan2(camera[0] - x, camera[2] - z) - yaw);
     return { x, z, yaw, card, tall, out, below: z < jetty.z + JETTY.head / 2 + .2 };
@@ -164,61 +169,105 @@ function course(points: Point[]) {
   }, { marks: marks.map(i => lengths[i] / total) });
 }
 
-// Each boat's course in, from far down the river to its berth: up the dock's
-// side of the river, outside the T-head (where the catamaran has yet to come),
-// swinging in round its end towards the bank, and the last little way up to
-// its berth.
+// Their way in round the moored catamaran: the line `above` its stern they
+// come back across the river on, and how far `wide` of its hulls they pass.
+// They wait (if they must) `before` units below the jetty, in sight: on
+// desktop out in the river wide of the catamaran, and on a phone, whose
+// narrow picture looks straight down the river past the catamaran's sail,
+// on the jetty's side below it, `near` the bank, under the old tree, until the catamaran is tied up (`gate`, in
+// progress: its stern below the line, with a margin).
+const ROUND = { above: .35, margin: .2, wide: .75, before: { desktop: 4.5, mobile: 4.6 }, near: .95 };
+const rounds = new Map<string, { line: number; gate: number }>();
+export function guestRound(count: number, width: number, height = Infinity) {
+  const key = `${fleetSize(count)} ${width} ${height}`;
+  if (!rounds.has(key)) {
+    const length = GUEST_BOAT.halfLength * guestScale(width, height, count), moored = boatPose(DOCKED, width);
+    // The catamaran's stern is 1.15 hull units above its middle.
+    const line = Math.max(moored.z + 1.15 * moored.scale, ...guestBerths(count, width, height).map(b => b.z)) + length + ROUND.above;
+    let gate = GUEST_ARRIVAL.cue;
+    while (gate < DOCKED) {
+      const pose = boatPose(gate, width);
+      if (pose.z + 1.15 * pose.scale < line - length - ROUND.margin && Math.abs(pose.x - moored.x) < .05) break;
+      gate += .0005;
+    }
+    rounds.set(key, { line, gate: Math.min(gate, DOCKED) });
+  }
+  return rounds.get(key)!;
+}
+
+// How far into the scene (in seconds, the first boat's clock) the boats may
+// be at progress p: none before the cue; up the river to wait below the
+// jetty by the time the catamaran is tied up (`gate`), in step with the
+// scroll; and round it into their berths by the end. GuestBoat's clock runs
+// in real time up to this, so they never get ahead of the catamaran nor rush.
+export const guestArrivalLength = (count: number) => GUEST_ARRIVAL.up + GUEST_ARRIVAL.across + (fleetSize(count) - 1) * GUEST_ARRIVAL.lag;
+export function guestArrivalCap(p: number, count: number, width: number, height = Infinity) {
+  const { cue, up } = GUEST_ARRIVAL, { gate } = guestRound(count, width, height);
+  if (p < cue) return 0;
+  if (p < gate) return up * (p - cue) / (gate - cue);
+  return up + (guestArrivalLength(count) - up) * clamp((p - gate) / Math.max(1e-6, 1 - gate));
+}
+
+// Each boat's course in, in two legs. Up: from far down the river, up its
+// far side and in towards the middle, to wait (if it must) below the jetty,
+// the later boats in file below it. Round: up past the moored catamaran wide
+// of its far hull, back across the river above its stern, and down beside
+// it into its berth.
 export function guestCourses(count: number, width: number, height = Infinity) {
   const n = fleetSize(count), scale = guestScale(width, height, n), { jetty } = voyageLandmarks(width);
-  const length = GUEST_BOAT.halfLength * scale, beam = GUEST_BOAT.halfBeam * scale;
-  // Wide of the T-head, and far enough above its end to turn in clear of it.
-  const clearHead = jetty.reach + .25 + beam + .3, clear = jetty.z + JETTY.head / 2 + length + .25;
+  const length = GUEST_BOAT.halfLength * scale, beam = GUEST_BOAT.halfBeam * scale, { line } = guestRound(n, width, height);
   const out = (point: Point) => (bankAt(point.z, width).x - point.x) * VOYAGE.dock.side;
+  const moored = boatPose(DOCKED, width), half = (CATAMARAN + HULL_HALF_BEAM.catamaran) * moored.scale;
+  // Wide of the catamaran's far hull.
+  const wide = out(moored) + half + beam + ROUND.wide;
+  const far = (z: number, share: number) => offBank(bankEdge(z, width) * 2 * share, z, width);
   return guestBerths(n, width, height).map(berth => {
-    // Out of the haze in file, a little either side of the line.
-    const i = berth.order, startZ = jetty.z - GUEST_ARRIVAL.run - i * 3 * length;
-    const wide = Math.max(clearHead, out(berth) + .2);
-    const points: Point[] = [
-      offBank(bankEdge(startZ, width) * (.75 + (i % 2 ? .12 : 0)), startZ, width),
-      offBank(wide, jetty.z - JETTY.head / 2 - length - .4, width),
-      offBank(wide, clear, width),
-      // Inside the T-head's end, just off its berth (and below it, where
-      // there is room), before the catamaran comes alongside the head.
-      // A berth tucked in below the T-head's end is come at from above it, nosing down into it.
-      berth.below ? offBank(out(berth) + .1, clear + .2, width)
-        : offBank(Math.min(out(berth) + .6, Math.max(out(berth) + .15, jetty.reach - .3)), Math.min(berth.z, Math.max(clear, berth.z - 1.1 * length)), width),
-      berth,
-    ];
-    return { berth, at: course(points) };
+    const i = berth.order, spacing = 2.6 * length, before = ROUND.before[layout(width)];
+    // On a phone they come up the far side, in sight beside the catamaran, and
+    // cross below where it will moor to wait on the jetty's side.
+    const phone = width < 1;
+    const start = far(jetty.z - before - GUEST_ARRIVAL.run - i * spacing, .66);
+    const wait = offBank(phone ? ROUND.near : wide, jetty.z - before - i * spacing, width);
+    const up = course([start, far(jetty.z - before - GUEST_ARRIVAL.run / 2 - i * spacing, phone ? .6 : .62), wait]);
+    // Round the catamaran's bow first, from the jetty's side.
+    const bow = phone ? [offBank(wide, moored.z - 1.5 * moored.scale - .5 - length, width)] : [];
+    const round = course([wait, ...bow, offBank(wide, moored.z - (phone ? 0 : 1.5 * moored.scale), width), offBank(wide, line - .3, width),
+      offBank((wide + out(berth)) / 2, line + .1, width), offBank(out(berth), line, width), berth]);
+    return { berth, up, across: round };
   });
 }
 
-// The boats at progress p: hidden before each sets off; coming up the river,
-// fast at first and easing to rest in its berth, turning the last little way
-// to lie along the bank, the card turning to the camera as it settles.
+// The boats `time` seconds into the scene (the first boat's clock; each later
+// one `lag` behind): hidden before the cue, waiting far off at the start of
+// their courses, sailing up easing to the far side, then across and down,
+// turning to lie as moored and the card to the dock's camera as they settle.
 const courses = new Map<string, ReturnType<typeof guestCourses>>();
-export function guestFleetPoses(p: number, count: number, width: number, height = Infinity): GuestPose[] {
-  const n = fleetSize(count), { from, inside, to, lag, settle } = GUEST_ARRIVAL, key = `${n} ${width} ${height}`;
+export function guestFleetPosesAt(time: number, count: number, width: number, height = Infinity): GuestPose[] {
+  const n = fleetSize(count), key = `${n} ${width} ${height}`, { up, across, lag } = GUEST_ARRIVAL;
   // The courses are laid out once per layout, not every frame.
   if (!courses.has(key)) courses.set(key, guestCourses(n, width, height));
-  return courses.get(key)!.map(({ berth, at }) => {
-    const i = berth.order, start = from + i * lag, inner = inside + i * lag, end = to - (n - 1 - i) * settle;
-    if (p >= end) return { x: berth.x, z: berth.z, yaw: berth.yaw, card: berth.card, shown: true, settled: 1 };
-    // Steadily to inside the T-head, then easing to rest at the speed it came in at.
-    const mark = at.marks[3], speed = mark / (inner - start);
-    const k = Math.min(4, Math.max(1, speed * (end - inner) / (1 - mark)));
-    const last = clamp((p - inner) / (end - inner));
-    const point = at(p < inner ? mark * clamp((p - start) / (inner - start)) : mark + (1 - mark) * (1 - (1 - last) ** k));
-    // Bow first along its course, then round to lie as it is moored, over the last little way in.
-    const yaw = point.yaw + wrap(berth.yaw - point.yaw) * smootherstep(last / .6);
-    const settled = smootherstep((last - .3) / .7);
-    // Under way the name faces ahead, so it reads as the boats come up the
-    // river towards the camera, and turns to the dock's camera as it settles.
+  return courses.get(key)!.map(({ berth, up: leg1, across: leg2 }) => {
+    const t = time - berth.order * lag;
+    if (t >= up + across) return { x: berth.x, z: berth.z, yaw: berth.yaw, card: berth.card, shown: true, settled: 1 };
+    // Up the river, easing to rest at the far side; across, gathering way and easing to rest again.
+    const last = clamp((t - up) / across);
+    const point = t < up ? leg1(1 - (1 - clamp(t / up)) ** 1.6) : leg2(last * last * (3 - 2 * last));
+    // Bow first along its course, then round to lie as it is moored, over the last of the way in.
+    const yaw = point.yaw + wrap(berth.yaw - point.yaw) * smootherstep((last - .55) / .45);
+    const settled = smootherstep((last - .5) / .5);
+    // Under way the name faces ahead, so it reads as they come up the river
+    // towards the camera, and turns to the dock's camera as it settles.
     const ahead = Math.PI, facing = wrap(berth.yaw + berth.card - yaw);
     const card = ahead + wrap(facing - ahead) * settled;
-    return { x: point.x, z: point.z, yaw, card, shown: p >= start, settled };
+    return { x: point.x, z: point.z, yaw, card, shown: true, settled };
   });
 }
+
+// The boats as they are at progress p when nothing has held them back: as
+// far in as the scroll allows (a still under reduced motion, or a jump).
+export const guestFleetPoses = (p: number, count: number, width: number, height = Infinity): GuestPose[] =>
+  p < GUEST_ARRIVAL.cue ? guestFleetPosesAt(0, count, width, height).map(pose => ({ ...pose, shown: false }))
+    : guestFleetPosesAt(guestArrivalCap(p, count, width, height), count, width, height);
 
 // The moored boats' footprints, as posts round each hull for the "Float a
 // boat" boats to bump off once they are in (see boatPhysics' stems), as the
