@@ -1,126 +1,140 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AUTUMN, NEUTRAL, SEASON_KEYS, SPRING, SUMMER, WINTER, leafColour, petalColour, petalShown, seasonAt, seasonLight, seasonOfYear, seasonsOn, yearAround } from '../src/components/garden/seasons.ts';
-import { DATES, MILESTONES, ROOM, STOPS, monthIndex, progressAt, stillProgress, storyMonth } from '../src/components/garden/journey.ts';
+import { AUTUMN, FEATURED, FEATURE_FRAME, NEUTRAL, ROLE, SEASON_KEYS, SPRING, SUMMER, WINTER, featuredTrees, leafColour, petalColour, petalShown, seasonAt, seasonLight, seasonName, seasonsOn, treeSeason } from '../src/components/garden/seasons.ts';
+import { MILESTONES, STOPS, progressAt, stillProgress } from '../src/components/garden/journey.ts';
+import { treeBase, treePlacements, oldTreePlacement } from '../src/components/garden/gardenTreeSpots.ts';
+import { cameraPose } from '../src/components/garden/cameraRig.ts';
+import { LAYOUTS, project, viewOf } from '../src/components/garden/voyageTimeline.ts';
 
 const AMOUNTS = Object.keys(NEUTRAL);
 const near = (a, b, eps = 1e-9) => AMOUNTS.every(k => Math.abs(a[k] - b[k]) < eps);
-const stop = id => STOPS[MILESTONES.findIndex(m => m.id === id) + 1];
-const wintry = s => s.grey > .9 && s.bare > .9 && s.turn < .2 && s.lush === 0;
+const index = id => MILESTONES.findIndex(m => m.id === id);
+const stop = id => STOPS[index(id) + 1];
+const still = id => stillProgress(progressAt(MILESTONES[index(id)].month) + 1e-6);
 
-test('each season holds through its months, NSW style', () => {
-  for (const m of [3, 3.5, 4.5]) assert.ok(near(seasonOfYear(m), AUTUMN), `autumn at ${m}`);
-  for (const m of [6, 6.5, 7, 7.3]) assert.ok(near(seasonOfYear(m), WINTER), `winter at ${m}`);
-  for (const m of [8.5, 9, 10]) assert.ok(near(seasonOfYear(m), SPRING), `spring at ${m}`);
-  for (const m of [11.5, 0, 1, 1.5]) assert.ok(near(seasonOfYear(m), SUMMER), `summer at ${m}`);
-  // It wraps every twelve months, story months included.
-  for (const m of [0, 2.3, 5.1, 8, 10.7]) assert.ok(near(seasonOfYear(m), seasonOfYear(m + 12 * 7)));
-  assert.ok(near(seasonOfYear(-1), seasonOfYear(11)));
+test('summer is the garden as it is with the seasons off', () => {
+  assert.ok(near(SUMMER, NEUTRAL));
+  assert.ok(near(seasonAt(0), NEUTRAL) && near(seasonAt(1), NEUTRAL));
 });
 
-test('the keys run round the year in order, each easing into the next', () => {
-  for (let i = 0; i < SEASON_KEYS.length; i++) {
-    const key = SEASON_KEYS[i], next = SEASON_KEYS[(i + 1) % SEASON_KEYS.length];
-    assert.ok(key.to > key.from);
-    assert.ok((next.from + (i + 1 === SEASON_KEYS.length ? 12 : 0)) - key.to >= 1, `${key.name} eases over a month or more`);
+test('the seasons change only a handful of times, mostly holding summer', () => {
+  let changes = 0, summer = 0, previous = seasonName(0);
+  const n = 20000;
+  for (let i = 0; i <= n; i++) {
+    const p = i / n, name = seasonName(p);
+    if (name !== previous) changes++;
+    if (near(seasonAt(p), SUMMER)) summer++;
+    previous = name;
   }
-  // Every amount stays within 0 and 1 and moves smoothly through the year.
-  let previous = seasonOfYear(0);
-  for (let m = .001; m <= 24; m += .001) {
-    const s = seasonOfYear(m);
+  // Summer, winter, summer, autumn, summer, winter, spring, summer.
+  assert.equal(changes, 7);
+  assert.ok(summer / n > .6, `summer for ${Math.round(summer / n * 100)}% of the scroll`);
+  // Every change is gentle: no ease shorter than 40svh or so (.017 of the page).
+  for (let i = 1; i < SEASON_KEYS.length; i++) {
+    const a = SEASON_KEYS[i - 1], b = SEASON_KEYS[i];
+    assert.ok(b.at > a.at, 'keys in order');
+    if (a.season !== b.season) assert.ok(b.at - a.at >= .017, `${a.name} to ${b.name} at ${a.at} eases slowly`);
+  }
+});
+
+test('the season moves smoothly with the scroll, never snapping', () => {
+  let previous = seasonAt(0);
+  for (let p = 0; p <= 1; p += 1e-5) {
+    const s = seasonAt(p);
     for (const k of AMOUNTS) {
       assert.ok(s[k] >= 0 && s[k] <= 1);
-      assert.ok(Math.abs(s[k] - previous[k]) < .005, `${k} jumps at month ${m}`);
+      assert.ok(Math.abs(s[k] - previous[k]) < .002, `${k} jumps at ${p}`);
     }
     previous = s;
   }
 });
 
-test('the year turns smoothly with the scroll, never flickering', () => {
-  let previous = seasonAt(0), autumns = 0, wasAutumn = false;
-  for (let p = 0; p <= 1; p += 2e-5) {
-    const s = seasonAt(p);
-    for (const k of AMOUNTS) assert.ok(Math.abs(s[k] - previous[k]) < .01, `${k} jumps at ${p}`);
-    previous = s;
-    // Count each autumn once: it comes and goes like the year, not in flashes.
-    const isAutumn = s.turn > (wasAutumn ? .3 : .6);
-    if (isAutumn && !wasAutumn) autumns++;
-    wasAutumn = isAutumn;
-  }
-  // Eleven Aprils from 2017 to 2027; 2023's rushes past in a few svh and
-  // barely shows, as its months cancel out.
-  assert.ok(autumns >= 9 && autumns <= 11, `${autumns} autumns`);
-});
-
-test('the average is exact: it matches a fine sum over the scroll', () => {
-  for (const p of [.12, .3, .551, .62, .8, .95]) {
-    const h = .3 * ROOM, n = 4000;
-    let re = 0, im = 0, total = 0;
-    for (let k = -n; k <= n; k++) {
-      const x = Math.min(1, Math.max(0, p + k * h / n)), w = 1 - Math.abs(k) / n, angle = storyMonth(x) * Math.PI / 6;
-      re += w * Math.cos(angle); im += w * Math.sin(angle); total += w;
-    }
-    const { month, strength } = yearAround(p);
-    assert.ok(Math.abs(strength - Math.hypot(re, im) / total) < 2e-3, `strength at ${p}`);
-    if (strength > .1) {
-      const want = ((Math.atan2(im, re) * 6 / Math.PI) % 12 + 12) % 12;
-      assert.ok(Math.min(Math.abs(month - want), 12 - Math.abs(month - want)) < 1e-2, `month at ${p}`);
-    }
-  }
-});
-
-test('both snow trips stand in winter, moving or still', () => {
+test('each season stands where the story suits it, moving or still', () => {
   for (const id of ['snow-2019', 'snow-2025']) {
-    assert.ok(wintry(seasonAt(stop(id))), `${id} at its stop`);
-    const month = MILESTONES.find(m => m.id === id).month;
-    assert.ok(near(seasonAt(stillProgress(progressAt(month)), false), WINTER), `${id} still`);
+    assert.ok(near(seasonAt(stop(id)), WINTER), `${id} at its stop`);
+    assert.ok(near(seasonAt(still(id)), WINTER), `${id} still`);
   }
-});
-
-test('each milestone stop shows its season', () => {
-  assert.ok(seasonAt(stop('internship')).blossom > .9, 'November 2018 in blossom');
-  assert.ok(seasonAt(stop('sydney')).lush > .9, 'February 2021 lush');
-  assert.ok(seasonAt(stop('apartments')).turn > .9, 'May 2024 amber');
-  assert.ok(seasonAt(stop('engaged')).turn > .9, 'April 2026 amber');
-  // The dock is April 2027, autumn at dusk, and the opening January, summer.
-  assert.ok(near(seasonAt(1), AUTUMN, 1e-6) && near(seasonAt(1, false), AUTUMN));
-  assert.ok(near(seasonAt(0, false), SUMMER) && seasonAt(0).lush > .95);
-  assert.equal(storyMonth(1), monthIndex(DATES.wedding));
-});
-
-test('reduced-motion stills show each milestone’s own month exactly', () => {
-  for (const { month } of MILESTONES) {
-    const p = stillProgress(progressAt(month) + 1e-6);
-    assert.ok(near(seasonAt(p, false), seasonOfYear(monthIndex(month))), month);
+  for (const id of ['salsa', 'engaged']) {
+    assert.ok(near(seasonAt(stop(id)), SPRING), `${id} at its stop`);
+    assert.ok(near(seasonAt(still(id)), SPRING), `${id} still`);
   }
+  assert.ok(near(seasonAt(.415), AUTUMN), 'autumn in 2021');
+  // The egg-heavy milestones elsewhere are summer, as the garden always was.
+  for (const id of ['meet', 'coast', 'internship', 'graduation', 'sydney', 'interim', 'amelia-heirwealth', 'heirwealth', 'apartments', 'living-together', 'dating']) {
+    assert.ok(near(seasonAt(stop(id)), SUMMER), `${id} at its stop`);
+    assert.ok(near(seasonAt(still(id)), SUMMER), `${id} still`);
+  }
+  // The dock and the bend before it: summer.
+  for (const p of [.83, .9, .95, 1]) assert.ok(near(seasonAt(p), SUMMER), `summer at ${p}`);
 });
 
-test('the light only nudges the day: within a tenth either way', () => {
+test('winter is soft and bright: sparse trees and paler grass, no grey, no darker light', () => {
+  assert.equal(WINTER.turn, 0);
+  assert.ok(WINTER.pale > 0 && WINTER.bare > 0);
   for (const s of [NEUTRAL, SUMMER, AUTUMN, WINTER, SPRING]) {
     const light = seasonLight(s);
-    for (const v of [...light.sunColor, light.sunIntensity, light.hemi]) assert.ok(Math.abs(v - 1) <= .1);
+    for (const v of [...light.sunColor, light.sunIntensity, light.hemi]) assert.ok(Math.abs(v - 1) <= .05, 'only a nudge');
+    assert.ok(light.sunIntensity >= 1 && light.hemi >= 1, 'never darker than summer');
   }
   const none = seasonLight(NEUTRAL);
   assert.deepEqual([...none.sunColor, none.sunIntensity, none.hemi], [1, 1, 1, 1, 1]);
-  // Winter's sun is cooler and weaker than summer's.
-  const winter = seasonLight(WINTER), summer = seasonLight(SUMMER);
-  assert.ok(winter.sunIntensity < summer.sunIntensity && winter.sunColor[2] > winter.sunColor[0]);
 });
 
-test('falling leaves turn amber in autumn; petals pale in spring and thin in winter', () => {
+// The trees whose crowns stand in the near picture at p, by role.
+function pictured(p, layout) {
+  const lens = LAYOUTS[layout], mobile = layout === 'phone', view = viewOf(cameraPose(p, lens.width));
+  const roles = [0, 0, 0, 0];
+  for (const tree of treePlacements(lens.width, mobile)) {
+    const crown = project({ centre: [tree.x, treeBase(tree, lens.width) + 6 * tree.scale, tree.z], radius: 3.5 * tree.scale }, view, lens);
+    if (!crown.screen || crown.depth < FEATURE_FRAME.depth[0] || crown.depth > FEATURE_FRAME.depth[1]) continue;
+    const x = Math.abs(crown.screen[0]);
+    if (x > FEATURE_FRAME.across[1] || Math.abs(crown.screen[1]) > 1) continue;
+    roles[treeSeason(tree.x, tree.z, tree.type, lens.width, mobile).role]++;
+  }
+  return roles;
+}
+
+test('a few trees change, and the ones that do are in view at their season’s milestones', () => {
+  for (const layout of ['desktop', 'phone']) {
+    const lens = LAYOUTS[layout], mobile = layout === 'phone';
+    const trees = treePlacements(lens.width, mobile), counts = [0, 0, 0, 0];
+    for (const t of trees) counts[treeSeason(t.x, t.z, t.type, lens.width, mobile).role]++;
+    const ashes = trees.filter(t => t.type <= 3).length;
+    // Most trees never change; blossom is on a handful only.
+    assert.ok(counts[ROLE.still] / ashes > .75, `${layout}: ${counts[ROLE.still]} of ${ashes} ashes stay as they are`);
+    assert.ok(counts[ROLE.blossom] >= 1 && counts[ROLE.blossom] <= 4, `${layout}: ${counts[ROLE.blossom]} blossoming trees`);
+    // The shrubs and the old tree at the dock never change.
+    for (const t of trees.filter(t => t.type > 3)) assert.equal(treeSeason(t.x, t.z, t.type, lens.width, mobile).role, ROLE.still);
+    const old = oldTreePlacement(lens.width, mobile);
+    assert.equal(treeSeason(old.x, old.z, old.type, lens.width, mobile).role, ROLE.still);
+    // Every featured moment has its tree in the near picture.
+    for (const id of ['snow-2019', 'snow-2025']) for (const p of [stop(id), still(id)]) assert.ok(pictured(p, layout)[ROLE.sparse] >= 1, `${layout}: a sparse tree at ${id} (${p})`);
+    for (const id of ['salsa', 'engaged']) for (const p of [stop(id), still(id)]) {
+      const n = pictured(p, layout)[ROLE.blossom];
+      assert.ok(n >= 1 && n <= 3, `${layout}: ${n} blossoming trees at ${id} (${p})`);
+    }
+    assert.ok(featuredTrees(lens.width, mobile).size <= FEATURED.reduce((n, f) => n + f.at.length * 2, 0));
+  }
+});
+
+test('falling leaves turn a little in autumn; petals pale in spring and thin a little in winter', () => {
   const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
   // Without seasons, the leaves and petals keep their old colours.
   assert.deepEqual([hex(leafColour(1, NEUTRAL)), hex(leafColour(3, NEUTRAL)), hex(petalColour(NEUTRAL))], ['#92996d', '#ba9565', '#c88889']);
-  for (let i = 0; i < 6; i++) {
+  // In autumn half the leaves turn warm and the rest stay as they were.
+  for (let i = 0; i < 8; i++) {
     const [r, g, b] = leafColour(i, AUTUMN);
-    assert.ok(r > g && g > b && r - b > .3, `leaf ${i} warm in autumn`);
+    if (i % 2) assert.ok(r > g && g > b && r - b > .3, `leaf ${i} warm in autumn`);
+    else assert.deepEqual(leafColour(i, AUTUMN), leafColour(i, NEUTRAL));
   }
+  // Winter doesn't brown them.
+  for (let i = 0; i < 6; i++) assert.deepEqual(leafColour(i, WINTER), leafColour(i, NEUTRAL));
   const [r, g, b] = petalColour(SPRING);
-  assert.ok(r > .85 && g > .65 && b > .65);
+  assert.ok(r > .9 && g > .7 && b > .7);
   const shown = s => Array.from({ length: 100 }, (_, i) => petalShown(i, 100, s)).reduce((a, v) => a + v, 0);
   assert.equal(shown(NEUTRAL), 100);
   assert.equal(shown(SPRING), 100);
-  assert.ok(shown(WINTER) < 40);
+  assert.equal(shown(WINTER), 50);
 });
 
 test('the Review choice: on unless turned off', () => {

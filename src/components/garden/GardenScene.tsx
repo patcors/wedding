@@ -75,7 +75,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
   const waterTint = useMemo(createWaterTint, []);
   return <JourneyProvider scroll={progress} pace={pace} paused={paused} reduced={reduced}>
     <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} reduced={reduced} />
-    <GardenSeasons on={seasons} reduced={reduced} />
+    <GardenSeasons on={seasons} />
     <Inspectable id="sky"><GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} seasons={seasons} /></Inspectable>
     <GardenGround width={width} style={groundStyle} />
     <GardenTrees width={width} mobile={mobile} paused={still} lightTrees={lightTrees} />
@@ -83,8 +83,8 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
     {plantStyle === 'varied' && <GardenPlants width={width} mobile={mobile} paused={still} visible />}
     {rockStyle === 'moss' && <GardenRocks width={width} visible />}
     <Inspectable id="water"><GardenWater paused={still} width={width} mobile={mobile} reeds={plantStyle === 'varied'} launchRequest={boatLaunchRequest} tint={waterTint} height={visibleHeight} /></Inspectable>
-    <Inspectable id="petals"><Petals paused={still} width={width} seasons={seasons} reduced={reduced} /></Inspectable>
-    <FallingLeaves paused={still} width={width} seasons={seasons} reduced={reduced} />
+    <Inspectable id="petals"><Petals paused={still} width={width} seasons={seasons} /></Inspectable>
+    <FallingLeaves paused={still} width={width} seasons={seasons} />
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
     <GuestBoat {...slot} height={visibleHeight} />
