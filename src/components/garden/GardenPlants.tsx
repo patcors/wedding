@@ -33,7 +33,7 @@ export function plantMaterial(kind: PlantKind, wind: { value: number }, mobile: 
     seasonalWash(shader);
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = seasonGround(diffuseColor.rgb);');
   };
-  result.customProgramCacheKey = () => `${key()}-seasons-v1`;
+  result.customProgramCacheKey = () => `${key()}-seasons-v2`;
   return result;
 }
 

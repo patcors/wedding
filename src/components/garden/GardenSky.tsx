@@ -99,7 +99,7 @@ function usePageColors() {
 // distance crisp, to the old mist's (1); the far end always fades.
 const FOG = { clear: { desktop: 38, mobile: 22 }, mist: { desktop: 16, mobile: 8 }, far: { desktop: 110, mobile: 85 } };
 
-export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint, seasons = false }: SlotProps & { skyStyle: SkyStyle; waterTint: WaterTint; seasons?: boolean }) {
+export default function GardenSky({ mobile, width, skyStyle, waterTint, seasons = false }: SlotProps & { skyStyle: SkyStyle; waterTint: WaterTint; seasons?: boolean }) {
   const keys = skyStyle.sky === 'mist' ? MIST_KEYS : SKY_KEYS;
   const clock = useJourney();
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -135,7 +135,7 @@ export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint,
       fog.current.near = FOG.clear[device] + (FOG.mist[device] - FOG.clear[device]) * sky.haze + FINALE.haze * clock.lift;
     }
     // The season's small share of the light (seasons.ts).
-    const season = seasonLight(currentSeason(clock.progress, reduced, seasons));
+    const season = seasonLight(currentSeason(clock.progress, seasons));
     const light = hemisphere.current;
     if (light) {
       set(light.color, sky.hemiSky);
