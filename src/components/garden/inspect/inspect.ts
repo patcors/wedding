@@ -73,9 +73,6 @@ const NAMED: Readonly<Record<string, InspectEntry>> = {
   'year-markers': { name: 'year marker', file: `${E}YearMarkers.tsx` },
   balloon: { name: 'hot-air balloons', file: `${E}Balloon.tsx`, milestone: 'turkey-greece' },
   'hagia-sophia': { name: 'Hagia Sophia', file: `${E}HagiaSophia.tsx`, milestone: 'turkey-greece' },
-  'place-illawarra': { name: 'the Illawarra escarpment, far off (places)', file: `${G}places.ts`, when: 'the opening to late 2020' },
-  'place-sydney': { name: 'Sydney’s sandstone heads, far off (places)', file: `${G}places.ts`, when: 'February 2021 to March 2023' },
-  'place-berry': { name: 'Berry’s hills and Coolangatta Mountain, far off (places)', file: `${G}places.ts`, when: 'the bend to the dock' },
 };
 // Names with a number or kind in them.
 const PATTERNS: readonly [RegExp, (match: RegExpMatchArray) => InspectEntry][] = [
@@ -94,7 +91,6 @@ const TAGGED: Readonly<Record<string, InspectEntry>> = {
   sky: { name: 'sky', file: `${G}GardenSky.tsx`, background: true },
   water: { name: 'river', file: `${G}GardenWater.tsx` },
   petals: { name: 'drifting petals', file: `${G}GardenDrift.tsx` },
-  places: { name: 'a far-off place (places)', file: `${G}GardenPlaces.tsx` },
   university: { name: 'the university egg (π and ducks)', file: `${E}University.tsx` },
   'snow-2019': { name: 'snowman with his arm in a sling', file: `${E}SnowTrip.tsx` },
   graduation: { name: 'mortarboards', file: `${E}Graduation.tsx` },
