@@ -17,6 +17,7 @@ import { namesAway } from './openingNames';
 import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
+import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasons';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
 import './garden.css';
 import './gardenScrollCue.css';
@@ -249,6 +250,8 @@ export default function Garden() {
   const [rockStyle, setRockStyle] = useState<RockStyle>('moss');
   const [plantStyle, setPlantStyle] = useState<PlantStyle>('varied');
   const [boatStyle, setBoatStyle] = useState<BoatLook>(BOAT_LOOK);
+  // The year turning in the canopy, grass and light; the Review panel can turn it off (seasons.ts).
+  const [seasons, setSeasons] = useState(SEASONS);
   const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [openingReleased, setOpeningReleased] = useState(false);
@@ -368,6 +371,7 @@ export default function Garden() {
   const [text, setText] = useState<TextLook>('glow');
   useEffect(() => { if (REVIEW) setText(textLook(localStorage.getItem(REVIEW_TEXT))); }, []);
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
+  useEffect(() => { if (REVIEW) setSeasons(seasonsOn(localStorage.getItem(REVIEW_SEASONS))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   const easedMonth = useCallback(() => storyMonth(voyage.pace.progress), [voyage.pace]);
   // The scene already eases between stops; native smooth scrolling would
@@ -378,7 +382,7 @@ export default function Garden() {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} arrival={flight ? arrival : undefined} />}
+          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} seasons={seasons} arrival={flight ? arrival : undefined} />}
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />
@@ -509,6 +513,12 @@ export default function Garden() {
       <button onClick={() => setLightTrees(value => !value)} aria-pressed={lightTrees}
         aria-label="Use light EZ-Tree colours" title={lightTrees ? 'Switch to dark EZ-Tree colours' : 'Switch to light EZ-Tree colours'}>
         Trees: {lightTrees ? 'Light' : 'Dark'}
+      </button>
+      <button onClick={() => {
+        localStorage.setItem(REVIEW_SEASONS, seasons ? 'off' : 'on');
+        setSeasons(!seasons);
+      }} aria-pressed={seasons} title={seasons ? 'Show the garden the same all year' : 'Turn the year in the canopy, grass and light'}>
+        Seasons: {seasons ? 'On' : 'Off'}
       </button>
       <button onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={paused || reduced}>
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}

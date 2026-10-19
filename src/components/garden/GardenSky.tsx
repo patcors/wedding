@@ -9,6 +9,8 @@ import { routeAt } from './journey';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import type { WaterTint } from './GardenWater';
 import { MIST_KEYS, SKY_KEYS, hex, skyAt, waterIn, type Rgb, type Sky, type WaterStyle } from './skyCycle';
+import { currentSeason } from './GardenSeasons';
+import { seasonLight } from './seasons';
 
 // Review options: the clear day, or the Garden's old misty one to compare,
 // over any of the rivers in WATERS. The clear day is the site's.
@@ -96,7 +98,7 @@ function usePageColors() {
 // distance crisp, to the old mist's (1); the far end always fades.
 const FOG = { clear: { desktop: 38, mobile: 22 }, mist: { desktop: 16, mobile: 8 }, far: { desktop: 110, mobile: 85 } };
 
-export default function GardenSky({ mobile, width, skyStyle, waterTint }: SlotProps & { skyStyle: SkyStyle; waterTint: WaterTint }) {
+export default function GardenSky({ mobile, width, reduced, skyStyle, waterTint, seasons = false }: SlotProps & { skyStyle: SkyStyle; waterTint: WaterTint; seasons?: boolean }) {
   const keys = skyStyle.sky === 'mist' ? MIST_KEYS : SKY_KEYS;
   const clock = useJourney();
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -118,15 +120,17 @@ export default function GardenSky({ mobile, width, skyStyle, waterTint }: SlotPr
       fog.current.color.copy(dome.horizon);
       fog.current.near = FOG.clear[device] + (FOG.mist[device] - FOG.clear[device]) * sky.haze;
     }
+    // The season's small share of the light (seasons.ts).
+    const season = seasonLight(currentSeason(clock.progress, reduced, seasons));
     const light = hemisphere.current;
     if (light) {
       set(light.color, sky.hemiSky);
       set(light.groundColor, sky.hemiGround);
-      light.intensity = sky.hemi;
+      light.intensity = sky.hemi * season.hemi;
     }
     if (sun.current) {
-      set(sun.current.color, sky.sunColor);
-      sun.current.intensity = sky.sunIntensity;
+      set(sun.current.color, sky.sunColor.map((v, i) => v * season.sunColor[i]) as Rgb);
+      sun.current.intensity = sky.sunIntensity * season.sunIntensity;
     }
     sunOffset.set(...sky.sun);
     set(waterTint.water, waterIn(sky, skyStyle.water));

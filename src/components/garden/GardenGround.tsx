@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { bankGeometry, RIVER_CHUNK, RIVER_REACH } from './gardenGeometry';
 import { useRiverReach } from './useRiverReach';
 import { useGardenTextures } from './gardenTextures';
+import { seasonalWash } from './GardenSeasons';
 
 export type GroundStyle = 'natural' | 'original' | 'leafy' | 'meadow';
 export type RockStyle = 'original' | 'moss';
@@ -53,6 +54,8 @@ function naturalGround(material: THREE.MeshStandardMaterial, litter: THREE.Textu
         // Broad patches of lusher and drier grass.
         float dry = groundFbm(groundWorld * .03 + 9.);
         ground *= mix(vec3(.84, .96, .80), vec3(1.12, 1.04, .76), dry);
+        // The season's wash (GardenSeasons.tsx), on the grass but not the mud.
+        ground = seasonGround(ground);
         // Damp brown mud along an uneven waterline, keeping the turf's grain.
         float shore = 1. - smoothstep(.2, .95 + groundNoise(groundWorld * .5) * .5, vInland);
         vec3 mud = vec3(.14, .11, .075) * (.6 + groundLuma * 1.2);
@@ -63,8 +66,9 @@ function naturalGround(material: THREE.MeshStandardMaterial, litter: THREE.Textu
         #include <roughnessmap_fragment>
         roughnessFactor = mix(roughnessFactor, .38, shore * .75);
       `);
+    seasonalWash(shader);
   };
-  material.customProgramCacheKey = () => 'garden-ground-natural-v3';
+  material.customProgramCacheKey = () => 'garden-ground-natural-seasons-v1';
 }
 
 // The ground's material in the chosen style. Anything else built as ground,
@@ -110,9 +114,10 @@ export function useGroundMaterial(style: GroundStyle) {
         // Broad patches soften repetition without enlarging the fine blades.
         float groundPatch = sin(vMapUv.x * .51 + sin(vMapUv.y * .37)) * sin(vMapUv.y * .43);
         diffuseColor.rgb *= 1.0 + groundPatch * .10;
-      `);
+      `).replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = seasonGround(diffuseColor.rgb);');
+      seasonalWash(shader);
     };
-    material.customProgramCacheKey = () => `garden-ground-${original ? 'original' : 'lush'}-v1`;
+    material.customProgramCacheKey = () => `garden-ground-${original ? 'original' : 'lush'}-seasons-v1`;
     return material;
   }, [style, color, normal, roughness, litter]);
   useEffect(() => () => material.dispose(), [material]);

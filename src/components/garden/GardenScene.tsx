@@ -11,6 +11,7 @@ import GardenRocks, { ROCK_MODEL, ROCK_TEXTURES } from './GardenRocks';
 import GardenPlants from './GardenPlants';
 import GardenBankDetails from './GardenBankDetails';
 import { FallingLeaves, Petals } from './GardenDrift';
+import GardenSeasons from './GardenSeasons';
 import GardenWater, { WATER_NORMALS, createWaterTint } from './GardenWater';
 import GardenSky, { type SkyStyle } from './GardenSky';
 import type { PlantStyle } from './gardenPlantGeometry';
@@ -51,10 +52,12 @@ function useGardenAssets(choices: AssetChoices) {
   textures.forEach(([urls, flipY]) => useGardenTextures(urls, { flipY }));
 }
 type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook;
+  // The year turning in the canopy, grass and light (seasons.ts).
+  seasons?: boolean;
   // The opening title's panel, while its names are to fly to their boats.
   arrival?: RefObject<HTMLElement | null> };
 
-export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook, arrival }: SceneProps) {
+export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook, arrival, seasons = false }: SceneProps) {
   useGardenAssets({ groundStyle, rockStyle, lightTrees });
   const size = useThree(state => state.size);
   // On touch screens the canvas runs on under Safari's toolbar (see
@@ -67,15 +70,16 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
   const waterTint = useMemo(createWaterTint, []);
   return <JourneyProvider scroll={progress} pace={pace} paused={paused} reduced={reduced}>
     <VoyageCamera mobile={mobile} width={width} visibleHeight={visibleHeight} />
-    <GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} />
+    <GardenSeasons on={seasons} reduced={reduced} />
+    <GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} seasons={seasons} />
     <GardenGround width={width} style={groundStyle} />
     <GardenTrees width={width} mobile={mobile} paused={still} lightTrees={lightTrees} />
     <GardenBankDetails width={width} rockStyle={rockStyle} plantStyle={plantStyle} />
     {plantStyle === 'varied' && <GardenPlants width={width} mobile={mobile} paused={still} visible />}
     {rockStyle === 'moss' && <GardenRocks width={width} visible />}
     <GardenWater paused={still} width={width} mobile={mobile} reeds={plantStyle === 'varied'} launchRequest={boatLaunchRequest} tint={waterTint} />
-    <Petals paused={still} width={width} />
-    <FallingLeaves paused={still} width={width} />
+    <Petals paused={still} width={width} seasons={seasons} reduced={reduced} />
+    <FallingLeaves paused={still} width={width} seasons={seasons} reduced={reduced} />
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
     <Eggs {...slot} />
