@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { plantGeometry, plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
+import { REED_HOLD_MOBILE, plantGeometry, plantSites } from '../src/components/garden/gardenPlantGeometry.ts';
 import { GARDEN_CAMERA, bankEdge, chunkSpan, groundHeight, inReach, riverCenter, riverChunks } from '../src/components/garden/gardenGeometry.ts';
-import { ROUTE } from '../src/components/garden/journey.ts';
+import { ARRIVAL_END, ROUTE, VOYAGE_END, routeAt } from '../src/components/garden/journey.ts';
+import { boatPose, hullHalfBeam } from '../src/components/garden/storyBoats.ts';
 
 test('land plants stay on land while wetland plants follow the shoreline on both compositions', () => {
   for (const [width, mobile] of [[1, false], [.45, true]]) {
@@ -46,13 +47,40 @@ test('every reed patch overlaps the shoreline along its whole length', () => {
     assert.equal(sites.length, patchSize * 13);
     for (let patch = 0; patch < sites.length / patchSize; patch++) {
       const group = sites.slice(patch * patchSize, (patch + 1) * patchSize).sort((a, b) => a.z - b.z);
+      // A bed held back from the boats on a phone reaches out only to its hold.
+      const middle = group.reduce((sum, site) => sum + site.z, 0) / group.length;
+      const held = mobile ? Object.entries(REED_HOLD_MOBILE).find(([z]) => Math.abs(z - middle) < 1)?.[1] : undefined;
       for (let band = 0; band < 4; band++) {
         const strip = group.slice(band * patchSize / 4, (band + 1) * patchSize / 4);
         const offsets = strip.map(site => Math.abs(site.x - riverCenter(site.z, width)) - bankEdge(site.z, width));
-        assert.ok(offsets.some(offset => offset < -.5), 'reeds surround the cattails in water');
+        if (held !== undefined) assert.ok(offsets.every(offset => offset > -held) && offsets.some(offset => offset < -held * .7), 'a held bed reaches out to its hold');
+        else assert.ok(offsets.some(offset => offset < -.5), 'reeds surround the cattails in water');
         assert.ok(offsets.some(offset => Math.abs(offset) < .2), 'reeds fill the shoreline');
         assert.ok(offsets.some(offset => offset > .3), 'reeds connect onto the bank');
         assert.ok(offsets.every(offset => offset < .78), 'bank overlap stays limited');
+      }
+    }
+  }
+});
+
+// On a real phone Patrick's hull went through the reeds at the end of 2022
+// (Amelia, October 2026): wherever a bed stands, both hulls, and the
+// catamaran's once they join, pass its reeds and cattails clear.
+test('the story boats sail clear of every reed and cattail in the water on both compositions', () => {
+  for (const [width, mobile] of [[1, false], [.45, true]]) {
+    // Where the boats are along the river through the voyage, from where they leave the jetties.
+    const ps = Array.from({ length: 4001 }, (_, i) => ARRIVAL_END + (VOYAGE_END - ARRIVAL_END) * i / 4000);
+    for (const kind of ['reed', 'cattail']) {
+      for (const site of plantSites(kind, width, mobile)) {
+        if (bankEdge(site.z, width) - Math.abs(site.x - riverCenter(site.z, width)) <= 0) continue;
+        const p = ps.find(q => routeAt(q) <= site.z);
+        if (p === undefined || site.z > routeAt(ARRIVAL_END)) continue;
+        const pose = boatPose(p, width), half = hullHalfBeam(pose.join.morph) * pose.scale;
+        for (const side of [-1, 1]) {
+          const hull = pose.x + side * pose.gap * pose.scale * Math.cos(pose.yaw);
+          const clear = Math.abs(site.x - hull) - half - (kind === 'reed' ? .07 : .05) * site.scale;
+          assert.ok(clear > .1, `a ${kind} at z ${site.z.toFixed(1)} ${clear.toFixed(2)} from a hull at ${p.toFixed(3)} (width ${width})`);
+        }
       }
     }
   }
