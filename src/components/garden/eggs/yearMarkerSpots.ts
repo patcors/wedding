@@ -61,7 +61,7 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85, grow: { mobile: 1.2 } },
   { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
-  { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3, mobile: { lead: 5.6, inland: -.4 } },
+  { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3, mobile: { lead: 5.6, inland: -.4 }, grow: { mobile: 1.15 } },
   { year: 2026, medium: 'arch', side: -1, lead: 8.6, inland: .6 },
   { year: 2027, medium: 'heart', side: -1, lead: 1.5, inland: .9, from: '2026-11' },
 ];

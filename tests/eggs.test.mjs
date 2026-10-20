@@ -580,7 +580,8 @@ test('the bullet is as large as a garden sculpture beside the snowmen, in two sm
   const { SNOWMAN } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
   const { COMPONENT } = await import('../src/components/garden/sceneryCatalog.ts');
   // Taller than the snowmen across the river (as SecondSnowTrip.tsx sizes them), but not towering.
-  for (const [size, snowmen] of [[BULLET.size.desktop, SNOWMAN.height * COMPONENT.snowScale], [BULLET.size.mobile, SNOWMAN.height * COMPONENT.snowScale * COMPONENT.snowMobile]]) {
+  const { SNOW_GROW } = await import('../src/components/garden/eggs/flurry.ts');
+  for (const [size, snowmen] of [[BULLET.size.desktop, SNOWMAN.height * COMPONENT.snowScale * SNOW_GROW.desktop], [BULLET.size.mobile, SNOWMAN.height * COMPONENT.snowScale * COMPONENT.snowMobile * SNOW_GROW.mobile]]) {
     assert.ok(size > snowmen * 1.05 && size < snowmen * 1.5, `${size} beside snowmen ${snowmen} tall`);
   }
   const triangles = geometry => (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3;
