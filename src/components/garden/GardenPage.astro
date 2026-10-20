@@ -4,6 +4,7 @@
 // Details page can show their RSVP. The Garden renders here on the server, so
 // its opening text and cover paint before any script arrives.
 import Garden from './Garden';
+import SiteFonts from '../SiteFonts.astro';
 import { DAWN, MIST_DAWN, type SkyKey } from './skyCycle';
 import type { Party } from '../../data/parties';
 
@@ -37,9 +38,10 @@ const devMist = import.meta.env.DEV && opening(MIST_DAWN);
     <meta property="og:image:alt" content="Patrick twirling Amelia on a green hillside at golden hour" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=block" rel="stylesheet" />
+    {/* The title waits for its typeface rather than flashing a fallback
+        serif, so its two files (the names, the "&" and the subtitle) come
+        with the first requests. */}
+    <SiteFonts display="block" preload={['cormorant-garamond-normal-latin.woff2', 'cormorant-garamond-italic-latin.woff2']} />
     <script is:inline>
       // The Garden runs its scene to the bottom of the physical screen, under
       // Safari's toolbar (see garden.css). iOS doesn't swap screen sizes when

@@ -3,6 +3,7 @@
 // All content lives in the objects below. Edit there, not in the markup.
 // Anything wrapped in tbc() renders with a soft "to be confirmed" mark until replaced.
 import RsvpForm from '../components/details/RsvpForm.astro';
+import SiteFonts from '../components/SiteFonts.astro';
 import { withPhoneLinks } from '../components/details/phone';
 
 const BASE = import.meta.env.BASE_URL;
@@ -74,9 +75,7 @@ const photos = {
     <meta name="theme-color" content="#eeeee5" />
     <title>Patrick &amp; Amelia · The details</title>
     <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, the garden, where to stay." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@400;500&display=swap" rel="stylesheet" />
+    <SiteFonts display="swap" />
   </head>
   <body>
     <main class="info">
