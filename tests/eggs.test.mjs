@@ -420,7 +420,8 @@ test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark,
     assert.ok(hits > 0 && touch < SIGN_GAP + .01, `on the bark, not floating (${touch}, width ${width})`);
     const { x: cx, z: cz } = signFaces(width), toCamera = new THREE.Vector3(cx - centre.x, 0, cz - centre.z).normalize();
     assert.ok(normal.dot(toCamera) > .999, 'facing the camera');
-    // In the picture and legible, its capitals (.55 of the blade) at least 5
+    // In the picture and legible, its capitals (.62 of the blade since
+    // October 2026, when Amelia asked for them a bit bigger; .55 before) at least 5
     // pixels tall from the living together's stop, and 6.5 from dating's,
     // until her bird has flown over to his and well after, as the houses
     // are; above her roof.
@@ -430,17 +431,18 @@ test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark,
       const { bearing, distance } = seen(p, width, centre.x, centre.z);
       assert.ok(Math.abs(bearing) + degrees(Math.atan(length / 2 / distance)) < halfView(width), `the sign in the picture at ${p}`);
       const least = p < STOPS[MILESTONES.findIndex(m => m.id === 'dating') + 1] ? 5 : 6.5;
-      assert.ok(pixels(bladeHeight(length) * .55, distance, width) > least, `the sign legible at ${p} (width ${width})`);
+      assert.ok(pixels(bladeHeight(length) * .62, distance, width) > least, `the sign legible at ${p} (width ${width})`);
     }
-    // The numbers at the apartments' stop: at least 11 pixels tall on
-    // desktop and 8.5 on a 390 × 844 phone (Amelia, October 2026: they were
-    // hard to spot on a real phone; a 375 × 667 one draws them .79 as tall),
-    // then larger as the boats come up.
+    // The numbers at the apartments' stop: at least 10 pixels tall on
+    // desktop and 7.5 on a 390 × 844 phone (Amelia, October 2026: they were
+    // hard to spot on a real phone, so they grew to about 13 and 10, then a
+    // bit too large, so they came down a sixth; a 375 × 667 phone draws them
+    // .79 as tall), then larger as the boats come up.
     const atStop = STOPS[MILESTONES.findIndex(m => m.id === 'apartments') + 1];
     for (const owner of ['amelia', 'patrick']) {
       const figures = PLAQUE.width * NUMBER_RECTS[owner].height / NUMBER_RECTS[owner].width * .65 * houses[owner].scale;
       const { distance } = seen(atStop, width, houses[owner].x, houses[owner].z);
-      assert.ok(pixels(figures, distance, width) > (width < 1 ? 8.5 : 11), `${owner}'s number at the apartments' stop (width ${width})`);
+      assert.ok(pixels(figures, distance, width) > (width < 1 ? 7.5 : 10), `${owner}'s number at the apartments' stop (width ${width}): ${pixels(figures, distance, width).toFixed(1)}px`);
     }
     // Within the egg's budget: both houses, their numbers and the
     // scaffolding in one mesh, the birds in another and the sign a third.
