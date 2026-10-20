@@ -138,8 +138,9 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-scene-only .garden-copy { opacity: 0; pointer-events: none; visibility: hidden; }
 /* Long enough for the Voyage: 148svh a year from 2018 to 2023, more for 2024
    and 2025 (see YEAR in journey.ts), and about 98svh a share, so 2024's busy
-   dates each show for a while. */
-.garden-scroll-space { height: 2400svh; pointer-events: none; }
+   dates each show for a while. The opening takes about 85svh less than it
+   did, so the boats set off with the first scroll (SCROLL_SPACE in journey.ts). */
+.garden-scroll-space { height: 2313svh; pointer-events: none; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
 /* On phones, upright or on their side, the header's taps were small for a
    thumb (October 2026): the monogram and links are each 44px tall, the

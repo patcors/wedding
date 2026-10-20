@@ -173,11 +173,52 @@ export const since = (month: string, p: number) => storyMonth(p) - monthIndex(mo
 export const scrolledSince = (month: string, p: number) => (p - progressAt(month)) / ROOM;
 
 // Where the boats are along the river: z, falling downstream (x follows from
-// riverCenter). They drift a little under the opening title, travel at a
+// riverCenter). They set off from their jetties under the opening title (see
+// openingRoute), travel at a
 // steady pace through the voyage, and glide the last stretch into the jetty.
 export const ROUTE = { start: 6, voyage: 4, approach: -164, dock: -172 } as const;
 const ROUTE_POINTS = [[0, ROUTE.start], [ARRIVAL_END, ROUTE.voyage], [VOYAGE_END, ROUTE.approach], [DOCKED, ROUTE.dock], [1, ROUTE.dock]];
-export const routeAt = (p: number) => interpolate(ROUTE_POINTS, p, ([q]) => q, ([, z]) => z);
+// The opening's travel (Amelia, October 2026, on a real iPhone: the first
+// scroll felt stuck, the boats barely moving with it compared to later
+// scrolls). They used to drift just 2 units under the title, a fifth of the
+// voyage's pace, for over a screen of scroll. Now, from the title to the
+// meeting's date (OPENING_END), they ease away from their jetties as the
+// guest starts to scroll, up to speed by `LAUNCH` (about 10svh), and
+// travel steadily to where the voyage has them at the meeting, which is
+// unchanged, as is everything from there on. That stretch also takes less
+// scroll (OPENING_CUT, see progressAtScroll), so every svh of it moves the
+// boats as far as an svh of the voyage does.
+export const OPENING_END = progressAt(MILESTONES[0].month);
+export const LAUNCH = .006;
+// The voyage's pace, z a unit of progress, and where it has the boats.
+const VOYAGE_PACE = (ROUTE.voyage - ROUTE.approach) / (VOYAGE_END - ARRIVAL_END);
+const voyageLine = (p: number) => ROUTE.voyage - VOYAGE_PACE * (p - ARRIVAL_END);
+const OPENING_PACE = (ROUTE.start - voyageLine(OPENING_END)) / (OPENING_END - LAUNCH / 2);
+function openingRoute(p: number) {
+  const run = p < LAUNCH ? p * p / (2 * LAUNCH) : p - LAUNCH / 2;
+  return ROUTE.start - OPENING_PACE * run;
+}
+export const routeAt = (p: number) => p < OPENING_END ? openingRoute(Math.max(0, p)) : interpolate(ROUTE_POINTS, p, ([q]) => q, ([, z]) => z);
+
+// How the page's scroll maps to progress. The page is shorter than it was by
+// OPENING_CUT of the old page's scroll, all taken from the opening, so the
+// title and the channels run up to the meeting's date in that much less
+// scroll (about 85svh: the meeting's date shows after about 160svh, not 247)
+// and progress there runs faster per svh; from the meeting's date on each
+// share takes just the scroll it did. `f` is how far down the page is
+// scrolled, 0 to 1 of as far as it goes. The scroll space in garden.css is
+// SCROLL_SPACE svh to match.
+export const OPENING_CUT = OPENING_END * (1 - OPENING_PACE / VOYAGE_PACE);
+export const SCROLL_SPACE = 2400 - 2300 * OPENING_CUT;
+const KNEE = (OPENING_END - OPENING_CUT) / (1 - OPENING_CUT);
+export const progressAtScroll = (f: number) => {
+  const x = Math.min(1, Math.max(0, f));
+  return x < KNEE ? x * OPENING_END / KNEE : OPENING_CUT + x * (1 - OPENING_CUT);
+};
+export const scrollAtProgress = (p: number) => {
+  const x = Math.min(1, Math.max(0, p));
+  return x < OPENING_END ? x * KNEE / OPENING_END : (x - OPENING_CUT) / (1 - OPENING_CUT);
+};
 // Where the boats are when story time reaches `month`.
 export const routeAtMonth = (month: string) => routeAt(progressAt(month));
 

@@ -1,14 +1,17 @@
 // Where the guest is in the story, kept when the screen changes shape and
 // when they step out to the Details page (see docs/VOYAGE.md). Pure, so it
 // can be tested; Garden.tsx's useVoyage applies it.
-import { ARRIVAL_END, VOYAGE_END } from './journey.ts';
+import { ARRIVAL_END, VOYAGE_END, progressAtScroll, scrollAtProgress } from './journey.ts';
 
 // The scroll space is a share of the screen's height (svh), so when a phone
 // turns, the same scroll in pixels is a different place in the story: turning
 // at May 2021 once landed in August 2022. The page keeps the story's progress
 // instead and sets the scroll from it, in the new height. `span` is how far
 // the page can scroll, in pixels.
-export const scrollFor = (progress: number, span: number) => Math.round(Math.min(1, Math.max(0, progress)) * Math.max(0, span));
+export const scrollFor = (progress: number, span: number) => Math.round(scrollAtProgress(progress) * Math.max(0, span));
+// And the progress at a scroll of `top` pixels. The opening takes less scroll
+// than the rest, so the two aren't in proportion (progressAtScroll).
+export const progressFor = (top: number, span: number) => progressAtScroll(top / Math.max(1, span));
 
 // Safari keeps no copy of a page with WebGL to go back to, and the Garden opens
 // at its title by design, so a guest who popped over to the details came back
