@@ -12,10 +12,9 @@ import { MIST_KEYS, SKY_KEYS, hex, skyAt, waterIn, type Rgb, type Sky, type Wate
 import { currentSeason } from './GardenSeasons';
 import { seasonLight } from './seasons';
 
-// Review options: the clear day, or the Garden's old misty one to compare,
-// over any of the rivers in WATERS. The clear day is the site's.
-export type SkyStyle = { sky: 'day' | 'mist'; water: WaterStyle };
-export const SKY_STYLE: SkyStyle = { sky: 'day', water: 'clear' };
+// Review options: the clear day, or the Garden's old misty one to compare (skyStyle.ts).
+import type { SkyStyle } from './skyStyle';
+export { SKY_STYLE, type SkyStyle } from './skyStyle';
 
 const set = (color: THREE.Color, [r, g, b]: Rgb) => color.setRGB(r, g, b, THREE.SRGBColorSpace);
 

@@ -9,7 +9,7 @@ import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors
 import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
-import { SKY_STYLE, type SkyStyle } from './GardenSky';
+import { SKY_STYLE, type SkyStyle } from './skyStyle';
 import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, scrollAtProgress, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
@@ -18,8 +18,8 @@ import { PLACE_KEY, placeToKeep, placeToReopen, progressFor, scrollFor } from '.
 import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
-import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasons';
-import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLooks';
+import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices';
+import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLookChoices';
 import { GUEST_SOUND, GUEST_SOUND_MODE, REVIEW_SOUND, SOUND_MODES, soundMode, type SoundMode } from './soundChoices';
 import { useSoundscape } from './useSoundscape';
 import { useScrollGuide } from './useScrollGuide';
@@ -445,7 +445,8 @@ export default function Garden() {
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
         <CanvasFallback onError={onError}>
-          {mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} seasons={seasons} arrival={flight ? arrival : undefined} />}
+          {/* Its own boundary: without one, the page's every update waits on the scene's chunk, the butterflies' flight included. */}
+          <Suspense fallback={null}>{mounted && !failed && <GardenCanvas frameloop={!running ? 'never' : paused || reduced ? 'demand' : 'always'} prepare={PREPARE !== 'butterflies' || butterflies.settled} progress={progress} pace={voyage.pace} paused={paused} reduced={reduced} onReady={onReady} onError={onError} boatLaunchRequest={boatLaunchRequest} lightTrees={lightTrees} groundStyle={groundStyle} rockStyle={rockStyle} plantStyle={plantStyle} skyStyle={skyStyle} boatLook={boatStyle} seasons={seasons} arrival={flight ? arrival : undefined} />}</Suspense>
         </CanvasFallback>
       </div>
       <div className="garden-wash" aria-hidden="true" />

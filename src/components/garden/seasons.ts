@@ -20,11 +20,8 @@ import { oldTreePlacement, treeBase, treePlacements } from './gardenTreeSpots.ts
 import { cameraPose } from './cameraRig.ts';
 import { LAYOUTS, project, viewOf } from './voyageTimeline.ts';
 
-// Guests see the seasons. Dev only: the Review panel's "Seasons" can turn
-// them off to compare, remembered across reloads.
-export const SEASONS = true;
-export const REVIEW_SEASONS = 'pa_dev_seasons';
-export const seasonsOn = (stored: string | null) => stored === 'on' ? true : stored === 'off' ? false : SEASONS;
+// Guests see the seasons; the Review panel can turn them off (seasonChoices.ts).
+export { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices.ts';
 
 // Each amount runs 0 to 1. `turn` is autumn colour on the trees that turn,
 // `bare` how bare the trees that stand bare grow in winter, `fresh` spring's
