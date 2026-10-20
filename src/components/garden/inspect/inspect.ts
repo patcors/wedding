@@ -65,7 +65,6 @@ const NAMED: Readonly<Record<string, InspectEntry>> = {
   careers: { name: 'working-life ornaments', file: `${E}Careers.tsx` },
   candlesticks: { name: 'candlestick posts', file: `${E}Careers.tsx`, milestone: 'internship' },
   'pie-bed': { name: 'pie-chart flower bed', file: `${E}Careers.tsx`, milestone: 'heirwealth' },
-  'bullet-ornament': { name: 'bullet garden ornament (Bullet)', file: `${E}BulletOrnament.tsx`, when: 'August 2025' },
   circus: { name: 'Amelia’s circus', file: `${E}Circus.tsx` },
   'aerial-silk': { name: 'purple aerial silk', file: `${E}Circus.tsx`, when: 'late 2022' },
   lyra: { name: 'lyra', file: `${E}Circus.tsx`, when: 'October 2025' },

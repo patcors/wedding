@@ -28,7 +28,11 @@ export const WHITE_UV = [(WHITE.x + WHITE.width / 2) / ATLAS.width, 1 - (WHITE.y
 
 // The blade's size in world units, its proportions the atlas rect's; a
 // phone's wider lens draws it smaller, so it is longer there (`mobile`).
-export const BLADE = { length: 1.1, mobile: 1.32, thick: .025, colour: '#245f63', edge: '#e9ecea' } as const;
+// Amelia asked (October 2026) for "Church St" a bit bigger: the blade was
+// 1.1 long and its letters 86px in the atlas, now a little longer and its
+// letters filling more of it, about a fifth larger in all. Any longer and it
+// would leave a phone's picture before her bird's flight across is done.
+export const BLADE = { length: 1.15, mobile: 1.32, thick: .025, colour: '#245f63', edge: '#e9ecea' } as const;
 export const bladeHeight = (length: number) => length * SIGN_RECT.height / SIGN_RECT.width;
 // Each plaque's border, in its house's roof colour, darker.
 const PLAQUE_BORDER = { amelia: '#3f6f69', patrick: '#b39a52' } as const;
@@ -63,7 +67,7 @@ export function streetAtlas() {
   roundRect(ctx, { x: s.x + 6, y: s.y + 6, width: s.width - 12, height: s.height - 12 }, 9);
   ctx.stroke();
   ctx.fillStyle = BLADE.edge;
-  fitText(ctx, 'Church St', size => `700 ${size}px ${SANS}`, { x: s.x + 22, y: s.y + 8, width: s.width - 44, height: s.height - 16 }, 86);
+  fitText(ctx, 'Church St', size => `700 ${size}px ${SANS}`, { x: s.x + 20, y: s.y + 8, width: s.width - 40, height: s.height - 16 }, 98);
   // The plaques: white enamel, a border in the roof's colour, dark figures.
   for (const owner of ['amelia', 'patrick'] as const) {
     const r = NUMBER_RECTS[owner];

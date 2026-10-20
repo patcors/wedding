@@ -66,7 +66,7 @@ export const VOYAGE = {
   meet: MEET_Z,
   sydney: { from: routeAtMonth(DATES.sydney), to: routeAtMonth(DATES.back), widen: 2.2 },
   rock: { from: -53.6, to: -61.3, halfWidth: 1.25, mobileHalfWidth: .64, bridge: -60.1 },
-  point: { z: -77.6, side: -1, out: 1.7, back: 1.5, wide: 2.31, top: .36, mobile: { z: -94, out: .2, back: 4.25, wide: 3.15, top: .7 } },
+  point: { z: -77.6, side: -1, out: 1.7, back: 1.5, wide: 2.31, top: .36, mobile: { z: -86, out: .2, back: 4.25, wide: 3.15, top: .8 } },
   bend: { from: -135, to: -164, swing: -12 },
   dock: { z: ROUTE.dock, side: 1, jetty: 2.4 },
   tree: { z: ROUTE.dock - 3.5, inland: 3.5 },
@@ -234,8 +234,9 @@ export function lawnSpot(width = 1) {
 // from there (well back, the bank cut down round it, see underPoint, so the
 // point can be low), how `wide` it is along the river, and how high its
 // `top` stands; on a phone (`mobile`) it juts only a little and stands
-// further down, so the Opera House on it is seen over Amelia's sails as
-// August 2022 shows. Built in voyageRock.ts.
+// a little further down, so the Opera House on it is seen over Amelia's
+// sails as August 2022 shows, but not so far that it is still beside the
+// boats once she is back in March 2023. Built in voyageRock.ts.
 export function pointSpot(width = 1) {
   const { side, mobile, ...desktop } = VOYAGE.point, { z, out, back, wide, top } = width < 1 ? mobile : desktop;
   return { x: riverCenter(z, width) + side * bankEdge(z, width), z, side, out, back, wide, top };

@@ -28,8 +28,9 @@ const BODY = { width: .34, height: .3, depth: .3, floor: .82 };
 const RIDGE = BODY.floor + BODY.height + .14, PITCH = (RIDGE - BODY.floor - BODY.height) / (BODY.width / 2);
 const onRoof = (x: number, z: number): Point => [x, RIDGE + .025 - Math.abs(x) * PITCH, z];
 // The number plaque on the front of the post, under the house: its middle's
-// height, and its width (its height follows from the atlas).
-export const PLAQUE = { y: .6, width: .36, thick: .012 } as const;
+// height, and its width (its height follows from the atlas). Amelia asked
+// (October 2026) for 29 and 54 a bit smaller again: it was .36.
+export const PLAQUE = { y: .6, width: .3, thick: .012 } as const;
 export const BIRDHOUSE = { perches: { home: onRoof(-.07, .03), guest: onRoof(.08, 0) }, height: RIDGE, post: .06 };
 
 function painter() {

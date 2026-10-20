@@ -277,8 +277,7 @@ test('the birds tell the apartments: one house each side of the river, his at he
     const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
     const { PIE_BED, ornamentSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
     const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
-    const { bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
-    const others = [...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ornamentSpot(PIE_BED, width), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width), bulletSpot(width)];
+    const others = [...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ornamentSpot(PIE_BED, width), snowSpot(SNOW_SPOTS[2025], snowAgain.month, width)];
     for (const owner of ['amelia', 'patrick']) {
       const house = houses[owner];
       assert.ok(onLand(house.x, house.z, width) && Math.sign(house.x - riverCenter(house.z, width)) === NESTS.side[owner], `${owner}'s on ${owner}'s bank`);
@@ -420,7 +419,8 @@ test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark,
     assert.ok(hits > 0 && touch < SIGN_GAP + .01, `on the bark, not floating (${touch}, width ${width})`);
     const { x: cx, z: cz } = signFaces(width), toCamera = new THREE.Vector3(cx - centre.x, 0, cz - centre.z).normalize();
     assert.ok(normal.dot(toCamera) > .999, 'facing the camera');
-    // In the picture and legible, its capitals (.55 of the blade) at least 5
+    // In the picture and legible, its capitals (.62 of the blade since
+    // October 2026, when Amelia asked for them a bit bigger; .55 before) at least 5
     // pixels tall from the living together's stop, and 6.5 from dating's,
     // until her bird has flown over to his and well after, as the houses
     // are; above her roof.
@@ -430,17 +430,18 @@ test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark,
       const { bearing, distance } = seen(p, width, centre.x, centre.z);
       assert.ok(Math.abs(bearing) + degrees(Math.atan(length / 2 / distance)) < halfView(width), `the sign in the picture at ${p}`);
       const least = p < STOPS[MILESTONES.findIndex(m => m.id === 'dating') + 1] ? 5 : 6.5;
-      assert.ok(pixels(bladeHeight(length) * .55, distance, width) > least, `the sign legible at ${p} (width ${width})`);
+      assert.ok(pixels(bladeHeight(length) * .62, distance, width) > least, `the sign legible at ${p} (width ${width})`);
     }
-    // The numbers at the apartments' stop: at least 11 pixels tall on
-    // desktop and 8.5 on a 390 × 844 phone (Amelia, October 2026: they were
-    // hard to spot on a real phone; a 375 × 667 one draws them .79 as tall),
-    // then larger as the boats come up.
+    // The numbers at the apartments' stop: at least 10 pixels tall on
+    // desktop and 7.5 on a 390 × 844 phone (Amelia, October 2026: they were
+    // hard to spot on a real phone, so they grew to about 13 and 10, then a
+    // bit too large, so they came down a sixth; a 375 × 667 phone draws them
+    // .79 as tall), then larger as the boats come up.
     const atStop = STOPS[MILESTONES.findIndex(m => m.id === 'apartments') + 1];
     for (const owner of ['amelia', 'patrick']) {
       const figures = PLAQUE.width * NUMBER_RECTS[owner].height / NUMBER_RECTS[owner].width * .65 * houses[owner].scale;
       const { distance } = seen(atStop, width, houses[owner].x, houses[owner].z);
-      assert.ok(pixels(figures, distance, width) > (width < 1 ? 8.5 : 11), `${owner}'s number at the apartments' stop (width ${width})`);
+      assert.ok(pixels(figures, distance, width) > (width < 1 ? 7.5 : 10), `${owner}'s number at the apartments' stop (width ${width}): ${pixels(figures, distance, width).toFixed(1)}px`);
     }
     // Within the egg's budget: both houses, their numbers and the
     // scaffolding in one mesh, the birds in another and the sign a third.
@@ -460,7 +461,7 @@ test('the 2025 snowmen stand on the bank holding hands, in view as their date ho
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
     const { x, z } = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
     assert.ok(onLand(x, z, width), 'on land');
-    for (let t = 0; t <= 1; t += .05) {
+    for (let t = 0; t <= .5; t += .05) {
       const { bearing } = seen(progressAt(snowAgain.month) + t * ROOM, width, x, z);
       assert.ok(Math.abs(bearing) < halfView(width) - 3, `bearing ${bearing} at ${t}`);
     }
@@ -489,34 +490,31 @@ const above = (p, width, x, y, z) => {
 const halfHeight = width => width < 1 ? 34 : 24;
 const underLabel = width => width < 1 ? 19 : 11;
 
-test('the bullet stands on Patrick\'s bank across the river from the 2025 snowmen, on land, clear of the trees and the other scenery', async () => {
-  const { BULLET, bulletFootprint, bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
-  const { BULLET_MODEL } = await import('../src/components/garden/eggs/bulletGeometry.ts');
-  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
-  const { groundHeight } = await import('../src/components/garden/gardenGeometry.ts');
+test('the 2025 snowmen stand on Patrick\'s bank, the right (on a phone still Amelia\'s), on land, their snow clear of the water, the trees and the other scenery', async () => {
+  const { SNOW_GROW, SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const { HOLD, SNOWMAN } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+  const { COMPONENT } = await import('../src/components/garden/sceneryCatalog.ts');
+  const { growth } = await import('../src/components/garden/eggs/egg.ts');
   const { treePlacements } = await import('../src/components/garden/gardenTreeSpots.ts');
-  const { plantSites } = await import('../src/components/garden/gardenPlantGeometry.ts');
   const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
   const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
   const { RIGS, hangSpot } = await import('../src/components/garden/eggs/circusRigs.ts');
   const { truckSpot } = await import('../src/components/garden/eggs/engagementTruck.ts');
   const { ORNAMENTS, ornamentSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
-  // Not a milestone: Bullet was released in October 2025, and it stands
-  // there from about the snow trip's stretch, with the snowmen.
-  assert.equal(BULLET.from, snowAgain.month);
+  // A trip of them both, so not on Amelia's bank, where that stretch was too
+  // busy; but a phone's picture has Patrick's bank at its edge there.
+  assert.equal(SNOW_SPOTS[2025].side, 1);
+  assert.equal(SNOW_SPOTS[2025].mobile.side, -1);
   for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const spot = bulletSpot(width), snow = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
-    assert.ok(onLand(spot.x, spot.z, width) && spot.x > riverCenter(spot.z, width), 'on Patrick\'s bank, the right');
-    // Its whole plinth on the bank above the waterline, whichever way it turns.
-    const corner = BULLET_MODEL.plinth * Math.SQRT2 * spot.scale;
-    assert.ok(spot.x - corner - riverCenter(spot.z, width) > bankEdge(spot.z, width), 'its plinth clear of the water');
-    assert.ok(spot.y > .02, `above the waterline (${spot.y})`);
-    for (let k = 0; k < 8; k++) assert.ok(groundHeight(spot.x + Math.cos(k) * corner, spot.z + Math.sin(k) * corner, width) >= spot.y - 1e-9, 'no corner floats');
-    // Across the river from the snowmen, a little further on.
-    assert.ok(snow.x < riverCenter(snow.z, width), 'the snowmen on the other bank');
-    assert.ok(spot.z < snow.z && snow.z - spot.z < 2.5, `opposite the snowmen (${snow.z - spot.z} on)`);
+    const mobile = width < 1, spot = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
+    const scale = COMPONENT.snowScale[2025] * (mobile ? COMPONENT.snowMobile : 1) * growth(mobile, SNOW_GROW);
+    const side = mobile ? -1 : 1;
+    assert.ok(onLand(spot.x, spot.z, width) && Math.sign(spot.x - riverCenter(spot.z, width)) === side, `on their bank (width ${width})`);
+    // The pair's feet, side by side across their spot, near enough clear of the water.
+    const reach = (HOLD.apart / 2 + SNOWMAN.balls[0][0]) * scale * Math.abs(Math.cos(spot.yaw));
+    assert.ok(Math.abs(spot.x - riverCenter(spot.z, width)) - reach > bankEdge(spot.z, width) - .1, `their snow clear of the water (width ${width})`);
     // Clear of every trunk, and of the other scenery on the banks.
-    for (const tree of treePlacements(width, width < 1)) assert.ok(Math.hypot(tree.x - spot.x, tree.z - spot.z) > 2.5, `a tree at ${tree.x}, ${tree.z} (width ${width})`);
+    for (const tree of treePlacements(width, mobile)) assert.ok(Math.hypot(tree.x - spot.x, tree.z - spot.z) > 2.5, `a tree at ${tree.x}, ${tree.z} (width ${width})`);
     const others = [
       ...YEAR_MARKERS.map(marker => [marker.year, yearMarkerSpot(marker, width)]),
       ...Object.entries(nestSpots(width)).map(([owner, house]) => [`${owner}'s birdhouse`, house]),
@@ -524,89 +522,46 @@ test('the bullet stands on Patrick\'s bank across the river from the 2025 snowme
       ...ORNAMENTS.map(ornament => [`${ornament.facing} ornament`, ornamentSpot(ornament, width)]),
       ['truck', truckSpot(width)],
     ];
-    for (const [name, other] of others) assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${name} crowds the bullet (width ${width})`);
-    assert.ok(Math.hypot(snow.x - spot.x, snow.z - spot.z) > 4, 'the river between it and the snowmen');
-    // Nothing grows up through its plinth, nor stands on it.
-    const under = bulletFootprint(width);
-    for (const kind of ['grass', 'clover', 'fern', 'meadow', 'reed', 'cattail']) assert.ok(plantSites(kind, width, width < 1).every(site => !under(site.x, site.z)), `${kind} through its plinth (width ${width})`);
+    for (const [name, other] of others) assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${name} crowds the snowmen (width ${width})`);
   }
 });
 
-test('the bullet is whole in the picture beside the snowmen from the snow trip\'s date through its stop, and stands there until the camera has passed', async () => {
-  const { BULLET, bulletShown, bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
-  const { BULLET_MODEL } = await import('../src/components/garden/eggs/bulletGeometry.ts');
-  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
-  const at = progressAt(snowAgain.month), stop = STOPS[MILESTONES.indexOf(snowAgain) + 1];
-  const dating = STOPS[MILESTONES.findIndex(m => m.id === 'dating') + 1];
-  for (const width of [1, MOBILE_RIVER_WIDTH]) {
-    const mobile = width < 1, spot = bulletSpot(width), snow = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
-    const shown = p => bulletShown(spot, p, cameraPose(p, width).position[2], mobile);
-    // Not there at dating's stop or long before the trip; dissolving in just before its date.
-    assert.equal(shown(dating), 0);
-    assert.equal(shown(at - BULLET.arrive * ROOM - 1e-9), 0);
-    assert.ok(shown(at - BULLET.arrive * ROOM / 2) > 0 && shown(at - BULLET.arrive * ROOM / 2) < 1);
-    // Fully in at the date and the still under reduced motion.
-    assert.equal(shown(stillProgress(at + .2 * ROOM)), 1);
-    // Whole in the picture with a margin, right of the boats while the
-    // snowmen stand left of them, from the date to the trip's stop on a
-    // phone, whose narrow lens loses Patrick's bank soon after, and on
-    // through most of the share on desktop.
-    const until = mobile ? stop : at + .75 * ROOM, margin = mobile ? 1.4 : 3;
-    for (let p = at; p <= until; p += .001) {
-      const pose = cameraPose(p, width), [cx, cy, cz] = pose.position;
-      assert.equal(shown(p), 1, `shown at ${p}`);
-      const { bearing, distance } = seen(p, width, spot.x, spot.z), half = degrees(Math.atan(BULLET_MODEL.radius * spot.scale / distance));
-      assert.ok(bearing - half > 0 && bearing + half < halfView(width) - margin, `bearing ${bearing.toFixed(1)}° at ${p} (width ${width})`);
-      assert.ok(seen(p, width, snow.x, snow.z).bearing < 0, 'the snowmen left of the middle');
-      // Plinth to tip within the picture's height, and large enough to read.
-      const tilt = degrees(Math.atan2(pose.target[1] - cy, Math.hypot(pose.target[0] - cx, pose.target[2] - cz)));
-      const top = degrees(Math.atan2(spot.y + spot.scale - cy, distance)) - tilt, foot = degrees(Math.atan2(spot.y - cy, distance)) - tilt;
-      assert.ok(top < halfHeight(width) - 3 && foot > -halfHeight(width) + 3, `plinth to tip in the picture at ${p}`);
-      // At least 70 pixels tall on a 390 × 844 phone, 110 on a 1440 × 900 desktop.
-      const pixels = (top - foot) / (2 * halfHeight(width)) * (mobile ? 844 : 900);
-      assert.ok(pixels > (mobile ? 70 : 110), `${pixels.toFixed(0)} pixels tall at ${p}`);
-    }
-    // Gone once the camera has passed it.
-    let p = at;
-    while (cameraPose(p, width).position[2] > spot.z - 4) p += .001;
-    assert.equal(shown(p), 0);
-  }
-});
-
-test('the bullet is as large as a garden sculpture beside the snowmen, in two small meshes that cast no shadow', async () => {
-  const { readFileSync } = await import('node:fs');
-  const { BULLET } = await import('../src/components/garden/eggs/bulletOrnament.ts');
-  const { BULLET_MODEL, bulletGeometry, bulletPlinthGeometry } = await import('../src/components/garden/eggs/bulletGeometry.ts');
-  const { SNOWMAN } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
+test('the 2025 snowmen are whole in the picture on their side of it from the trip\'s stop through the next half share, and on a phone 2025\'s oar stands out of their way', async () => {
+  const { FLURRY, SNOW_GROW, SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const { HOLD, SNOWMAN } = await import('../src/components/garden/eggs/snowmanGeometry.ts');
   const { COMPONENT } = await import('../src/components/garden/sceneryCatalog.ts');
-  // Taller than the snowmen across the river (as SecondSnowTrip.tsx sizes them), but not towering.
-  const { SNOW_GROW } = await import('../src/components/garden/eggs/flurry.ts');
-  for (const [size, snowmen] of [[BULLET.size.desktop, SNOWMAN.height * COMPONENT.snowScale * SNOW_GROW.desktop], [BULLET.size.mobile, SNOWMAN.height * COMPONENT.snowScale * COMPONENT.snowMobile * SNOW_GROW.mobile]]) {
-    assert.ok(size > snowmen * 1.05 && size < snowmen * 1.5, `${size} beside snowmen ${snowmen} tall`);
+  const { growth } = await import('../src/components/garden/eggs/egg.ts');
+  const at = progressAt(snowAgain.month), stop = STOPS[MILESTONES.indexOf(snowAgain) + 1];
+  for (const width of [1, MOBILE_RIVER_WIDTH]) {
+    const mobile = width < 1, spot = snowSpot(SNOW_SPOTS[2025], snowAgain.month, width);
+    const scale = COMPONENT.snowScale[2025] * (mobile ? COMPONENT.snowMobile : 1) * growth(mobile, SNOW_GROW);
+    // Whole in the picture with a margin, on the side of it where their bank
+    // is (right on desktop, left on a phone), from the stop, where the still
+    // shows them, while the flurry clears and on to half a share.
+    const side = mobile ? -1 : 1, margin = mobile ? 1.4 : 3;
+    assert.ok(stop < at + FLURRY.clear * ROOM);
+    for (let p = stop; p <= at + .5 * ROOM; p += .001) {
+      const pose = cameraPose(p, width), [cx, cy, cz] = pose.position;
+      const { bearing, distance } = seen(p, width, spot.x, spot.z), half = degrees(Math.atan((HOLD.apart / 2 + SNOWMAN.balls[0][0]) * scale / distance));
+      assert.ok(side * bearing - half > 0 && side * bearing + half < halfView(width) - margin, `bearing ${bearing.toFixed(1)}° at ${p} (width ${width})`);
+      // Feet to hats within the picture's height, and large enough to read.
+      const tilt = degrees(Math.atan2(pose.target[1] - cy, Math.hypot(pose.target[0] - cx, pose.target[2] - cz)));
+      const top = degrees(Math.atan2(spot.y + SNOWMAN.height * scale - cy, distance)) - tilt, foot = degrees(Math.atan2(spot.y - cy, distance)) - tilt;
+      assert.ok(top < halfHeight(width) - 3 && foot > -halfHeight(width) + 3, `feet to hats in the picture at ${p}`);
+      // At least 55 pixels tall on a 390 × 844 phone, 90 on a 1440 × 900 desktop.
+      const pixels = (top - foot) / (2 * halfHeight(width)) * (mobile ? 844 : 900);
+      assert.ok(pixels > (mobile ? 55 : 90), `${pixels.toFixed(0)} pixels tall at ${p}`);
+    }
   }
-  const triangles = geometry => (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3;
-  const bullet = bulletGeometry(), plinth = bulletPlinthGeometry();
-  assert.ok(triangles(bullet) + triangles(plinth) < 1500, `${triangles(bullet) + triangles(plinth)} triangles`);
-  for (const geometry of [bullet, plinth]) {
-    assert.equal(geometry.groups.length, 0, 'one draw call each');
-    assert.ok([...geometry.attributes.position.array].every(Number.isFinite));
-    geometry.computeBoundingBox();
-  }
-  // Upright, its tip 1 above the ground, standing on the plinth's top, the plinth sunk a little into the lawn.
-  assert.ok(Math.abs(bullet.boundingBox.max.y - 1) < 1e-6 && Math.abs(bullet.boundingBox.min.y - BULLET_MODEL.top) < 1e-6);
-  assert.ok(Math.abs(plinth.boundingBox.max.y - BULLET_MODEL.top) < 1e-6 && plinth.boundingBox.min.y < 0);
-  assert.ok(Math.abs(plinth.boundingBox.max.x - BULLET_MODEL.plinth) < 1e-6 && bullet.boundingBox.max.x <= BULLET_MODEL.radius + 1e-6);
-  // Brass below and copper at the tip.
-  const colours = bullet.attributes.color, positions = bullet.attributes.position;
-  let brass = 0, copper = 0;
-  for (let i = 0; i < positions.count; i++) {
-    const [r, g, b] = [colours.getX(i), colours.getY(i), colours.getZ(i)];
-    if (positions.getY(i) < .5) brass += g / r > .7 && r > b ? 1 : 0;
-    if (positions.getY(i) > .62) copper += g / r < .7 && r > b ? 1 : 0;
-  }
-  assert.ok(brass > 0 && copper > 0);
-  const source = readFileSync(new URL('../src/components/garden/eggs/BulletOrnament.tsx', import.meta.url), 'utf8');
-  assert.ok(!source.includes('castShadow'), 'casts no shadow');
+  // On a phone 2025's oar, nearer the camera on the same bank, isn't in front of them at the stop.
+  const { YEAR_MARKERS, yearMarkerSpot } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
+  const scale = COMPONENT.snowScale[2025] * COMPONENT.snowMobile * growth(true, SNOW_GROW);
+  const spot = snowSpot(SNOW_SPOTS[2025], snowAgain.month, MOBILE_RIVER_WIDTH), oar = yearMarkerSpot(YEAR_MARKERS.find(m => m.year === 2025), MOBILE_RIVER_WIDTH);
+  const them = seen(stop, MOBILE_RIVER_WIDTH, spot.x, spot.z), it = seen(stop, MOBILE_RIVER_WIDTH, oar.x, oar.z);
+  const apart = Math.abs(them.bearing - it.bearing) - degrees(Math.atan((HOLD.apart / 2 + SNOWMAN.balls[0][0]) * scale / them.distance)) - degrees(Math.atan(.2 * oar.scale / it.distance));
+  assert.ok(apart > .5, `the oar ${apart.toFixed(1)}° clear of the snowmen at the stop`);
+  // A little smaller than July 2019's lone snowman, as there are two.
+  assert.ok(COMPONENT.snowScale[2025] < COMPONENT.snowScale[2019] * .9);
 });
 
 test('the Hagia Sophia stands far off past the S-bend, on level ground back from the left bank, under the balloon at the trip\'s stop', async () => {

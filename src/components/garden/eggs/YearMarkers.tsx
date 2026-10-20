@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { useJourney } from '../JourneyProvider';
 import type { SlotProps } from '../JourneyProvider';
 import { TREE_MODELS } from '../GardenTrees';
-import { YEAR_MARKERS, yearCarving, yearMarkerShown, yearMarkerSpot, type YearCarving, type YearMarker } from './yearMarkerSpots';
+import { YEAR_MARKERS, markerSide, yearCarving, yearMarkerShown, yearMarkerSpot, type YearCarving, type YearMarker } from './yearMarkerSpots';
 import { yearAtlas, yearCarvingTextures, yearMarkerModel } from './yearMarkerGeometry';
 import { barkPatchGeometry, treeMatrix } from './barkCarvingGeometry';
 import { treeMesh } from './BarkCarvings';
@@ -49,7 +49,7 @@ function CarvedYear({ marker, mobile, width }: { marker: YearMarker & { carved: 
 
 export default function YearMarkers({ paused, mobile, width }: SlotProps) {
   const clock = useJourney();
-  const models = useMemo(() => YEAR_MARKERS.map((marker, i) => marker.medium === 'carving' ? null : yearMarkerModel({ ...marker, medium: marker.medium }, i)), []);
+  const models = useMemo(() => YEAR_MARKERS.map((marker, i) => marker.medium === 'carving' ? null : yearMarkerModel({ ...marker, medium: marker.medium }, i, markerSide(marker, width))), [width]);
   // Each marker has its own pair of materials, to dissolve on its own; they
   // share one shader. Hashed alpha fades the solid body without sorting.
   const { atlas, materials } = useMemo(() => {

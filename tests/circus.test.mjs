@@ -98,7 +98,6 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
   const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
   const { ORNAMENTS: WORK, ornamentSpot: workSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
   const { ORNAMENTS: UNI, ornamentSpot: uniSpot } = await import('../src/components/garden/eggs/uniOrnaments.ts');
-  const { bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
   const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { operaHouseSpot } = await import('../src/components/garden/eggs/harbour.ts');
   for (const [width] of LAYOUTS) {
@@ -111,34 +110,56 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
       ...Object.values(nestSpots(width)).map(house => ['birdhouse', house]),
       ...WORK.map(ornament => [`${ornament.facing} ornament`, workSpot(ornament, width)]),
       ...Object.entries(UNI).map(([name, ornament]) => [name, uniSpot(ornament, width)]),
-      ['bullet', bulletSpot(width)],
       ['Hagia Sophia', hagiaSophiaSpot('2026-07', width)],
-      ['Opera House', operaHouseSpot(width)],
+      ...(width < 1 ? [] : [['Opera House', operaHouseSpot(width)]]),
     ];
     for (const [id, rig] of Object.entries(RIGS)) {
       const spot = hangSpot(rig, width);
       for (const [name, other] of others) assert.ok(Math.hypot(other.x - spot.x, other.z - spot.z) > 5, `${name} crowds the ${id} (width ${width})`);
     }
-    // The silk on its own, years before the lyra.
+    // On a phone the silk hangs just beyond the Opera House, which stays
+    // until it has left the picture (Amelia, October 2026), so it is held
+    // to clear its podium rather than its middle: down the river from it.
+    if (width < 1) {
+      const { OPERA } = await import('../src/components/garden/eggs/harbour.ts');
+      const house = operaHouseSpot(width), silk = hangSpot(SILK, width);
+      assert.ok(silk.z < house.z - OPERA.width * house.scale / 2 - 1.5, 'the silk down the river from the Opera House on a phone');
+    }
+    // The silk on its own, years before the lyra (on a phone it hangs a
+    // little further down than desktop's, beyond the Opera House).
     const [silk, lyra] = [SILK, LYRA].map(rig => hangSpot(rig, width));
-    assert.ok(Math.abs(silk.z - lyra.z) > 40);
+    assert.ok(Math.abs(silk.z - lyra.z) > 35);
   }
 });
 
-test('the silk never hangs in front of or behind the Opera House in the picture, on the same bank', async () => {
+test('the silk never hangs in front of the Opera House in the picture, on the same bank, nor mostly behind it', async () => {
+  // On desktop it is always clear beside the house. On a phone the house
+  // now stays until the camera has passed it (Amelia, October 2026: it used
+  // to fade away before the silk came in), and a phone sees too little of
+  // the bank for the two to stand apart there while the silk's stretch
+  // (November 2022 to January 2023's stop) is also clear of the flower bed
+  // at March's stop, so the silk hangs just beyond the house's last shells:
+  // never in front of it, and with more than half its length clear above it.
   const { OPERA, harbourShown, operaHouseSpot } = await import('../src/components/garden/eggs/harbour.ts');
   for (const [width, aspect, fov] of LAYOUTS) {
     const half = halfView(aspect, fov), house = operaHouseSpot(width), silk = hangSpot(SILK, width);
     const c = Math.cos(house.yaw), s = Math.sin(house.yaw);
+    const podium = [-1, 1].flatMap(a => [-.5, .5].map(b => ({ x: house.x + (c * a * OPERA.width / 2 + s * b) * house.scale, z: house.z + (-s * a * OPERA.width / 2 + c * b) * house.scale })));
     for (let p = progressAt('2022-01'); p < progressAt('2023-03'); p += .001) {
-      const [cx, , cz] = cameraPose(p, width).position;
+      const [cx, cy, cz] = cameraPose(p, width).position;
       if (!rigShown(SILK, silk, p, cz, width < 1) || !harbourShown(p, cz, width < 1).opera) continue;
       const bearing = (x, z) => degrees(Math.atan2(x - cx, cz - z) - cameraHeading(p, width));
-      const corners = [-1, 1].flatMap(a => [-.5, .5].map(b => bearing(house.x + (c * a * OPERA.width / 2 + s * b) * house.scale, house.z + (-s * a * OPERA.width / 2 + c * b) * house.scale)));
+      const corners = podium.map(({ x, z }) => bearing(x, z));
       if (Math.max(...corners) < -half) continue;
       // Its tails, spread a little either side of where it hangs.
-      const tails = degrees(Math.atan(.25 * silk.scale / Math.hypot(silk.x - cx, silk.z - cz)));
-      assert.ok(bearing(silk.x, silk.z) - tails - Math.max(...corners) > 2, `the silk beside the Opera House at ${p} (width ${width})`);
+      const away = Math.hypot(silk.x - cx, silk.z - cz), tails = degrees(Math.atan(.25 * silk.scale / away));
+      if (bearing(silk.x, silk.z) - tails - Math.max(...corners) > 2) continue;
+      assert.ok(width < 1, `the silk beside the Opera House at ${p} (width ${width})`);
+      assert.ok(podium.every(({ x, z }) => Math.hypot(x - cx, z - cz) < away), `the silk in front of the Opera House at ${p}`);
+      const rise = (x, y, z) => degrees(Math.atan2(y - cy, Math.hypot(x - cx, z - cz)));
+      const top = rise(silk.x, silk.y, silk.z), foot = rise(silk.x, silk.ground, silk.z);
+      const roof = Math.max(...podium.map(({ x, z }) => rise(x, house.y + .49 * house.scale, z)));
+      assert.ok((top - roof) / (top - foot) > .5, `the silk hidden behind the Opera House at ${p}`);
     }
   }
 });

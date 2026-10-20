@@ -21,7 +21,6 @@ import { LIFT, barkPatch, treeMatrix } from '../src/components/garden/eggs/barkC
 import { RIGS, hangSpot, rigShown, rigTree } from '../src/components/garden/eggs/circusRigs.ts';
 import { harbourShown, operaHouseSpot } from '../src/components/garden/eggs/harbour.ts';
 import { nestSpots } from '../src/components/garden/eggs/nesting.ts';
-import { bulletSpot } from '../src/components/garden/eggs/bulletOrnament.ts';
 import { CANDLE, CANDLES, CANDLESTICKS, ORNAMENTS as WORK_ORNAMENTS, PIE, ornamentShown as workShown, ornamentSpot as workSpot } from '../src/components/garden/eggs/careerSpots.ts';
 
 const degrees = radians => radians * 180 / Math.PI;
@@ -399,7 +398,7 @@ test('each is wholly in the picture through its stretch, near enough to make out
 test('they keep clear of the other scenery, on the ground and in the picture', () => {
   for (const width of WIDTHS) {
     const mobile = width < 1, all = trees(width);
-    const ground = [piSpot(mobile, width), snowSpot(SNOW_SPOTS[2019], '2019-07', width), snowSpot(SNOW_SPOTS[2025], '2025-08', width), operaHouseSpot(width), bulletSpot(width),
+    const ground = [piSpot(mobile, width), snowSpot(SNOW_SPOTS[2019], '2019-07', width), snowSpot(SNOW_SPOTS[2025], '2025-08', width), operaHouseSpot(width),
       ...YEAR_MARKERS.map(marker => yearMarkerSpot(marker, width)), ...CAPS.tosses.map(toss => capLanding('2020-08', toss, width)),
       ...DUCKS.launches.map((_, i) => duckLaunchSpot(i, width)), ...Object.values(spots(width)), ...WORK_ORNAMENTS.map(work => workSpot(work, width)),
       ...Object.values(RIGS).map(rig => hangSpot(rig, width)), ...Object.values(nestSpots(width))];

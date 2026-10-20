@@ -12,7 +12,9 @@ import { OPERA, archAt, harbourBridge, operaHouseSpot, type HarbourBridge } from
 type V = THREE.Vector3;
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const TILE = '#f3f0e6', TILE_SHADE = '#e6e1d4', GLASS = '#6f5d4a', PODIUM = '#a88f7a', STEPS = '#b9a28c';
-const GRANITE = '#aaa395', GRANITE_LIGHT = '#bab3a5', GRANITE_DARK = '#8f897e', STEEL = '#6f797d', STEEL_DARK = '#5f686c', ROAD = '#4f5354';
+// The bridge's steel is a dark grey (Amelia, October 2026: it read too pale;
+// it was #6f797d, #5f686c and the road #4f5354).
+const GRANITE = '#aaa395', GRANITE_LIGHT = '#bab3a5', GRANITE_DARK = '#8f897e', STEEL = '#4a5155', STEEL_DARK = '#3b4144', ROAD = '#3a3d3e';
 
 // Pieces in vertex colours, each a shade lighter or darker face by face so it
 // looks weathered rather than new, merged into one geometry. Each keeps the
