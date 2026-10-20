@@ -1,14 +1,15 @@
-// The seasons in the garden, chosen for the story rather than the calendar.
-// Summer, the garden as it always looked, holds for most of the voyage; it
-// turns only a handful of times, each over a long stretch of scroll where the
-// scenery is quiet: a mild winter for each snow trip (July 2019, August 2025),
-// a short autumn in the quiet stretch after the Harbour Bridge (2021), and
-// spring blossom after the second snow trip, through salsa and the
-// engagement. Understated by design, so the eggs stay what the eye finds: a
-// few trees change, not the avenue. A painter's wash over the trees, grass,
-// plants and light, never a filter: GardenSeasons.tsx feeds it to the
-// shaders, GardenSky.tsx to the light, GardenDrift.tsx to the falling leaves
-// and petals. Pure, so it can be tested (tests/seasons.test.mjs).
+// The seasons in the garden: one cycle over the whole voyage, following the
+// story's years in the Australian seasons. Winter from the opening title
+// through 2017 to 2019 (they met in July 2017; the 2019 snow trip falls in
+// it), spring through 2020 to 2022, summer (the garden as it always looked)
+// through 2023 to 2025, and autumn through 2026 and 2027, the engagement, the
+// bend and the dock. It changes three times, each easing over a quiet stretch
+// of scroll near the January it stands for. Understated by design, so the
+// eggs stay what the eye finds: a few trees change, not the avenue. A
+// painter's wash over the trees, grass, plants and light, never a filter:
+// GardenSeasons.tsx feeds it to the shaders, GardenSky.tsx to the light,
+// GardenDrift.tsx to the falling leaves and petals. Pure, so it can be tested
+// (tests/seasons.test.mjs).
 import { MILESTONES, STOPS, progressAt } from './journey.ts';
 import { treeBase, treePlacements } from './gardenTreeSpots.ts';
 import { cameraPose } from './cameraRig.ts';
@@ -32,38 +33,36 @@ const AMOUNTS = Object.keys(NEUTRAL) as (keyof Season)[];
 
 // Summer is the garden exactly as it is with the seasons off.
 export const SUMMER: Season = { ...NEUTRAL };
-export const AUTUMN: Season = { ...NEUTRAL, turn: 1, bare: .15, dry: 1, petals: .7 };
-// A soft, bright, crisp winter: a few trees sparse, the grass a little paler.
-export const WINTER: Season = { ...NEUTRAL, bare: 1, pale: 1, petals: .5 };
+// A warm, lovely autumn: the trees that turn go gold and amber, none thin.
+export const AUTUMN: Season = { ...NEUTRAL, turn: 1, dry: .6, petals: .6 };
+// A soft, bright winter: a few trees sparse, the grass a little paler.
+export const WINTER: Season = { ...NEUTRAL, bare: .8, pale: .8, petals: .4 };
 export const SPRING: Season = { ...NEUTRAL, fresh: 1, blossom: 1 };
 
 // The seasons over scroll progress p: each holds from one key to the next of
 // the same season and eases between seasons over the scroll from one key to
-// the next (about 40 to 80svh), in stretches with little else in the
-// picture (see /dev/timeline). Dates are where those stretches fall.
+// the next (about 40svh), in stretches with little else in the picture (see
+// /dev/timeline), each as near as it can be to the January it stands for.
 export const SEASON_KEYS: readonly { at: number; season: Season; name: string }[] = [
-  { at: 0, season: SUMMER, name: 'summer' },
-  // Coming into 2019 (after the internship's November), winter by April for
-  // the snowman's flurry in July, gone by the summer of 2020.
-  { at: .238, season: SUMMER, name: 'summer' },
-  { at: .262, season: WINTER, name: 'winter' },
-  { at: .29, season: WINTER, name: 'winter' },
-  { at: .312, season: SUMMER, name: 'summer' },
-  // After the Harbour Bridge (February 2021), autumn through 2021's middle.
-  { at: .389, season: SUMMER, name: 'summer' },
-  { at: .407, season: AUTUMN, name: 'autumn' },
-  { at: .423, season: AUTUMN, name: 'autumn' },
-  { at: .441, season: SUMMER, name: 'summer' },
-  // Early 2025 into winter for the snowmen holding hands (August 2025), then
-  // spring from that October, blossom through salsa and the engagement,
-  // back to summer over the trip (July 2026), before the bend.
-  { at: .645, season: SUMMER, name: 'summer' },
-  { at: .665, season: WINTER, name: 'winter' },
-  { at: .69, season: WINTER, name: 'winter' },
-  { at: .712, season: SPRING, name: 'spring' },
-  { at: .775, season: SPRING, name: 'spring' },
-  { at: .81, season: SUMMER, name: 'summer' },
-  { at: 1, season: SUMMER, name: 'summer' },
+  // 2017 to 2019, from the opening title: winter. They met in July 2017, in
+  // the Australian winter, and the snow trip of July 2019 falls inside it.
+  { at: 0, season: WINTER, name: 'winter' },
+  // Into spring across New Year 2020 (p .3085), after the snowman's flurry
+  // and before the graduation's mortarboards, so graduation's still is in
+  // blossom.
+  { at: .298, season: WINTER, name: 'winter' },
+  { at: .318, season: SPRING, name: 'spring' },
+  // 2020 to 2022: spring. Into summer over the end of 2022, after the Opera
+  // House, before 2023's January (p .4932) and the HeirWealth still there.
+  { at: .471, season: SPRING, name: 'spring' },
+  { at: .492, season: SUMMER, name: 'summer' },
+  // 2023 to 2025: summer, the 2025 snowmen bringing their own flurry. Into
+  // autumn after that flurry, before salsa's still on 2026's January (p
+  // .7148); autumn then holds through the engagement (April 2026), the bend
+  // and the dock (April 2027).
+  { at: .696, season: SUMMER, name: 'summer' },
+  { at: .714, season: AUTUMN, name: 'autumn' },
+  { at: 1, season: AUTUMN, name: 'autumn' },
 ];
 
 const smooth = (x: number) => {
@@ -102,13 +101,14 @@ export function seasonName(p: number) {
 }
 
 // The light's share of the season, kept tiny so it never fights the day's
-// sky (skyCycle.ts): winter's sun a shade whiter and its fill light a little
-// brighter, crisp rather than gloomy; autumn's sun a touch warmer, spring's
-// fill a shade brighter. Multipliers for the sun's colour and intensity and
-// the hemisphere light's intensity, never darker than summer's.
+// sky (skyCycle.ts): winter's sun and fill light a little brighter and its
+// sun no cooler (the dawn under the title stays warm), soft rather than
+// gloomy; autumn's sun a touch warmer, spring's fill a shade brighter.
+// Multipliers for the sun's colour and intensity and the hemisphere light's
+// intensity, never darker than summer's.
 export function seasonLight(s: Season) {
   return {
-    sunColor: [1 + .02 * s.turn - .01 * s.pale, 1, 1 - .03 * s.turn + .02 * s.pale] as [number, number, number],
+    sunColor: [1 + .02 * s.turn, 1, 1 - .03 * s.turn - .01 * s.pale] as [number, number, number],
     sunIntensity: 1 + .02 * s.pale,
     hemi: 1 + .04 * s.pale + .02 * s.fresh,
   };
@@ -140,23 +140,29 @@ export const petalShown = (i: number, n: number, s: Season) => Math.min(1, Math.
 
 // Which trees take part, and how (GardenTrees.tsx hands each tree's role to
 // its leaves' shader as the instance's colour; GardenSeasons.tsx reads it).
-// Every other tree, the shrubs and the old tree at the dock stay as they are
-// all year. A few trees are featured, so each season shows on a tree or two
+// Every other tree and the shrubs stay as they are all year, and the old tree
+// at the dock only takes a touch of autumn (`old`): some of its cards go
+// gold, never thinning or blossoming, so it stays the tree it is under the
+// festoons. A few trees are featured, so each season shows on a tree or two
 // the guest really sees: at each of its moments (FEATURED), the ash whose
 // crown stands largest in the picture to one side, clear of the middle, on
 // that layout (desktop or phone). Behind them a hash of where each ash
 // stands has a few more turn (`turns` and up) and grow sparse (`sparse` and
 // up), for depth. Blossom is only ever on the featured trees, so spring
 // reads as a handful of flowering trees rather than a tint across many.
-export const ROLE = { still: 0, turns: 1, sparse: 2, blossom: 3 } as const;
+export const ROLE = { still: 0, turns: 1, sparse: 2, blossom: 3, old: 4 } as const;
 export type Role = typeof ROLE[keyof typeof ROLE];
 export const TREES = { turns: .88, sparse: .95 } as const;
+// The old tree at the dock's model type (oldTreePlacement in gardenTreeSpots.ts),
+// and how much of autumn's turn it takes: a share of its cards, and how far each goes.
+export const OLD_TREE_TYPE = 4;
+export const OLD_TREE_AUTUMN = { cards: .45, turn: .55 } as const;
 // The moments each season features a tree at: a milestone's stop and its
 // still (by id), or a progress. `sparse` trees also turn in autumn.
 export const FEATURED: readonly { role: Role; at: readonly (string | number)[] }[] = [
-  { role: ROLE.sparse, at: ['snow-2019', 'snow-2025'] },
-  { role: ROLE.turns, at: [.405, .415, .425] },
-  { role: ROLE.blossom, at: ['salsa', 'engaged'] },
+  { role: ROLE.sparse, at: ['meet', 'snow-2019'] },
+  { role: ROLE.blossom, at: ['graduation', .41, 'interim'] },
+  { role: ROLE.turns, at: ['salsa', 'engaged', 'turkey-greece', .86, .95, 1] },
 ];
 // Where a featured crown must stand: its middle this far in front of the
 // camera, and across the picture (0 the middle, 1 the edge) and up it.
@@ -185,14 +191,17 @@ export function featuredTrees(width: number, mobile: boolean): Map<string, Role>
     const view = viewOf(cameraPose(p, width));
     let best: { tree: typeof ashes[number]; pixels: number } | null = null;
     for (const tree of ashes) {
+      // A tree another season already features is passed over for the next.
+      const taken = picks.get(key(tree.x, tree.z));
+      if (taken !== undefined && taken !== role) continue;
       const crown = project({ centre: [tree.x, treeBase(tree, width) + 6 * tree.scale, tree.z], radius: 3.5 * tree.scale }, view, lens);
       if (!crown.screen || crown.depth < depth[0] || crown.depth > depth[1]) continue;
       const x = Math.abs(crown.screen[0]), y = crown.screen[1];
       if (x < across[0] || x > across[1] || y < up[0] || y > up[1]) continue;
       if (!best || crown.pixels > best.pixels) best = { tree, pixels: crown.pixels };
     }
-    // A stop and its still often share their tree, which keeps its first role.
-    if (best && !picks.has(key(best.tree.x, best.tree.z))) picks.set(key(best.tree.x, best.tree.z), role);
+    // A stop and its still often share their tree.
+    if (best) picks.set(key(best.tree.x, best.tree.z), role);
   }
   featured.set(`${width},${mobile}`, picks);
   return picks;
@@ -203,6 +212,7 @@ export function featuredTrees(width: number, mobile: boolean): Map<string, Role>
 // (gardenTreeSpots.ts: 0 to 3 the ashes), on a layout.
 export function treeSeason(x: number, z: number, type: number, width: number, mobile: boolean): { role: Role; shade: number } {
   const shade = hash(x, z, 7.1);
+  if (type === OLD_TREE_TYPE) return { role: ROLE.old, shade };
   if (type > 3) return { role: ROLE.still, shade };
   const pick = featuredTrees(width, mobile).get(key(x, z));
   if (pick !== undefined) return { role: pick, shade };
