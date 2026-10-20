@@ -41,5 +41,7 @@ test('the first script reaches neither three.js nor React Three Fiber', () => {
   assert.deepEqual(three.map(({ file, spec }) => `${chain(file)} imports ${spec}`), []);
   // The scene is still there, behind the lazy import.
   assert.ok(!files.some(file => file.endsWith('GardenCanvas.tsx')));
-  assert.match(readFileSync(join(garden, 'Garden.tsx'), 'utf8'), /lazy\(\(\) => import\('\.\/GardenCanvas'\)\)/);
+  const source = readFileSync(join(garden, 'Garden.tsx'), 'utf8');
+  assert.match(source, /= \(\) => import\('\.\/GardenCanvas'\)/);
+  assert.match(source, /const GardenCanvas = lazy\(/);
 });

@@ -28,7 +28,12 @@ import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
 
-const GardenCanvas = lazy(() => import('./GardenCanvas'));
+// The scene's code is fetched as soon as this script runs, not once the page
+// has hydrated and mounted it, so its downloads start about half a second
+// sooner on a phone (docs/VOYAGE.md, "Scene ready").
+const loadCanvas = () => import('./GardenCanvas');
+const canvasChunk = typeof window === 'undefined' ? null : loadCanvas();
+const GardenCanvas = lazy(() => canvasChunk ?? loadCanvas());
 const BASE = import.meta.env.BASE_URL;
 function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, onRetire }: {
   visit: ButterflyVisit; paused: boolean; available: boolean; openingReleased: boolean; onLand: () => void; onRetire: (id: number) => void;
