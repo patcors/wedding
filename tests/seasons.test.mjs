@@ -134,7 +134,7 @@ test('a good share of the avenue takes part in each season, in view at its miles
       const got = share(PART[k]);
       assert.ok(got >= v - .08 && got <= v + .1, `${layout}: ${Math.round(got * 100)}% of the ashes ${k}, meant ${v * 100}%`);
     }
-    // The shrubs never change; the old tree at the dock turns in autumn and nothing else.
+    // The shrubs take no part; the old tree at the dock is an evergreen, which no season touches.
     for (const t of trees.filter(t => t.type > 3)) assert.equal(treeSeason(t.x, t.z, t.type, lens.width, mobile).parts, 0);
     const old = oldTreePlacement(lens.width, mobile);
     assert.equal(old.type, OLD_TREE_TYPE);

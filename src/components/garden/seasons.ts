@@ -3,7 +3,8 @@
 // through 2017 to 2019 (they met in July 2017; the 2019 snow trip falls in
 // it), spring through 2020 to 2022, summer (the garden as it always looked)
 // through 2023 to 2025, and autumn through 2026 and 2027, the engagement, the
-// bend and the dock. It changes three times, each easing over a quiet stretch
+// bend and the dock. The old tree at the dock is an evergreen, the same in
+// every season. It changes three times, each easing over a quiet stretch
 // of scroll near the January it stands for. Each season has its own palette
 // (Amelia, October 2026): a crisp, cool winter with many trees bare and the
 // grass frosted, cherry blossom and flowers on the banks in spring, the
@@ -164,22 +165,19 @@ export const FLOWER_GROWTH = 1.4, CLOVER_FLOWERS = { share: .5, lift: .2 } as co
 // the avenue apiece (SHARES): in winter a good number stand bare, in autumn
 // most turn, in spring a fair few blossom. The rest of the avenue changes only
 // a little (its leaves cooler in winter, fresher in spring, warmer in
-// autumn), and the shrubs not at all. The old tree at the dock (`old`) turns
-// in autumn, never thinning or blossoming, so it stays the tree it is under
-// the festoons. A few trees are featured besides, so each season shows on a
+// autumn), and the shrubs not at all. The old tree at the dock (`old`) is an
+// evergreen, as the real one is: no season touches it. A few trees are featured besides, so each season shows on a
 // tree the guest really sees: at each of its moments (FEATURED), the ash
 // whose crown stands largest in the picture to one side, clear of the middle,
 // on that layout (desktop or phone).
 export const ROLE = { still: 0, turns: 1, sparse: 2, blossom: 3 } as const;
 export type Role = typeof ROLE[keyof typeof ROLE];
 // A tree's parts, as bits: it turns in autumn, stands bare in winter,
-// blossoms in spring, or is the old tree at the dock.
+// blossoms in spring, or is the old tree at the dock, which stays as it is.
 export const PART = { turns: 1, bare: 2, blossom: 4, old: 8 } as const;
 export const SHARES = { turns: .6, bare: .6, blossom: .16 } as const;
-// The old tree at the dock's model type (oldTreePlacement in gardenTreeSpots.ts),
-// and how much of autumn's turn it takes: a share of its cards, and how far each goes.
+// The old tree at the dock's model type (oldTreePlacement in gardenTreeSpots.ts).
 export const OLD_TREE_TYPE = 4;
-export const OLD_TREE_AUTUMN = { cards: .75, turn: .85 } as const;
 // The moments each season features a tree at: a milestone's stop and its
 // still (by id), or a progress. `sparse` trees, bare in winter, also turn in autumn.
 export const FEATURED: readonly { role: Role; at: readonly (string | number)[] }[] = [
