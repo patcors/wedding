@@ -11,10 +11,10 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './GardenSky';
 import { WATERS, type WaterStyle } from './skyCycle';
-import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
+import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, scrollAtProgress, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
-import { PLACE_KEY, placeToKeep, placeToReopen, scrollFor } from './voyagePlace';
+import { PLACE_KEY, placeToKeep, placeToReopen, progressFor, scrollFor } from './voyagePlace';
 import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
@@ -77,7 +77,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
     // `travelling`: the scroll was sent to a stop, so it may be further ahead than the leash allows.
     // `kept`: the scroll's last progress, and `spanned`, the span it was read in.
     let frame = 0, shown: string | null | undefined, changed = -Infinity, travelling = false;
-    let kept = Math.min(1, element.scrollTop / span()), spanned = span();
+    let kept = progressFor(element.scrollTop, span()), spanned = span();
     const show = (p: number, settled: boolean, now: number) => {
       setChapter(chapterAt(p));
       setAway(namesAway(p));
@@ -93,7 +93,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       const now = performance.now();
       advancePace(pace, now);
       // The glide moves the scroll with it, so a guest who takes over carries on from there.
-      if (pace.glide) element.scrollTop = pace.progress * span();
+      if (pace.glide) element.scrollTop = scrollFor(pace.progress, span());
       setGliding(pace.glide !== null);
       const settled = !pace.glide && pace.progress === pace.target;
       setStill(atRest(pace));
@@ -109,7 +109,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
         element.scrollTop = scrollFor(kept, spanned);
         return;
       }
-      const scroll = kept = Math.min(1, element.scrollTop / span());
+      const scroll = kept = progressFor(element.scrollTop, span());
       if (reduced) {
         // The scene cuts to each milestone's still, and so does the page.
         const still = stillProgress(scroll);
@@ -121,7 +121,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       if (!pace.glide && !travelling) {
         // However far a fling goes, the page stays within reach of the story.
         target = leashed(scroll, pace.progress);
-        if (target !== scroll) element.scrollTop = target > scroll ? Math.ceil(target * span()) : Math.floor(target * span());
+        if (target !== scroll) element.scrollTop = target > scroll ? Math.ceil(scrollAtProgress(target) * span()) : Math.floor(scrollAtProgress(target) * span());
       }
       if (!pace.glide) pace.target = target;
       setProgress(target);
@@ -144,7 +144,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       if (jump || reduced) pace.progress = next;
       pace.target = next;
       setProgress(next);
-      element.scrollTo({ top: span() * next, behavior: 'instant' });
+      element.scrollTo({ top: span() * scrollAtProgress(next), behavior: 'instant' });
       wake();
     };
     controls.current = {
@@ -164,7 +164,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       takeOver(event);
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return;
       if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review, dialog')) return;
-      const at = element.scrollTop / span();
+      const at = progressFor(element.scrollTop, span());
       event.preventDefault();
       go(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
     };
@@ -172,7 +172,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
     // Safari, but others may): it is already there, so drop the place, or a
     // later reload would open at it.
     const restored = (event: PageTransitionEvent) => { if (event.persisted) try { sessionStorage.removeItem(PLACE_KEY); } catch { /* nothing kept */ } };
-    pace.progress = pace.target = Math.min(1, element.scrollTop / span());
+    pace.progress = pace.target = progressFor(element.scrollTop, span());
     update();
     addEventListener('pageshow', restored);
     element.addEventListener('scroll', update, { passive: true });

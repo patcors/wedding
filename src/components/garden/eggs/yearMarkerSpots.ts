@@ -55,7 +55,11 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // until the Hagia Sophia has sunk back into the haze, and dissolves in as
 // November 2026 shows, well before December's frame of the two hearts.
 export const YEAR_MARKERS: readonly YearMarker[] = [
-  { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45, grow: { mobile: 1.15 } },
+  // 2017's stands where it always has, in view under the title: since the
+  // boats set off faster from the title (OPENING_PACE in journey.ts), they
+  // are 3.9 units further on as January 2017 shows, so its lead is that much
+  // shorter than the 8 it had.
+  { year: 2017, medium: 'signpost', side: -1, lead: 4.11, inland: .45, grow: { mobile: 1.15 } },
   { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1, grow: { mobile: .9 } },
   { year: 2019, medium: 'buoy', side: 1, lead: 3.5, share: .8, mobile: { lead: 3.5, share: .87 }, grow: { mobile: 1.3 } },
   { year: 2020, medium: 'carving', side: -1, lead: 8.6, carved: { arc: .95, from: 1.2, to: 2.2 } },

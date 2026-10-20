@@ -20,7 +20,7 @@ import { tmpdir, platform } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
-import { MILESTONES, STOPS, dateLabel, stillProgress } from '../src/components/garden/journey.ts';
+import { MILESTONES, STOPS, dateLabel, progressAtScroll, scrollAtProgress, stillProgress } from '../src/components/garden/journey.ts';
 import { paceToward } from '../src/components/garden/journeyPace.ts';
 import {
   USAGE, UsageError, contactSheetLayout, diffStats, dilate, escapeXml, frameLabel, indexHtml, outDirName, when,
@@ -218,7 +218,8 @@ async function waitReady(page, url, timeout) {
 }
 
 const SCROLLER = `document.querySelector('main.garden-prototype')`;
-const scrollTo = p => `(() => { const m = ${SCROLLER}; const span = Math.max(1, m.scrollHeight - m.clientHeight); m.scrollTop = ${p} * span; return m.scrollTop / span; })()`;
+// The opening takes less scroll than the rest, so progress isn't the scroll's share (progressAtScroll).
+const scrollTo = p => `(() => { const m = ${SCROLLER}; const span = Math.max(1, m.scrollHeight - m.clientHeight); m.scrollTop = ${scrollAtProgress(p)} * span; return m.scrollTop / span; })()`;
 const frames = `new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => done(true))))`;
 // Until the page's fades (the copy's) have finished, or 5s:
 // no finite animation running for ten frames in a row, since React can start
@@ -272,7 +273,7 @@ async function shootViewport(cdp, base, viewport, stops, options, dir) {
         await page.evaluate(fadesDone, 10_000);
         await sleep(options.settle);
       }
-      const reached = await page.evaluate(`(() => { const m = ${SCROLLER}; return m.scrollTop / Math.max(1, m.scrollHeight - m.clientHeight); })()`);
+      const reached = progressAtScroll(await page.evaluate(`(() => { const m = ${SCROLLER}; return m.scrollTop / Math.max(1, m.scrollHeight - m.clientHeight); })()`));
       if (Math.abs(reached - stop.p) > 2e-3) console.warn(`  ${viewport.name} ${stop.id}: the page stopped at ${reached.toFixed(4)}, not ${stop.p.toFixed(4)}`);
       at = stop.p;
       await page.evaluate(frames, 10_000);
