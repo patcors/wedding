@@ -261,7 +261,8 @@ const SKIP_AFTER = 10000;
 
 const REVIEW = import.meta.env.DEV;
 if (REVIEW) void import('./gardenReview.css');
-// Dev only: the monogram hides and shows the Review panel, remembered across reloads.
+// Dev only: the monogram, the panel's × and the Review tab hide and show the
+// Review panel, remembered across reloads.
 const REVIEW_HIDDEN = 'pa_dev_review_hidden';
 // Dev only: the Review sky and water, remembered; GardenPage reads the sky to colour Safari's bars to match.
 const REVIEW_SKY = 'pa_dev_sky';
@@ -550,7 +551,9 @@ export default function Garden() {
         <button className={`garden-wander ${explored ? 'is-done' : ''}`} onClick={() => goToProgress(nextStop(progress))}>Wander with us</button>
       </div>
     </div>
+    {REVIEW && !showReview && <button className="garden-review-show" onClick={toggleReview}>Review</button>}
     {REVIEW && showReview && <aside className="garden-review" aria-label="Review panel">
+      <button className="garden-review-hide" onClick={toggleReview} aria-label="Hide the Review panel">×</button>
       <span className="garden-study-label">Garden study <b>02</b></span>
       <span className="garden-review-divider" />
       <details className="garden-butterfly-colours">

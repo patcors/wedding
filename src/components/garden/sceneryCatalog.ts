@@ -24,7 +24,7 @@ import { growth } from './eggs/egg.ts';
 import { ORNAMENTS as UNI, CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, grownCut, ornamentSpot as uniSpot, type CarvingId } from './eggs/uniOrnaments.ts';
 import { MOBIUS_PLINTH, mobiusGeometry } from './eggs/mobiusGeometry.ts';
 import { BENCH, parkBenchGeometry } from './eggs/parkBenchGeometry.ts';
-import { TRUNK_RADIUS, YEAR_MARKERS, markerShown, yearCarving, yearMarkerShown, yearMarkerSpot, type YearMarker } from './eggs/yearMarkerSpots.ts';
+import { TRUNK_RADIUS, YEAR_MARKERS, markerShown, markerSide, yearCarving, yearMarkerShown, yearMarkerSpot, type YearMarker } from './eggs/yearMarkerSpots.ts';
 import { yearMarkerModel } from './eggs/yearMarkerGeometry.ts';
 import { CANDLESTICKS, PIE, PIE_BED, candleBoxes, ornamentShown, ornamentSpot } from './eggs/careerSpots.ts';
 import { FLURRY, SNOW_GROW, SNOW_SPOTS, snowSpot } from './eggs/flurry.ts';
@@ -46,7 +46,6 @@ import { PROPOSAL, proposalTime } from './eggs/proposal.ts';
 import { BALLOONS, BALLOON_TIMES, HAGIA_TIMES, balloonSpot, hagiaShown, hagiaSophiaSpot } from './eggs/balloonCourse.ts';
 import { balloonGeometry } from './eggs/balloonGeometry.ts';
 import { hagiaSophiaGeometry } from './eggs/hagiaSophiaGeometry.ts';
-import { bulletShown, bulletSpot } from './eggs/bulletOrnament.ts';
 import type { Bank, Piece, Sphere } from './voyageTimeline.ts';
 
 // Numbers the scene keeps inside its components, copied here and checked
@@ -55,7 +54,7 @@ import type { Bank, Piece, Sphere } from './voyageTimeline.ts';
 // flurry's box (half extents, SnowReveal.tsx), and how far the silk and the
 // lyra hang clear of the ground (Circus.tsx).
 export const COMPONENT = {
-  snowScale: 1.25, snowMobile: .9,
+  snowScale: { 2019: 1.25, 2025: 1.06 }, snowMobile: .9,
   flurryBox: { across: 3.4, up: 3.4, along: 3.4 },
   silkClear: .15, lyraClear: 1.1,
 } as const;
@@ -118,7 +117,7 @@ export function sceneryCatalog(width: number): Piece[] {
   }
   const snow = (year: 2019 | 2025, milestone: string, model: () => THREE.BufferGeometry, what: string, file: string) => {
     const month = monthOf(milestone), spot = snowSpot(SNOW_SPOTS[year], month, width);
-    const scale = COMPONENT.snowScale * (mobile ? COMPONENT.snowMobile : 1) * growth(mobile, SNOW_GROW), box = COMPONENT.flurryBox;
+    const scale = COMPONENT.snowScale[year] * (mobile ? COMPONENT.snowMobile : 1) * growth(mobile, SNOW_GROW), box = COMPONENT.flurryBox;
     const passed = (cameraZ: number) => cameraZ > spot.z - 2, bank = bankOf(spot.x, spot.z, width);
     const flurry = sphere(spot.x, box.up * scale / 2, spot.z, Math.hypot(box.across, box.up / 2, box.along) * scale * .6);
     add({ id: `flurry-${year}`, name: `Snow flurry (${year})`, group: 'Milestone eggs', file: 'eggs/SnowReveal.tsx', bank, counts: true,
@@ -187,7 +186,7 @@ export function sceneryCatalog(width: number): Piece[] {
       shown: p => hagiaShown(scrolledSince(month, p)), spheres: () => [s] });
   }
 
-  // --- Ornaments: the university years, working lives, the circus, the truck, the bullet
+  // --- Ornaments: the university years, working lives, the circus, the truck
   for (const id of ['mobius', 'bench'] as const) {
     const footprint = id === 'mobius' ? MOBIUS_PLINTH.width / 2 : BENCH.length / 2, spot = uniSpot(UNI[id], width, footprint);
     const s = placed(local(id, id === 'mobius' ? mobiusGeometry : parkBenchGeometry), spot);
@@ -225,12 +224,6 @@ export function sceneryCatalog(width: number): Piece[] {
     add({ id: 'truck', name: 'Engagement truck', group: 'Ornaments', file: 'eggs/EngagementTruck.tsx', bank: bankOf(spot.x, spot.z, width), counts: true,
       shown: p => truckShown(p), spheres: () => [s] });
   }
-  {
-    // Upright, 1 tall in its own units, plinth to tip.
-    const spot = bulletSpot(width), s = sphere(spot.x, spot.y + spot.scale / 2, spot.z, spot.scale * .52);
-    add({ id: 'bullet', name: 'Bullet garden ornament', group: 'Ornaments', file: 'eggs/BulletOrnament.tsx', bank: bankOf(spot.x, spot.z, width), counts: true,
-      shown: (p, cameraZ) => bulletShown(spot, p, cameraZ, mobile), spheres: () => [s] });
-  }
 
   // --- Carvings in the bark -------------------------------------------------
   const carvingNames: Record<CarvingId, string> = { stats: 'Statistics carving', algebra: 'Quadratic formula carving', sloop: 'Sloop carving',
@@ -256,7 +249,7 @@ export function sceneryCatalog(width: number): Piece[] {
       s = sphere(spot.x, spot.y, spot.z, Math.max((carving.to - carving.from) / 2, carving.arc * TRUNK_RADIUS) * tree.scale);
     } else s = placed(local(`year-${marker.year}`, () => yearMarkerModel({ ...marker, medium: marker.medium as Exclude<typeof marker.medium, 'carving'> }, i).body), spot);
     add({ id: `year-${marker.year}`, name: `${marker.year} ${marker.medium}`, group: 'Year markers', file: 'eggs/YearMarkers.tsx',
-      bank: 'share' in marker ? 'river' : sideBank(marker.side), counts: true,
+      bank: 'share' in marker ? 'river' : sideBank(markerSide(marker, width)), counts: true,
       shown: (p, cameraZ) => yearMarkerShown(marker, z, p, cameraZ, mobile), spheres: () => [s] });
   });
 

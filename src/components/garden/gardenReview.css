@@ -1,5 +1,10 @@
 /* Review panel (dev only). Imported from Garden.tsx under import.meta.env.DEV. */
 .garden-review { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; color: var(--garden-ink); display: flex; gap: 18px; align-items: center; padding: 12px 20px; border: 1px solid #fff9; background: #f7f6eee8; backdrop-filter: blur(16px); box-shadow: 0 4px 24px #3d4e3510; border-radius: 40px; white-space: nowrap; }
+.garden-review-hide { position: absolute; top: -11px; right: 14px; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border: 1px solid #fff9; border-radius: 50%; background: #f7f6ee; color: var(--garden-ink); font-size: 16px; line-height: 1; box-shadow: 0 2px 10px #3d4e3520; cursor: pointer; }
+.garden-review .garden-review-hide { font-size: 16px; padding: 0; min-height: 0; }
+.garden-review-hide::after, .garden-review-show::after { content: ''; position: absolute; inset: -10px; }
+/* Hidden, the panel leaves a slim tab on the right edge, the word running down it, low enough to keep off the header's links and high enough to keep off the scroll helper's words. */
+.garden-prototype .garden-review-show { position: fixed; right: 0; top: 58%; z-index: 5; writing-mode: vertical-rl; padding: 8px 3px; border: 1px solid #fff6; border-right: 0; border-radius: 8px 0 0 8px; background: #f7f6ee99; backdrop-filter: blur(8px); color: var(--garden-ink); font-size: 7px; line-height: 1; letter-spacing: .1em; text-transform: uppercase; opacity: .8; cursor: pointer; }
 .garden-study-label { text-transform: uppercase; font-size: 8px; letter-spacing: .12em; color: #6e7464; }
 .garden-study-label b { margin-left: 5px; font-weight: 500; }
 .garden-review-divider { width: 1px; height: 14px; background: #747d602a; }

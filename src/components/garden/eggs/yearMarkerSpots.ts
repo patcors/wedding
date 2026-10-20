@@ -20,11 +20,11 @@ export type YearMedium = 'signpost' | 'rock' | 'buoy' | 'carving' | 'stake' | 'p
 // `from` and `to` up it, in the tree's own units (see uniOrnaments.ts).
 // `from`, if set, holds it back until that month shows, however near it is.
 // `mobile`, if set, is where it stands on a phone instead: its `lead`, and
-// its `inland` in a phone's own units; out in the shallows (negative), it
+// its `inland` in a phone's own units, and its `side` if not its own; out in the shallows (negative), it
 // stands on the river bed, its foot under the water; in the river, its
 // `share`. `grow`, if set, is how much it grows instead of MARKER_GROW.
 export type YearCarving = { arc: number; from: number; to: number };
-export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number; from?: string; mobile?: { lead: number; inland?: number; share?: number }; grow?: { desktop?: number; mobile?: number } }
+export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead: number; from?: string; mobile?: { lead: number; inland?: number; share?: number; side?: -1 | 1 }; grow?: { desktop?: number; mobile?: number } }
   & ({ inland: number } | { share: number } | { carved: YearCarving });
 
 // Mostly alternating banks, with the buoy and the pile out in the river, where
@@ -40,11 +40,13 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // From 2025 the river bends left and the S-bend draws the camera round
 // after it, so through late 2025 and 2026 the right bank is at the edge of a
 // phone's picture: 2025's oar and 2026's arch both stand on the left, the
-// arch further on, past the snowmen and the lyra's ashes. On a phone, Amelia's
-// birdhouse stands right by the water just short of the oar, and from the
-// boats the oar would peek out from behind its roof, so there it stands a
-// little further on, out in the shallows at the water's edge, clear to the
-// right of the house in the picture and short of the snowmen.
+// arch further on, past the snowmen and the lyra's ashes. On a phone, where
+// the 2025 snowmen stay on Amelia's bank (flurry.ts) and anything on it
+// nearer the camera stood in front of them at the trip's stop, and her
+// birdhouse stands right by the water just short of where the oar would,
+// the oar stands on Patrick's bank instead: as 2025 turns his bank is still
+// well in a phone's picture, and it stands a way past his birdhouse, left of
+// it in the picture and clear of its roof.
 // January 2027 turns round the S-bend, so the wedding's heart stands on the
 // outside of its second curve, the left bank, where the river runs straight
 // at it: in the open across from the headland that hides the old tree, and
@@ -54,14 +56,14 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // November 2026 shows, well before December's frame of the two hearts.
 export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2017, medium: 'signpost', side: -1, lead: 8, inland: .45, grow: { mobile: 1.15 } },
-  { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1 },
+  { year: 2018, medium: 'rock', side: -1, lead: 6, inland: -.1, grow: { mobile: .9 } },
   { year: 2019, medium: 'buoy', side: 1, lead: 3.5, share: .8, mobile: { lead: 3.5, share: .87 }, grow: { mobile: 1.3 } },
   { year: 2020, medium: 'carving', side: -1, lead: 8.6, carved: { arc: .95, from: 1.2, to: 2.2 } },
   { year: 2021, medium: 'stake', side: 1, lead: 3.5, inland: .55 },
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85, grow: { mobile: 1.2 } },
-  { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9 },
+  { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9, mobile: { lead: 9.8, inland: -.35 }, grow: { mobile: 1 } },
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
-  { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3, mobile: { lead: 5.6, inland: -.4 }, grow: { mobile: 1.15 } },
+  { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3, mobile: { lead: 9.5, inland: .3, side: 1 }, grow: { mobile: 1.15 } },
   { year: 2026, medium: 'arch', side: -1, lead: 8.6, inland: .6 },
   { year: 2027, medium: 'heart', side: -1, lead: 1.5, inland: .9, from: '2026-11' },
 ];
@@ -70,12 +72,17 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
 // narrower river also brings inland spots in nearer the water. Grown by
 // `MARKER_GROW` (a little less than the other eggs, as they stand nearer the
 // boats) so each year reads on a phone (eggSize in egg.ts); 2020's carving
-// grows as the other carvings do (grownCut in uniOrnaments.ts).
+// grows as the other carvings do (grownCut in uniOrnaments.ts). Some grow
+// less on a phone (`grow`): 2018's rock only so far that its year is cut
+// as large as 2019's on the buoy (Amelia, October 2026), and 2023's slate
+// not at all, as it stood behind Patrick's flag at January 2023's stop.
 export const MARKER_SCALE = { desktop: 1, mobile: 1.3 } as const;
 export const MARKER_GROW = { desktop: 1.15, mobile: 1.4 } as const;
 const MOBILE_INLAND = .6;
 
 export const yearTurns = (year: number) => progressAt(`${year}-01`);
+// The bank a marker stands on at this width: its own, or a phone's.
+export const markerSide = (marker: YearMarker, width: number) => (width < 1 ? marker.mobile?.side : undefined) ?? marker.side;
 
 export type MarkerSpot = { x: number; y: number; z: number; yaw: number; scale: number };
 // The tree a year is carved into, and the carving as the university years'
@@ -99,12 +106,12 @@ export function yearMarkerSpot(marker: YearMarker, width: number): MarkerSpot {
     const { tree, carving } = yearCarving(marker, width), toward = Math.atan2(cx - tree.x, cz - tree.z), r = TRUNK_RADIUS * tree.scale;
     return { x: tree.x + Math.sin(toward) * r, y: tree.y + (carving.from + carving.to) / 2 * tree.scale, z: tree.z + Math.cos(toward) * r, yaw: toward, scale: tree.scale };
   }
-  const phone = mobile ? marker.mobile : undefined;
+  const phone = mobile ? marker.mobile : undefined, side = markerSide(marker, width);
   const z = routeAt(turn) - (phone?.lead ?? marker.lead);
   const middle = riverCenter(z, width), edge = bankEdge(z, width);
   const x = 'share' in marker
-    ? middle + marker.side * edge * (phone?.share ?? marker.share)
-    : middle + marker.side * (edge + (phone?.inland ?? marker.inland * (mobile ? MOBILE_INLAND : 1)));
+    ? middle + side * edge * (phone?.share ?? marker.share)
+    : middle + side * (edge + (phone?.inland ?? marker.inland * (mobile ? MOBILE_INLAND : 1)));
   // On the bank it stands on the ground, never below the water, unless a
   // phone puts it out in the shallows.
   const ground = groundHeight(x, z, width), shallows = (phone?.inland ?? 0) < 0;

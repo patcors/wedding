@@ -416,9 +416,10 @@ export function yearAtlas() {
   return texture;
 }
 
-export function yearMarkerModel(marker: YearMarker & { medium: Built }, index: number): Model {
+// `side` is the bank it stands on, if not its own (a phone's, markerSide).
+export function yearMarkerModel(marker: YearMarker & { medium: Built }, index: number, side = marker.side): Model {
   const { face, build } = MODELS[marker.medium];
-  return build(index, face, -marker.side, marker.year);
+  return build(index, face, -side, marker.year);
 }
 
 // 2020, carved into the bark of an ash by the water: the year stacked 20 over
