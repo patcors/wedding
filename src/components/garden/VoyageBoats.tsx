@@ -33,18 +33,24 @@ const BEAM_Z = [-.56, .56], PLANK_Z = (i: number) => -.66 + i * .12;
 // How far aft each small mast is lowered, to lie along its hull.
 const LOWERED = 1.48;
 const COMPANIES: Company[] = ['finocomp', 'interim', 'heirwealth'];
-// Each flag's mark in public/textures/garden/ (a 512px PNG on
-// transparency) and the shape its cloth is cut to (FLAGS).
+// Each flag's mark in public/textures/flags/ (a 512px lossless WebP on
+// transparency, from the PNG of the same name in textures/garden/ by
+// scripts/compress-flag-marks.mjs) and the shape its cloth is cut to (FLAGS).
 // The interim flag, for Amelia's months tutoring and selling haircare, is
 // Wavves', a disc like FinoComp's (Amelia, October 2026).
 const MARKS: Record<Company, { mark: string; shape: FlagShape }> = {
-  finocomp: { mark: 'finocomp-mark.png', shape: 'circle' },
-  interim: { mark: 'wavves-mark.png', shape: 'circle' },
-  heirwealth: { mark: 'heirwealth-crown.png', shape: 'square' },
+  finocomp: { mark: 'finocomp-mark.webp', shape: 'circle' },
+  interim: { mark: 'wavves-mark.webp', shape: 'circle' },
+  heirwealth: { mark: 'heirwealth-crown.webp', shape: 'square' },
 };
 // The university's flag is its shield.
-const UNIVERSITY = { mark: 'uow-shield.png', shape: 'shield' } as const;
-const texture = (mark: string) => `${import.meta.env.BASE_URL}textures/garden/${mark}`;
+const UNIVERSITY = { mark: 'uow-shield.webp', shape: 'shield' } as const;
+const texture = (mark: string) => `${import.meta.env.BASE_URL}textures/flags/${mark}`;
+// Fetched as soon as the scene's code arrives, alongside its models, rather
+// than once the boats are built; the flags' own loads then find them ready.
+// Held so nothing collects them mid-download.
+const EARLY_MARKS = typeof Image === 'undefined' ? [] : [...Object.values(MARKS), UNIVERSITY].map(({ mark }) => Object.assign(new Image(), { src: texture(mark) }));
+void EARLY_MARKS;
 // How far a flag runs up its ensign staff, from just clear of the rim to
 // the top; and where the monogram's halyard starts, above the big boom.
 const staffRun = (shape: FlagShape) => ENSIGN.height - FLAGS[shape].height - .06, LOGO_FOOT = BIG_RIG.boom + .55;
