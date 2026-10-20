@@ -164,6 +164,19 @@ test('the silk never hangs in front of the Opera House in the picture, on the sa
   }
 });
 
+test('on a phone the silk is gone by March 2023\'s stop, once Amelia is back, and dissolves only after its own stretch', () => {
+  // Amelia, October 2026: nothing of Sydney's stretch beside the boats once
+  // she is back. The Opera House stays until passed; the silk, which hangs
+  // beyond it and would still be at the picture's left edge then, dissolves
+  // as the camera comes up to it.
+  const width = MOBILE_RIVER_WIDTH, spot = hangSpot(SILK, width), back = stop('heirwealth');
+  const shown = p => rigShown(SILK, spot, p, cameraPose(p, width).position[2], true);
+  assert.equal(shown(back), 0, 'shown at March\'s stop');
+  for (let p = stop('amelia-heirwealth'); p < stop('amelia-heirwealth') + .5 * ROOM; p += .001) assert.equal(shown(p), 1, `fading at ${p}, during its stretch`);
+  // Desktop's passes out of the picture on its own, as before.
+  assert.ok(!SILK.leave?.desktop);
+});
+
 test('each dissolves in no earlier than its month, and is gone once the camera has passed it', () => {
   for (const [width] of LAYOUTS) {
     for (const rig of Object.values(RIGS)) {
