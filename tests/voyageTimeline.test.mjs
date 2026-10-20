@@ -16,7 +16,7 @@ test('the numbers copied from components match their source', () => {
   for (const file of ['eggs/SnowTrip.tsx', 'eggs/SecondSnowTrip.tsx']) assert.match(source(file), new RegExp(`scale=\\{${COMPONENT.snowScale}\\}`));
   const reveal = source('eggs/SnowReveal.tsx'), { across, up, along } = COMPONENT.flurryBox;
   assert.match(reveal, new RegExp(`const BOX = \\{ across: ${across}, up: ${up}, along: ${along} \\}`));
-  assert.match(reveal, new RegExp(`size \\* \\(mobile \\? ${String(COMPONENT.snowMobile).replace(/^0/, '')} : 1\\)`));
+  assert.match(reveal, new RegExp(`size \\* \\(mobile \\? ${String(COMPONENT.snowMobile).replace(/^0/, '')} : 1\\) \\* growth\\(mobile, SNOW_GROW\\)`));
   const circus = source('eggs/Circus.tsx').replace(/0\./g, '.');
   assert.match(circus, new RegExp(`SILK_CLEAR = ${String(COMPONENT.silkClear).replace(/^0/, '')}, LYRA_CLEAR = ${COMPONENT.lyraClear}`));
   const sky = source('GardenSky.tsx');

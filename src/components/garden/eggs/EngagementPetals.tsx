@@ -10,6 +10,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useJourney, type SlotProps } from '../JourneyProvider';
+import { eggSize } from './egg';
 import { PETALS, PETAL_LIST, afloat, floatPoint, petalCourse, petalScale, petalTime, petalsShown, restingPetals } from './petalTrail';
 
 // A rose petal lying on the water, its base towards −z: broad and rounded,
@@ -61,7 +62,7 @@ export default function EngagementPetals({ paused, reduced, mobile, width }: Slo
     if (!mesh.current.visible) return;
     const step = paused ? 0 : Math.min(dt, .1);
     idle.current += step;
-    const s = idle.current, size = mobile ? PETALS.size.mobile : PETALS.size.desktop;
+    const s = idle.current, size = eggSize(PETALS.size, mobile);
     PETAL_LIST.forEach((petal, i) => {
       dummy.scale.setScalar(0);
       const rest = still ? resting[i] : null;

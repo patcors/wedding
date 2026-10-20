@@ -8,7 +8,7 @@
 //   <SnowReveal {...props} spot={{ ahead: 7.5, side: -1 }}><Snowman sling /></SnowReveal>
 //
 // `scale` sizes it all, the flurry, the patch and the children; portrait's is
-// a little smaller. Costs two draw calls (the flakes and the settled
+// a little smaller, and all of it is grown by SNOW_GROW. Costs two draw calls (the flakes and the settled
 // snow) plus the children's, and nothing outside its window.
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -16,8 +16,8 @@ import * as THREE from 'three';
 import { cameraPose } from '../cameraRig';
 import { groundHeight, random } from '../gardenGeometry';
 import { useJourney } from '../JourneyProvider';
-import { FLURRY, flurryAt, gustAt, revealed, snowSpot, type SnowSpot } from './flurry';
-import { eggTime, type EggProps } from './egg';
+import { FLURRY, SNOW_GROW, flurryAt, gustAt, revealed, snowSpot, type SnowSpot } from './flurry';
+import { eggTime, growth, type EggProps } from './egg';
 
 // The flurry's box around the spot, half extents: across the river, up, and
 // along it. Flakes, and soft puffs that thicken it into a white-out over the spot.
@@ -127,7 +127,8 @@ export default function SnowReveal({ milestone, paused, reduced, mobile, width, 
   const clock = useJourney();
   const group = useRef<THREE.Group>(null), left = useRef<THREE.Group>(null), points = useRef<THREE.Points>(null);
   const spot = useMemo(() => snowSpot(where, milestone.month, width), [where, milestone.month, width]);
-  const scale = size * (mobile ? .9 : 1);
+  // Grown a little, as the bank's eggs are (SNOW_GROW in flurry.ts).
+  const scale = size * (mobile ? .9 : 1) * growth(mobile, SNOW_GROW);
   const parts = useMemo(() => {
     const flakes = new THREE.ShaderMaterial({
       uniforms: { ...THREE.UniformsLib.fog, uTime: { value: 0 }, uFlurry: { value: 0 }, uGust: { value: 0 }, uScale: { value: 1 }, uSize: { value: scale }, uWind: { value: -where.side },

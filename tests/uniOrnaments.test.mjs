@@ -8,13 +8,13 @@ import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { treePlacements } from '../src/components/garden/gardenTreeSpots.ts';
 import { ROOM, STOPS, progressAt } from '../src/components/garden/journey.ts';
-import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
+import { EGG_GROWTH, cameraHeading, eggSize, growth } from '../src/components/garden/eggs/egg.ts';
 import { DUCKS, duckLaunchSpot, piSpot } from '../src/components/garden/eggs/campus.ts';
 import { CAPS, capLanding } from '../src/components/garden/eggs/capToss.ts';
-import { FLURRY, SNOW_SPOTS, snowSpot } from '../src/components/garden/eggs/flurry.ts';
+import { FLURRY, SNOW_GROW, SNOW_SPOTS, snowSpot } from '../src/components/garden/eggs/flurry.ts';
 import { SNOWMAN } from '../src/components/garden/eggs/snowmanGeometry.ts';
 import { ARRIVE, YEAR_MARKERS, markerShown, yearCarving, yearMarkerShown, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
-import { CARVINGS, ORNAMENTS, carvedOn, carvedTree, carvingFaces, carvingShown, ornamentSpot } from '../src/components/garden/eggs/uniOrnaments.ts';
+import { CARVINGS, ORNAMENTS, carvedOn, carvedTree, carvingFaces, carvingShown, grownCut, CARVED_ARC, ornamentSpot } from '../src/components/garden/eggs/uniOrnaments.ts';
 import { MOBIUS, MOBIUS_PLINTH, mobiusGeometry } from '../src/components/garden/eggs/mobiusGeometry.ts';
 import { BENCH, parkBenchGeometry } from '../src/components/garden/eggs/parkBenchGeometry.ts';
 import { LIFT, barkPatch, treeMatrix } from '../src/components/garden/eggs/barkCarvingGeometry.ts';
@@ -56,7 +56,7 @@ const meshes = await Promise.all(MODELS.map(async file => {
   return { position: position.getArray(), normal: Array.from({ length: normal.getCount() }, (_, i) => normal.getElement(i, [])).flat(), index: primitive.getIndices().getArray() };
 }));
 const patch = (id, width) => {
-  const carving = CARVINGS[id], tree = carvedTree(carving, width);
+  const carving = grownCut(CARVINGS[id], width), tree = carvedTree(carving, width);
   return barkPatch(meshes[tree.type], { matrix: treeMatrix(tree), toward: carvingFaces(carving, width), arc: carving.arc, from: carving.from, to: carving.to });
 };
 // The patch's point at (u, v) on the carving's canvas, and the normal of the face it is on.
@@ -269,7 +269,7 @@ test('on Amelia\'s bank the 2019 snowman stands clear of her carving in the pict
   for (const width of WIDTHS) {
     const tree = trees(width).stats, snowman = snowSpot(SNOW_SPOTS[2019], '2019-07', width);
     // Its bottom ball's half width, at SnowTrip's scale (portrait's a little smaller), and its height.
-    const size = 1.25 * (width < 1 ? .9 : 1), half = SNOWMAN.balls[0][0] * size;
+    const size = 1.25 * (width < 1 ? .9 : 1) * growth(width < 1, SNOW_GROW), half = SNOWMAN.balls[0][0] * size;
     // From as the flurry clears until the carving is passed.
     for (const p of span(progressAt('2019-07') + FLURRY.clear * ROOM, progressAt('2020-08'))) {
       if (!shown(tree, p, width)) continue;
@@ -450,6 +450,28 @@ test('nothing beside a year marker as its year turns, and never more than two ca
       // Those shown but out of the picture, behind the camera or off to the side, are culled.
       const drawn = Object.values(all).filter(tree => shown(tree, p, width) > 0 && Math.abs(seen(p, width, tree).bearing) < halfView(width) + 5).length;
       assert.ok(drawn <= 2, `${drawn} carvings in the picture at ${p} (width ${width})`);
+    }
+  }
+});
+
+test('the eggs grow more on a phone than on desktop, each by its own growth where it has one', () => {
+  assert.ok(EGG_GROWTH.mobile > EGG_GROWTH.desktop && EGG_GROWTH.desktop >= 1);
+  assert.equal(eggSize({ desktop: 2, mobile: 3 }, false), 2 * EGG_GROWTH.desktop);
+  assert.equal(eggSize({ desktop: 2, mobile: 3 }, true), 3 * EGG_GROWTH.mobile);
+  assert.equal(eggSize({ desktop: 2, mobile: 3 }, true, { desktop: 1.1 }), 3 * EGG_GROWTH.mobile);
+  assert.equal(eggSize({ desktop: 2, mobile: 3 }, false, { desktop: 1.1 }), 2 * 1.1);
+});
+
+test('a carving grows round its trunk only so far, and up it from its foot keeping its shape', () => {
+  for (const width of WIDTHS) {
+    for (const carving of [...Object.values(CARVINGS), ...YEAR_MARKERS.filter(marker => 'carved' in marker).map(marker => marker.carved)]) {
+      const cut = grownCut(carving, width);
+      assert.equal(cut.from, carving.from, 'its foot stays where it was');
+      assert.ok(cut.arc >= carving.arc && cut.arc <= Math.max(carving.arc, CARVED_ARC));
+      assert.ok(cut.arc <= carving.arc * growth(width < 1) + 1e-9);
+      // Up the trunk as much as it looks wider round it.
+      assert.ok(Math.abs((cut.to - cut.from) / (carving.to - carving.from) - Math.sin(cut.arc) / Math.sin(carving.arc)) < 1e-9);
+      assert.ok(cut.to < 2.4, 'still on the trunk, below its first branches');
     }
   }
 });

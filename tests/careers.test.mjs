@@ -33,7 +33,8 @@ test('each stands on land, off the island, near enough the water to be seen', ()
       const spot = ornamentSpot(ornament, width), out = Math.abs(spot.x - riverCenter(spot.z, width)), edge = bankEdge(spot.z, width);
       // The flower bed lies a little back from the water, its whole width clear of it.
       const reach = ornament === PIE_BED ? PIE.radius * spot.scale : 0;
-      assert.ok(out - reach > edge + (reach ? .6 : .2) && out < edge + (reach ? 2.2 : 1.5), `${ornament.facing} on the bank (width ${width})`);
+      // Its near edge set back a little from the water, near enough to be seen.
+      assert.ok(out - reach > edge + (reach ? .6 : .2) && out - reach < edge + (reach ? 1.1 : 1.5), `${ornament.facing} on the bank (width ${width})`);
       assert.equal(Math.sign(spot.x - riverCenter(spot.z, width)), ornament.side);
       assert.equal(islandHalfWidth(spot.z, width), 0);
     }

@@ -9,7 +9,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { cameraPose } from '../cameraRig';
 import { useJourney } from '../JourneyProvider';
-import { CAPS, capInAir, capLanding, capLaunch } from './capToss';
+import { CAPS, capInAir, capLanding, capLaunch, capScale } from './capToss';
 import { mortarboardGeometry } from './mortarboardGeometry';
 import { eggTime, type EggProps } from './egg';
 
@@ -30,7 +30,7 @@ export default function Graduation({ milestone, paused, reduced, mobile, width }
   // Seconds each cap has been in the air since it was tossed, or null while
   // it is still in hand.
   const tossed = useRef<(number | null)[]>(Array(count).fill(null));
-  const scale = mobile ? CAPS.scale.mobile : CAPS.scale.desktop;
+  const scale = capScale(mobile);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   useLayoutEffect(() => {
     const colour = new THREE.Color();

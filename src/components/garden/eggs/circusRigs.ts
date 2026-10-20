@@ -8,6 +8,7 @@ import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt } from '../journey.ts';
 import { treeBase, treePlacements, type Placement } from '../gardenTreeSpots.ts';
 import { markerShown } from './yearMarkerSpots.ts';
+import { eggSize } from './egg.ts';
 
 type Point = readonly [number, number, number];
 // Each hangs from a real tree (gardenTreeSpots.ts): the one on the left bank
@@ -65,7 +66,7 @@ export function hangSpot(rig: Rig, width: number): HangSpot {
   const mobile = width < 1;
   const { x, y, z } = onTree(rigTree(rig, width), mobile ? rig.limb.mobile : rig.limb.desktop, width);
   const [cx, , cz] = cameraPose(progressAt(rig.from), width).position;
-  return { x, y, z, ground: Math.max(0, groundHeight(x, z, width)), yaw: Math.atan2(cx - x, cz - z), scale: mobile ? rig.scale.mobile : rig.scale.desktop };
+  return { x, y, z, ground: Math.max(0, groundHeight(x, z, width)), yaw: Math.atan2(cx - x, cz - z), scale: eggSize(rig.scale, mobile) };
 }
 
 // How much of it shows at p, 0 to 1, with the camera at cameraZ.
