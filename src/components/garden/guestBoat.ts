@@ -63,7 +63,7 @@ export const GUEST_BERTHS: Record<'desktop' | 'mobile', readonly (readonly Slot[
     [[.8, 2.4, 0, 0]],
     [[.62, 1.4, 0, 1], [1.2, 2.1, -.06, 0]],
     [[.6, 2.8, .08, 0], [.66, 1.45, 0, 1], [1.21, 2.15, -.06, 0]],
-    [[.64, 2.8, .08, 0], [.66, 1.45, 0, 1], [1.21, 2.15, -.06, 0], [1.36, 3.4, -.1, 1]],
+    [[.64, 2.8, .08, 0], [.7, 1.45, 0, 1], [1.21, 2.15, -.06, 0], [1.36, 3.4, -.1, 1]],
   ],
 };
 
@@ -130,8 +130,11 @@ export function guestBerths(count: number, width: number, height = Infinity): Gu
     const card = wrap(Math.atan2(camera[0] - x, camera[2] - z) - yaw);
     return { x, z, yaw, card, tall, out, below: z < jetty.z + JETTY.head / 2 + .2 };
   });
-  // They come in deepest first: any tucked in below the T-head's end, then from the bank out.
-  const arrivals = [...placed].sort((a, b) => Number(b.below) - Number(a.below) || a.out - b.out);
+  // They come in deepest first: any tucked in below the T-head's end, then
+  // furthest down the river, so none comes down to its berth past one already
+  // in (on a phone a Party of three's last boat used to come down through the
+  // second's), then from the bank out.
+  const arrivals = [...placed].sort((a, b) => Number(b.below) - Number(a.below) || a.z - b.z || a.out - b.out);
   return placed.map((_, i) => placed[n - 1 - i]).map(berth => ({ x: berth.x, z: berth.z, yaw: berth.yaw, card: berth.card, tall: berth.tall, below: berth.below, order: arrivals.indexOf(berth) }));
 }
 
@@ -198,14 +201,51 @@ export function guestRound(count: number, width: number, height = Infinity) {
 // How far into the scene (in seconds, the first boat's clock) the boats may
 // be at progress p: none before the cue; up the river to wait below the
 // jetty by the time the catamaran is tied up (`gate`), in step with the
-// scroll; and round it into their berths by the end. GuestBoat's clock runs
-// in real time up to this, so they never get ahead of the catamaran nor rush.
+// scroll; and, once it is tied up, all the way in, without the guest
+// scrolling on (Amelia, October 2026: they used to come round only as the
+// scroll went on to the end, so a guest who stopped as the catamaran moored
+// left them waiting below the jetty or halfway round it). GuestBoat's clock
+// runs in real time up to this (guestArrivalStep), so they never get ahead
+// of the catamaran nor rush.
 export const guestArrivalLength = (count: number) => GUEST_ARRIVAL.up + GUEST_ARRIVAL.across + (fleetSize(count) - 1) * GUEST_ARRIVAL.lag;
 export function guestArrivalCap(p: number, count: number, width: number, height = Infinity) {
   const { cue, up } = GUEST_ARRIVAL, { gate } = guestRound(count, width, height);
   if (p < cue) return 0;
   if (p < gate) return up * (p - cue) / (gate - cue);
-  return up + (guestArrivalLength(count) - up) * clamp((p - gate) / Math.max(1e-6, 1 - gate));
+  return guestArrivalLength(count);
+}
+
+// Scrolling back, they make for where the scroll used to allow
+// (guestArrivalBack: from the gate to the end they came round in step with
+// the scroll), going back the way they came on their own clock at `pace`
+// times real time, as quick as the scroll took them back at the story's
+// full pace, and come on in again once the scroll comes to rest at the
+// dock. Short of the gate, as the catamaran puts out, they are never further
+// round than guestReturnCap: all the way in at the gate, easing to the cap
+// by `span` of progress before it (about a tenth of a screen's scroll), so
+// by then they wait below the jetty again, clear of the catamaran (a wider
+// span would let its stern back into the last of them as they come back
+// across).
+export const GUEST_RETURN = { pace: 5, span: .004 } as const;
+export function guestArrivalBack(p: number, count: number, width: number, height = Infinity) {
+  const { gate } = guestRound(count, width, height), up = GUEST_ARRIVAL.up;
+  return p < gate ? guestArrivalCap(p, count, width, height) : up + (guestArrivalLength(count) - up) * clamp((p - gate) / Math.max(1e-6, 1 - gate));
+}
+export function guestReturnCap(p: number, count: number, width: number, height = Infinity) {
+  const cap = guestArrivalCap(p, count, width, height), { gate } = guestRound(count, width, height);
+  if (p >= gate) return cap;
+  return cap + (guestArrivalLength(count) - cap) * smootherstep((p - gate + GUEST_RETURN.span) / GUEST_RETURN.span);
+}
+
+// The scene's clock a frame of `dt` seconds on, at progress p, `last` the
+// progress the frame before. It makes for the cap (guestArrivalCap), or,
+// while the scroll goes back, for guestArrivalBack: on in real time, back at
+// `pace`; and is never further in than guestReturnCap. Up the river it keeps
+// in step with the scroll going back, as it always has.
+export function guestArrivalStep(time: number, p: number, last: number, dt: number, count: number, width: number, height = Infinity) {
+  const target = p < last ? guestArrivalBack(p, count, width, height) : guestArrivalCap(p, count, width, height);
+  const next = time < target ? Math.min(time + dt, target) : Math.max(target, time - GUEST_RETURN.pace * dt);
+  return Math.min(next, guestReturnCap(p, count, width, height));
 }
 
 // Each boat's course in, in two legs. Up: from far down the river, up its
