@@ -112,6 +112,14 @@ export function plantGeometry(kind: PlantKind) {
 const PLANTED_LENGTH = RIVER_REACH.from - 1 - RIVER_REACH.to;
 // Beds past the original river, alternating banks down to the dock and beyond.
 const REED_BEDS_DOWNSTREAM = [-101, -119, -142, -158, -186, -210, -236].map((z, i) => ({ z, side: i % 2 ? -1 : 1 }));
+// On a phone's narrow river the boats sail close by some beds, and a hull
+// went through the reeds as it passed (Amelia, on an iPhone, October 2026:
+// Patrick's at the end of 2022). There each bed reaches only so far out into
+// the water (`hold`, world units from the water's edge): its reeds are drawn
+// in towards the bank and its cattails out past that are left out, so both
+// hulls pass it clear. Keyed by the bed's z; tests/gardenPlants.test.mjs
+// checks that the hulls clear every bed on both compositions.
+export const REED_HOLD_MOBILE: Readonly<Record<number, number>> = { [-3.9]: .35, [-39]: .5, [-80]: .36, [-119]: .7, [-158]: .8 };
 
 export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
   // Nothing grows up through the engagement's truck, so its wheels show.
@@ -127,7 +135,7 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
       mobile ? { z: -3.9, side: 1, length: 5.2, reach: .6 } : { z: -5, side: 1 },
       { z: -23, side: -1 }, { z: -39, side: 1 }, { z: -61, side: -1 }, { z: -80, side: 1 },
       ...REED_BEDS_DOWNSTREAM]
-      .map(patch => ({ length: 3.5, reach: 1, ...patch }));
+      .map(patch => ({ length: 3.5, reach: 1, ...patch, hold: mobile ? REED_HOLD_MOBILE[patch.z] ?? Infinity : Infinity }));
     const reedColumns = 8, reedRows = mobile ? 8 : 12;
     const perPatch = kind === 'reed' ? reedColumns * reedRows : (mobile ? 4 : 6);
     return patches.flatMap(patch => Array.from({ length: perPatch }, (_, i) => {
@@ -137,7 +145,8 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
         ? patch.z + ((Math.floor(i / reedColumns) + .3 + rand() * .4) / reedRows - .5) * patch.length
         : patch.z + (rand() - .5) * patch.length * .86;
       // How far out the bed reaches: the full 1.05, or less where it would crowd the river.
-      const out = 1.05 * patch.reach;
+      // A held bed reaches no further than its `hold`, and its cattails out past it are left out.
+      const out = Math.min(1.05 * patch.reach, patch.hold);
       const inland = kind === 'cattail' ? -.4 - rand() * .4 * patch.reach
         : -out + (i % reedColumns + .3 + rand() * .4) / reedColumns * (.775 + out);
       const x = riverCenter(z, width) + patch.side * (bankEdge(z, width) + inland);
@@ -151,8 +160,8 @@ export function plantSites(kind: PlantKind, width: number, mobile: boolean) {
       const taper = Math.min(.66 + .34 * Math.min(1, along / .6), outward)
         * (inland > 0 ? 1 - .4 * Math.min(1, inland / .78) : 1);
       return { x, y, z, angle: rand() * Math.PI * 2,
-        scale: (.8 + rand() * .3) * taper, tint: .85 + rand() * .2 };
-    }));
+        scale: (.8 + rand() * .3) * taper, tint: .85 + rand() * .2, held: -inland > patch.hold };
+    })).filter(({ held }) => !held).map(({ held: _, ...site }) => site);
   }
   if (kind === 'meadow') {
     const rand = random(2081);

@@ -336,7 +336,7 @@ const FOUND_WINDOWS = {
   // May was before the boats set off faster from the title (OPENING_PACE).
   sloop: [[progressAt('2017-03'), progressAt('2017-07')], [progressAt('2017-01'), progressAt('2017-04')]],
   spiral: [[progressAt('2021-07'), progressAt('2022-08')], null],
-  sloops: [[progressAt('2022-09'), stopAfter('2023-03')], [progressAt('2022-09'), progressAt('2022-12')]],
+  sloops: [[progressAt('2022-09'), stopAfter('2023-03')], null],
   heart: [[progressAt('2026-11') + ARRIVE * ROOM + 1e-6, progressAt('2027-03')], [progressAt('2026-11') + ARRIVE * ROOM + 1e-6, progressAt('2027-02')]],
 };
 

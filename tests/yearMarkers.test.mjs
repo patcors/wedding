@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, islandHalfWidth, riverCenter, voyageLandmarks } from '../src/components/garden/gardenGeometry.ts';
@@ -9,6 +10,29 @@ import { hagiaShown, tripStop } from '../src/components/garden/eggs/balloonCours
 import { yearMarkerModel } from '../src/components/garden/eggs/yearMarkerGeometry.ts';
 
 const LAYOUTS = [[1, 1440 / 900, GARDEN_CAMERA.fov], [MOBILE_RIVER_WIDTH, 390 / 844, GARDEN_CAMERA.mobileFov]];
+// A point in a marker's own frame, in the world, as YearMarkers.tsx stands it.
+const placed = (spot, [x, y, z]) => ({ x: spot.x + (x * Math.cos(spot.yaw) + z * Math.sin(spot.yaw)) * spot.scale, y: spot.y + y * spot.scale, z: spot.z + (z * Math.cos(spot.yaw) - x * Math.sin(spot.yaw)) * spot.scale });
+const centre = geometry => { geometry.computeBoundingBox(); const c = geometry.boundingBox.getCenter(new THREE.Vector3()); return [c.x, c.y, c.z]; };
+// Where its year is, in the world: the middle of its face (the lantern's
+// swinging from its pivot), or a carving's spot. The slate's board stands at
+// the river end of its landing, about a unit out from its spot.
+function yearAt(marker, width) {
+  const spot = yearMarkerSpot(marker, width);
+  if ('carved' in marker) return spot;
+  const { face, hanging } = yearMarkerModel(marker, YEAR_MARKERS.indexOf(marker), markerSide(marker, width));
+  if (face) return placed(spot, centre(face));
+  const [x, y, z] = centre(hanging.face);
+  return placed(spot, [x + hanging.pivot[0], y + hanging.pivot[1], z + hanging.pivot[2]]);
+}
+// How far a marker reaches out over the water from its spot, in its own units
+// (the slate's landing runs out from the bank), so at least that much of it
+// can be by the water however far back its spot stands.
+function riverReach(marker, width) {
+  const { body } = yearMarkerModel(marker, YEAR_MARKERS.indexOf(marker), markerSide(marker, width));
+  body.computeBoundingBox();
+  // Its river side is towards −x on the right bank and +x on the left (yearMarkerModel's `river`).
+  return Math.max(0, markerSide(marker, width) > 0 ? -body.boundingBox.min.x : body.boundingBox.max.x);
+}
 const halfView = (aspect, fov) => Math.atan(Math.tan(fov / 2 * Math.PI / 180) * aspect) * 180 / Math.PI;
 
 test('each year from 2017 to 2027 is marked once, each in its own medium', () => {
@@ -30,8 +54,9 @@ test('as its year turns, each marker stands just past the boats, in clear view',
       const ahead = cz - spot.z;
       assert.ok(ahead > 12 && ahead < 22, `${marker.year} is ${ahead} ahead`);
       assert.equal(markerShown(spot.z, cz, width < 1), 1, `${marker.year} fully shown`);
-      // Within the picture, with a margin, on a phone's narrow lens too.
-      const bearing = (Math.atan2(spot.x - cx, cz - spot.z) - Math.atan2(tx - cx, cz - tz)) * 180 / Math.PI;
+      // Its year within the picture, with a margin, on a phone's narrow lens too.
+      const year = yearAt(marker, width);
+      const bearing = (Math.atan2(year.x - cx, cz - year.z) - Math.atan2(tx - cx, cz - tz)) * 180 / Math.PI;
       assert.ok(Math.abs(bearing) < halfView(aspect, fov) - 3, `${marker.year} at ${bearing}° (width ${width})`);
     }
   }
@@ -48,7 +73,9 @@ test('markers on the banks stand on land and those in the river keep clear of th
         continue;
       }
       if ('inland' in marker) {
-        assert.ok(Math.abs(out - bankEdge(spot.z, width)) < 1, `${marker.year} at the water's edge`);
+        // By the water: its foot, or what it reaches out over the water from it.
+        const edge = bankEdge(spot.z, width), reach = riverReach(marker, width) * spot.scale;
+        assert.ok(Math.abs(out - edge) < 1 || out > edge && Math.abs(out - reach - edge) < 1, `${marker.year} at the water's edge (width ${width})`);
         assert.ok(islandHalfWidth(spot.z, width) === 0 || out > bankEdge(spot.z, width) - .2, `${marker.year} off the island`);
         continue;
       }
@@ -132,6 +159,77 @@ test('on a phone 2025\'s oar stands on Patrick\'s bank, clear of his birdhouse i
   // On desktop it stands where it did, on Amelia's bank.
   assert.equal(markerSide(marker, 1), -1);
   assert.ok(yearMarkerSpot(marker, 1).y >= 0);
+});
+
+// Patrick's boat as the camera sees it, in his boat's own frame (model
+// units, his outboard +x): the hull's box, the mast, the sail eased out over
+// his quarter (SAIL_EASED about the mast), and his company's flag flying
+// outwards from the top of his outboard staff.
+async function patricksBoat() {
+  const { HULL, SAIL_EASED, FLAGS, ensignStaff, storyRig } = await import('../src/components/garden/storyBoatGeometry.ts');
+  const { cloth } = storyRig(1);
+  cloth.computeBoundingBox();
+  const { min, max } = cloth.boundingBox, mast = HULL.mast.dinghy, [sx, top, sz] = ensignStaff(1, 0), flag = FLAGS.square;
+  const points = [];
+  for (let i = 0; i <= 12; i++) for (let j = 0; j <= 12 - i; j++) {
+    const up = i / 12, aft = j / 12 * max.z;
+    points.push([Math.sin(SAIL_EASED) * aft, min.y + up * (max.y - min.y), mast + Math.cos(SAIL_EASED) * aft]);
+  }
+  for (let i = 0; i <= 12; i++) points.push([0, HULL.mastTop * i / 12, mast]);
+  for (const a of [-HULL_HALF_BEAM.dinghy, HULL_HALF_BEAM.dinghy]) for (const y of [0, .3]) for (const b of [-.78, HULL.stern.dinghy]) points.push([a, y, b]);
+  for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) points.push([sx + flag.length * i / 4, top - flag.height * j / 4, sz]);
+  return points;
+}
+// A point of Patrick's boat in the world at p, as storyBoats' mastheadAt places one.
+function onPatricks(p, width, [a, y, b]) {
+  const { x, z, yaw, scale, gap, turn } = boatPose(p, width), c = Math.cos(yaw), s = Math.sin(yaw);
+  const u = gap + a * Math.cos(turn) + b * Math.sin(turn), v = b * Math.cos(turn) - a * Math.sin(turn);
+  return [x + (c * u + s * v) * scale, -.02 + y * scale, z + (-s * u + c * v) * scale];
+}
+
+// On a real phone Patrick's boat sailed through 2023's slate, out in the
+// shallows, its sail running across the board and his flag over it from
+// late January to March 2023 (Amelia, October 2026). There it stands back on
+// his bank: its landing well off his hull as he passes, and from the moment
+// it dissolves in until it has gone, its year is never behind his sail, mast,
+// hull or flag in the picture, but clear to the right of them.
+test('on a phone 2023\'s slate stands back on Patrick\'s bank, so his boat sails clear of it', async () => {
+  const { viewOf, project, LAYOUTS: LENSES } = await import('../src/components/garden/voyageTimeline.ts');
+  const marker = YEAR_MARKERS.find(m => m.year === 2023), lens = LENSES.phone, width = lens.width;
+  const spot = yearMarkerSpot(marker, width), { body, face } = yearMarkerModel(marker, YEAR_MARKERS.indexOf(marker), 1);
+  assert.equal(markerSide(marker, width), 1);
+  assert.ok(spot.x - riverCenter(spot.z, width) > bankEdge(spot.z, width) + 1, 'back on the bank');
+  // Its landing, out to its river end, well off his hull as he passes it.
+  body.computeBoundingBox();
+  const end = placed(spot, [body.boundingBox.min.x, 0, 0]);
+  let passing = yearTurns(2023);
+  while (routeAt(passing) > end.z) passing += 1e-4;
+  assert.ok(end.x - onPatricks(passing, width, [HULL_HALF_BEAM.dinghy, 0, 0])[0] > 1, 'its landing clear of his hull');
+  // The board: its chalked face in its frame, the frame a fifth wider and
+  // running down a face's height under it to the landing.
+  face.computeBoundingBox();
+  const { min, max } = face.boundingBox, wide = (max.x - min.x) * .1, tall = max.y - min.y;
+  const corners = [min.x - wide, max.x + wide].flatMap(x => [min.y - tall, max.y].flatMap(y => [min.z, max.z].map(z => placed(spot, [x, y, z]))));
+  const boat = await patricksBoat();
+  let seen = 0;
+  for (let p = yearTurns(2023) - 2 * ROOM; p < yearTurns(2023) + 3 * ROOM; p += .0005) {
+    const pose = cameraPose(p, width);
+    if (!markerShown(spot.z, pose.position[2], true)) continue;
+    seen++;
+    const view = viewOf(pose), at = point => project({ centre: point, radius: 0 }, view, lens);
+    const board = corners.map(({ x, y, z }) => at([x, y, z])).filter(q => q.screen && q.inside).map(q => q.screen);
+    if (!board.length) continue;
+    const left = Math.min(...board.map(q => q[0])), low = Math.min(...board.map(q => q[1])), high = Math.max(...board.map(q => q[1]));
+    for (const point of boat) {
+      const [x, y] = at(onPatricks(p, width, point)).screen;
+      // A margin of about 2% of the screen's height round the board.
+      const clear = (left - x) * lens.aspect > .04 || y < low - .04 || y > high + .04;
+      assert.ok(clear, `his boat in front of the slate at ${p.toFixed(4)} (${dateLabel(p)})`);
+    }
+  }
+  assert.ok(seen > 50, 'seen as the boats pass it');
+  // On desktop it stands where it did.
+  assert.deepEqual(yearMarkerSpot(marker, 1), yearMarkerSpot({ ...marker, mobile: undefined }, 1));
 });
 
 test('2027\'s heart stands on the left bank round the S-bend, clear of the Hagia Sophia, and is out of the picture by the dock', () => {
