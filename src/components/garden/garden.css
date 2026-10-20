@@ -121,7 +121,11 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-text-link span { padding-left: 18px; }
 .garden-celebrate { top: 19%; width: 100%; }
 .garden-celebrate h2 { font-size: clamp(70px, 7vw, 108px); }
-.garden-venue { font: italic 24px 'Cormorant Garamond', Georgia, serif; }
+.garden-celebrate .garden-eyebrow { font-size: 11px; letter-spacing: .24em; }
+.garden-venue { font: italic 24px 'Cormorant Garamond', Georgia, serif; margin: 22px 0 4px; }
+/* The day itself, read at a glance: the serif upright under the italic venue,
+   not the eyebrow's small capitals, which barely showed (October 2026). */
+.garden-date { font: 500 26px/1.25 'Cormorant Garamond', Georgia, serif; letter-spacing: .02em; margin: 0 0 6px; }
 .garden-button { display: inline-block; font-size: 10px; letter-spacing: .1em; padding: 18px 25px; background: #414d3d; color: #f6f3e7 !important; margin-top: 18px; }
 .garden-button span { margin-left: 25px; }
 .garden-bottom { position: absolute; bottom: calc(44px - var(--garden-edge-clear)); left: 48px; right: 48px; display: flex; justify-content: space-between; align-items: center; }
@@ -165,9 +169,12 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-voyage-digits { font-size: min(46px, 12.6vw); font-weight: 400; }
   .garden-voyage-year { font-size: 18px; }
   .garden-voyage .garden-text-link { margin-top: 4px; }
-  .garden-celebrate { top: 23%; padding: 0 25px; }
-  .garden-celebrate h2 { font-size: 65px; }
-  .garden-venue { font-size: 21px; }
+  /* High enough that the venue and the day sit on the canopy, above the
+     festoons, whose lights white can't be read over. */
+  .garden-celebrate { top: max(13%, calc(var(--garden-header-bottom) + 12px)); padding: 0 25px; }
+  .garden-celebrate h2 { font-size: 65px; margin: 20px 0; }
+  .garden-venue { font-size: 21px; margin: 18px 0 6px; }
+  .garden-date { font-size: 22px; }
 }
 /* Shorter phones: the boats sit at the same share of the screen's height, but
    the copy doesn't shrink with it, so it is set smaller and higher to stay
@@ -177,10 +184,11 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-arrival h1 { font-size: min(16vw, 9svh); margin: 14px 0 12px; }
   .garden-arrival .garden-amp { font-size: 30px; margin: 2px 0; }
   .garden-subtitle { font-size: 20px; }
-  .garden-celebrate { top: 13%; }
+  .garden-celebrate { top: max(10%, calc(var(--garden-header-bottom) + 12px)); }
   /* Two lines even on the narrowest phone. */
-  .garden-celebrate h2 { font-size: min(58px, 17.5vw); margin: 16px 0; }
-  .garden-venue { font-size: 19px; margin: 12px 0; }
+  .garden-celebrate h2 { font-size: min(58px, 17.5vw); margin: 12px 0; }
+  .garden-venue { font-size: 19px; margin: 12px 0 4px; }
+  .garden-date { font-size: 20px; }
   .garden-button { margin-top: 8px; padding: 15px 22px; }
 }
 /* Phones on their side: too short for the stacked copy, which ran off the
@@ -201,13 +209,18 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-voyage-digits { font-size: 30px; }
   .garden-voyage-year { font-size: 15px; }
   .garden-voyage .garden-text-link { margin-top: 0; }
-  /* On one line, so the button stays above the catamaran's sail. */
-  .garden-celebrate { top: 12%; }
-  .garden-celebrate h2 { font-size: min(48px, 12svh); margin: 6px 0 8px; }
+  /* On one line, so the button stays above the catamaran's sail. The venue
+     and the day share a line too, and the button is a little slimmer, so it
+     clears the monogram flag at the masthead. */
+  .garden-celebrate { top: 10%; }
+  .garden-celebrate .garden-eyebrow { margin: 0; }
+  .garden-celebrate h2 { font-size: min(48px, 12svh); margin: 6px 0 4px; }
   .garden-celebrate h2 br { display: none; }
   .garden-celebrate h2 em { margin-left: .22em; }
-  .garden-venue { font-size: 18px; margin: 8px 0; }
-  .garden-button { margin-top: 4px; padding: 14px 22px; }
+  .garden-venue, .garden-date { display: inline-block; margin: 4px .6em 0; }
+  .garden-venue { font-size: 18px; }
+  .garden-date { font-size: 19px; }
+  .garden-button { display: table; margin: 10px auto 0; padding: 12px 22px; }
   .garden-bottom { left: max(24px, env(safe-area-inset-left)); right: max(24px, env(safe-area-inset-right)); bottom: calc(10px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
 }
@@ -231,4 +244,9 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 .garden-prototype[data-state=ready]:is([data-text=white], [data-text=shadow], [data-text=scrim], [data-text=ink][data-golden]) {
   --garden-on-sky: #fff; --garden-on-sky-soft: #ffffffe8; --garden-on-sky-line: #ffffffa6; --garden-halo: none; }
 .garden-prototype[data-state=ready][data-text=white] .garden-monogram img { filter: brightness(0) invert(1); }
+/* Only the dock's venue and day carry a shadow, soft and close, so they read
+   where the festoons' lights and the misty light behind them cross them
+   (white alone measured 1.0 to 2.5 there on a phone, October 2026). */
+.garden-prototype[data-state=ready][data-text=white] .garden-celebrate :is(.garden-venue, .garden-date) {
+  text-shadow: 0 1px 2px #18202c8c, 0 0 8px #18202c73, 0 0 18px #18202c4d; }
 .garden-prototype[data-text] .garden-scroll-cue i { box-shadow: none; }

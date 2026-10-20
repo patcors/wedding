@@ -491,7 +491,7 @@ export default function Garden() {
         <p className="garden-eyebrow">We’re getting married</p>
         <h2><b className="garden-perch">M</b>eet us<br /><em>in the garden.</em></h2>
         <p className="garden-venue">Jasper’s Berry · Berry, NSW</p>
-        <p className="garden-eyebrow">Friday, 16 April 2027</p>
+        <p className="garden-date">Friday, 16 April 2027</p>
         <a className="garden-button" href={`${BASE}details/`}>The details &amp; RSVP <span aria-hidden="true">→</span></a>
       </section>
     </div>
