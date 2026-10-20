@@ -452,7 +452,7 @@ export default function Garden() {
             </svg>
           </button>}
           <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
-          <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP <span aria-hidden="true">↗</span></a>
+          <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP</a>
         </div>
       </header>
     </div>

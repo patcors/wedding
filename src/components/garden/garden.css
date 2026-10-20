@@ -54,13 +54,16 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
 @media (hover: none) { .garden-stage::after { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 48px; pointer-events: none; background: linear-gradient(var(--garden-page, #eeeee5), var(--garden-sky-top, #eeeee5) 45%, transparent); } }
 /* Phones keep only the top of the wash: nothing fades the bottom of the screen. */
 @media (hover: none) { .garden-wash { background: linear-gradient(180deg, var(--garden-top-wash), transparent 28%); } }
-.garden-header { position: absolute; inset: 0 0 auto; padding: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
+.garden-header { position: absolute; inset: 0 0 auto; padding: var(--garden-header-top) 48px 32px; display: flex; align-items: center; justify-content: space-between; }
 .garden-monogram { position: relative; isolation: isolate; padding: 0; }
+/* Where the header starts (below a phone's notch or Dynamic Island) and where
+   it ends, so the running date and the dock's copy can keep clear of it.
+   Phones give the monogram and links 44px targets (see below). */
+.garden-prototype { --garden-header-top: calc(32px + env(safe-area-inset-top) - var(--garden-edge-clear)); --garden-header-bottom: calc(var(--garden-header-top) + 34px); }
 /* The same halo keeps the logo legible over dark treetops, following its strokes. */
 .garden-monogram img { height: 34px; width: auto; display: block; filter: drop-shadow(0 0 1px var(--garden-glow)) drop-shadow(0 0 5px color-mix(in srgb, var(--garden-glow) 80%, transparent)); }
 .garden-header-links { display: flex; align-items: center; gap: 28px; }
 .garden-invitation-link { font-size: 10px; letter-spacing: .05em; border-bottom: 1px solid var(--garden-on-sky-line, #73796770); padding-bottom: 8px; }
-.garden-invitation-link span { margin-left: 18px; }
 .garden-panels, .garden-chrome-layer { position: sticky; top: var(--garden-edge-clear); height: calc(100svh - 2 * var(--garden-edge-clear)); margin: var(--garden-edge-clear) 0 calc(var(--garden-edge-clear) - 100svh); pointer-events: none; z-index: 2; }
 .garden-chrome-layer { z-index: 3; }
 /* Only the controls themselves catch taps; the water between them still takes a boat. */
@@ -134,10 +137,18 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
    dates each show for a while. */
 .garden-scroll-space { height: 2400svh; pointer-events: none; }
 @media (min-width: 1600px) { .garden-arrival { top: 25%; } }
+/* On phones, upright or on their side, the header's taps were small for a
+   thumb (October 2026): the monogram and links are each 44px tall, the
+   links' text 12px, their underlines still close under the words. */
+@media (max-width: 700px), (orientation: landscape) and (max-height: 500px) {
+  .garden-monogram { min-height: 44px; display: flex; align-items: center; }
+  .garden-header-links { gap: 26px; }
+  .garden-invitation-link { font-size: 12px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; padding: 14px 0 6px; }
+}
 @media (max-width: 700px) {
-  .garden-header { padding: calc(20px + env(safe-area-inset-top) - var(--garden-edge-clear)) 24px 24px; }
+  .garden-prototype { --garden-header-top: calc(20px + env(safe-area-inset-top) - var(--garden-edge-clear)); --garden-header-bottom: calc(var(--garden-header-top) + 44px); }
+  .garden-header { padding: var(--garden-header-top) 24px 24px; }
   .garden-monogram img { height: 30px; }
-  .garden-invitation-link { font-size: 10px; min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 22%; padding: 0 30px; }
   .garden-arrival h1 { font-size: clamp(60px, 16vw, 90px); line-height: .9; margin: 24px 0 20px; }
   .garden-arrival .garden-amp { display: block; font-size: 35px; line-height: 1.2; margin: 4px 0; }
@@ -145,7 +156,8 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
   .garden-subtitle { font-size: 22px; }
   .garden-bottom { left: 24px; right: 24px; bottom: calc(16px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); }
   .garden-place { font-size: 6px; max-width: 100px; line-height: 1.8; }
-  .garden-voyage { top: 11%; }
+  /* Clear of the header on phones with a Dynamic Island, whose inset pushes it down. */
+  .garden-voyage { top: max(11%, calc(var(--garden-header-bottom) + 12px)); }
   .garden-voyage-month { font-size: 42px; }
   /* The running date read small on a real phone (Amelia, October 2026):
      larger and a touch heavier than desktop's smallest, still clear of the
@@ -176,9 +188,9 @@ html:has(.garden-prototype), html:has(.garden-prototype) body { height: 100%; ov
    goes on one line and everything is set small enough to clear the boats'
    masts. The sides keep clear of the notch. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .garden-header { padding: calc(12px + env(safe-area-inset-top) - var(--garden-edge-clear)) max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left)); }
+  .garden-prototype { --garden-header-top: calc(12px + env(safe-area-inset-top) - var(--garden-edge-clear)); }
+  .garden-header { padding: var(--garden-header-top) max(24px, env(safe-area-inset-right)) 12px max(24px, env(safe-area-inset-left)); }
   .garden-monogram img { height: 28px; }
-  .garden-invitation-link { min-height: 36px; display: flex; align-items: center; }
   .garden-arrival { top: 15%; padding: 0 max(30px, env(safe-area-inset-left), env(safe-area-inset-right)); }
   .garden-eyebrow { font-size: 8px; letter-spacing: .18em; }
   .garden-arrival h1 { font-size: min(54px, 13svh); line-height: 1.1; margin: 8px 0 4px; }
