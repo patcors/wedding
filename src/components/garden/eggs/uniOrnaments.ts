@@ -11,6 +11,7 @@ import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { TREE_SINK, treePlacements } from '../gardenTreeSpots.ts';
 import { progressAt, routeAtMonth } from '../journey.ts';
 import { heldBack, markerShown } from './yearMarkerSpots.ts';
+import { eggSize, growth } from './egg.ts';
 
 // Each stands `ahead` units past where the boats are as its month shows, on
 // its `side`'s bank (−1 is Amelia's, −x; 1 Patrick's), `inland` of the
@@ -28,11 +29,11 @@ import { heldBack, markerShown } from './yearMarkerSpots.ts';
 //   further from the water, turned to look out over the river.
 export type Ornament = {
   side: -1 | 1; month: string; ahead: number; facing: string; turn?: number;
-  inland: { desktop: number; mobile: number }; scale: { desktop: number; mobile: number };
+  inland: { desktop: number; mobile: number }; scale: { desktop: number; mobile: number }; grow?: { desktop?: number; mobile?: number };
 };
 export const ORNAMENTS = {
   mobius: { side: -1, month: '2017-07', ahead: 15.2, facing: '2017-09', inland: { desktop: .9, mobile: .2 }, scale: { desktop: 1.2, mobile: 1.15 } },
-  bench: { side: 1, month: '2017-07', ahead: 13.6, facing: '2017-09', turn: .5, inland: { desktop: 4.3, mobile: 1.2 }, scale: { desktop: 1.3, mobile: 1.4 } },
+  bench: { side: 1, month: '2017-07', ahead: 13.6, facing: '2017-09', turn: .5, inland: { desktop: 4.3, mobile: 1 }, scale: { desktop: 1.3, mobile: 1.4 }, grow: { desktop: 1.12, mobile: 1.15 } },
 } as const satisfies Record<string, Ornament>;
 export type OrnamentId = keyof typeof ORNAMENTS;
 
@@ -41,7 +42,7 @@ export type OrnamentSpot = { x: number; y: number; z: number; yaw: number; scale
 // (half its width, in its own units) so no edge floats on the bank's slope,
 // and its yaw (about +y) turning its face (+z in its own frame) to the camera.
 export function ornamentSpot(ornament: Ornament, width: number, footprint = .5): OrnamentSpot {
-  const mobile = width < 1, scale = mobile ? ornament.scale.mobile : ornament.scale.desktop;
+  const mobile = width < 1, scale = eggSize(ornament.scale, mobile, ornament.grow);
   const z = routeAtMonth(ornament.month) - ornament.ahead;
   const reach = footprint * scale;
   const x = riverCenter(z, width) + ornament.side * (bankEdge(z, width) + (mobile ? ornament.inland.mobile : ornament.inland.desktop) + reach);
@@ -92,6 +93,19 @@ export const CARVINGS = {
   heart: { side: 1, z: { desktop: -157.2, mobile: -157.2 }, facing: '2027-01', arc: .85, from: 1.3, to: 1.9, after: '2026-11' },
 } as const satisfies Record<string, BarkCarving>;
 export type CarvingId = keyof typeof CARVINGS;
+// A carving as it is cut on this layout: grown as the bank's eggs are
+// (EGG_GROWTH in egg.ts), up the trunk from where its foot was (so it stays
+// above whatever stands in front of the tree), but only so far
+// round its trunk: past about `CARVED_ARC` radians either side of the face it
+// wraps out of sight, so it grows round the trunk to there at most and up it
+// as much as it then looks wider (the sine of its reach), keeping its shape.
+// A trunk's girth is the limit, so carvings grow less than the other eggs.
+export const CARVED_ARC = 1.2;
+export type Cut = { arc: number; from: number; to: number };
+export function grownCut<T extends Cut>(cut: T, width: number): T {
+  const arc = Math.min(cut.arc * growth(width < 1), Math.max(cut.arc, CARVED_ARC));
+  return { ...cut, arc, to: cut.from + (cut.to - cut.from) * Math.sin(arc) / Math.sin(cut.arc) };
+}
 // Trees within this of the water: the avenue and the groves' inner row.
 const RIVERSIDE = 7;
 

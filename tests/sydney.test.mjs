@@ -5,7 +5,7 @@ import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, groundHeight, pointInland, pointS
 import { DATES, MILESTONES, ROOM, STOPS, monthIndex, progressAt, routeAt } from '../src/components/garden/journey.ts';
 import { ALONGSIDE, boatScale, boatPose } from '../src/components/garden/storyBoats.ts';
 import { HULL, SAIL_EASED } from '../src/components/garden/storyBoatGeometry.ts';
-import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
+import { cameraHeading, growth } from '../src/components/garden/eggs/egg.ts';
 import { BRIDGE, HARBOUR_SHOWN, OPERA, archAt, bridgeStems, harbourBridge, harbourShown, onPoint, operaHouseSpot, pointStems } from '../src/components/garden/eggs/harbour.ts';
 import { pointGeometry, pointTop, rockGeometry, rockHeight, rockInland } from '../src/components/garden/voyageRock.ts';
 import { YEAR_MARKERS, yearMarkerSpot, yearTurns } from '../src/components/garden/eggs/yearMarkerSpots.ts';
@@ -336,7 +336,7 @@ test('2020 is carved into a tree on Amelia\'s bank as 2020 turns, before the bri
   const { yearCarving } = await import('../src/components/garden/eggs/yearMarkerSpots.ts');
   const { treePlacements } = await import('../src/components/garden/gardenTreeSpots.ts');
   const { CAPS, capLanding } = await import('../src/components/garden/eggs/capToss.ts');
-  const { SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
+  const { SNOW_GROW, SNOW_SPOTS, snowSpot } = await import('../src/components/garden/eggs/flurry.ts');
   const marker = YEAR_MARKERS.find(m => m.year === 2020);
   assert.equal(marker.medium, 'carving');
   assert.equal(marker.side, -1);
@@ -356,7 +356,7 @@ test('2020 is carved into a tree on Amelia\'s bank as 2020 turns, before the bri
     const cap = capLanding('2020-08', CAPS.tosses[0], width);
     assert.ok(cap.z > tree.z && Math.hypot(cap.x - tree.x, cap.z - tree.z) < 4.5 && Math.hypot(cap.x - tree.x, cap.z - tree.z) > 1.5);
     // Above the 2019 snowman's head in the picture, so it isn't hidden behind it.
-    const snowman = snowSpot(SNOW_SPOTS[2019], '2019-07', width), size = 1.25 * (width < 1 ? .9 : 1);
+    const snowman = snowSpot(SNOW_SPOTS[2019], '2019-07', width), size = 1.25 * (width < 1 ? .9 : 1) * growth(width < 1, SNOW_GROW);
     for (const p of range(yearTurns(2020), progressAt('2020-10'), .002)) {
       const [, cy] = cameraPose(p, width).position, at = seen(p, width, spot.x, spot.z), him = seen(p, width, snowman.x, snowman.z);
       const carving = degrees(Math.atan2(tree.y + marker.carved.from * tree.scale - cy, at.distance)), head = degrees(Math.atan2(snowman.y + 1.52 * size - cy, him.distance));

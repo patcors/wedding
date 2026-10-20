@@ -18,17 +18,18 @@ import { DATES, MILESTONES, ROOM, progressAt, scrolledSince } from './journey.ts
 import { SALSA, boatPose, catamaran, companyFlags, joining, rigging, salsaTime, universityFlag, type Company } from './storyBoats.ts';
 import { HULL } from './storyBoatGeometry.ts';
 import { rubberDuck } from './rubberDuckGeometry.ts';
-import { DUCKS, duckOnWater, piSpot } from './eggs/campus.ts';
+import { DUCKS, duckOnWater, duckScale, piSpot } from './eggs/campus.ts';
 import { piSculptureGeometry } from './eggs/piSculptureGeometry.ts';
-import { ORNAMENTS as UNI, CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, ornamentSpot as uniSpot, type CarvingId } from './eggs/uniOrnaments.ts';
+import { growth } from './eggs/egg.ts';
+import { ORNAMENTS as UNI, CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, grownCut, ornamentSpot as uniSpot, type CarvingId } from './eggs/uniOrnaments.ts';
 import { MOBIUS_PLINTH, mobiusGeometry } from './eggs/mobiusGeometry.ts';
 import { BENCH, parkBenchGeometry } from './eggs/parkBenchGeometry.ts';
 import { TRUNK_RADIUS, YEAR_MARKERS, markerShown, yearCarving, yearMarkerShown, yearMarkerSpot, type YearMarker } from './eggs/yearMarkerSpots.ts';
 import { yearMarkerModel } from './eggs/yearMarkerGeometry.ts';
 import { CANDLESTICKS, PIE, PIE_BED, candleBoxes, ornamentShown, ornamentSpot } from './eggs/careerSpots.ts';
-import { FLURRY, SNOW_SPOTS, snowSpot } from './eggs/flurry.ts';
+import { FLURRY, SNOW_GROW, SNOW_SPOTS, snowSpot } from './eggs/flurry.ts';
 import { holdingHandsGeometry, snowmanGeometry } from './eggs/snowmanGeometry.ts';
-import { CAPS, capLanding } from './eggs/capToss.ts';
+import { CAPS, capLanding, capScale } from './eggs/capToss.ts';
 import { mortarboardGeometry } from './eggs/mortarboardGeometry.ts';
 import { harbourShown } from './eggs/harbour.ts';
 import { harbourGeometry } from './eggs/sydneyGeometry.ts';
@@ -106,7 +107,7 @@ export function sceneryCatalog(width: number): Piece[] {
       shown: (p, cameraZ) => on(scrolledSince(meet, p) > -1.2 && cameraZ > spot.z - 2), spheres: () => [s] });
   }
   {
-    const duck = local('duck', () => rubberDuck().geometry), scale = mobile ? DUCKS.scale.mobile : DUCKS.scale.desktop;
+    const duck = local('duck', () => rubberDuck().geometry), scale = duckScale(mobile);
     add({ id: 'ducks', name: 'Rubber ducks', group: 'Milestone eggs', file: 'eggs/Ducks.tsx', bank: sideBank(mobile ? DUCKS.side.mobile : DUCKS.side.desktop), counts: true,
       note: 'Each toss plays in .75s; drawn where it bobs on the water.',
       shown: p => { const t = scrolledSince(meet, p); return on(t > 0 && t < DUCKS.gone); },
@@ -117,7 +118,7 @@ export function sceneryCatalog(width: number): Piece[] {
   }
   const snow = (year: 2019 | 2025, milestone: string, model: () => THREE.BufferGeometry, what: string, file: string) => {
     const month = monthOf(milestone), spot = snowSpot(SNOW_SPOTS[year], month, width);
-    const scale = COMPONENT.snowScale * (mobile ? COMPONENT.snowMobile : 1), box = COMPONENT.flurryBox;
+    const scale = COMPONENT.snowScale * (mobile ? COMPONENT.snowMobile : 1) * growth(mobile, SNOW_GROW), box = COMPONENT.flurryBox;
     const passed = (cameraZ: number) => cameraZ > spot.z - 2, bank = bankOf(spot.x, spot.z, width);
     const flurry = sphere(spot.x, box.up * scale / 2, spot.z, Math.hypot(box.across, box.up / 2, box.along) * scale * .6);
     add({ id: `flurry-${year}`, name: `Snow flurry (${year})`, group: 'Milestone eggs', file: 'eggs/SnowReveal.tsx', bank, counts: true,
@@ -128,7 +129,7 @@ export function sceneryCatalog(width: number): Piece[] {
   };
   snow(2019, 'snow-2019', () => snowmanGeometry({ sling: true }), 'Snowman with a sling (2019)', 'eggs/SnowTrip.tsx');
   {
-    const month = monthOf('graduation'), cap = local('cap', mortarboardGeometry), scale = mobile ? CAPS.scale.mobile : CAPS.scale.desktop;
+    const month = monthOf('graduation'), cap = local('cap', mortarboardGeometry), scale = capScale(mobile);
     CAPS.tosses.forEach(toss => {
       const to = capLanding(month, toss, width), s = placed(cap, { ...to, scale });
       add({ id: `cap-${toss.side < 0 ? 'amelia' : 'patrick'}`, name: `${toss.side < 0 ? "Amelia's" : "Patrick's"} mortarboard`, group: 'Milestone eggs',
@@ -235,7 +236,7 @@ export function sceneryCatalog(width: number): Piece[] {
   const carvingNames: Record<CarvingId, string> = { stats: 'Statistics carving', algebra: 'Quadratic formula carving', sloop: 'Sloop carving',
     spiral: 'Golden spiral carving', sloops: 'Two sloops carving', heart: 'P + A heart carving' };
   for (const id of Object.keys(CARVINGS) as CarvingId[]) {
-    const carving = CARVINGS[id];
+    const carving = grownCut(CARVINGS[id], width);
     if (!carvedOn(carving, width)) continue;
     const tree = carvedTree(carving, width), faces = carvingFaces(carving, width), toward = Math.atan2(faces.x - tree.x, faces.z - tree.z);
     const r = TRUNK_RADIUS * tree.scale;
@@ -250,9 +251,9 @@ export function sceneryCatalog(width: number): Piece[] {
     const spot = yearMarkerSpot(marker, width);
     let s: Sphere, z = spot.z;
     if ('carved' in marker) {
-      const { tree } = yearCarving(marker, width);
+      const { tree, carving } = yearCarving(marker, width);
       z = tree.z;
-      s = sphere(spot.x, spot.y, spot.z, Math.max((marker.carved.to - marker.carved.from) / 2, marker.carved.arc * TRUNK_RADIUS) * tree.scale);
+      s = sphere(spot.x, spot.y, spot.z, Math.max((carving.to - carving.from) / 2, carving.arc * TRUNK_RADIUS) * tree.scale);
     } else s = placed(local(`year-${marker.year}`, () => yearMarkerModel({ ...marker, medium: marker.medium as Exclude<typeof marker.medium, 'carving'> }, i).body), spot);
     add({ id: `year-${marker.year}`, name: `${marker.year} ${marker.medium}`, group: 'Year markers', file: 'eggs/YearMarkers.tsx',
       bank: 'share' in marker ? 'river' : sideBank(marker.side), counts: true,

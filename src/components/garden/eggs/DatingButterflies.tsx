@@ -13,11 +13,13 @@ import { WING } from '../butterflyWing';
 import { SCALE_BEFORE, boatPose } from '../storyBoats';
 import { useJourney, type SlotProps } from '../JourneyProvider';
 import { FLYERS, courtshipTime, flightPoint, flying, perch } from './datingFlight';
+import { eggSize } from './egg';
 
 // Each wing card is half the artwork's viewBox: 50 wide by 100 long.
 const CELL = { width: 128, height: 256 };
 // A wing's length, nose to tail, in world units: well larger than life,
-// so they read beside the boats, and larger again on a phone's wider lens.
+// so they read beside the boats, and larger again on a phone's wider lens;
+// grown as the bank's eggs are (eggSize in egg.ts).
 const SIZE = { desktop: .55, mobile: .7 };
 // Half raised, as the page's butterflies rest on a letter.
 const RESTING_FOLD = 55;
@@ -101,7 +103,7 @@ export default function DatingButterflies({ paused, reduced, mobile, width }: Sl
       const rest = still ? perch(flyer, pose.gap * SCALE_BEFORE) : null;
       body.visible = still ? !!rest : flying(flyer, t);
       if (!body.visible) return;
-      body.scale.setScalar((mobile ? SIZE.mobile : SIZE.desktop) / grow);
+      body.scale.setScalar(eggSize(SIZE, mobile) / grow);
       if (rest) {
         // Side by side on the bows, facing forward, wings half raised.
         body.position.set(...rest);

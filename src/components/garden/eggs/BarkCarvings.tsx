@@ -13,7 +13,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useJourney, type SlotProps } from '../JourneyProvider';
 import { TREE_MODELS } from '../GardenTrees';
-import { CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, type BarkCarving, type CarvingId } from './uniOrnaments';
+import { CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, grownCut, type BarkCarving, type CarvingId } from './uniOrnaments';
 import { barkCarvingTextures, barkPatchGeometry, treeMatrix, type TreeMesh } from './barkCarvingGeometry';
 
 // The model's branches as plain arrays (its normals are stored packed).
@@ -30,7 +30,7 @@ export function treeMesh(geometry: THREE.BufferGeometry): TreeMesh {
 function Carving({ id, width }: SlotProps & { id: CarvingId }) {
   const clock = useJourney();
   const models = useGLTF(TREE_MODELS);
-  const carving: BarkCarving = CARVINGS[id];
+  const carving: BarkCarving = useMemo(() => grownCut(CARVINGS[id], width), [id, width]);
   const tree = useMemo(() => carvedTree(carving, width), [carving, width]);
   const geometry = useMemo(() => {
     const branches = (models[tree.type].nodes.branches as THREE.Mesh).geometry;

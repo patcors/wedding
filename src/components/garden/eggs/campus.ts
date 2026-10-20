@@ -3,6 +3,7 @@
 // into the river. Pure, so it can be tested.
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { DATES, routeAtMonth } from '../journey.ts';
+import { eggSize } from './egg.ts';
 
 // Where the boats are as they meet: the π and the ducks are placed from here,
 // so they keep their place in the story if the scroll is shared out anew.
@@ -15,7 +16,7 @@ const MEET_Z = routeAtMonth(DATES.meet);
 // narrower, so it stands nearer the water and smaller.
 export const PI = { ahead: 18.5, side: 1, inland: { desktop: 1.4, mobile: .8 }, scale: { desktop: 1.3, mobile: 1 }, yaw: -.28 } as const;
 export function piSpot(mobile: boolean, width: number) {
-  const { side, yaw } = PI, z = MEET_Z - PI.ahead, inland = mobile ? PI.inland.mobile : PI.inland.desktop, scale = mobile ? PI.scale.mobile : PI.scale.desktop;
+  const { side, yaw } = PI, z = MEET_Z - PI.ahead, inland = mobile ? PI.inland.mobile : PI.inland.desktop, scale = eggSize(PI.scale, mobile);
   const x = riverCenter(z, width) + side * (bankEdge(z, width) + inland);
   // Sunk to the lowest ground under its plinth, so no edge floats on the slope.
   const reach = .55 * scale;
@@ -39,12 +40,16 @@ export const DUCKS = {
   flight: .75, arc: .9,
   // Drift downstream in units per share, and how long it takes to reach its lane.
   drift: 1.1, settle: 1.2,
-  scale: { desktop: .85, mobile: .65 },
+  // Grown less than the bank's eggs (`grow`, see eggSize in egg.ts): out on
+  // the water beside the boats they were already easy to see.
+  scale: { desktop: .85, mobile: .65 }, grow: { desktop: 1.1, mobile: 1.2 },
   // Under reduced motion they float just off the bank, all four in, at this time.
   settled: .45, gone: 3.1,
 } as const;
 const smooth = (t: number) => { const x = Math.min(1, Math.max(0, t)); return x * x * (3 - 2 * x); };
 
+// Its size on this layout, grown as the bank's eggs are (eggSize in egg.ts).
+export const duckScale = (mobile: boolean) => eggSize(DUCKS.scale, mobile, DUCKS.grow);
 const duckSide = (width: number) => width < 1 ? DUCKS.side.mobile : DUCKS.side.desktop;
 // Where duck `i` sits on the water `t` shares after the date, once in: x, z.
 export function duckOnWater(i: number, t: number, width: number) {

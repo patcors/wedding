@@ -23,6 +23,10 @@ export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number; mobileInl
 // the boats.
 export const SNOW_SPOTS = { 2019: { ahead: 7.5, side: -1, inland: 1.5, mobileInland: .35 }, 2025: { ahead: 3.7, side: -1, inland: .4, mobileInland: .8 } } as const satisfies Record<number, SnowSpot>;
 
+// How much the snow trips grow (EGG_GROWTH in egg.ts): less than the other
+// eggs, as a snowman near the water already stands large beside the boats.
+export const SNOW_GROW = { desktop: 1.1, mobile: 1.15 } as const;
+
 // Its course in milestone shares since the date (see eggTime): the flurry
 // thickens from 0 to `full`, hides the bank while what it leaves behind
 // appears from `reveal`, thins from `clear` and is gone by `gone`, all while

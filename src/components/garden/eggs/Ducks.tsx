@@ -7,7 +7,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { simplifiedRubberDuck } from '../rubberDuckGeometry';
 import { useJourney } from '../JourneyProvider';
-import { DUCKS, duckLaunchSpot, duckOnWater } from './campus';
+import { DUCKS, duckLaunchSpot, duckOnWater, duckScale } from './campus';
 import { eggTime, type EggProps } from './egg';
 
 const RING = { seconds: 1.2, size: .7 };
@@ -33,7 +33,7 @@ export default function Ducks({ milestone, paused, reduced, mobile, width }: Egg
   // null while it waits behind the bank.
   const thrown = useRef<(number | null)[]>(Array(count).fill(null));
   const idle = useRef(0);
-  const scale = mobile ? DUCKS.scale.mobile : DUCKS.scale.desktop;
+  const scale = duckScale(mobile);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const colour = useMemo(() => new THREE.Color(), []);
   // The rings' colours exist from the first frame, so the material is built with them.

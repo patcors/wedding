@@ -7,6 +7,7 @@ import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt, routeAtMonth } from '../journey.ts';
 import { markerShown } from './yearMarkerSpots.ts';
+import { eggSize } from './egg.ts';
 
 // `facing` is the month it stands for: it stands `ahead` past where the boats
 // are then, on the `side` bank (−1 is −x, Amelia's), `inland` from the
@@ -14,8 +15,10 @@ import { markerShown } from './yearMarkerSpots.ts';
 // `mobileInland` where given), turned so its
 // face (+z in its own frame) looks at the camera. It dissolves in out of the
 // haze as the year markers do, and no earlier than `from` (it is fully in as
-// that month shows), and goes once the camera has passed it.
-export type BankOrnament = { facing: string; from: string; ahead: number; side: -1 | 1; inland: number; mobileInland?: number; scale: { desktop: number; mobile: number } };
+// that month shows), and goes once the camera has passed it. If it `grows`,
+// it is drawn at its `scale` grown as the bank's eggs are (eggSize in
+// egg.ts), by its own growth where `grows` gives one; otherwise (the truck, engagementTruck.ts) at its `scale` as it is.
+export type BankOrnament = { facing: string; from: string; ahead: number; side: -1 | 1; inland: number; mobileInland?: number; scale: { desktop: number; mobile: number }; grows?: { desktop?: number; mobile?: number } };
 
 // Each stands clear of the eggs and year markers near it. The candlesticks
 // are on the left bank behind 2018's rock, in view through 2018 and beside the
@@ -28,8 +31,8 @@ export type BankOrnament = { facing: string; from: string; ahead: number; side: 
 // It lies a little back from the water, on the slope up from it, which tips
 // it towards the camera, and far enough on that a phone's narrow picture
 // takes in the whole bed.
-export const CANDLESTICKS: BankOrnament = { facing: '2018-07', from: '2018-01', ahead: 7.3, side: -1, inland: .9, mobileInland: 1.25, scale: { desktop: 1.3, mobile: .9 } };
-export const PIE_BED: BankOrnament = { facing: '2023-03', from: '2023-03', ahead: 6, side: -1, inland: 2.1, mobileInland: 1.6, scale: { desktop: 1.5, mobile: 1 } };
+export const CANDLESTICKS: BankOrnament = { facing: '2018-07', from: '2018-01', ahead: 7.3, side: -1, inland: .9, mobileInland: 1.25, scale: { desktop: 1.3, mobile: .9 }, grows: { desktop: 1, mobile: 1.25 } };
+export const PIE_BED: BankOrnament = { facing: '2023-03', from: '2023-03', ahead: 6, side: -1, inland: 2.3, mobileInland: 1.95, scale: { desktop: 1.5, mobile: 1 }, grows: {} };
 export const ORNAMENTS = [CANDLESTICKS, PIE_BED] as const;
 
 const MOBILE_INLAND = .6;
@@ -42,7 +45,7 @@ export function ornamentSpot(ornament: BankOrnament, width: number): OrnamentSpo
   const z = routeAtMonth(ornament.facing) - ornament.ahead;
   const x = riverCenter(z, width) + ornament.side * (bankEdge(z, width) + (mobile ? ornament.mobileInland ?? ornament.inland * MOBILE_INLAND : ornament.inland));
   const [cx, , cz] = cameraPose(progressAt(ornament.facing), width).position;
-  return { x, y: groundHeight(x, z, width), z, yaw: Math.atan2(cx - x, cz - z), scale: mobile ? ornament.scale.mobile : ornament.scale.desktop };
+  return { x, y: groundHeight(x, z, width), z, yaw: Math.atan2(cx - x, cz - z), scale: ornament.grows ? eggSize(ornament.scale, mobile, ornament.grows) : mobile ? ornament.scale.mobile : ornament.scale.desktop };
 }
 
 // How much of it shows at p, 0 to 1, with the camera at cameraZ.

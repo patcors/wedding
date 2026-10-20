@@ -20,13 +20,13 @@ import { BULLET_MODEL } from './bulletGeometry.ts';
 // dissolving in over the `arrive` shares before August 2025 shows, fully in
 // at the trip's date and its still, and gone once the camera has passed it,
 // as the ornaments are. `size` is its height in world units, plinth to tip,
-// its only size: about 1.2 times the snowmen's (1.9 tall on desktop, and a
-// tenth smaller on a phone, as they are), so it reads as a garden sculpture
-// beside them. If the snowmen change size, change this with them.
+// its only size: about 1.2 times the snowmen's (2.1 tall on desktop and 2
+// on a phone, grown by SNOW_GROW in flurry.ts), so it reads as a garden
+// sculpture beside them. If the snowmen change size, change this with them.
 export const BULLET = {
   from: '2025-08', arrive: .3,
   ahead: 5.5, side: 1, inland: { desktop: 1.2, mobile: .75 },
-  size: { desktop: 2.3, mobile: 2.1 },
+  size: { desktop: 2.55, mobile: 2.4 },
 } as const;
 
 export type BulletSpot = { x: number; y: number; z: number; yaw: number; scale: number };

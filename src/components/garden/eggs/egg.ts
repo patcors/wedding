@@ -69,6 +69,19 @@ export function inView(p: number, width: number, { distance, bearing = 0, height
 export const heightAt = (distance: number, elevation: number) =>
   GARDEN_CAMERA.height + Math.tan(elevation * Math.PI / 180) * distance;
 
+// How much larger the bank's eggs and the year markers are drawn than first
+// placed. On a real phone the things at the side of the river were too small
+// to spot (Amelia, October 2026), and a phone's wider lens draws everything
+// smaller, so they grow most there; on desktop a little. Each egg keeps its
+// own approved `scale` and is drawn at it times this growth (`eggSize`), or
+// at a growth of its own (`grow`) where it reads better so.
+export type Sizes = { desktop: number; mobile: number };
+export const EGG_GROWTH: Sizes = { desktop: 1.2, mobile: 1.5 };
+export const growth = (mobile: boolean, grow?: Partial<Sizes>) =>
+  mobile ? grow?.mobile ?? EGG_GROWTH.mobile : grow?.desktop ?? EGG_GROWTH.desktop;
+export const eggSize = (scale: Sizes, mobile: boolean, grow?: Partial<Sizes>) =>
+  (mobile ? scale.mobile : scale.desktop) * growth(mobile, grow);
+
 // Moves a point sideways, if need be, to keep it over the water: within
 // `share` of the way from the river's middle to its banks. Trees line the
 // banks, so this keeps something in the air clear of them.

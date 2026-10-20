@@ -6,6 +6,7 @@ import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt } from '../journey.ts';
 import { boatPose } from '../storyBoats.ts';
+import { eggSize } from './egg.ts';
 
 // One cap a boat: Amelia's (the −x boat) and then Patrick's, each tossed `at`
 // shares after the date, while it holds, just after their UOW flags come
@@ -27,6 +28,8 @@ export const CAPS = {
   settled: .4,
 } as const;
 export type Toss = (typeof CAPS.tosses)[number];
+// Its size on this layout, grown as the bank's eggs are (eggSize in egg.ts).
+export const capScale = (mobile: boolean) => eggSize(CAPS.scale, mobile);
 
 // Where the cap is tossed from: the boat's cockpit, aft of its mast, as the
 // toss's time comes. x, y, z in the world.
