@@ -37,6 +37,13 @@ export type YearMarker = { year: number; medium: YearMedium; side: -1 | 1; lead:
 // Sydney's wide river puts its left
 // bank out of a phone's picture, so 2021 and 2023 stand on the right, and
 // 2022's pile stands mid-river between the boats while they are apart.
+// On a phone's narrow river Patrick's boat sails close by his bank there, so
+// 2023's slate stood out in the shallows just left of his mast at January's
+// stop, and as the boats sailed on his sail ran across it and his flag over
+// it, his hull through its landing (Amelia, on an iPhone, October 2026). It
+// stands back on his bank instead, a little upstream, its landing running
+// out to the water: clear to the right of his rig and flag from when it
+// dissolves in until it has gone, and well off his hull.
 // From 2025 the river bends left and the S-bend draws the camera round
 // after it, so through late 2025 and 2026 the right bank is at the edge of a
 // phone's picture: 2025's oar and 2026's arch both stand on the left, the
@@ -61,7 +68,7 @@ export const YEAR_MARKERS: readonly YearMarker[] = [
   { year: 2020, medium: 'carving', side: -1, lead: 8.6, carved: { arc: .95, from: 1.2, to: 2.2 } },
   { year: 2021, medium: 'stake', side: 1, lead: 3.5, inland: .55 },
   { year: 2022, medium: 'pile', side: 1, lead: 3, share: .85, grow: { mobile: 1.2 } },
-  { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9, mobile: { lead: 9.8, inland: -.35 }, grow: { mobile: 1 } },
+  { year: 2023, medium: 'slate', side: 1, lead: 9.8, inland: .9, mobile: { lead: 7, inland: 1.45 }, grow: { mobile: 1 } },
   { year: 2024, medium: 'lantern', side: 1, lead: 9.5, inland: .2 },
   { year: 2025, medium: 'oar', side: -1, lead: 4.8, inland: .3, mobile: { lead: 9.5, inland: .3, side: 1 }, grow: { mobile: 1.15 } },
   { year: 2026, medium: 'arch', side: -1, lead: 8.6, inland: .6 },

@@ -75,7 +75,10 @@ export function ornamentSpot(ornament: Ornament, width: number, footprint = .5):
 //   through 2021, while Amelia is in Sydney. Not on a phone (`mobile` null),
 //   whose narrow lens would see it only far off, past 2021's stake.
 // - Two little sloops side by side on Patrick's bank, as the boats come back
-//   alongside in March 2023.
+//   alongside in March 2023. Not on a phone (`mobile` null), where its tree
+//   was seen only far off, a few pixels across, at the picture's edge, and
+//   2023's slate now stands on the bank right in front of it (see
+//   yearMarkerSpots.ts).
 // - A heart with P + A cut inside it on the headland in the S-bend, nearest
 //   as the wedding comes, across the river from 2027's heart. Its tree is
 //   near the middle of the picture from the trip on, so it is held back
@@ -89,7 +92,7 @@ export const CARVINGS = {
   algebra: { side: 1, z: { desktop: -45.6, mobile: -43 }, facing: '2019-03', arc: 1, from: .4, to: .92 },
   sloop: { side: -1, z: { desktop: -17, mobile: -17 }, facing: '2017-05', arc: .95, from: .9, to: 1.72 },
   spiral: { side: 1, z: { desktop: -82.5, mobile: null }, facing: '2022-01', arc: 1, from: .9, to: 1.4 },
-  sloops: { side: 1, z: { desktop: -95, mobile: -95 }, facing: '2023-01', arc: 1, from: .9, to: 1.42 },
+  sloops: { side: 1, z: { desktop: -95, mobile: null }, facing: '2023-01', arc: 1, from: .9, to: 1.42 },
   heart: { side: 1, z: { desktop: -157.2, mobile: -157.2 }, facing: '2027-01', arc: .85, from: 1.3, to: 1.9, after: '2026-11' },
 } as const satisfies Record<string, BarkCarving>;
 export type CarvingId = keyof typeof CARVINGS;
