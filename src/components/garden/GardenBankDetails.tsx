@@ -1,6 +1,6 @@
 // Stones, grass and flowers along the banks: the original Review variants and
 // the flowers every variant keeps.
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { riverCenter, bankEdge, groundHeight, leafGeometry, random, voyageClearing, RIVER_REACH } from './gardenGeometry';
@@ -9,6 +9,7 @@ import { pieBedFootprint } from './eggs/careerSpots';
 import { truckFootprint } from './eggs/engagementTruck';
 import type { RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
+import { seasonalFlowers } from './GardenSeasons';
 
 // The original counts covered about 126 units of river; these keep that density.
 const LENGTH = RIVER_REACH.from - RIVER_REACH.to;
@@ -37,6 +38,14 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
     g.computeVertexNormals(); return g;
   }, []);
   const petal = useMemo(() => leafGeometry(true), []);
+  // In spring the flowers grow and take their clump's colour (GardenSeasons.tsx).
+  const flowerMaterial = useMemo(() => {
+    const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: .8 });
+    material.onBeforeCompile = seasonalFlowers;
+    material.customProgramCacheKey = () => 'garden-bank-flowers-seasons-v1';
+    return material;
+  }, []);
+  useEffect(() => () => flowerMaterial.dispose(), [flowerMaterial]);
   useLayoutEffect(() => {
     const rand = random(319), dummy = new THREE.Object3D(), color = new THREE.Color(), underBed = pieBedFootprint(width), underTruck = truckFootprint(width);
     // The same sites as the moss rocks in GardenRocks, compared in Review,
@@ -89,9 +98,7 @@ export default function GardenBankDetails({ width, rockStyle, plantStyle }: { wi
     {plantStyle === 'original' && <instancedMesh name="garden-original-grass" ref={grasses} args={[blade, undefined, GRASSES]}>
       <meshStandardMaterial color="#6d7954" side={THREE.DoubleSide} roughness={1} />
     </instancedMesh>}
-    <instancedMesh name="garden-bank-flowers" ref={flowers} args={[petal, undefined, FLOWERS]}>
-      <meshStandardMaterial side={THREE.DoubleSide} roughness={.8} />
-    </instancedMesh>
+    <instancedMesh name="garden-bank-flowers" ref={flowers} args={[petal, flowerMaterial, FLOWERS]} />
   </>;
 }
 

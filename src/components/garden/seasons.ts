@@ -4,11 +4,14 @@
 // it), spring through 2020 to 2022, summer (the garden as it always looked)
 // through 2023 to 2025, and autumn through 2026 and 2027, the engagement, the
 // bend and the dock. It changes three times, each easing over a quiet stretch
-// of scroll near the January it stands for. Understated by design, so the
-// eggs stay what the eye finds: a few trees change, not the avenue. A
-// painter's wash over the trees, grass, plants and light, never a filter:
-// GardenSeasons.tsx feeds it to the shaders, GardenSky.tsx to the light,
-// GardenDrift.tsx to the falling leaves and petals. Pure, so it can be tested
+// of scroll near the January it stands for. Each season has its own palette
+// (Amelia, October 2026): a crisp, cool winter with many trees bare and the
+// grass frosted, cherry blossom and flowers on the banks in spring, the
+// garden as it always was in summer, amber, orange, rust and red in autumn;
+// the motion stays as calm as ever, so the eggs stay what the eye finds. A
+// painter's wash over the trees, grass, plants, flowers and light, never a
+// filter: GardenSeasons.tsx feeds it to the shaders, GardenSky.tsx to the
+// light, GardenDrift.tsx to the falling leaves and petals. Pure, so it can be tested
 // (tests/seasons.test.mjs).
 import { MILESTONES, STOPS, progressAt } from './journey.ts';
 import { treeBase, treePlacements } from './gardenTreeSpots.ts';
@@ -21,23 +24,24 @@ export const SEASONS = true;
 export const REVIEW_SEASONS = 'pa_dev_seasons';
 export const seasonsOn = (stored: string | null) => stored === 'on' ? true : stored === 'off' ? false : SEASONS;
 
-// Each amount runs 0 to 1. `turn` is autumn colour on the few trees that
-// turn, `bare` how sparse a few of them grow in winter, `fresh` spring's new
-// growth, `blossom` spring flowers on a handful of trees, `pale` winter's
-// paler, frost-dried grass, `dry` autumn's straw in the grass, and `petals`
-// how many of the petals drifting in the air are out (1 is all of them, as
-// without seasons).
-export type Season = { turn: number; bare: number; fresh: number; blossom: number; pale: number; dry: number; petals: number };
-export const NEUTRAL: Season = { turn: 0, bare: 0, fresh: 0, blossom: 0, pale: 0, dry: 0, petals: 1 };
+// Each amount runs 0 to 1. `turn` is autumn colour on the trees that turn,
+// `bare` how bare the trees that stand bare grow in winter, `fresh` spring's
+// new growth, `blossom` spring flowers on the trees that blossom, `flowers`
+// the flowers out on the banks in spring, `pale` winter's frost on the grass,
+// `dry` autumn's straw in the grass, and `petals` how many of the petals
+// drifting in the air are out (1 is all of them, as without seasons).
+export type Season = { turn: number; bare: number; fresh: number; blossom: number; flowers: number; pale: number; dry: number; petals: number };
+export const NEUTRAL: Season = { turn: 0, bare: 0, fresh: 0, blossom: 0, flowers: 0, pale: 0, dry: 0, petals: 1 };
 const AMOUNTS = Object.keys(NEUTRAL) as (keyof Season)[];
 
 // Summer is the garden exactly as it is with the seasons off.
 export const SUMMER: Season = { ...NEUTRAL };
-// A warm, lovely autumn: the trees that turn go gold and amber, none thin.
-export const AUTUMN: Season = { ...NEUTRAL, turn: 1, dry: .6, petals: .6 };
-// A soft, bright winter: a few trees sparse, the grass a little paler.
-export const WINTER: Season = { ...NEUTRAL, bare: .8, pale: .8, petals: .4 };
-export const SPRING: Season = { ...NEUTRAL, fresh: 1, blossom: 1 };
+// Autumn: much of the avenue amber, orange, rust and red, the grass straw.
+export const AUTUMN: Season = { ...NEUTRAL, turn: 1, dry: 1, petals: .4 };
+// Winter: crisp and bright, not grey: many trees bare, the grass frosted, the light cooler.
+export const WINTER: Season = { ...NEUTRAL, bare: 1, pale: 1, petals: .2 };
+// Spring: cherry-pink blossom, fresh green, flowers along the banks.
+export const SPRING: Season = { ...NEUTRAL, fresh: 1, blossom: 1, flowers: 1 };
 
 // The seasons over scroll progress p: each holds from one key to the next of
 // the same season and eases between seasons over the scroll from one key to
@@ -100,65 +104,84 @@ export function seasonName(p: number) {
   return p - a.at < b.at - p ? a.name : b.name;
 }
 
-// The light's share of the season, kept tiny so it never fights the day's
-// sky (skyCycle.ts): winter's sun and fill light a little brighter and its
-// sun no cooler (the dawn under the title stays warm), soft rather than
-// gloomy; autumn's sun a touch warmer, spring's fill a shade brighter.
-// Multipliers for the sun's colour and intensity and the hemisphere light's
-// intensity, never darker than summer's.
+// The light's share of the season, small beside the day's sky (skyCycle.ts)
+// but enough to set each season's palette: winter's sun and fill light
+// cooler and brighter, so the shadows go blue and the frost glints, crisp
+// rather than gloomy; autumn's sun and fill warmer; spring's fill a shade
+// brighter. Multipliers for the sun's colour and intensity and the
+// hemisphere light's colour and intensity, never darker than summer's.
 export function seasonLight(s: Season) {
   return {
-    sunColor: [1 + .02 * s.turn, 1, 1 - .03 * s.turn - .01 * s.pale] as [number, number, number],
-    sunIntensity: 1 + .02 * s.pale,
-    hemi: 1 + .04 * s.pale + .02 * s.fresh,
+    sunColor: [1 + .04 * s.turn - .03 * s.pale, 1, 1 - .07 * s.turn + .05 * s.pale] as [number, number, number],
+    sunIntensity: 1 + .04 * s.pale,
+    hemiColor: [1 + .02 * s.turn - .04 * s.pale, 1, 1 - .04 * s.turn + .06 * s.pale] as [number, number, number],
+    hemi: 1 + .08 * s.pale + .04 * s.fresh,
   };
 }
 
-// The falling leaves' colours: olive and tan, a few turning gold and amber
-// in autumn, fresh green in spring.
+// The falling leaves' colours: olive and tan; in autumn most turn amber,
+// orange, rust or red; fresh green in spring.
 export const LEAF_COLOURS = {
   green: [0x92 / 255, 0x99 / 255, 0x6d / 255], tan: [0xba / 255, 0x95 / 255, 0x65 / 255],
-  gold: [.8, .63, .3], amber: [.76, .5, .25],
-  fresh: [.62, .7, .36],
+  amber: [.86, .58, .2], orange: [.88, .4, .12], rust: [.68, .27, .12], red: [.76, .18, .12],
+  fresh: [.62, .74, .32],
 } as const;
+const AUTUMN_LEAVES = [LEAF_COLOURS.amber, LEAF_COLOURS.orange, LEAF_COLOURS.rust, LEAF_COLOURS.red];
 type Rgb = [number, number, number];
 const mixRgb = (a: readonly number[], b: readonly number[], t: number): Rgb => [0, 1, 2].map(i => a[i] + (b[i] - a[i]) * t) as Rgb;
 // The i-th falling leaf's colour in season s; without seasons, every third is
-// tan and the rest olive. In autumn every other leaf turns, gold or amber.
+// tan and the rest olive. In autumn three in four turn, round the palette.
 export function leafColour(i: number, s: Season): Rgb {
   const base = i % 3 ? LEAF_COLOURS.green : LEAF_COLOURS.tan;
-  const autumn = i % 4 < 2 ? LEAF_COLOURS.gold : LEAF_COLOURS.amber;
-  const c = mixRgb(base, autumn, Math.min(1, s.turn) * (i % 2 ? .7 : 0));
-  return mixRgb(c, LEAF_COLOURS.fresh, s.fresh * .4 * (i % 3 ? 1 : 0));
+  const c = mixRgb(base, AUTUMN_LEAVES[i % 4], Math.min(1, s.turn) * (i % 4 === 3 ? 0 : .9));
+  return mixRgb(c, LEAF_COLOURS.fresh, s.fresh * .5 * (i % 3 ? 1 : 0));
 }
-// The drifting petals: their usual rose, paler like blossom in spring.
-export const PETAL_COLOURS = { rose: [0xc8 / 255, 0x88 / 255, 0x89 / 255], blossom: [.96, .85, .87] } as const;
-export const petalColour = (s: Season): Rgb => mixRgb(PETAL_COLOURS.rose, PETAL_COLOURS.blossom, s.blossom * .7);
+// The drifting petals: their usual rose, cherry pink in spring.
+export const PETAL_COLOURS = { rose: [0xc8 / 255, 0x88 / 255, 0x89 / 255], blossom: [.96, .52, .68] } as const;
+export const petalColour = (s: Season): Rgb => mixRgb(PETAL_COLOURS.rose, PETAL_COLOURS.blossom, s.blossom);
 // How much of the i-th of n petals shows: all of them with petals 1, the
 // later ones fading out as fewer are about.
 export const petalShown = (i: number, n: number, s: Season) => Math.min(1, Math.max(0, s.petals * n - i));
 
-// Which trees take part, and how (GardenTrees.tsx hands each tree's role to
+// The trees' palettes, in sRGB (GardenSeasons.tsx turns them to the shaders'
+// linear light, so they stay as saturated on screen as written): autumn's
+// amber, orange, rust and red, most trees amber or orange; spring's cherry
+// blossom, from a deeper to a paler pink, never white, so it never reads as
+// snow.
+export const AUTUMN_TREE_COLOURS = [[.92, .64, .2], [.93, .47, .13], [.74, .31, .13], [.74, .2, .13]] as const;
+export const BLOSSOM_COLOURS = [[.93, .38, .6], [.98, .6, .74]] as const;
+
+// The flowers on the banks in spring (GardenSeasons.tsx's seasonalFlowers
+// and seasonalClover): cherry pink, buttercup yellow, white and violet, one
+// colour to a clump; the bank flowers grow by `FLOWER_GROWTH` and about half
+// the clover's colonies (`CLOVER_FLOWERS`) lift their heads above the grass.
+export const FLOWER_COLOURS = [[1, .42, .64], [1, .8, .2], [1, .97, .9], [.62, .42, .92]] as const;
+export const FLOWER_GROWTH = 1.4, CLOVER_FLOWERS = { share: .5, lift: .2 } as const;
+
+// Which trees take part, and how (GardenTrees.tsx hands each tree's part to
 // its leaves' shader as the instance's colour; GardenSeasons.tsx reads it).
-// Every other tree and the shrubs stay as they are all year, and the old tree
-// at the dock only takes a touch of autumn (`old`): some of its cards go
-// gold, never thinning or blossoming, so it stays the tree it is under the
-// festoons. A few trees are featured, so each season shows on a tree or two
-// the guest really sees: at each of its moments (FEATURED), the ash whose
-// crown stands largest in the picture to one side, clear of the middle, on
-// that layout (desktop or phone). Behind them a hash of where each ash
-// stands has a few more turn (`turns` and up) and grow sparse (`sparse` and
-// up), for depth. Blossom is only ever on the featured trees, so spring
-// reads as a handful of flowering trees rather than a tint across many.
-export const ROLE = { still: 0, turns: 1, sparse: 2, blossom: 3, old: 4 } as const;
+// Each ash takes part in each season by a hash of where it stands, a share of
+// the avenue apiece (SHARES): in winter a good number stand bare, in autumn
+// most turn, in spring a fair few blossom. The rest of the avenue changes only
+// a little (its leaves cooler in winter, fresher in spring, warmer in
+// autumn), and the shrubs not at all. The old tree at the dock (`old`) turns
+// in autumn, never thinning or blossoming, so it stays the tree it is under
+// the festoons. A few trees are featured besides, so each season shows on a
+// tree the guest really sees: at each of its moments (FEATURED), the ash
+// whose crown stands largest in the picture to one side, clear of the middle,
+// on that layout (desktop or phone).
+export const ROLE = { still: 0, turns: 1, sparse: 2, blossom: 3 } as const;
 export type Role = typeof ROLE[keyof typeof ROLE];
-export const TREES = { turns: .88, sparse: .95 } as const;
+// A tree's parts, as bits: it turns in autumn, stands bare in winter,
+// blossoms in spring, or is the old tree at the dock.
+export const PART = { turns: 1, bare: 2, blossom: 4, old: 8 } as const;
+export const SHARES = { turns: .6, bare: .6, blossom: .16 } as const;
 // The old tree at the dock's model type (oldTreePlacement in gardenTreeSpots.ts),
 // and how much of autumn's turn it takes: a share of its cards, and how far each goes.
 export const OLD_TREE_TYPE = 4;
-export const OLD_TREE_AUTUMN = { cards: .45, turn: .55 } as const;
+export const OLD_TREE_AUTUMN = { cards: .75, turn: .85 } as const;
 // The moments each season features a tree at: a milestone's stop and its
-// still (by id), or a progress. `sparse` trees also turn in autumn.
+// still (by id), or a progress. `sparse` trees, bare in winter, also turn in autumn.
 export const FEATURED: readonly { role: Role; at: readonly (string | number)[] }[] = [
   { role: ROLE.sparse, at: ['meet', 'snow-2019'] },
   { role: ROLE.blossom, at: ['graduation', .42, 'interim'] },
@@ -207,15 +230,18 @@ export function featuredTrees(width: number, mobile: boolean): Map<string, Role>
   return picks;
 }
 
-// A tree's role and its shade (0 to 1: gold to amber in autumn, pinker or
-// whiter blossom), from where it stands and its model `type`
-// (gardenTreeSpots.ts: 0 to 3 the ashes), on a layout.
-export function treeSeason(x: number, z: number, type: number, width: number, mobile: boolean): { role: Role; shade: number } {
+// A tree's parts (PART's bits) and its shade (0 to 1: amber through orange
+// and rust to red in autumn, deeper or paler pink blossom), from where it
+// stands and its model `type` (gardenTreeSpots.ts: 0 to 3 the ashes), on a
+// layout.
+const FEATURED_PART: Record<Role, number> = { [ROLE.still]: 0, [ROLE.turns]: PART.turns, [ROLE.sparse]: PART.bare | PART.turns, [ROLE.blossom]: PART.blossom };
+export function treeSeason(x: number, z: number, type: number, width: number, mobile: boolean): { parts: number; shade: number } {
   const shade = hash(x, z, 7.1);
-  if (type === OLD_TREE_TYPE) return { role: ROLE.old, shade };
-  if (type > 3) return { role: ROLE.still, shade };
+  if (type === OLD_TREE_TYPE) return { parts: PART.old, shade };
+  if (type > 3) return { parts: 0, shade };
   const pick = featuredTrees(width, mobile).get(key(x, z));
-  if (pick !== undefined) return { role: pick, shade };
-  const h = hash(x, z);
-  return { role: h >= TREES.sparse ? ROLE.sparse : h >= TREES.turns ? ROLE.turns : ROLE.still, shade };
+  const parts = (hash(x, z) < SHARES.turns ? PART.turns : 0)
+    | (hash(x, z, 3.3) < SHARES.bare ? PART.bare : 0)
+    | (hash(x, z, 5.9) < SHARES.blossom ? PART.blossom : 0);
+  return { parts: parts | (pick === undefined ? 0 : FEATURED_PART[pick]), shade };
 }

@@ -5,7 +5,7 @@ import { plantGeometry, plantSites, type PlantKind } from './gardenPlantGeometry
 import { configureGrassMaterial } from './gardenGrassMaterial';
 import { riverChunks } from './gardenGeometry';
 import { useRiverReach } from './useRiverReach';
-import { seasonalWash } from './GardenSeasons';
+import { seasonalClover, seasonalWash } from './GardenSeasons';
 
 type PlantSite = ReturnType<typeof plantSites>[number];
 
@@ -32,8 +32,10 @@ export function plantMaterial(kind: PlantKind, wind: { value: number }, mobile: 
     sway(shader, renderer);
     seasonalWash(shader);
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = seasonGround(diffuseColor.rgb);');
+    // In spring half the clover's colonies flower above the grass.
+    if (kind === 'clover') seasonalClover(shader);
   };
-  result.customProgramCacheKey = () => `${key()}-seasons-v2`;
+  result.customProgramCacheKey = () => `${key()}-${kind === 'clover' ? 'clover-' : ''}seasons-v3`;
   return result;
 }
 

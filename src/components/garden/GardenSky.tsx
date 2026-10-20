@@ -136,8 +136,8 @@ export default function GardenSky({ mobile, width, skyStyle, waterTint, seasons 
     const season = seasonLight(currentSeason(clock.progress, seasons));
     const light = hemisphere.current;
     if (light) {
-      set(light.color, sky.hemiSky);
-      set(light.groundColor, sky.hemiGround);
+      set(light.color, sky.hemiSky.map((v, i) => v * season.hemiColor[i]) as Rgb);
+      set(light.groundColor, sky.hemiGround.map((v, i) => v * season.hemiColor[i]) as Rgb);
       light.intensity = sky.hemi * season.hemi;
     }
     if (sun.current) {

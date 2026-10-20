@@ -68,7 +68,7 @@ function naturalGround(material: THREE.MeshStandardMaterial, litter: THREE.Textu
       `);
     seasonalWash(shader);
   };
-  material.customProgramCacheKey = () => 'garden-ground-natural-seasons-v2';
+  material.customProgramCacheKey = () => 'garden-ground-natural-seasons-v3';
 }
 
 // The ground's material in the chosen style. Anything else built as ground,
@@ -117,7 +117,7 @@ export function useGroundMaterial(style: GroundStyle) {
       `).replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = seasonGround(diffuseColor.rgb);');
       seasonalWash(shader);
     };
-    material.customProgramCacheKey = () => `garden-ground-${original ? 'original' : 'lush'}-seasons-v2`;
+    material.customProgramCacheKey = () => `garden-ground-${original ? 'original' : 'lush'}-seasons-v3`;
     return material;
   }, [style, color, normal, roughness, litter]);
   useEffect(() => () => material.dispose(), [material]);

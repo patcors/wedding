@@ -136,7 +136,7 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
       animate(shader, renderer);
       seasonalLeaves(shader);
     };
-    leaves.customProgramCacheKey = depth.customProgramCacheKey = () => 'garden-leaf-wind-seasons-v4';
+    leaves.customProgramCacheKey = depth.customProgramCacheKey = () => 'garden-leaf-wind-seasons-v5';
     return { bark, leaves, depth };
     // Built once, so the meshes keep them; the palette's maps are set below.
   }, [windTime]);

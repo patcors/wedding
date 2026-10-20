@@ -9,9 +9,9 @@ import { useJourney } from './JourneyProvider';
 import { currentSeason } from './GardenSeasons';
 import { leafColour, petalColour, petalShown } from './seasons';
 
-// The season (seasons.ts) turns a few of the leaves gold and amber in autumn
-// and the petals to blossom in spring, and thins the petals a little through
-// autumn and winter. No more of either, so nothing drifts across an egg.
+// The season (seasons.ts) turns most of the leaves amber, orange, rust and
+// red in autumn and the petals cherry pink in spring, and thins the petals
+// through autumn and winter. No more of either, so nothing drifts across an egg.
 type Seasonal = { seasons?: boolean };
 
 // From the opening to a little past the dock. The originals covered 90 and 64 units.

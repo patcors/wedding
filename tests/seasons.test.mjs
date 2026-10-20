@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AUTUMN, FEATURED, FEATURE_FRAME, NEUTRAL, OLD_TREE_TYPE, ROLE, SEASON_KEYS, SPRING, SUMMER, WINTER, featuredTrees, leafColour, petalColour, petalShown, seasonAt, seasonLight, seasonName, seasonsOn, treeSeason } from '../src/components/garden/seasons.ts';
+import { AUTUMN, AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, FEATURED, FEATURE_FRAME, FLOWER_COLOURS, FLOWER_GROWTH, NEUTRAL, OLD_TREE_TYPE, PART, SEASON_KEYS, SHARES, SPRING, SUMMER, WINTER, featuredTrees, leafColour, petalColour, petalShown, seasonAt, seasonLight, seasonName, seasonsOn, treeSeason } from '../src/components/garden/seasons.ts';
 import { MILESTONES, STOPS, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { treeBase, treePlacements, oldTreePlacement } from '../src/components/garden/gardenTreeSpots.ts';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
@@ -92,81 +92,97 @@ test('each change eases over a quiet stretch, between milestones', () => {
   }
 });
 
-test('winter is soft and bright: sparse trees and paler grass, no grey, no darker light', () => {
-  assert.equal(WINTER.turn, 0);
-  assert.ok(WINTER.pale > 0 && WINTER.bare > 0);
+test('each season has its own light: winter cooler and brighter, autumn warmer, never darker than summer', () => {
   for (const s of [NEUTRAL, SUMMER, AUTUMN, WINTER, SPRING]) {
     const light = seasonLight(s);
-    for (const v of [...light.sunColor, light.sunIntensity, light.hemi]) assert.ok(Math.abs(v - 1) <= .05, 'only a nudge');
+    for (const v of [...light.sunColor, ...light.hemiColor, light.sunIntensity, light.hemi]) assert.ok(Math.abs(v - 1) <= .1, 'a share of the light, not a new sky');
     assert.ok(light.sunIntensity >= 1 && light.hemi >= 1, 'never darker than summer');
   }
   const none = seasonLight(NEUTRAL);
-  assert.deepEqual([...none.sunColor, none.sunIntensity, none.hemi], [1, 1, 1, 1, 1]);
+  assert.deepEqual([...none.sunColor, ...none.hemiColor, none.sunIntensity, none.hemi], [1, 1, 1, 1, 1, 1, 1, 1]);
+  // Winter: bluer sun and fill, so the shadows cool, and brighter, so it is crisp, not gloomy.
+  const winter = seasonLight(WINTER), autumn = seasonLight(AUTUMN);
+  assert.ok(winter.sunColor[2] > winter.sunColor[0] && winter.hemiColor[2] > winter.hemiColor[0]);
+  assert.ok(winter.sunIntensity > 1 && winter.hemi > 1);
+  assert.ok(autumn.sunColor[0] > autumn.sunColor[2] && autumn.hemiColor[0] > autumn.hemiColor[2]);
+  assert.ok(WINTER.bare === 1 && WINTER.pale === 1 && WINTER.turn === 0);
 });
 
-// The trees whose crowns stand in the near picture at p, by role.
+// The trees whose crowns stand in the near picture at p, by part.
 function pictured(p, layout) {
   const lens = LAYOUTS[layout], mobile = layout === 'phone', view = viewOf(cameraPose(p, lens.width));
-  const roles = [0, 0, 0, 0, 0];
+  const parts = { all: 0, turns: 0, bare: 0, blossom: 0 };
   for (const tree of treePlacements(lens.width, mobile)) {
+    if (tree.type > 3) continue;
     const crown = project({ centre: [tree.x, treeBase(tree, lens.width) + 6 * tree.scale, tree.z], radius: 3.5 * tree.scale }, view, lens);
     if (!crown.screen || crown.depth < FEATURE_FRAME.depth[0] || crown.depth > FEATURE_FRAME.depth[1]) continue;
-    const x = Math.abs(crown.screen[0]);
-    if (x > FEATURE_FRAME.across[1] || Math.abs(crown.screen[1]) > 1) continue;
-    roles[treeSeason(tree.x, tree.z, tree.type, lens.width, mobile).role]++;
+    if (Math.abs(crown.screen[0]) > FEATURE_FRAME.across[1] || Math.abs(crown.screen[1]) > 1) continue;
+    const { parts: bits } = treeSeason(tree.x, tree.z, tree.type, lens.width, mobile);
+    parts.all++;
+    for (const k of ['turns', 'bare', 'blossom']) if (bits & PART[k]) parts[k]++;
   }
-  return roles;
+  return parts;
 }
 
-test('a few trees change, and the ones that do are in view at their season’s milestones', () => {
+test('a good share of the avenue takes part in each season, in view at its milestones', () => {
   for (const layout of ['desktop', 'phone']) {
     const lens = LAYOUTS[layout], mobile = layout === 'phone';
-    const trees = treePlacements(lens.width, mobile), counts = [0, 0, 0, 0, 0];
-    for (const t of trees) counts[treeSeason(t.x, t.z, t.type, lens.width, mobile).role]++;
-    const ashes = trees.filter(t => t.type <= 3).length;
-    // Most trees never change; blossom is on a handful only.
-    assert.ok(counts[ROLE.still] / ashes > .75, `${layout}: ${counts[ROLE.still]} of ${ashes} ashes stay as they are`);
-    assert.ok(counts[ROLE.blossom] >= 2 && counts[ROLE.blossom] <= 5, `${layout}: ${counts[ROLE.blossom]} blossoming trees`);
-    // The shrubs never change; the old tree at the dock only takes a touch of autumn.
-    for (const t of trees.filter(t => t.type > 3)) assert.equal(treeSeason(t.x, t.z, t.type, lens.width, mobile).role, ROLE.still);
+    const trees = treePlacements(lens.width, mobile), ashes = trees.filter(t => t.type <= 3);
+    const share = part => ashes.filter(t => treeSeason(t.x, t.z, t.type, lens.width, mobile).parts & part).length / ashes.length;
+    // Each season's share of the ashes, by the hash and the featured trees together.
+    for (const [k, v] of Object.entries(SHARES)) {
+      const got = share(PART[k]);
+      assert.ok(got >= v - .08 && got <= v + .1, `${layout}: ${Math.round(got * 100)}% of the ashes ${k}, meant ${v * 100}%`);
+    }
+    // The shrubs never change; the old tree at the dock turns in autumn and nothing else.
+    for (const t of trees.filter(t => t.type > 3)) assert.equal(treeSeason(t.x, t.z, t.type, lens.width, mobile).parts, 0);
     const old = oldTreePlacement(lens.width, mobile);
     assert.equal(old.type, OLD_TREE_TYPE);
-    assert.equal(treeSeason(old.x, old.z, old.type, lens.width, mobile).role, ROLE.old);
-    assert.equal(counts[ROLE.old], 0, 'only the old tree');
-    // Every featured moment has its tree in the near picture: bare branches
-    // in winter, blossom in spring (a couple, not an avenue), gold in autumn.
-    for (const id of ['meet', 'snow-2019']) for (const p of [stop(id), still(id)]) assert.ok(pictured(p, layout)[ROLE.sparse] >= 1, `${layout}: a sparse tree at ${id} (${p})`);
-    for (const p of [stop('graduation'), still('graduation'), .42, stop('interim'), still('interim')]) {
-      const n = pictured(p, layout)[ROLE.blossom];
-      assert.ok(n >= 1 && n <= 3, `${layout}: ${n} blossoming trees at ${p}`);
-    }
-    for (const id of ['salsa', 'engaged', 'turkey-greece']) for (const p of [stop(id), still(id)]) {
-      const n = pictured(p, layout);
-      assert.ok(n[ROLE.turns] + n[ROLE.sparse] >= 1, `${layout}: a turning tree at ${id} (${p})`);
-    }
+    assert.equal(treeSeason(old.x, old.z, old.type, lens.width, mobile).parts, PART.old);
+    // Every featured moment has its season's tree in the near picture: bare
+    // branches in winter, blossom in spring, autumn colour.
+    for (const id of ['meet', 'snow-2019']) for (const p of [stop(id), still(id)]) assert.ok(pictured(p, layout).bare >= 1, `${layout}: a bare tree at ${id} (${p})`);
+    for (const p of [stop('graduation'), still('graduation'), .42, stop('interim'), still('interim')]) assert.ok(pictured(p, layout).blossom >= 1, `${layout}: blossom at ${p}`);
+    for (const id of ['salsa', 'engaged', 'turkey-greece']) for (const p of [stop(id), still(id)]) assert.ok(pictured(p, layout).turns >= 1, `${layout}: a turning tree at ${id} (${p})`);
     assert.ok(featuredTrees(lens.width, mobile).size <= FEATURED.reduce((n, f) => n + f.at.length * 2, 0));
   }
 });
 
-test('falling leaves turn a little in autumn; petals pale in spring and thin through autumn and winter', () => {
+// Saturation, 0 for grey or white, 1 for a pure colour.
+const saturation = c => (Math.max(...c) - Math.min(...c)) / Math.max(...c);
+test('the blossom and the flowers are real colours, never white like snow; autumn runs amber to red', () => {
+  for (const c of BLOSSOM_COLOURS) {
+    assert.ok(saturation(c) >= .35, `blossom ${c} is pink, not white`);
+    assert.ok(c[0] > c[2] && c[2] > c[1], `blossom ${c} is a pink`);
+  }
+  assert.ok(FLOWER_COLOURS.filter(c => saturation(c) >= .5).length >= 3, 'most of the bank flowers are bright colours');
+  for (const c of AUTUMN_TREE_COLOURS) assert.ok(c[0] > c[1] && c[1] > c[2] && saturation(c) > .6, `autumn ${c} is warm`);
+  // From amber to red, the green falling away.
+  assert.ok(AUTUMN_TREE_COLOURS.every((c, i) => !i || c[1] < AUTUMN_TREE_COLOURS[i - 1][1]));
+  assert.ok(FLOWER_GROWTH > 0 && CLOVER_FLOWERS.share > 0 && CLOVER_FLOWERS.lift > 0);
+  assert.equal(SPRING.flowers, 1);
+  for (const s of [WINTER, SUMMER, AUTUMN]) assert.equal(s.flowers, 0);
+});
+
+test('falling leaves turn amber to red in autumn; petals cherry pink in spring and thin through autumn and winter', () => {
   const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
   // Without seasons, the leaves and petals keep their old colours.
   assert.deepEqual([hex(leafColour(1, NEUTRAL)), hex(leafColour(3, NEUTRAL)), hex(petalColour(NEUTRAL))], ['#92996d', '#ba9565', '#c88889']);
-  // In autumn half the leaves turn warm and the rest stay as they were.
-  for (let i = 0; i < 8; i++) {
+  // In autumn three in four leaves turn warm and the rest stay as they were;
+  // there are no more of them, so nothing more moves.
+  for (let i = 0; i < 12; i++) {
     const [r, g, b] = leafColour(i, AUTUMN);
-    if (i % 2) assert.ok(r > g && g > b && r - b > .3, `leaf ${i} warm in autumn`);
+    if (i % 4 !== 3) assert.ok(r > g && g > b && r - b > .4, `leaf ${i} warm in autumn`);
     else assert.deepEqual(leafColour(i, AUTUMN), leafColour(i, NEUTRAL));
   }
-  // Winter doesn't brown them.
   for (let i = 0; i < 6; i++) assert.deepEqual(leafColour(i, WINTER), leafColour(i, NEUTRAL));
-  const [r, g, b] = petalColour(SPRING);
-  assert.ok(r > .9 && g > .7 && b > .7);
+  const pink = petalColour(SPRING);
+  assert.ok(pink[0] > .9 && pink[1] < .6 && saturation(pink) > .4, 'spring petals cherry pink');
   const shown = s => Array.from({ length: 100 }, (_, i) => petalShown(i, 100, s)).reduce((a, v) => a + v, 0);
   assert.equal(shown(NEUTRAL), 100);
   assert.equal(shown(SPRING), 100);
-  assert.equal(shown(WINTER), 40);
-  assert.equal(shown(AUTUMN), 60);
+  assert.equal(shown(WINTER), 20);
+  assert.equal(shown(AUTUMN), 40);
 });
 
 test('the Review choice: on unless turned off', () => {
