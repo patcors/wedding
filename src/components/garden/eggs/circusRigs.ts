@@ -33,8 +33,11 @@ type Point = readonly [number, number, number];
 //   passed it (Amelia, October 2026), and its point takes the ash at z −85,
 //   so there the silk hangs from a taller ash planted for it a little
 //   further down (SILK_ASH in gardenTreeSpots.ts, z −89.5), just beyond the
-//   house's last shells, rising clear above them, and leaves the picture by
-//   March 2023's stop, before the flower bed beyond it.
+//   house's last shells, rising clear above them. There it would still be at
+//   the left edge of the picture at March 2023's stop, once Amelia is back,
+//   so on a phone it dissolves as the camera comes up to it (`leave`, 13 to
+//   11 units off), in late February, gone just after March shows (the
+//   Opera House itself stays until passed).
 // - The lyra hangs from the further back of two ashes standing together
 //   past 2025's snowmen. Amelia asked for it about 2024, but that year her
 //   bank already holds the flower bed, her birdhouse and its street sign,
@@ -42,11 +45,15 @@ type Point = readonly [number, number, number];
 //   It comes in as October 2025 shows, her circus show that year, hangs past
 //   the snowmen and short of 2026's arch, and is in the picture until
 //   salsa's stop and passed soon after.
+// On a phone a rig may also dissolve as the camera comes up to it (`leave`,
+// from the first distance ahead of the camera to the second), where it
+// would otherwise still be in the picture at a later milestone's stop.
 export type Rig = {
   tree: { desktop: number; mobile: number }; limb: { desktop: Point; mobile: Point };
   from: string; arrive: number; scale: { desktop: number; mobile: number };
+  leave?: { mobile: readonly [number, number] };
 };
-export const SILK: Rig = { tree: { desktop: -85, mobile: SILK_ASH }, limb: { desktop: [3.038, 4.72, .449], mobile: [3.386, 4.526, .678] }, from: '2022-11', arrive: .3, scale: { desktop: 1.25, mobile: 1.4 } };
+export const SILK: Rig = { tree: { desktop: -85, mobile: SILK_ASH }, limb: { desktop: [3.038, 4.72, .449], mobile: [3.386, 4.526, .678] }, from: '2022-11', arrive: .3, scale: { desktop: 1.25, mobile: 1.4 }, leave: { mobile: [13, 11] } };
 export const LYRA: Rig = { tree: { desktop: -126.1, mobile: -126.62 }, limb: { desktop: [-.726, 4.42, 2.655], mobile: [2.674, 4.772, 2.162] }, from: '2025-10', arrive: .25, scale: { desktop: 1.25, mobile: 1.35 } };
 export const RIGS = { silk: SILK, lyra: LYRA } as const;
 export type RigId = keyof typeof RIGS;
@@ -78,5 +85,7 @@ export function hangSpot(rig: Rig, width: number): HangSpot {
 // How much of it shows at p, 0 to 1, with the camera at cameraZ.
 export function rigShown(rig: Rig, spot: HangSpot, p: number, cameraZ: number, mobile: boolean) {
   const arrived = Math.min(1, Math.max(0, (p - progressAt(rig.from)) / (rig.arrive * ROOM) + 1));
-  return Math.min(arrived, markerShown(spot.z, cameraZ, mobile));
+  const leave = mobile ? rig.leave?.mobile : undefined;
+  const staying = leave ? Math.min(1, Math.max(0, (cameraZ - spot.z - leave[1]) / (leave[0] - leave[1]))) : 1;
+  return Math.min(arrived, markerShown(spot.z, cameraZ, mobile), staying);
 }
