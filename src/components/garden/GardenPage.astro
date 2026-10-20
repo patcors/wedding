@@ -50,6 +50,15 @@ const devMist = import.meta.env.DEV && opening(MIST_DAWN);
           document.documentElement.style.setProperty('--garden-screen', (innerWidth > innerHeight ? short : long) + 'px');
         };
         set(); addEventListener('resize', set);
+        // The scene is taller than the page under Safari's toolbar, so the
+        // page itself could be scrolled by up to the toolbar's height, which
+        // lifts the header under the status bar and leaves a band below the
+        // scene (seen on an iPhone, October 2026). Only <main> scrolls: put
+        // the page back whenever anything moves it.
+        var pin = function () { var root = document.scrollingElement; if (root && (root.scrollTop || root.scrollLeft)) root.scrollTo(0, 0); };
+        addEventListener('scroll', pin, { passive: true });
+        addEventListener('resize', pin);
+        addEventListener('pageshow', pin);
       })();
     </script>
     <style is:global>@view-transition { navigation: auto; } html { background: var(--garden-page); } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; }</style>
