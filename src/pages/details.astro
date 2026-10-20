@@ -3,6 +3,7 @@
 // All content lives in the objects below. Edit there, not in the markup.
 // Anything wrapped in tbc() renders with a soft "to be confirmed" mark until replaced.
 import RsvpForm from '../components/details/RsvpForm.astro';
+import { withPhoneLinks } from '../components/details/phone';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -46,7 +47,7 @@ const faqs = [
   { q: 'What if it rains?', a: 'It won’t rain, don’t worry so much.' },
   { q: 'What about dietary requirements?', a: 'Tell us when you RSVP and we’ll take care of the rest.' },
   { q: 'Are there gifts?', a: 'We will have a wishing well on the day.' },
-  { q: 'Who do I ask about everything else?', a: 'You can call Jonathon Dale on 0435597406.' },
+  { q: 'Who do I ask about everything else?', a: 'You can call Jonathon Dale on 0435 597 406.' },
 ];
 
 const rsvp = {
@@ -153,7 +154,7 @@ const photos = {
         <div class="info-faqs">
           {faqs.map(faq => <div class="info-faq">
             <h3>{faq.q}</h3>
-            <p class:list={{ 'is-tbc': tbcValues.has(faq.a) }}>{faq.a}</p>
+            <p class:list={{ 'is-tbc': tbcValues.has(faq.a) }}>{withPhoneLinks(faq.a).map(part => part.tel ? <a class="info-tel" href={part.tel}>{part.text}</a> : part.text)}</p>
           </div>)}
         </div>
       </section>
@@ -182,7 +183,7 @@ const photos = {
 </style>
 
 <style>
-  .info { --ink: #384135; --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --paper: #f7f3e8;
+  .info { --ink: #384135; --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --paper: #f7f3e8; --info-header-h: 86px;
     color: var(--ink); font-family: 'Montserrat', sans-serif; overflow-x: clip; }
   .info a { color: inherit; text-decoration: none; }
   .info a:focus-visible { outline: 2px solid #6e775c; outline-offset: 7px; }
@@ -198,13 +199,19 @@ const photos = {
     color: #8b6158c9; border: 1px solid #8b615826; border-radius: 20px; padding: 2px 7px; margin-left: 9px; vertical-align: 2px; white-space: nowrap; }
 
 
-  .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
-    padding: 26px 48px; background: linear-gradient(#eeeee5 55%, #eeeee500); }
+  /* The header and the section nav both stay: the nav sticks just under the
+     header, its top tucked beneath the header's soft edge, rather than
+     sliding under it (October 2026). */
+  .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;
+    height: var(--info-header-h); padding: 0 48px; background: linear-gradient(#eeeee5 calc(100% - 16px), #eeeee500); }
   .info-monogram { display: block; line-height: 0; }
+  .info-header .info-monogram { padding: 5px 0; }
   .info-monogram img { display: block; width: auto; height: 34px; }
   .info-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
-  .info .info-rsvp-link { font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--paper);
+  .info .info-rsvp-link { position: relative; font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--paper);
     background: var(--deep); border-radius: 999px; padding: 11px 19px 11px 21px; transition: background-color .3s; }
+  /* A thumb-sized target round the slim pill. */
+  .info .info-rsvp-link::after { content: ''; position: absolute; inset: -6px -4px; }
   .info .info-rsvp-link:hover { background: #59634f; }
 
   .info-hero { display: flex; align-items: center; gap: clamp(40px, 6vw, 90px); max-width: 1180px; margin: 0 auto; padding: clamp(30px, 6vh, 80px) 48px 40px; }
@@ -218,10 +225,15 @@ const photos = {
   .info-photo-tilt-left { rotate: -2.5deg; }
   .info-photo-tilt-right { rotate: 2deg; }
 
-  .info-nav { position: sticky; top: 0; z-index: 4; display: flex; justify-content: center; flex-wrap: wrap; gap: clamp(18px, 3.5vw, 44px);
-    padding: 20px 24px; margin: 20px 0 0; font-size: 9px; text-transform: uppercase; letter-spacing: .2em; }
-  .info-nav a { padding: 6px 0 8px; border-bottom: 1px solid transparent; transition: border-color .3s; }
+  .info-nav { position: sticky; top: calc(var(--info-header-h) - 16px); z-index: 4; display: flex; gap: clamp(18px, 3.5vw, 44px);
+    padding: 6px 24px 14px; margin: 20px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .2em; background: linear-gradient(#eeeee5 calc(100% - 14px), #eeeee500); }
+  /* Centred while they fit; from the start, scrolling sideways, when they don't. */
+  .info-nav a:first-child { margin-left: auto; }
+  .info-nav a:last-child { margin-right: auto; }
+  .info-nav a { flex: none; display: flex; align-items: center; min-height: 44px; box-sizing: border-box; padding-top: 2px; border-bottom: 1px solid transparent; transition: border-color .3s; white-space: nowrap; }
   .info-nav a:hover { border-color: #73796770; }
+  /* A link to a section lands below the header and nav. */
+  .info section[id] { scroll-margin-top: calc(var(--info-header-h) + 50px); }
 
   .info-section { max-width: 1180px; margin: 0 auto; padding: clamp(60px, 10vh, 120px) 48px 0; }
   .info-day { text-align: center; padding-top: clamp(30px, 5vh, 60px); }
@@ -256,6 +268,8 @@ const photos = {
   .info-faq { break-inside: avoid; padding: 0 0 34px; }
   .info-faq h3 { font: 500 23px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin: 0 0 8px; }
   .info-faq p { font: 17px/1.5 'Cormorant Garamond', Georgia, serif; color: var(--ink); margin: 0; max-width: 430px; }
+  /* Numbers in the answers ring when tapped. */
+  .info .info-tel { white-space: nowrap; border-bottom: 1px solid #73796770; }
 
   .info-rsvp { text-align: center; max-width: 700px; margin: 0 auto; padding: clamp(80px, 13vh, 150px) 48px; }
   .info-boat { color: var(--leaf); }
@@ -297,14 +311,19 @@ const photos = {
   }
 
   @media (max-width: 860px) {
-    .info-header { padding: 22px 24px; }
+    .info { --info-header-h: 74px; }
+    .info-header { padding: 0 24px; }
     .info-header .info-monogram img { height: 30px; }
     .info-header-date { display: none; }
     .info-hero { flex-direction: column; padding: 20px 28px 10px; text-align: center; }
     .info-date-row { flex-direction: column; gap: 10px; }
     .info-date-row i { display: none; }
     .info-hero-photo { max-width: 330px; margin-top: 20px; }
-    .info-nav { gap: 16px 22px; padding: 16px 20px; background: linear-gradient(#eeeee5 78%, #eeeee500); }
+    /* One row: on a phone it scrolls sideways, its ends fading, rather than
+       wrapping into a second row of sticky links. */
+    .info-nav { gap: 22px; padding: 2px 24px 12px; letter-spacing: .14em; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+    .info-nav::-webkit-scrollbar { display: none; }
     .info-section { padding: 65px 28px 0; }
     .info-split, .info-split-reverse { flex-direction: column; align-items: center; text-align: center; }
     .info-split .info-photo, .info-photo-break { max-width: 300px; }

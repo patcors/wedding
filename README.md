@@ -33,7 +33,7 @@ Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Ga
 
 ## Editing content
 
-- Details page facts (schedule, venue, travel, where to stay, FAQs): the objects at the top of `src/pages/details.astro`. Wrap anything unconfirmed in `tbc()` and it shows a "to confirm" tag.
+- Details page facts (schedule, venue, travel, where to stay, FAQs): the objects at the top of `src/pages/details.astro`. Wrap anything unconfirmed in `tbc()` and it shows a "to confirm" tag. A phone number in an answer (`0435 597 406`) becomes a tap-to-call link (`withPhoneLinks` in `src/components/details/phone.ts`).
 - The Garden's story: `MILESTONES` in `src/components/garden/journey.ts`, one per date, oldest first. `month` is `'YYYY-MM'` and shows as the running date; `description` is what screen readers hear there; `room` gives a milestone more or less scroll at its date (a third of a share by default) and `hold` how long its date holds; each year from 2018 gets the same scroll however its milestones fall. See [docs/VOYAGE.md](docs/VOYAGE.md); `node --test tests/*.test.mjs` checks the story still runs in order.
 - Link preview image: `public/og.jpg` (1200×630).
 

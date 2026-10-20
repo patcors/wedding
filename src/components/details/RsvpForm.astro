@@ -5,6 +5,7 @@
 // visitor is pointed back to their Personal link (or to us) instead of a form.
 // The guest list itself is never shipped here.
 import { BUS_STOPS, DIETARY_OPTIONS } from './rsvp';
+import { telHref } from './phone';
 
 interface Props {
   replyBy: string;   // e.g. "16 February 2027"
@@ -14,7 +15,7 @@ interface Props {
 }
 
 const { replyBy, busHint, email, phone } = Astro.props;
-const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
+const phoneHref = telHref(phone);
 ---
 <div class="rsvp" data-rsvp data-reply-by={replyBy}>
   <h2 class="rsvp-heading" tabindex="-1" data-rsvp-heading>We’d love to <em>know you’re coming.</em></h2>
@@ -33,7 +34,11 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     <div class="rsvp-party">
       <label class="rsvp-field">
         <span class="rsvp-label">Email or mobile</span>
-        <input class="rsvp-input" name="contact" type="text" autocomplete="email" aria-describedby="rsvp-contact-error" data-rsvp-contact />
+        <!-- Either will do, so it stays a text field (type=email would refuse a
+             mobile), but asks for the email keyboard: most reply by email, it
+             has @ and . to hand and numbers a tap away, and autofill offers
+             their address. No capitals or corrections, which spoil an address. -->
+        <input class="rsvp-input" name="contact" type="text" inputmode="email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="rsvp-contact-error" data-rsvp-contact />
       </label>
       <p class="rsvp-error" id="rsvp-contact-error" hidden></p>
       <label class="rsvp-field">
@@ -403,7 +408,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
 </script>
 
 <style>
-  .rsvp { scroll-margin-top: 90px; }
+  .rsvp { scroll-margin-top: calc(var(--info-header-h, 74px) + 50px); }
   .rsvp [hidden] { display: none !important; }
   .rsvp a { color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; }
   .rsvp a:focus-visible { outline: 2px solid #6e775c; outline-offset: 4px; }
@@ -434,7 +439,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
   .rsvp-pills-bus { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .rsvp-pills-bus .rsvp-pill span { padding: 14px 6px; }
   .rsvp-pill input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
-  .rsvp-pill span { display: block; text-align: center; font: 500 10px 'Montserrat', sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  .rsvp-pill span { display: block; text-align: center; font: 500 12px 'Montserrat', sans-serif; letter-spacing: .08em; text-transform: uppercase;
     padding: 16px 12px; border: 1px solid #7379677a; color: var(--ink); transition: background-color .2s, color .2s, border-color .2s; }
   .rsvp-pill input:checked + span { background: var(--deep); border-color: var(--deep); color: #f6f3e7; }
   .rsvp-pill input:focus-visible + span { outline: 2px solid #6e775c; outline-offset: 3px; }
@@ -443,7 +448,7 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
   .rsvp-extras { margin-top: 6px; padding-left: 20px; border-left: 1px solid #7a826d66; }
   .rsvp-dietary { margin-top: 24px; }
   .rsvp-dietary legend { margin-bottom: 12px; }
-  .rsvp-pills-diet { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .rsvp-pills-diet { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
   .rsvp-pills-diet .rsvp-pill-other { grid-column: 1 / -1; }
   .rsvp-diet-other { margin-top: 14px; }
   .rsvp-bus { margin-top: 24px; }
@@ -483,8 +488,11 @@ const phoneHref = `tel:+61${phone.replace(/\D/g, '').replace(/^0/, '')}`;
     .rsvp-form, .rsvp-thanks { margin-top: 36px; }
     .rsvp-button { width: 100%; }
     .rsvp-extras { padding-left: 16px; }
-  }
-  @media (max-width: 480px) {
+    /* Two to a row, so "Wollongong" fits at the answers' 12px. */
     .rsvp-pills-bus { grid-template-columns: 1fr 1fr; }
+  }
+  /* Each answer on one line on the narrowest phones. */
+  @media (max-width: 360px) {
+    .rsvp-pill span { letter-spacing: .04em; padding-inline: 6px; }
   }
 </style>
