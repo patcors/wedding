@@ -11,7 +11,7 @@ import { useGardenTextures } from './gardenTextures';
 import { jettyStems, launchJettyStems, underJetty, underLaunchJetty } from './voyageDock';
 import { mooredStems } from './storyBoats';
 import { guestBoatStems } from './guestBoat';
-import { rememberedParty } from './GuestBoat';
+import { rememberedNames } from './GuestBoat';
 import { bridgeStems, onPoint, pointStems } from './eggs/harbour';
 import { DOCKED } from './journey';
 import { useJourney } from './JourneyProvider';
@@ -41,10 +41,11 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
   const [simulation] = useState(() => new BoatSimulation(boatRiver, width));
   const clock = useJourney();
   // The reeds, the jetties and the Harbour Bridge's pylons always; the
-  // catamaran once it is tied up there, and the guest's own boat beside it.
+  // catamaran once it is tied up there, and the guests' own boats beside it.
   const stems = useMemo(() => {
+    const guests = rememberedNames().length;
     const fixed = [...reeds ? reedStems(width, mobile) : [], ...launchJettyStems(width), ...jettyStems(width), ...bridgeStems(width), ...pointStems(width)];
-    return { fixed, moored: [...fixed, ...mooredStems(width), ...rememberedParty() ? guestBoatStems(width, height) : []] };
+    return { fixed, moored: [...fixed, ...mooredStems(width), ...guests ? guestBoatStems(guests, width, height) : []] };
   }, [reeds, width, mobile, height]);
   const moored = useRef(false);
   useLayoutEffect(() => {
