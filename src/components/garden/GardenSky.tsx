@@ -15,7 +15,7 @@ import { seasonLight } from './seasons';
 // Review options: the clear day, or the Garden's old misty one to compare,
 // over any of the rivers in WATERS. The clear day is the site's.
 export type SkyStyle = { sky: 'day' | 'mist'; water: WaterStyle };
-export const SKY_STYLE: SkyStyle = { sky: 'day', water: 'deep' };
+export const SKY_STYLE: SkyStyle = { sky: 'day', water: 'clear' };
 
 const set = (color: THREE.Color, [r, g, b]: Rgb) => color.setRGB(r, g, b, THREE.SRGBColorSpace);
 

@@ -23,7 +23,8 @@ const rgb = (hex: string): Rgb => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2
 export const hex = (c: Rgb) => '#' + c.map(v => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join('');
 
 // The river's colours for the Review panel, as each looks in clear midday
-// light. Deep blue is Patrick's clear-day water and sage the old misty river.
+// light. Clear blue is the site's, deep blue Patrick's first clear-day water
+// and sage the old misty river.
 export type WaterStyle = 'deep' | 'clear' | 'teal' | 'sage' | 'dark';
 export const WATERS: Record<WaterStyle, { label: string; color: string }> = {
   deep: { label: 'Deep blue', color: '#1d4f8c' },
