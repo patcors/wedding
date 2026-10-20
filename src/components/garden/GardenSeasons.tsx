@@ -6,24 +6,32 @@ import { useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useJourney } from './JourneyProvider';
-import { AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, FLOWER_COLOURS, FLOWER_GROWTH, NEUTRAL, OLD_TREE_AUTUMN, seasonAt, treeSeason, type Season } from './seasons';
+import { AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, FLOWER_COLOURS, FLOWER_GROWTH, NEUTRAL, TREE_TURN, seasonAt, seasonChange, treeSeason, type Season } from './seasons';
 import type { Placement } from './gardenTreeSpots';
 
 export const SEASON_UNIFORMS = {
-  // turn, bare, fresh, blossom
+  // turn, bare, fresh, blossom: the whole picture's
   seasonCanopy: { value: new THREE.Vector4() },
   // pale, dry, flowers
   seasonWash: { value: new THREE.Vector3() },
+  // The change under way (seasonChange): the trees' turn, bare, fresh and
+  // blossom it leaves and goes to, how far through it is, and 1 if the trees
+  // go in reverse. Each tree works out its own point in it (treeTurn).
+  seasonFrom: { value: new THREE.Vector4() },
+  seasonTo: { value: new THREE.Vector4() },
+  seasonChange: { value: new THREE.Vector2() },
 };
+const canopy = (v: THREE.Vector4, s: Season) => v.set(s.turn, s.bare, s.fresh, s.blossom);
 
 // Gives each tree in a batch of leaves its part in the seasons (treeSeason in
 // seasons.ts), carried to the shader as the instance's colour: red its parts,
-// green its shade. The shader puts the leaves' own colour back.
+// green its shade, blue its order in a change. The shader puts the leaves'
+// own colour back.
 const roleColour = new THREE.Color();
 export function seasonRoles(mesh: THREE.InstancedMesh, placements: readonly Placement[], width: number, mobile: boolean) {
   placements.forEach((p, i) => {
-    const { parts, shade } = treeSeason(p.x, p.z, p.type, width, mobile);
-    mesh.setColorAt(i, roleColour.setRGB(parts, shade, 0, THREE.LinearSRGBColorSpace));
+    const { parts, shade, order } = treeSeason(p.x, p.z, p.type, width, mobile);
+    mesh.setColorAt(i, roleColour.setRGB(parts, shade, order, THREE.LinearSRGBColorSpace));
   });
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 }
@@ -41,8 +49,12 @@ export default function GardenSeasons({ on }: { on: boolean }) {
   useEffect(() => { invalidate(); }, [on, invalidate]);
   useFrame(() => {
     const s = currentSeason(clock.progress, on);
-    SEASON_UNIFORMS.seasonCanopy.value.set(s.turn, s.bare, s.fresh, s.blossom);
+    canopy(SEASON_UNIFORMS.seasonCanopy.value, s);
     SEASON_UNIFORMS.seasonWash.value.set(s.pale, s.dry, s.flowers);
+    const change = on ? seasonChange(clock.progress) : { from: NEUTRAL, to: NEUTRAL, t: 0, reverse: false };
+    canopy(SEASON_UNIFORMS.seasonFrom.value, change.from);
+    canopy(SEASON_UNIFORMS.seasonTo.value, change.to);
+    SEASON_UNIFORMS.seasonChange.value.set(change.t, change.reverse ? 1 : 0);
   });
   return null;
 }
@@ -66,18 +78,20 @@ const FLOWER = `vec3 seasonFlower(float h) {
 // the bare trees drop most of their cards in turn, so their branches show,
 // and the rest a few, their leaves a cooler green. In autumn the trees that
 // turn go amber, orange, rust and red card by card, a few cards staying
-// green, and the rest of the avenue warms a little; the old tree at the dock
-// turns too, on most of its cards. In spring the trees that blossom open card
-// by card in cherry pink, and every tree's green freshens. Shared by the
-// colour and depth (shadow) materials, so the shadows thin with the canopy.
+// green, and the rest of the avenue warms a little. In spring the trees that
+// blossom open card by card in cherry pink, and every tree's green freshens.
+// Through a change each tree turns over its own share of it, in its own
+// order (treeTurn in seasons.ts), so they go one by one. The old tree at the
+// dock is an evergreen and stays as it is all year. Shared by the colour and
+// depth (shadow) materials, so the shadows thin with the canopy.
 export function seasonalLeaves(shader: THREE.WebGLProgramParametersWithUniforms) {
   Object.assign(shader.uniforms, SEASON_UNIFORMS);
-  shader.vertexShader = `varying vec3 vSeason;\n${shader.vertexShader}`
+  shader.vertexShader = `varying vec4 vSeason;\n${shader.vertexShader}`
     .replace('#include <begin_vertex>', `#include <begin_vertex>
-      // x: the tree's parts, y: its shade, z: which leaf card.
-      vSeason = vec3(0., 0., fract(sin(dot(_leafcentre.xz * 7.1 + _leafcentre.y * 3.7, vec2(41.37, 289.13))) * 43758.5453));
+      // x: the tree's parts, y: its shade, z: which leaf card, w: its order in a change.
+      vSeason = vec4(0., 0., fract(sin(dot(_leafcentre.xz * 7.1 + _leafcentre.y * 3.7, vec2(41.37, 289.13))) * 43758.5453), 0.);
       #ifdef USE_INSTANCING_COLOR
-        vSeason.xy = instanceColor.rg;
+        vSeason.xyw = instanceColor.rgb;
       #endif
     `)
     .replace('#include <color_vertex>', `#include <color_vertex>
@@ -85,36 +99,39 @@ export function seasonalLeaves(shader: THREE.WebGLProgramParametersWithUniforms)
         vColor.rgb = vec3(1.);
       #endif
     `);
-  shader.fragmentShader = `uniform vec4 seasonCanopy;\nvarying vec3 vSeason;\n${shader.fragmentShader}`
+  shader.fragmentShader = `uniform vec4 seasonFrom;\nuniform vec4 seasonTo;\nuniform vec2 seasonChange;\nvarying vec4 vSeason;\n${shader.fragmentShader}`
     .replace('#include <map_fragment>', `#include <map_fragment>
       {
         // The bits of PART (seasons.ts): turns 1, bare 2, blossom 4, old 8.
         float parts = floor(vSeason.x + .5), shade = vSeason.y, card = vSeason.z;
-        float turns = mod(parts, 2.), bare = mod(floor(parts * .5), 2.), blossoming = mod(floor(parts * .25), 2.), old = step(7.5, parts);
-        // Winter: the bare trees drop most of their cards in turn as \`bare\` rises, the rest a few.
-        if (card < seasonCanopy.y * mix(.2, .94, bare) * (1. - old)) discard;
-        vec3 leaf = diffuseColor.rgb;
-        float luma = dot(leaf, vec3(.2126, .7152, .0722));
-        // Winter: the leaves left a cooler green.
-        leaf = mix(leaf, vec3(luma) * vec3(.78, 1.05, 1.1), .3 * seasonCanopy.y);
-        // Autumn: each tree round the palette, its cards a little either side, amber
-        // and orange the most, then rust, then a little red.
-        float hue = pow(fract(shade + (card - .5) * .3), 1.6) * 3.;
-        vec3 autumn = mix(mix(${linear(AUTUMN_LEAVES[0])}, ${linear(AUTUMN_LEAVES[1])}, clamp(hue, 0., 1.)),
-          mix(${linear(AUTUMN_LEAVES[2])}, ${linear(AUTUMN_LEAVES[3])}, clamp(hue - 2., 0., 1.)), clamp(hue - 1., 0., 1.));
-        autumn *= clamp(luma * 5.5, .35, 1.15);
-        leaf = mix(leaf, autumn, seasonCanopy.x * (turns * .92 * step(.12, card) + (1. - turns) * .14 * (1. - old)));
-        // The old tree at the dock: most of its cards, amber to orange, so it stays itself under the festoons.
-        vec3 warm = mix(${linear(AUTUMN_LEAVES[0])}, ${linear(AUTUMN_LEAVES[1])}, card) * clamp(luma * 5.5, .35, 1.15);
-        leaf = mix(leaf, warm, ${f(OLD_TREE_AUTUMN.turn)} * seasonCanopy.x * old * step(card, ${f(OLD_TREE_AUTUMN.cards)}));
-        // Spring: every tree's green a little fresher and brighter.
-        vec3 fresh = vec3(luma) * vec3(.9, 1.32, .5) * 1.25;
-        leaf = mix(leaf, fresh, seasonCanopy.z * .32);
-        // Blossom: card by card as it opens, cherry pink, deeper to paler, keeping a little of the card's shading.
-        float opened = blossoming * smoothstep(.0, .12, seasonCanopy.w * .88 - card);
-        vec3 bloom = mix(${linear(BLOSSOM[0])}, ${linear(BLOSSOM[1])}, fract(card * 7.3 + shade)) * clamp(.55 + luma * 3., .6, 1.);
-        leaf = mix(leaf, bloom, opened);
-        diffuseColor.rgb = leaf;
+        // The old tree at the dock is an evergreen: no season touches it.
+        if (parts < 7.5) {
+          float turns = mod(parts, 2.), bare = mod(floor(parts * .5), 2.), blossoming = mod(floor(parts * .25), 2.);
+          // This tree's own point in the change under way (treeTurn in seasons.ts).
+          float order = mix(vSeason.w, 1. - vSeason.w, seasonChange.y);
+          vec4 seasonCanopy = mix(seasonFrom, seasonTo, smoothstep(0., 1., (seasonChange.x - order * ${f(1 - TREE_TURN)}) / ${f(TREE_TURN)}));
+          // Winter: the bare trees drop most of their cards in turn as \`bare\` rises, the rest a few.
+          if (card < seasonCanopy.y * mix(.2, .94, bare)) discard;
+          vec3 leaf = diffuseColor.rgb;
+          float luma = dot(leaf, vec3(.2126, .7152, .0722));
+          // Winter: the leaves left a cooler green.
+          leaf = mix(leaf, vec3(luma) * vec3(.78, 1.05, 1.1), .3 * seasonCanopy.y);
+          // Autumn: each tree round the palette, its cards a little either side, amber
+          // and orange the most, then rust, then a little red.
+          float hue = pow(fract(shade + (card - .5) * .3), 1.6) * 3.;
+          vec3 autumn = mix(mix(${linear(AUTUMN_LEAVES[0])}, ${linear(AUTUMN_LEAVES[1])}, clamp(hue, 0., 1.)),
+            mix(${linear(AUTUMN_LEAVES[2])}, ${linear(AUTUMN_LEAVES[3])}, clamp(hue - 2., 0., 1.)), clamp(hue - 1., 0., 1.));
+          autumn *= clamp(luma * 5.5, .35, 1.15);
+          leaf = mix(leaf, autumn, seasonCanopy.x * (turns * .92 * step(.12, card) + (1. - turns) * .14));
+          // Spring: every tree's green a little fresher and brighter.
+          vec3 fresh = vec3(luma) * vec3(.9, 1.32, .5) * 1.25;
+          leaf = mix(leaf, fresh, seasonCanopy.z * .32);
+          // Blossom: card by card as it opens, cherry pink, deeper to paler, keeping a little of the card's shading.
+          float opened = blossoming * smoothstep(.0, .12, seasonCanopy.w * .88 - card);
+          vec3 bloom = mix(${linear(BLOSSOM[0])}, ${linear(BLOSSOM[1])}, fract(card * 7.3 + shade)) * clamp(.55 + luma * 3., .6, 1.);
+          leaf = mix(leaf, bloom, opened);
+          diffuseColor.rgb = leaf;
+        }
       }
     `);
 }
