@@ -262,5 +262,5 @@ Every push to `main` builds and deploys through `.github/workflows/deploy.yml` (
 
 - Astro 7, static output, `compressHTML: true` (keeps spaces in the "P & A" monogram)
 - React 19 + React Three Fiber + drei for the Garden; butterflies are DOM/CSS
-- Plain scoped CSS; Cormorant Garamond and Montserrat from Google Fonts
+- Plain scoped CSS; Cormorant Garamond and Montserrat, self-hosted under `public/fonts/` (`src/components/SiteFonts.astro`)
 - Garden asset pipelines: `pnpm prepare:garden-ground`, `pnpm generate:garden-trees` (see docs/GARDEN_*.md)

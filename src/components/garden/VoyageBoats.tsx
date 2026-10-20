@@ -46,11 +46,9 @@ const MARKS: Record<Company, { mark: string; shape: FlagShape }> = {
 // The university's flag is its shield.
 const UNIVERSITY = { mark: 'uow-shield.webp', shape: 'shield' } as const;
 const texture = (mark: string) => `${import.meta.env.BASE_URL}textures/flags/${mark}`;
-// Fetched as soon as the scene's code arrives, alongside its models, rather
-// than once the boats are built; the flags' own loads then find them ready.
-// Held so nothing collects them mid-download.
-const EARLY_MARKS = typeof Image === 'undefined' ? [] : [...Object.values(MARKS), UNIVERSITY].map(({ mark }) => Object.assign(new Image(), { src: texture(mark) }));
-void EARLY_MARKS;
+// Fetched once the boats are built, as before: fetching them with the models
+// put their bytes in the way of the scene's and made it ready later (about
+// a second on throttled 3G), as nothing waits on them.
 // How far a flag runs up its ensign staff, from just clear of the rim to
 // the top; and where the monogram's halyard starts, above the big boom.
 const staffRun = (shape: FlagShape) => ENSIGN.height - FLAGS[shape].height - .06, LOGO_FOOT = BIG_RIG.boom + .55;
