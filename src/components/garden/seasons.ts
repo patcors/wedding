@@ -4,8 +4,9 @@
 // it), spring through 2020 to 2022, summer (the garden as it always looked)
 // through 2023 to 2025, and autumn through 2026 and 2027, the engagement, the
 // bend and the dock. The old tree at the dock is an evergreen, the same in
-// every season. It changes three times, each easing over a quiet stretch
-// of scroll near the January it stands for. Each season has its own palette
+// every season. It changes three times, each a slow drift over a long
+// stretch of the journey (across two or three stops) round the January it
+// stands for, the trees turning one by one. Each season has its own palette
 // (Amelia, October 2026): a crisp, cool winter with many trees bare and the
 // grass frosted, cherry blossom and flowers on the banks in spring, the
 // garden as it always was in summer, amber, orange, rust and red in autumn;
@@ -45,28 +46,35 @@ export const WINTER: Season = { ...NEUTRAL, bare: 1, pale: 1, petals: .2 };
 export const SPRING: Season = { ...NEUTRAL, fresh: 1, blossom: 1, flowers: 1 };
 
 // The seasons over scroll progress p: each holds from one key to the next of
-// the same season and eases between seasons over the scroll from one key to
-// the next (about 40svh), in stretches with little else in the picture (see
-// /dev/timeline), each as near as it can be to the January it stands for.
+// the same season and drifts slowly into the next season over the long
+// stretch from one key to the next, across several stops and the January it
+// stands for, so the guest sees the season turning rather than a cut
+// (Amelia, October 2026: "it reads as hard cuts between seasons rather than
+// seasons slowly changing"). Each season keeps a short stretch of its own,
+// holding its featured moments (FEATURED).
 export const SEASON_KEYS: readonly { at: number; season: Season; name: string }[] = [
   // 2017 to 2019, from the opening title: winter. They met in July 2017, in
-  // the Australian winter, and the snow trip of July 2019 falls inside it.
+  // the Australian winter. Pure winter through the internship's stop.
   { at: 0, season: WINTER, name: 'winter' },
-  // Into spring across New Year 2020 (p .3085), after the snowman's flurry
-  // and before the graduation's mortarboards, so graduation's still is in
-  // blossom.
-  { at: .298, season: WINTER, name: 'winter' },
-  { at: .318, season: SPRING, name: 'spring' },
-  // 2020 to 2022: spring. Into summer over the end of 2022, after the Opera
-  // House, before 2023's January (p .4932) and the HeirWealth still there.
-  { at: .471, season: SPRING, name: 'spring' },
-  { at: .492, season: SUMMER, name: 'summer' },
-  // 2023 to 2025: summer, the 2025 snowmen bringing their own flurry. Into
-  // autumn after that flurry, before salsa's still on 2026's January (p
-  // .7148); autumn then holds through the engagement (April 2026), the bend
-  // and the dock (April 2027).
-  { at: .696, season: SUMMER, name: 'summer' },
-  { at: .714, season: AUTUMN, name: 'autumn' },
+  // Into spring from the end of 2018 to early 2021, across New Year 2020 (p
+  // .3085): the 2019 snow trip still mostly winter (about three quarters),
+  // graduation well into spring, and the Opera House in full spring.
+  { at: .235, season: WINTER, name: 'winter' },
+  { at: .37, season: SPRING, name: 'spring' },
+  // 2020 to 2022: spring, pure through 2021 (p .42). Into summer from early
+  // 2022 to mid-2023, across 2023's January (p .4932): the interim's still
+  // mostly spring, the HeirWealth's mostly summer.
+  { at: .43, season: SPRING, name: 'spring' },
+  { at: .55, season: SUMMER, name: 'summer' },
+  // 2023 to 2025: summer, pure through the apartments, living together and
+  // dating. Into autumn from late 2024 to the engagement, across the 2025
+  // snowmen (still leaning summer) and salsa (well into autumn), ending
+  // before the engagement's still (April 2026, p .7435), so autumn is full
+  // there and through the trip, the bend and the dock (April 2027). It
+  // stands a little before 2026's January (p .7148), as the engagement is only
+  // three months after it.
+  { at: .63, season: SUMMER, name: 'summer' },
+  { at: .742, season: AUTUMN, name: 'autumn' },
   { at: 1, season: AUTUMN, name: 'autumn' },
 ];
 
@@ -74,24 +82,59 @@ const smooth = (x: number) => {
   const t = Math.min(1, Math.max(0, x));
   return t * t * (3 - 2 * t);
 };
+// The whole picture's drift through a change (the grass, flowers, light and
+// drift): half straight, half smoothstep, so it moves at much the same pace
+// all the way and only softens at its ends.
+const gentle = (t: number) => .5 * t + .5 * smooth(t);
 const mixSeason = (a: Season, b: Season, t: number) =>
   Object.fromEntries(AMOUNTS.map(name => [name, a[name] + (b[name] - a[name]) * t])) as Season;
 
-// The season at progress p. The same for a moving scene and a reduced-motion
+// Where p stands in the changes: the season it is leaving (`from`) and going
+// to (`to`), how far through the change it is (`t`, straight from 0 to 1;
+// `from` and `to` the same season, and `t` 0, where one holds), and whether
+// the trees turn in the opposite order this time (`reverse`; see treeTurn).
+export type SeasonChange = { from: Season; to: Season; t: number; reverse: boolean };
+export function seasonChange(p: number): SeasonChange {
+  if (p <= 0) return { from: SEASON_KEYS[0].season, to: SEASON_KEYS[0].season, t: 0, reverse: false };
+  for (let i = 1; i < SEASON_KEYS.length; i++) {
+    const a = SEASON_KEYS[i - 1], b = SEASON_KEYS[i];
+    if (p > b.at) continue;
+    if (a.season === b.season) return { from: a.season, to: a.season, t: 0, reverse: false };
+    // Out of spring the trees go in reverse, so those that blossomed first
+    // keep their blossom longest.
+    return { from: a.season, to: b.season, t: Math.min(1, Math.max(0, (p - a.at) / (b.at - a.at))), reverse: a.season === SPRING };
+  }
+  const last = SEASON_KEYS[SEASON_KEYS.length - 1].season;
+  return { from: last, to: last, t: 0, reverse: false };
+}
+
+// The trees don't change in step: each takes its own share of a change
+// (TREE_TURN of it), starting when its `order` (0 to 1, from treeSeason)
+// comes round, so across a change they turn one by one, the first before
+// the grass has gone far and the last as it finishes. A tree's own turn at
+// t: 0 before its start, 1 once it has turned. The leaves' shader
+// (GardenSeasons.tsx) works the same sum.
+export const TREE_TURN = .4;
+export function treeTurn(t: number, order: number, reverse = false) {
+  const o = reverse ? 1 - order : order;
+  return smooth((t - o * (1 - TREE_TURN)) / TREE_TURN);
+}
+// The season a tree of that order shows at p.
+export function treeSeasonAt(p: number, order: number): Season {
+  const { from, to, t, reverse } = seasonChange(p);
+  return from === to ? { ...from } : mixSeason(from, to, treeTurn(t, order, reverse));
+}
+
+// The season at progress p, for the grass, plants, flowers, light and drift:
+// the whole picture's drift. The same for a moving scene and a reduced-motion
 // still (which stands at its milestone's own p), so a still shows the season
 // the guest would see there. Remembers the last answer, as the scene asks
 // several times a frame.
 let last: { p: number; season: Season } | null = null;
 export function seasonAt(p: number): Season {
   if (last && last.p === p) return last.season;
-  let season: Season = { ...SEASON_KEYS[SEASON_KEYS.length - 1].season };
-  if (p <= 0) season = { ...SEASON_KEYS[0].season };
-  else for (let i = 1; i < SEASON_KEYS.length; i++) {
-    const a = SEASON_KEYS[i - 1], b = SEASON_KEYS[i];
-    if (p > b.at) continue;
-    season = a.season === b.season ? { ...a.season } : mixSeason(a.season, b.season, smooth((p - a.at) / (b.at - a.at)));
-    break;
-  }
+  const { from, to, t } = seasonChange(p);
+  const season = from === to ? { ...from } : mixSeason(from, to, gentle(t));
   last = { p, season };
   return season;
 }
@@ -228,18 +271,23 @@ export function featuredTrees(width: number, mobile: boolean): Map<string, Role>
   return picks;
 }
 
-// A tree's parts (PART's bits) and its shade (0 to 1: amber through orange
-// and rust to red in autumn, deeper or paler pink blossom), from where it
-// stands and its model `type` (gardenTreeSpots.ts: 0 to 3 the ashes), on a
-// layout.
+// A tree's parts (PART's bits), its shade (0 to 1: amber through orange
+// and rust to red in autumn, deeper or paler pink blossom) and its order in
+// each change (0 to 1, treeTurn), from where it stands and its model `type`
+// (gardenTreeSpots.ts: 0 to 3 the ashes), on a layout. A featured tree turns
+// so its season is whole at its moments: a bare one leafs out last, one that
+// blossoms blossoms first (and, as the trees go in reverse out of spring,
+// keeps it last), and one that turns in autumn turns first.
 const FEATURED_PART: Record<Role, number> = { [ROLE.still]: 0, [ROLE.turns]: PART.turns, [ROLE.sparse]: PART.bare | PART.turns, [ROLE.blossom]: PART.blossom };
-export function treeSeason(x: number, z: number, type: number, width: number, mobile: boolean): { parts: number; shade: number } {
-  const shade = hash(x, z, 7.1);
-  if (type === OLD_TREE_TYPE) return { parts: PART.old, shade };
-  if (type > 3) return { parts: 0, shade };
+const FEATURED_ORDER: Record<Role, number | undefined> = { [ROLE.still]: undefined, [ROLE.turns]: 0, [ROLE.sparse]: 1, [ROLE.blossom]: 0 };
+export function treeSeason(x: number, z: number, type: number, width: number, mobile: boolean): { parts: number; shade: number; order: number } {
+  const shade = hash(x, z, 7.1), order = hash(x, z, 9.7);
+  if (type === OLD_TREE_TYPE) return { parts: PART.old, shade, order };
+  if (type > 3) return { parts: 0, shade, order };
   const pick = featuredTrees(width, mobile).get(key(x, z));
   const parts = (hash(x, z) < SHARES.turns ? PART.turns : 0)
     | (hash(x, z, 3.3) < SHARES.bare ? PART.bare : 0)
     | (hash(x, z, 5.9) < SHARES.blossom ? PART.blossom : 0);
-  return { parts: parts | (pick === undefined ? 0 : FEATURED_PART[pick]), shade };
+  if (pick === undefined) return { parts, shade, order };
+  return { parts: parts | FEATURED_PART[pick], shade, order: FEATURED_ORDER[pick] ?? order };
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AUTUMN, AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, FEATURED, FEATURE_FRAME, FLOWER_COLOURS, FLOWER_GROWTH, NEUTRAL, OLD_TREE_TYPE, PART, SEASON_KEYS, SHARES, SPRING, SUMMER, WINTER, featuredTrees, leafColour, petalColour, petalShown, seasonAt, seasonLight, seasonName, seasonsOn, treeSeason } from '../src/components/garden/seasons.ts';
+import { AUTUMN, AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, FEATURED, FEATURE_FRAME, ROLE, FLOWER_COLOURS, FLOWER_GROWTH, NEUTRAL, OLD_TREE_TYPE, PART, SEASON_KEYS, SHARES, SPRING, SUMMER, TREE_TURN, WINTER, featuredTrees, leafColour, petalColour, petalShown, seasonAt, seasonChange, seasonLight, seasonName, seasonsOn, treeSeason, treeSeasonAt, treeTurn } from '../src/components/garden/seasons.ts';
 import { MILESTONES, STOPS, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { treeBase, treePlacements, oldTreePlacement } from '../src/components/garden/gardenTreeSpots.ts';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
@@ -23,7 +23,7 @@ test('summer is the garden as it is with the seasons off; the voyage opens in wi
   assert.ok(near(seasonAt(0), WINTER) && near(seasonAt(1), AUTUMN));
 });
 
-test('one cycle over the whole journey: winter, spring, summer, autumn, three gentle changes', () => {
+test('one cycle over the whole journey: winter, spring, summer, autumn, three slow drifts', () => {
   let names = [seasonName(0)];
   for (let i = 0; i <= 20000; i++) {
     const name = seasonName(i / 20000);
@@ -34,15 +34,21 @@ test('one cycle over the whole journey: winter, spring, summer, autumn, three ge
   const eases = changes();
   assert.equal(eases.length, 3);
   eases.forEach(([a, b], i) => {
-    // Gentle: no ease shorter than 40svh or so (.017 of the page).
-    assert.ok(b.at - a.at >= .017, `${a.name} to ${b.name} at ${a.at} eases slowly`);
-    // Near the January it stands for.
+    // A long drift over many stops (Amelia, October 2026: not a cut), five or
+    // six times as long as the old 40svh.
+    assert.ok(b.at - a.at >= .1, `${a.name} to ${b.name} from ${a.at} drifts slowly`);
+    const stops = STOPS.filter(p => p > a.at && p < b.at).length;
+    assert.ok(stops >= 2, `${a.name} to ${b.name} across ${stops} stops`);
+    // Round the January it stands for.
     const january = progressAt(`${CYCLE[i + 1][1]}-01`), middle = (a.at + b.at) / 2;
-    assert.ok(Math.abs(middle - january) < .015, `${a.name} to ${b.name} at ${middle.toFixed(3)}, ${CYCLE[i + 1][1]} at ${january.toFixed(3)}`);
+    assert.ok(a.at < january && january < b.at, `${a.name} to ${b.name} across ${CYCLE[i + 1][1]}'s January`);
+    assert.ok(Math.abs(middle - january) < .035, `${a.name} to ${b.name} at ${middle.toFixed(3)}, ${CYCLE[i + 1][1]} at ${january.toFixed(3)}`);
   });
+  // Each season keeps a stretch of its own between the drifts.
+  for (let i = 1; i < eases.length; i++) assert.ok(eases[i][0].at - eases[i - 1][1].at >= .05, `pure ${eases[i][0].name}`);
 });
 
-test('the season moves smoothly with the scroll, never snapping', () => {
+test('the season moves smoothly and slowly with the scroll, never snapping', () => {
   let previous = seasonAt(0);
   for (let p = 0; p <= 1; p += 1e-5) {
     const s = seasonAt(p);
@@ -52,44 +58,65 @@ test('the season moves smoothly with the scroll, never snapping', () => {
     }
     previous = s;
   }
+  // Calm: the whole picture moves no more than about a seventh of the way
+  // from one season to the next over a hundredth of the scroll (about 2 or 3
+  // seconds of reading).
+  for (let p = 0; p <= .99; p += .001) {
+    const a = seasonAt(p), b = seasonAt(p + .01);
+    for (const k of AMOUNTS) assert.ok(Math.abs(b[k] - a[k]) <= .15, `${k} from ${p.toFixed(3)}: ${Math.abs(b[k] - a[k]).toFixed(3)}`);
+  }
 });
 
-test('each milestone stands wholly in its year’s season, moving or still', () => {
+test('each milestone leans to its year’s season, and stands wholly in it outside the drifts', () => {
   const seasonOf = id => {
     const year = Number(MILESTONES[index(id)].month.slice(0, 4));
-    return SEASONS[CYCLE.filter(([, from]) => from <= year).at(-1)[0]];
+    return CYCLE.filter(([, from]) => from <= year).at(-1)[0];
   };
-  for (const { id } of MILESTONES) {
-    assert.ok(near(seasonAt(stop(id)), seasonOf(id)), `${id} at its stop`);
-    assert.ok(near(seasonAt(still(id)), seasonOf(id)), `${id} still`);
+  const drifting = p => changes().some(([a, b]) => p > a.at && p < b.at);
+  for (const { id } of MILESTONES) for (const [p, what] of [[stop(id), 'at its stop'], [still(id), 'still']]) {
+    assert.equal(seasonName(p), seasonOf(id), `${id} ${what} (${p.toFixed(4)})`);
+    if (!drifting(p)) assert.ok(near(seasonAt(p), SEASONS[seasonOf(id)]), `${id} ${what} wholly ${seasonOf(id)}`);
   }
-  // The story's own seasons: they met in winter, both snow trips' years as asked, engaged in autumn.
-  assert.ok(near(seasonAt(stop('meet')), WINTER) && near(seasonAt(stop('snow-2019')), WINTER));
-  assert.ok(near(seasonAt(stop('snow-2025')), SUMMER));
-  assert.ok(near(seasonAt(stop('engaged')), AUTUMN));
-  // The opening title, the bend and the dock.
+  // The story's own seasons. They met in winter, wholly.
+  for (const id of ['meet', 'coast', 'internship']) assert.ok(near(seasonAt(stop(id)), WINTER) && near(seasonAt(still(id)), WINTER), id);
+  // The 2019 snow trip still wintry: frosted, many trees bare.
+  for (const p of [stop('snow-2019'), still('snow-2019')]) assert.ok(seasonAt(p).bare >= .6 && seasonAt(p).pale >= .6, `snow-2019 wintry at ${p}`);
+  // Spring clear at graduation, whole at the Opera House and late in 2021.
+  for (const p of [stop('graduation'), still('graduation')]) assert.ok(seasonAt(p).blossom >= .5 && seasonAt(p).flowers >= .5, `graduation in spring at ${p}`);
+  for (const p of [stop('sydney'), still('sydney'), .42]) assert.ok(near(seasonAt(p), SPRING), `spring at ${p}`);
+  for (const p of [stop('interim'), still('interim')]) assert.ok(seasonAt(p).blossom >= .7, `interim mostly spring at ${p}`);
+  // Summer, the garden as it was, wholly through the apartments and dating.
+  for (const id of ['apartments', 'living-together', 'dating']) assert.ok(near(seasonAt(stop(id)), SUMMER) && near(seasonAt(still(id)), SUMMER), id);
+  assert.equal(seasonName(stop('snow-2025')), 'summer');
+  // Autumn full by the engagement, and on through the bend to the dock.
+  assert.ok(near(seasonAt(still('engaged')), AUTUMN) && near(seasonAt(stop('engaged')), AUTUMN));
   assert.ok(near(seasonAt(0), WINTER));
   for (const p of [.83, .9, .95, 1]) assert.ok(near(seasonAt(p), AUTUMN), `autumn at ${p}`);
 });
 
-test('each change eases over a quiet stretch, between milestones', () => {
-  const step = .001, counts = Object.fromEntries(['desktop', 'phone'].map(name => [name, timeline(sceneryCatalog(LAYOUTS[name].width), LAYOUTS[name], step).counts]));
-  // How many pieces compete for the eye over [from, to], on desktop and phone together.
-  const busy = (from, to) => {
-    let sum = 0, n = 0;
-    for (let i = Math.round(from / step); i <= Math.round(to / step); i++, n++) sum += counts.desktop[i] + counts.phone[i];
-    return sum / n;
-  };
-  const moments = MILESTONES.flatMap(({ id }) => [stop(id), still(id)]).sort((a, b) => a - b);
+test('through a drift the trees turn one by one, not in step', () => {
+  const orders = Array.from({ length: 200 }, (_, i) => (i + .5) / 200);
   for (const [a, b] of changes()) {
-    // No milestone's stop or still falls inside an ease.
-    const before = moments.filter(p => p <= a.at).at(-1), after = moments.find(p => p >= b.at);
-    assert.ok(moments.every(p => p <= a.at || p >= b.at), `${a.name} to ${b.name} clear of the milestones`);
-    // As quiet as any stretch as long between those milestones, or nearly.
-    let quietest = Infinity;
-    for (let from = before; from + b.at - a.at <= after; from += step) quietest = Math.min(quietest, busy(from, from + b.at - a.at));
-    assert.ok(busy(a.at, b.at) <= quietest + .5, `${a.name} to ${b.name}: ${busy(a.at, b.at).toFixed(2)} in view, ${quietest.toFixed(2)} at the quietest`);
+    // At each end every tree stands in its season.
+    for (const o of orders) {
+      assert.ok(near(treeSeasonAt(a.at, o), a.season) && near(treeSeasonAt(b.at, o), b.season));
+      assert.ok(near(treeSeasonAt((a.at + b.at) / 2, o), treeSeasonAt((a.at + b.at) / 2 + 1e-12, o), 1e-6));
+    }
+    // A third of the way through, some trees have turned, some not begun, the rest partway.
+    for (const t of [1 / 3, 1 / 2, 2 / 3]) {
+      const { reverse } = seasonChange(a.at + (b.at - a.at) * t);
+      const turns = orders.map(o => treeTurn(t, o, reverse));
+      const done = turns.filter(v => v === 1).length, waiting = turns.filter(v => v === 0).length;
+      assert.ok(done > 0 || waiting > 0, `${a.name} to ${b.name} at ${t}: not in step`);
+      assert.ok(turns.filter(v => v > 0 && v < 1).length > 40, `${a.name} to ${b.name} at ${t}: many partway`);
+    }
+    // Each tree turns over its own share of the drift, never at once.
+    const own = (b.at - a.at) * TREE_TURN;
+    assert.ok(own >= .04, `${a.name} to ${b.name}: each tree over ${own.toFixed(3)} of the scroll`);
   }
+  // The first tree begins as the drift does, the last finishes with it.
+  assert.ok(treeTurn(.01, 0) > 0 && treeTurn(.99, 1) < 1 && treeTurn(1, 1) === 1);
+  assert.equal(treeTurn(.5, 0, true), treeTurn(.5, 1));
 });
 
 test('each season has its own light: winter cooler and brighter, autumn warmer, never darker than summer', () => {
@@ -145,6 +172,16 @@ test('a good share of the avenue takes part in each season, in view at its miles
     for (const p of [stop('graduation'), still('graduation'), .42, stop('interim'), still('interim')]) assert.ok(pictured(p, layout).blossom >= 1, `${layout}: blossom at ${p}`);
     for (const id of ['salsa', 'engaged', 'turkey-greece']) for (const p of [stop(id), still(id)]) assert.ok(pictured(p, layout).turns >= 1, `${layout}: a turning tree at ${id} (${p})`);
     assert.ok(featuredTrees(lens.width, mobile).size <= FEATURED.reduce((n, f) => n + f.at.length * 2, 0));
+    // And it shows its season whole there, even inside a drift: the bare
+    // ones leaf out last, the ones that blossom do so first and keep it last,
+    // the ones that turn in autumn turn first.
+    const whole = { [ROLE.sparse]: s => s.bare === 1, [ROLE.blossom]: s => s.blossom === 1, [ROLE.turns]: s => s.turn === 1 };
+    for (const [spot, role] of featuredTrees(lens.width, mobile)) {
+      const [x, z] = spot.split(',').map(Number), tree = ashes.find(t => t.x.toFixed(2) === x.toFixed(2) && t.z.toFixed(2) === z.toFixed(2));
+      const { order } = treeSeason(tree.x, tree.z, tree.type, lens.width, mobile);
+      const moments = FEATURED.find(f => f.role === role).at.flatMap(at => typeof at === 'number' ? [at] : [stop(at), still(at)]);
+      for (const p of moments) assert.ok(whole[role](treeSeasonAt(p, order)), `${layout}: featured ${role} tree whole at ${p}`);
+    }
   }
 });
 
