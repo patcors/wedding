@@ -14,6 +14,7 @@ import { WATERS, type WaterStyle } from './skyCycle';
 import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
+import { PLACE_KEY, placeToKeep, placeToReopen, scrollFor } from './voyagePlace';
 import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
@@ -44,10 +45,14 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
 // guest has stayed on it a moment. Here too the scroll is kept within reach
 // of the story, the arrow keys send it to a stop, and "Sail on" glides on to
 // the dock until the guest takes over. `still`: the story has as good as
-// come to rest (atRest).
+// come to rest (atRest). When the screen changes shape (a phone turning) the
+// story keeps its place, and coming back from the details it reopens where
+// the guest left (voyagePlace.ts).
 const DATE_EVERY = 400, ANNOUNCE_AFTER = 700;
 function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   const pace = useMemo(createPace, []);
+  // Read once, on the first mount: where to reopen after the details, if anywhere.
+  const reopen = useRef<number | null | undefined>(undefined);
   // The raw scroll, 0 to 1.
   const [progress, setProgress] = useState(0);
   const [chapter, setChapter] = useState<Chapter>('arrival');
@@ -61,8 +66,17 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   useEffect(() => {
     const element = scroller.current!;
     const span = () => Math.max(1, element.scrollHeight - element.clientHeight);
+    if (reopen.current === undefined) {
+      try {
+        reopen.current = placeToReopen(sessionStorage.getItem(PLACE_KEY));
+        sessionStorage.removeItem(PLACE_KEY);
+      } catch { reopen.current = null; }
+      if (reopen.current !== null) element.scrollTop = scrollFor(reopen.current, span());
+    }
     // `travelling`: the scroll was sent to a stop, so it may be further ahead than the leash allows.
+    // `kept`: the scroll's last progress, and `spanned`, the span it was read in.
     let frame = 0, shown: string | null | undefined, changed = -Infinity, travelling = false;
+    let kept = Math.min(1, element.scrollTop / span()), spanned = span();
     const show = (p: number, settled: boolean, now: number) => {
       setChapter(chapterAt(p));
       setAway(namesAway(p));
@@ -86,7 +100,15 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
     };
     const wake = () => { if (!frame && !reduced) frame = requestAnimationFrame(tick); };
     const update = () => {
-      const scroll = Math.min(1, element.scrollTop / span());
+      // The screen changed shape: put the scroll back at the story's place in
+      // the new span, leaving the story where it was (it doesn't move, so
+      // nothing glides). Setting it scrolls, which comes back here.
+      if (span() !== spanned) {
+        spanned = span();
+        element.scrollTop = scrollFor(kept, spanned);
+        return;
+      }
+      const scroll = kept = Math.min(1, element.scrollTop / span());
       if (reduced) {
         // The scene cuts to each milestone's still, and so does the page.
         const still = stillProgress(scroll);
@@ -145,8 +167,13 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       event.preventDefault();
       go(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
     };
+    // Back from the details with the page kept whole (no WebGL page in
+    // Safari, but others may): it is already there, so drop the place, or a
+    // later reload would open at it.
+    const restored = (event: PageTransitionEvent) => { if (event.persisted) try { sessionStorage.removeItem(PLACE_KEY); } catch { /* nothing kept */ } };
     pace.progress = pace.target = Math.min(1, element.scrollTop / span());
     update();
+    addEventListener('pageshow', restored);
     element.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update);
     element.addEventListener('wheel', takeOver, { passive: true });
@@ -159,7 +186,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       element.removeEventListener('scroll', update); window.removeEventListener('resize', update);
       element.removeEventListener('wheel', takeOver); element.removeEventListener('touchstart', takeOver);
       element.removeEventListener('pointerdown', takeOver);
-      removeEventListener('keydown', onKey);
+      removeEventListener('keydown', onKey); removeEventListener('pageshow', restored);
     };
   }, [scroller, pace, reduced]);
   // Screen readers hear the milestone once the guest settles on it.
@@ -403,6 +430,11 @@ export default function Garden() {
   // The scene already eases between stops; native smooth scrolling would
   // introduce a second animation and delay the content on slower devices.
   const goToProgress = voyage.go;
+  // Leaving for the details or the RSVP, remember the place to come back to (voyagePlace.ts).
+  const keepPlace = () => {
+    const place = placeToKeep(voyage.pace.progress);
+    try { if (place) sessionStorage.setItem(PLACE_KEY, place); else sessionStorage.removeItem(PLACE_KEY); } catch { /* private mode: back to the title */ }
+  };
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
   return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-text={text === 'glow' ? undefined : text} data-golden={REVIEW && inkTurnsWhite(progress) ? '' : undefined} aria-busy={state === 'loading'}>
     <div className="garden-stage">
@@ -451,8 +483,8 @@ export default function Garden() {
               {sound === 'off' ? <path d="m16 9.5 5 5m0-5-5 5" /> : <path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" />}
             </svg>
           </button>}
-          <a className="garden-invitation-link" href={`${BASE}details/`}>The details</a>
-          <a className="garden-invitation-link" href={`${BASE}details/#rsvp`}>RSVP</a>
+          <a className="garden-invitation-link" href={`${BASE}details/`} onClick={keepPlace}>The details</a>
+          <a className="garden-invitation-link" href={`${BASE}details/#rsvp`} onClick={keepPlace}>RSVP</a>
         </div>
       </header>
     </div>
@@ -492,7 +524,7 @@ export default function Garden() {
         <h2><b className="garden-perch">M</b>eet us<br /><em>in the garden.</em></h2>
         <p className="garden-venue">Jasper’s Berry · Berry, NSW</p>
         <p className="garden-date">Friday, 16 April 2027</p>
-        <a className="garden-button" href={`${BASE}details/`}>The details &amp; RSVP <span aria-hidden="true">→</span></a>
+        <a className="garden-button" href={`${BASE}details/`} onClick={keepPlace}>The details &amp; RSVP <span aria-hidden="true">→</span></a>
       </section>
     </div>
 
