@@ -17,6 +17,8 @@ const OLD_TREE_SPREAD = 9.5;
 // banks', on the island. Each stands .08 below the ground (TREE_SINK).
 export type Placement = { x: number; y?: number; z: number; scale: number; rotation: number; type: number; distant: boolean };
 export const TREE_SINK = .08;
+// Where the phone's ash for the circus's silk stands along the river (see below).
+export const SILK_ASH = -89.5;
 // The height a tree's model stands at: on the ground, sunk TREE_SINK.
 export const treeBase = (p: Placement, width: number) => (p.y ?? groundHeight(p.x, p.z, width)) - TREE_SINK;
 
@@ -52,6 +54,11 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
   // street sign fixed to its trunk (eggs/nesting.ts), near enough the water
   // to stay in a phone's narrow picture while the birdhouses are.
   avenue.push({ x: riverCenter(-110.3, width) - bankEdge(-110.3, width) - (mobile ? .8 : 1.3), z: -110.3, scale: mobile ? .9 : 1, rotation: 2.2, type: 3, distant: true });
+  // On a phone the Opera House's point takes the avenue's ash at z −85 on
+  // Amelia's bank, so the circus's silk hangs from an ash like it a little
+  // further down and taller, so the silk hangs high beyond the Opera House's
+  // shells in the picture (eggs/circusRigs.ts).
+  if (mobile) avenue.push({ x: riverCenter(SILK_ASH, width) - bankEdge(SILK_ASH, width) - 4.6, z: SILK_ASH, scale: 1.2, rotation: .2, type: 2, distant: true });
   const rand = random(415);
   // Stagger groves along both banks all the way into the mist. The inner
   // trees overlap the avenue while outer trees fill gaps between canopies.

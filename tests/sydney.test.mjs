@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { MOBILE_RIVER_WIDTH, VOYAGE, bankEdge, groundHeight, pointInland, pointSpot, riverCenter, rockHalfWidth, voyageClearing } from '../src/components/garden/gardenGeometry.ts';
-import { DATES, MILESTONES, ROOM, STOPS, monthIndex, progressAt, routeAt } from '../src/components/garden/journey.ts';
+import { AMELIA_LEFT_FINOCOMP, DATES, MILESTONES, ROOM, STOPS, monthIndex, progressAt, routeAt } from '../src/components/garden/journey.ts';
 import { ALONGSIDE, boatScale, boatPose } from '../src/components/garden/storyBoats.ts';
 import { HULL, SAIL_EASED } from '../src/components/garden/storyBoatGeometry.ts';
 import { cameraHeading, growth } from '../src/components/garden/eggs/egg.ts';
@@ -169,8 +169,8 @@ test('the point rises out of the water above the bank everywhere under it, seate
       const x = point.x + point.side * u, z = point.z + v;
       if (pointInland(x, z, width) > 0) assert.ok(groundHeight(x, z, width) < top - .03, `the bank over the point at ${u}, ${v}`);
     }
-    // Low: on a phone, where it runs furthest back, about as high as the bank's level top.
-    assert.ok(top > .2 && top < (width < 1 ? .75 : .45), `top at ${top}`);
+    // Low: on a phone, where it runs furthest back, about as high as the bank's level top (about .8 at z −86).
+    assert.ok(top > .2 && top < (width < 1 ? .85 : .45), `top at ${top}`);
     // Its sides run down under the water, and nothing of it stands above its top.
     let low = Infinity, high = -Infinity;
     for (let i = 0; i < position.count; i++) { low = Math.min(low, position.getY(i)); high = Math.max(high, position.getY(i)); }
@@ -197,11 +197,16 @@ test('the point rises out of the water above the bank everywhere under it, seate
 test('the Opera House is in the picture through 2022 to August\'s stop on desktop and a phone, clear of her boat and its sails there', () => {
   for (const width of widths) {
     const { corners, top } = house(width);
+    // Wholly in the picture from January to August's date; on a phone,
+    // where it now stands nearer so that it is passed by March 2023 (see
+    // below), by August's stop the back corner of its podium, on the bank,
+    // may just touch the picture's edge.
     for (const p of range(progressAt('2022-01'), interim, .001)) {
       assert.equal(harbourShown(p, cameraPose(p, width).position[2], width < 1).opera, 1, `shown at ${p}`);
+      const margin = width < 1 ? (p > progressAt(AMELIA_LEFT_FINOCOMP) ? -.5 : .3) : .6;
       for (const { x, z } of [...corners, top]) {
         const at = seen(p, width, x, z);
-        assert.ok(Math.abs(at.bearing) < halfView(width) - .6 && at.distance < (width < 1 ? 39 : 26), `${at.bearing.toFixed(1)}°, ${at.distance.toFixed(1)} away at ${p} (width ${width})`);
+        assert.ok(Math.abs(at.bearing) < halfView(width) - margin && at.distance < (width < 1 ? 39 : 26), `${at.bearing.toFixed(1)}°, ${at.distance.toFixed(1)} away at ${p} (width ${width})`);
       }
     }
     // At August 2022's stop it stands clear of her boat and its sail: on a
@@ -213,14 +218,20 @@ test('the Opera House is in the picture through 2022 to August\'s stop on deskto
     if (width < 1) {
       const { mast } = boat(interim, width, -1);
       const [cx, cy, cz] = cameraPose(interim, width).position, rise = (x, y, z) => degrees(Math.atan2(y - cy, Math.hypot(x - cx, z - cz)));
-      const masthead = rise(mast.x, HULL.mastTop * boatScale(width), mast.z), point = pointSpot(width);
-      for (const { x, z } of corners) assert.ok(rise(x, pointTop(width), z) > masthead + .4, 'the house over her masthead');
-      // The foot of the point's near side, where it meets the water or the bank, over the masthead.
-      const over = seen(interim, width, mast.x, mast.z).bearing;
-      for (let u = -point.out; u <= point.back; u += .05) {
-        const x = point.x + point.side * u, z = point.z + point.wide / 2;
-        if (Math.abs(seen(interim, width, x, z).bearing - over) < 1) assert.ok(rise(x, Math.max(0, groundHeight(x, z, width)), z) > masthead + .3, 'the point over her masthead');
+      const masthead = rise(mast.x, HULL.mastTop * boatScale(width), mast.z);
+      // It stands nearer than it did (z −94), so that it is passed before
+      // Amelia is back in March 2023 (see below), and her masthead now comes
+      // up to the foot of its shells, the top of the podium, but no further:
+      // the shells stand whole above her sail.
+      const { spot } = house(width), c = Math.cos(spot.yaw), s = Math.sin(spot.yaw), over = seen(interim, width, mast.x, mast.z).bearing;
+      let behind = 0;
+      for (let lz = -.5; lz <= .5; lz += .005) for (const lx of [-OPERA.width / 2, OPERA.width / 2]) {
+        const x = spot.x + (c * lx + s * lz) * spot.scale, z = spot.z + (-s * lx + c * lz) * spot.scale;
+        if (Math.abs(seen(interim, width, x, z).bearing - over) > .3) continue;
+        behind++;
+        assert.ok(rise(x, spot.y + .07 * spot.scale, z) > masthead - .25, 'the shells over her masthead');
       }
+      assert.ok(behind > 0);
     } else {
       const { hull, sail } = boat(interim, width, -1), rim = hull.map(point => sight(interim, width, { ...point, y: .2 * boatScale(width) }));
       const port = Math.min(...rim.map(at => at.bearing)), gunwale = Math.max(...rim.map(at => at.up));
@@ -382,13 +393,25 @@ test('guests\' boats bump off the bridge\'s pylons, and the two cost two draw ca
   assert.ok(BRIDGE.deck > 2);
 });
 
-test('on a phone the Opera House goes after August\'s stop, before the circus\'s silk comes in in front of it', async () => {
-  const { SILK } = await import('../src/components/garden/eggs/circusRigs.ts');
-  const shown = p => harbourShown(p, cameraPose(p, MOBILE_RIVER_WIDTH).position[2], true).opera;
-  assert.equal(shown(interim), 1);
-  const silk = progressAt(SILK.from) - SILK.arrive * ROOM;
-  assert.equal(shown(silk), 0);
-  assert.ok(silk - interim > .2 * ROOM, 'whole well past the stop');
-  // On desktop it stays until the camera has passed it, as before.
-  assert.equal(harbourShown(silk, cameraPose(silk, 1).position[2], false).opera, 1);
+test('the Opera House stays until it has left the picture, and is behind the boats and out of sight once Amelia is back in March 2023', () => {
+  // Amelia, October 2026: on a phone it used to fade away once August's
+  // stop was past, leaving its point by the river, and stood so far down
+  // that the point was still beside the boats after she was back in
+  // Wollongong. Now it stays as other scenery does, on both compositions.
+  const back = STOPS[MILESTONES.findIndex(m => m.id === 'heirwealth') + 1];
+  for (const width of widths) {
+    const { corners } = house(width), point = pointSpot(width);
+    const edge = [-point.out, point.back].flatMap(u => [-1, 1].map(v => ({ x: point.x + point.side * u, z: point.z + v * point.wide / 2 })));
+    for (const p of range(progressAt('2022-01'), back + .3 * ROOM, .001)) {
+      if (corners.some(({ x, z }) => seen(p, width, x, z).bearing > -halfView(width))) assert.equal(harbourShown(p, cameraPose(p, width).position[2], width < 1).opera, 1, `faded while in sight at ${p} (width ${width})`);
+    }
+    // The boats are past the point before March 2023 shows.
+    assert.ok(routeAt(progressAt(DATES.back)) < point.z - point.wide / 2 - 1.5, `the boats past the point (width ${width})`);
+    // At March's stop at most a sliver of the point, at the picture's left
+    // edge, and gone within a quarter of a share.
+    for (const { x, z } of [...corners, ...edge]) {
+      assert.ok(seen(back, width, x, z).bearing < -halfView(width) + 2.5, `the point in the picture at March's stop (width ${width})`);
+      assert.ok(seen(back + .25 * ROOM, width, x, z).bearing < -halfView(width), `the point still in the picture after March's stop (width ${width})`);
+    }
+  }
 });

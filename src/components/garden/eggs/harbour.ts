@@ -11,7 +11,6 @@
 import { VOYAGE, bankEdge, groundHeight, pointInland, pointSpot, riverCenter, rockHalfWidth } from '../gardenGeometry.ts';
 import { ROOM, progressAt } from '../journey.ts';
 import { pointTop, rockHeight } from '../voyageRock.ts';
-import { SILK } from './circusRigs.ts';
 import { MARKER_REACH, markerShown } from './yearMarkerSpots.ts';
 
 // The Opera House stands on the point's flat top, its long axis turned
@@ -21,7 +20,7 @@ import { MARKER_REACH, markerShown } from './yearMarkerSpots.ts';
 // a unit long and `width` wide (its podium); `scale` sizes it on each
 // composition so that it fills the point's top but for a narrow ledge, as
 // the real one fills Bennelong Point; larger on a phone, where it stands
-// further down the river (see pointSpot).
+// a little further down the river (see pointSpot).
 export const OPERA = { turn: -1.55, width: .66, scale: { desktop: 2.9, mobile: 4.1 } } as const;
 
 // The bridge crosses the river at VOYAGE.rock.bridge, from a pair of granite
@@ -111,17 +110,17 @@ export const onPoint = (x: number, z: number, width: number) => pointInland(x, z
 // it fades away quickly as the camera comes `leave` units from it (from the
 // first to the second), just after Sydney's stop. The Opera House comes in
 // with 2022, fully in as its `from` shows, and goes once the camera has
-// passed it. On a phone it stands further down the river than the year
-// markers' reach (`MARKER_REACH`) as 2022 comes in, so it has a reach of
-// its own there (`reach`, the markers' on desktop), held back by its month
-// rather than its distance. There it is beyond the circus's silk, which
-// comes in on the same bank late in 2022 and would hang in front of it, so
-// on a phone it goes once August's stop is past, fading over the `leave`
-// of a share before the silk starts to come in. Both fade evenly
-// (Sydney.tsx), so neither is grainy part way.
+// passed it, as other scenery does: it never fades away while in sight.
+// On a phone it stands further down the river than the year markers' reach
+// (`MARKER_REACH`) as 2022 comes in, so it has a reach of its own there
+// (`reach`, the markers' on desktop), held back by its month rather than
+// its distance. It stays as the camera passes it (Amelia, October 2026: on
+// a phone it used to fade once August's stop was past, before the circus's
+// silk, which hung in front of it, came in; the silk now hangs beyond it
+// there). Both fade evenly (Sydney.tsx), so neither is grainy part way.
 export const HARBOUR_SHOWN = {
   bridge: { from: '2020-10', arrive: .3, leave: [10.9, 9.7] },
-  opera: { from: '2022-01', arrive: .35, reach: { desktop: MARKER_REACH.desktop, mobile: 40 }, leave: .2 },
+  opera: { from: '2022-01', arrive: .35, reach: { desktop: MARKER_REACH.desktop, mobile: 34 } },
 } as const;
 const arrived = (p: number, { from, arrive }: { from: string; arrive: number }) => Math.min(1, Math.max(0, (p - progressAt(from)) / (arrive * ROOM) + 1));
 // As markerShown, with a reach of its own: in over the last `fade` of it, gone once passed.
@@ -134,8 +133,7 @@ export function harbourShown(p: number, cameraZ: number, mobile: boolean) {
   const { bridge, opera } = HARBOUR_SHOWN, [from, to] = bridge.leave;
   const left = smooth((cameraZ - VOYAGE.rock.bridge - to) / (from - to));
   return {
-    opera: Math.min(smooth(arrived(p, opera)), withinReach(mobile ? VOYAGE.point.mobile.z : VOYAGE.point.z, cameraZ, opera.reach[mobile ? 'mobile' : 'desktop']),
-      mobile ? smooth((progressAt(SILK.from) - SILK.arrive * ROOM - p) / (opera.leave * ROOM)) : 1),
+    opera: Math.min(smooth(arrived(p, opera)), withinReach(mobile ? VOYAGE.point.mobile.z : VOYAGE.point.z, cameraZ, opera.reach[mobile ? 'mobile' : 'desktop'])),
     bridge: Math.min(left, smooth(arrived(p, bridge)), markerShown(VOYAGE.rock.bridge, cameraZ, mobile)),
   };
 }

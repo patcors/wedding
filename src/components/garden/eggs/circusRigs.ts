@@ -6,7 +6,7 @@
 import { cameraPose } from '../cameraRig.ts';
 import { bankEdge, groundHeight, riverCenter } from '../gardenGeometry.ts';
 import { ROOM, progressAt } from '../journey.ts';
-import { treeBase, treePlacements, type Placement } from '../gardenTreeSpots.ts';
+import { SILK_ASH, treeBase, treePlacements, type Placement } from '../gardenTreeSpots.ts';
 import { markerShown } from './yearMarkerSpots.ts';
 import { eggSize } from './egg.ts';
 
@@ -29,6 +29,12 @@ type Point = readonly [number, number, number];
 //   after August 2022's stop, once Amelia's interim flag is up, as the Opera
 //   House slips out of the picture (on a phone it is still leaving the left
 //   edge), and is in the picture from November 2022 to January 2023's stop.
+//   On a phone the Opera House stands nearer and stays until the camera has
+//   passed it (Amelia, October 2026), and its point takes the ash at z −85,
+//   so there the silk hangs from a taller ash planted for it a little
+//   further down (SILK_ASH in gardenTreeSpots.ts, z −89.5), just beyond the
+//   house's last shells, rising clear above them, and leaves the picture by
+//   March 2023's stop, before the flower bed beyond it.
 // - The lyra hangs from the further back of two ashes standing together
 //   past 2025's snowmen. Amelia asked for it about 2024, but that year her
 //   bank already holds the flower bed, her birdhouse and its street sign,
@@ -40,7 +46,7 @@ export type Rig = {
   tree: { desktop: number; mobile: number }; limb: { desktop: Point; mobile: Point };
   from: string; arrive: number; scale: { desktop: number; mobile: number };
 };
-export const SILK: Rig = { tree: { desktop: -85, mobile: -85 }, limb: { desktop: [3.038, 4.72, .449], mobile: [3.386, 4.526, .678] }, from: '2022-11', arrive: .3, scale: { desktop: 1.25, mobile: 1.4 } };
+export const SILK: Rig = { tree: { desktop: -85, mobile: SILK_ASH }, limb: { desktop: [3.038, 4.72, .449], mobile: [3.386, 4.526, .678] }, from: '2022-11', arrive: .3, scale: { desktop: 1.25, mobile: 1.4 } };
 export const LYRA: Rig = { tree: { desktop: -126.1, mobile: -126.62 }, limb: { desktop: [-.726, 4.42, 2.655], mobile: [2.674, 4.772, 2.162] }, from: '2025-10', arrive: .25, scale: { desktop: 1.25, mobile: 1.35 } };
 export const RIGS = { silk: SILK, lyra: LYRA } as const;
 export type RigId = keyof typeof RIGS;
