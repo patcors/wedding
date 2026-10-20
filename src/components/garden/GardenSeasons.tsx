@@ -102,8 +102,10 @@ export function seasonalLeaves(shader: THREE.WebGLProgramParametersWithUniforms)
   shader.fragmentShader = `uniform vec4 seasonFrom;\nuniform vec4 seasonTo;\nuniform vec2 seasonChange;\nvarying vec4 vSeason;\n${shader.fragmentShader}`
     .replace('#include <map_fragment>', `#include <map_fragment>
       {
-        // The bits of PART (seasons.ts): turns 1, bare 2, blossom 4, old 8.
+        // The bits of PART (seasons.ts): turns 1, bare 2, blossom 4, old 8, green 16.
         float parts = floor(vSeason.x + .5), shade = vSeason.y, card = vSeason.z;
+        float green = step(15.5, parts);
+        parts = mod(parts, 16.);
         // The old tree at the dock is an evergreen: no season touches it.
         if (parts < 7.5) {
           float turns = mod(parts, 2.), bare = mod(floor(parts * .5), 2.), blossoming = mod(floor(parts * .25), 2.);
@@ -122,7 +124,8 @@ export function seasonalLeaves(shader: THREE.WebGLProgramParametersWithUniforms)
           vec3 autumn = mix(mix(${linear(AUTUMN_LEAVES[0])}, ${linear(AUTUMN_LEAVES[1])}, clamp(hue, 0., 1.)),
             mix(${linear(AUTUMN_LEAVES[2])}, ${linear(AUTUMN_LEAVES[3])}, clamp(hue - 2., 0., 1.)), clamp(hue - 1., 0., 1.));
           autumn *= clamp(luma * 5.5, .35, 1.15);
-          leaf = mix(leaf, autumn, seasonCanopy.x * (turns * .92 * step(.12, card) + (1. - turns) * .14));
+          // The ashes round the old tree at the dock (green) stay green.
+          leaf = mix(leaf, autumn, seasonCanopy.x * (turns * .92 * step(.12, card) + (1. - turns) * .14 * (1. - green)));
           // Spring: every tree's green a little fresher and brighter.
           vec3 fresh = vec3(luma) * vec3(.9, 1.32, .5) * 1.25;
           leaf = mix(leaf, fresh, seasonCanopy.z * .32);

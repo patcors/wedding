@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AUTUMN, AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, FEATURED, FEATURE_FRAME, ROLE, FLOWER_COLOURS, FLOWER_GROWTH, NEUTRAL, OLD_TREE_TYPE, PART, SEASON_KEYS, SHARES, SPRING, SUMMER, TREE_TURN, WINTER, featuredTrees, leafColour, petalColour, petalShown, seasonAt, seasonChange, seasonLight, seasonName, seasonsOn, treeSeason, treeSeasonAt, treeTurn } from '../src/components/garden/seasons.ts';
+import { AUTUMN, AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, DOCK_SURROUND, FEATURED, FEATURE_FRAME, ROLE, FLOWER_COLOURS, FLOWER_GROWTH, NEUTRAL, OLD_TREE_TYPE, PART, SEASON_KEYS, SHARES, SPRING, SUMMER, TREE_TURN, WINTER, dockSurround, featuredTrees, leafColour, petalColour, petalShown, seasonAt, seasonChange, seasonLight, seasonName, seasonsOn, treeSeason, treeSeasonAt, treeTurn } from '../src/components/garden/seasons.ts';
 import { MILESTONES, STOPS, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { treeBase, treePlacements, oldTreePlacement } from '../src/components/garden/gardenTreeSpots.ts';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
@@ -154,7 +154,9 @@ test('a good share of the avenue takes part in each season, in view at its miles
   for (const layout of ['desktop', 'phone']) {
     const lens = LAYOUTS[layout], mobile = layout === 'phone';
     const trees = treePlacements(lens.width, mobile), ashes = trees.filter(t => t.type <= 3);
-    const share = part => ashes.filter(t => treeSeason(t.x, t.z, t.type, lens.width, mobile).parts & part).length / ashes.length;
+    // Away from the old tree's green setting at the dock (see below).
+    const setting = dockSurround(lens.width, mobile), free = ashes.filter(t => !setting.has(`${t.x.toFixed(2)},${t.z.toFixed(2)}`));
+    const share = part => free.filter(t => treeSeason(t.x, t.z, t.type, lens.width, mobile).parts & part).length / free.length;
     // Each season's share of the ashes, by the hash and the featured trees together.
     for (const [k, v] of Object.entries(SHARES)) {
       const got = share(PART[k]);
@@ -180,6 +182,44 @@ test('a good share of the avenue takes part in each season, in view at its miles
       const { order } = treeSeason(tree.x, tree.z, tree.type, lens.width, mobile);
       const moments = FEATURED.find(f => f.role === role).at.flatMap(at => typeof at === 'number' ? [at] : [stop(at), still(at)]);
       for (const p of moments) assert.ok(whole[role](treeSeasonAt(p, order)), `${layout}: featured ${role} tree whole at ${p}`);
+    }
+  }
+});
+
+test('the old tree at the dock stands in a green setting, with autumn still in the dock\'s picture', () => {
+  for (const layout of ['desktop', 'phone']) {
+    const lens = LAYOUTS[layout], mobile = layout === 'phone';
+    const ashes = treePlacements(lens.width, mobile).filter(t => t.type <= 3), at = t => `${t.x.toFixed(2)},${t.z.toFixed(2)}`;
+    const setting = dockSurround(lens.width, mobile), old = oldTreePlacement(lens.width, mobile);
+    // A few of the ashes, no more than one in six, all beyond the dock's camera.
+    assert.ok(setting.size >= 5 && setting.size <= ashes.length / 6, `${layout}: ${setting.size} ashes in the setting`);
+    const eye = cameraPose(DOCK_SURROUND.at[0], lens.width).position;
+    for (const t of ashes.filter(t => setting.has(at(t)))) {
+      assert.ok(t.z < eye[2], `${layout}: ${at(t)} beyond the camera`);
+      const { parts } = treeSeason(t.x, t.z, t.type, lens.width, mobile);
+      assert.ok(parts & PART.green && !(parts & PART.turns), `${layout}: ${at(t)} stays green in autumn`);
+    }
+    // Seen from the dock, the ashes showing through the old tree's canopy stay
+    // green: on desktop, those above the title, behind the festoons; on a
+    // phone, those round the old tree's crown.
+    const view = viewOf(cameraPose(1, lens.width));
+    const crown = project({ centre: [old.x, treeBase(old, lens.width) + 9.5 * old.scale, old.z], radius: 0 }, view, lens).screen;
+    const behind = ashes.filter(t => {
+      const c = project({ centre: [t.x, treeBase(t, lens.width) + 8.5 * t.scale, t.z], radius: 0 }, view, lens).screen;
+      if (!c) return false;
+      return mobile ? Math.hypot(c[0] - crown[0], c[1] - crown[1]) < .35 : Math.abs(c[0]) < .3 && c[1] > .45 && c[1] < 1;
+    });
+    assert.ok(behind.length > 0 && behind.every(t => setting.has(at(t))), `${layout}: ${behind.length} ashes right behind the crown, all green`);
+    // Autumn is never featured there, and still turns elsewhere in the dock's picture.
+    for (const [spot, role] of featuredTrees(lens.width, mobile)) if (role === ROLE.turns) assert.ok(!setting.has(spot));
+    for (const p of DOCK_SURROUND.at) {
+      const v = viewOf(cameraPose(p, lens.width));
+      const turning = ashes.filter(t => {
+        if (!(treeSeason(t.x, t.z, t.type, lens.width, mobile).parts & PART.turns)) return false;
+        const c = project({ centre: [t.x, treeBase(t, lens.width) + 8.5 * t.scale, t.z], radius: 5 * t.scale }, v, lens);
+        return c.inside && c.screen && Math.abs(c.screen[0]) < 1 && Math.abs(c.screen[1]) < 1;
+      });
+      assert.ok(turning.length >= (mobile ? 2 : 8), `${layout}: ${turning.length} turned ashes in the picture at ${p}`);
     }
   }
 });

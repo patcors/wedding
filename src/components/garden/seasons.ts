@@ -16,7 +16,7 @@
 // light, GardenDrift.tsx to the falling leaves and petals. Pure, so it can be tested
 // (tests/seasons.test.mjs).
 import { MILESTONES, STOPS, progressAt } from './journey.ts';
-import { treeBase, treePlacements } from './gardenTreeSpots.ts';
+import { oldTreePlacement, treeBase, treePlacements } from './gardenTreeSpots.ts';
 import { cameraPose } from './cameraRig.ts';
 import { LAYOUTS, project, viewOf } from './voyageTimeline.ts';
 
@@ -209,15 +209,19 @@ export const FLOWER_GROWTH = 1.4, CLOVER_FLOWERS = { share: .5, lift: .2 } as co
 // most turn, in spring a fair few blossom. The rest of the avenue changes only
 // a little (its leaves cooler in winter, fresher in spring, warmer in
 // autumn), and the shrubs not at all. The old tree at the dock (`old`) is an
-// evergreen, as the real one is: no season touches it. A few trees are featured besides, so each season shows on a
-// tree the guest really sees: at each of its moments (FEATURED), the ash
-// whose crown stands largest in the picture to one side, clear of the middle,
-// on that layout (desktop or phone).
+// evergreen, as the real one is: no season touches it, and the ashes whose
+// crowns show behind or through its canopy from the dock (`green`,
+// dockSurround) stay green in autumn too, so it stands in a green setting. A
+// few trees are featured besides, so each season shows on a tree the guest
+// really sees: at each of its moments (FEATURED), the ash whose crown stands
+// largest in the picture to one side, clear of the middle, on that layout
+// (desktop or phone).
 export const ROLE = { still: 0, turns: 1, sparse: 2, blossom: 3 } as const;
 export type Role = typeof ROLE[keyof typeof ROLE];
 // A tree's parts, as bits: it turns in autumn, stands bare in winter,
-// blossoms in spring, or is the old tree at the dock, which stays as it is.
-export const PART = { turns: 1, bare: 2, blossom: 4, old: 8 } as const;
+// blossoms in spring, is the old tree at the dock, which stays as it is, or
+// stays green in autumn round the old tree.
+export const PART = { turns: 1, bare: 2, blossom: 4, old: 8, green: 16 } as const;
 export const SHARES = { turns: .6, bare: .6, blossom: .16 } as const;
 // The old tree at the dock's model type (oldTreePlacement in gardenTreeSpots.ts).
 export const OLD_TREE_TYPE = 4;
@@ -231,6 +235,8 @@ export const FEATURED: readonly { role: Role; at: readonly (string | number)[] }
 // Where a featured crown must stand: its middle this far in front of the
 // camera, and across the picture (0 the middle, 1 the edge) and up it.
 export const FEATURE_FRAME = { depth: [12, 34], across: [.2, .85], up: [-.3, .7] } as const;
+// How far in front of the camera a featured crown may stand when none is near enough.
+export const FEATURE_FAR = 64;
 
 const hash = (x: number, z: number, salt = 0) => {
   const v = Math.sin(x * 12.9898 + z * 78.233 + salt) * 43758.5453;
@@ -243,23 +249,65 @@ const moments = (at: string | number) => {
   return [STOPS[i + 1], progressAt(MILESTONES[i].month)];
 };
 
+// The ashes seen behind or through the old tree's canopy from the dock, on a
+// layout, by where they stand. Its leaves fill an ellipsoid round about
+// (DOCK_SURROUND.crown, in the model's own units, before it is turned and
+// scaled as oldTreePlacement does); an ash is in its setting if, at any of
+// the dock's views (DOCK_SURROUND.at), the line from the camera to the
+// middle, top or either side of its crown passes through that ellipsoid on
+// the way, so the canopy hangs in front of it.
+export const DOCK_SURROUND = { at: [.95, .975, 1], crown: { centre: [-2.5, 9.5, 1], radii: [9, 6, 7] } } as const;
+const surround = new Map<string, Set<string>>();
+export function dockSurround(width: number, mobile: boolean): Set<string> {
+  const cached = surround.get(`${width},${mobile}`);
+  if (cached) return cached;
+  const old = oldTreePlacement(width, mobile), s = old.scale, base = treeBase(old, width);
+  const turn = [Math.cos(old.rotation), Math.sin(old.rotation)];
+  const { centre: [cx, cy, cz], radii } = DOCK_SURROUND.crown;
+  // The ellipsoid in the world: the model turned about its trunk and scaled.
+  const c = [old.x + (cx * turn[0] + cz * turn[1]) * s, base + cy * s, old.z + (-cx * turn[1] + cz * turn[0]) * s];
+  const r = radii.map(v => v * s);
+  // Whether the line from `from` to `to` passes through it.
+  const through = (from: readonly number[], to: readonly number[]) => {
+    const o = [0, 1, 2].map(i => (from[i] - c[i]) / r[i]), d = [0, 1, 2].map(i => (to[i] - from[i]) / r[i]);
+    const a = d[0] ** 2 + d[1] ** 2 + d[2] ** 2, b = 2 * (o[0] * d[0] + o[1] * d[1] + o[2] * d[2]);
+    const disc = b * b - 4 * a * (o[0] ** 2 + o[1] ** 2 + o[2] ** 2 - 1);
+    if (disc < 0) return false;
+    const near = (-b - Math.sqrt(disc)) / (2 * a), far = (-b + Math.sqrt(disc)) / (2 * a);
+    return far > 0 && near < 1;
+  };
+  const set = new Set<string>();
+  const cameras = DOCK_SURROUND.at.map(p => cameraPose(p, width).position);
+  for (const tree of treePlacements(width, mobile)) {
+    if (tree.type > 3) continue;
+    const middle = [tree.x, treeBase(tree, width) + 8.5 * tree.scale, tree.z];
+    if (cameras.some(eye => through(eye, middle))) set.add(key(tree.x, tree.z));
+  }
+  surround.set(`${width},${mobile}`, set);
+  return set;
+}
+
 // The featured trees on a layout, by where they stand, and their roles.
 const featured = new Map<string, Map<string, Role>>();
 export function featuredTrees(width: number, mobile: boolean): Map<string, Role> {
   const cached = featured.get(`${width},${mobile}`);
   if (cached) return cached;
   const lens = LAYOUTS[mobile ? 'phone' : 'desktop'], picks = new Map<string, Role>();
-  const ashes = treePlacements(width, mobile).filter(t => t.type <= 3);
+  const ashes = treePlacements(width, mobile).filter(t => t.type <= 3), green = dockSurround(width, mobile);
   const { depth, across, up } = FEATURE_FRAME;
   for (const { role, at } of FEATURED) for (const p of at.flatMap(moments)) {
     const view = viewOf(cameraPose(p, width));
     let best: { tree: typeof ashes[number]; pixels: number } | null = null;
-    for (const tree of ashes) {
+    // If no ash stands near enough (at the dock, where those near enough are
+    // the old tree's green setting), the largest a little further off.
+    for (const far of [depth[1], FEATURE_FAR]) if (!best) for (const tree of ashes) {
       // A tree another season already features is passed over for the next.
       const taken = picks.get(key(tree.x, tree.z));
       if (taken !== undefined && taken !== role) continue;
+      // Autumn is never featured on the old tree's green setting.
+      if (role === ROLE.turns && green.has(key(tree.x, tree.z))) continue;
       const crown = project({ centre: [tree.x, treeBase(tree, width) + 6 * tree.scale, tree.z], radius: 3.5 * tree.scale }, view, lens);
-      if (!crown.screen || crown.depth < depth[0] || crown.depth > depth[1]) continue;
+      if (!crown.screen || crown.depth < depth[0] || crown.depth > far) continue;
       const x = Math.abs(crown.screen[0]), y = crown.screen[1];
       if (x < across[0] || x > across[1] || y < up[0] || y > up[1]) continue;
       if (!best || crown.pixels > best.pixels) best = { tree, pixels: crown.pixels };
@@ -277,7 +325,8 @@ export function featuredTrees(width: number, mobile: boolean): Map<string, Role>
 // (gardenTreeSpots.ts: 0 to 3 the ashes), on a layout. A featured tree turns
 // so its season is whole at its moments: a bare one leafs out last, one that
 // blossoms blossoms first (and, as the trees go in reverse out of spring,
-// keeps it last), and one that turns in autumn turns first.
+// keeps it last), and one that turns in autumn turns first. The ashes round
+// the old tree at the dock never turn.
 const FEATURED_PART: Record<Role, number> = { [ROLE.still]: 0, [ROLE.turns]: PART.turns, [ROLE.sparse]: PART.bare | PART.turns, [ROLE.blossom]: PART.blossom };
 const FEATURED_ORDER: Record<Role, number | undefined> = { [ROLE.still]: undefined, [ROLE.turns]: 0, [ROLE.sparse]: 1, [ROLE.blossom]: 0 };
 export function treeSeason(x: number, z: number, type: number, width: number, mobile: boolean): { parts: number; shade: number; order: number } {
@@ -288,6 +337,7 @@ export function treeSeason(x: number, z: number, type: number, width: number, mo
   const parts = (hash(x, z) < SHARES.turns ? PART.turns : 0)
     | (hash(x, z, 3.3) < SHARES.bare ? PART.bare : 0)
     | (hash(x, z, 5.9) < SHARES.blossom ? PART.blossom : 0);
-  if (pick === undefined) return { parts, shade, order };
-  return { parts: parts | FEATURED_PART[pick], shade, order: FEATURED_ORDER[pick] ?? order };
+  let all = parts | (pick === undefined ? 0 : FEATURED_PART[pick]);
+  if (dockSurround(width, mobile).has(key(x, z))) all = (all & ~PART.turns) | PART.green;
+  return { parts: all, shade, order: pick === undefined ? order : FEATURED_ORDER[pick] ?? order };
 }
