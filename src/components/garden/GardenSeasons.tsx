@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useJourney } from './JourneyProvider';
-import { NEUTRAL, ROLE, seasonAt, treeSeason, type Season } from './seasons';
+import { NEUTRAL, OLD_TREE_AUTUMN, ROLE, seasonAt, treeSeason, type Season } from './seasons';
 import type { Placement } from './gardenTreeSpots';
 
 export const SEASON_UNIFORMS = {
@@ -51,7 +51,8 @@ const f = (v: number) => v.toFixed(1);
 
 // The leaves. Only the trees treeSeason picks take part; every other tree
 // stays as it is all year. The ones that turn go gold or amber card by card
-// in autumn, some cards staying green; the sparse ones drop most of their
+// in autumn, some cards staying green, and the old tree at the dock goes
+// gold on a share of its cards; the sparse ones drop most of their
 // cards in winter, so a few branches show; the blossoming ones open card by
 // card, pale pink to white, so a flowering tree reads clearly, even on a
 // phone, among the green. Shared by the colour and depth (shadow) materials,
@@ -81,9 +82,14 @@ export function seasonalLeaves(shader: THREE.WebGLProgramParametersWithUniforms)
         if (card < seasonCanopy.y * (.72 * sparse + .15 * turns)) discard;
         vec3 leaf = diffuseColor.rgb;
         float luma = dot(leaf, vec3(.2126, .7152, .0722));
-        // Autumn: gold to amber tree by tree, some cards slower to turn, some staying green.
-        vec3 autumn = mix(vec3(1.0, .72, .3), vec3(.95, .5, .22), shade) * luma * 2.;
-        leaf = mix(leaf, autumn, .6 * seasonCanopy.x * turns * smoothstep(.0, .5, card + .2 * seasonCanopy.x - .15));
+        // Autumn: gold to amber tree by tree, some cards slower to turn, some staying green;
+        // lifted a little, so a turned crown glows rather than browns in the late light.
+        vec3 autumn = mix(vec3(1.0, .7, .26), vec3(.97, .47, .2), shade) * (luma * 2.3 + .07);
+        leaf = mix(leaf, autumn, .75 * seasonCanopy.x * turns * smoothstep(.0, .5, card + .2 * seasonCanopy.x - .15));
+        // The old tree at the dock: gold on only a share of its cards, and only partly, so it stays itself.
+        float old = step(abs(role - ${f(ROLE.old)}), .1);
+        vec3 gold = vec3(1.0, .74, .32) * (luma * 2.3 + .1);
+        leaf = mix(leaf, gold, ${OLD_TREE_AUTUMN.turn.toFixed(2)} * seasonCanopy.x * old * step(card, ${OLD_TREE_AUTUMN.cards.toFixed(2)}));
         // Spring: a little fresh growth on the trees that turn.
         vec3 fresh = vec3(luma) * vec3(.95, 1.28, .5) * 1.18;
         leaf = mix(leaf, fresh, seasonCanopy.z * .2 * turns);
