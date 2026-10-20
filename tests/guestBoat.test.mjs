@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as THREE from 'three';
-import { GUEST_ARRIVAL, GUEST_BOAT, GUEST_CARD, GUEST_SCALE, cormorantWidth, guestBerths, guestBoatStems, guestCard, guestCardScale, guestFleetPoses, guestNames, guestRig, guestScale } from '../src/components/garden/guestBoat.ts';
+import { GUEST_ARRIVAL, GUEST_BOAT, GUEST_CARD, GUEST_SCALE, cormorantWidth, guestArrivalCap, guestArrivalLength, guestBerths, guestBoatStems, guestCard, guestCardScale, guestRound, guestFleetPoses, guestFleetPosesAt, guestNames, guestRig, guestScale } from '../src/components/garden/guestBoat.ts';
+import { MAX_SPEED } from '../src/components/garden/journeyPace.ts';
 import { cameraPose, dockView } from '../src/components/garden/cameraRig.ts';
 import { DOCKED, VOYAGE_END, progressAt, DATES } from '../src/components/garden/journey.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
@@ -117,61 +118,82 @@ test('at the dock every name reads at a dozen pixels to the em or more, its card
   }
 });
 
-test('they come up the river as the catamaran rounds the bend and are settled in their berths as it is tied up', () => {
-  assert.ok(GUEST_ARRIVAL.from < progressAt(DATES.wedding) && GUEST_ARRIVAL.from > progressAt(DATES.wedding) - .02, 'they set off before the wedding\'s date shows');
-  assert.ok(GUEST_ARRIVAL.to < DOCKED && GUEST_ARRIVAL.to > VOYAGE_END + .04, 'settling as the catamaran moors');
+test('their scene starts as the wedding\'s date is about to show, keeps behind the scroll and is done as the catamaran is tied up', () => {
+  assert.ok(GUEST_ARRIVAL.cue < progressAt(DATES.wedding) && GUEST_ARRIVAL.cue > progressAt(DATES.wedding) - .01);
+  const length = n => GUEST_ARRIVAL.up + GUEST_ARRIVAL.across + (n - 1) * GUEST_ARRIVAL.lag;
   for (const screen of SCREENS) for (let n = 1; n <= 4; n++) {
-    const { width, h } = screen, berths = guestBerths(n, width, h);
-    for (const p of [0, GUEST_ARRIVAL.from - .001]) assert.ok(guestFleetPoses(p, n, width, h).every(pose => !pose.shown));
-    for (const p of [GUEST_ARRIVAL.to, DOCKED, 1]) guestFleetPoses(p, n, width, h).forEach((pose, i) => {
+    const { width, h } = screen, { gate } = guestRound(n, width, h);
+    assert.ok(gate > VOYAGE_END && gate <= DOCKED, `they come round the catamaran once it is tied up (${screen.w}, ${n}): ${gate.toFixed(4)}`);
+    assert.equal(guestArrivalLength(n), length(n));
+    assert.ok(length(n) >= 5 && length(n) <= 8, 'a scene of five to eight seconds');
+    assert.equal(guestArrivalCap(GUEST_ARRIVAL.cue - .001, n, width, h), 0);
+    let last = 0;
+    for (let p = GUEST_ARRIVAL.cue; p <= 1; p += .0005) {
+      const cap = guestArrivalCap(p, n, width, h);
+      assert.ok(cap >= last - 1e-9, 'never back while the scroll goes on');
+      if (p < gate) assert.ok(cap <= GUEST_ARRIVAL.up + 1e-9, 'nobody crosses before the catamaran has passed');
+      last = cap;
+    }
+    assert.ok(guestArrivalCap(DOCKED, n, width, h) >= GUEST_ARRIVAL.up - 1e-9, 'free to come round once the catamaran is tied up');
+    assert.equal(guestArrivalCap(1, n, width, h), length(n));
+    // Done, and at a still of the dock, they are in their berths.
+    const berths = guestBerths(n, width, h);
+    for (const poses of [guestFleetPosesAt(length(n), n, width, h), guestFleetPoses(1, n, width, h)]) poses.forEach((pose, i) => {
       assert.ok(pose.shown && pose.settled === 1);
       for (const key of ['x', 'z', 'yaw', 'card']) assert.ok(Math.abs(pose[key] - berths[i][key]) < 1e-9, `${key} at its berth`);
     });
+    assert.ok(guestFleetPoses(0, n, width, h).every(pose => !pose.shown));
   }
 });
 
-test('on the way in they keep to the water, clear of the jetty, the catamaran coming in and each other, with no jumps', () => {
+test('wherever the scroll has got to and however far behind it the scene is, they keep to the water, clear of the jetty, the catamaran and each other', () => {
   for (const screen of SCREENS.slice(0, 3)) for (let n = 1; n <= 4; n++) {
     const { width, h } = screen, length = GUEST_BOAT.halfLength * guestScale(width, h, n), beam = GUEST_BOAT.halfBeam * guestScale(width, h, n);
-    let last = guestFleetPoses(GUEST_ARRIVAL.from, n, width, h);
-    for (let p = GUEST_ARRIVAL.from; p <= DOCKED; p += .0005) {
-      const poses = guestFleetPoses(p, n, width, h), cat = boatPose(p, width);
+    for (let p = GUEST_ARRIVAL.cue; p <= DOCKED + .002; p += .001) {
+      const cat = boatPose(p, width), cap = guestArrivalCap(p, n, width, h);
       // The catamaran at its size there (bigger through the voyage, easing back as it moors).
       const half = (CATAMARAN + HULL_HALF_BEAM.catamaran) * cat.scale, ends = [-1.5 * cat.scale, 1.15 * cat.scale];
-      poses.forEach((pose, i) => {
-        if (!pose.shown) return;
-        assert.ok(Math.hypot(pose.x - last[i].x, pose.z - last[i].z) < .5, `no jumps (${screen.w}, ${n}, ${p.toFixed(4)})`);
-        // Bow, stern and either side.
-        const s = Math.sin(pose.yaw), c = Math.cos(pose.yaw);
-        for (const [u, v] of [[0, -length], [0, length], [beam, 0], [-beam, 0]]) {
-          const x = pose.x + c * u + s * v, z = pose.z - s * u + c * v;
-          assert.ok(Math.abs(x - riverCenter(z, width)) < bankEdge(z, width), `on the water (${screen.w}, ${n}, ${p.toFixed(4)})`);
-          assert.ok(!underJetty(x, z, width), `clear of the jetty (${screen.w}, ${n}, ${p.toFixed(4)})`);
-          // In the catamaran's frame: clear of its deck and hulls, with a margin.
-          const dx = x - cat.x, dz = z - cat.z, cs = Math.cos(cat.yaw), sn = Math.sin(cat.yaw);
-          const across = cs * dx - sn * dz, along = sn * dx + cs * dz;
-          assert.ok(Math.abs(across) > half + .15 || along < ends[0] - .15 || along > ends[1] + .15, `clear of the catamaran (${screen.w}, ${n}, boat ${i}, ${p.toFixed(4)})`);
-        }
-        for (const other of poses.slice(i + 1)) if (other.shown) assert.ok(Math.hypot(pose.x - other.x, pose.z - other.z) > 1.2 * beam, `clear of each other (${screen.w}, ${n}, ${p.toFixed(4)})`);
-      });
-      last = poses;
+      let last = null;
+      for (let time = 0; time <= cap + 1e-9; time = time + .1 > cap && time < cap ? cap : time + .1) {
+        const poses = guestFleetPosesAt(time, n, width, h);
+        poses.forEach((pose, i) => {
+          if (last) assert.ok(Math.hypot(pose.x - last[i].x, pose.z - last[i].z) < .75, `no jumps (${screen.w}, ${n}, ${time.toFixed(1)}s)`);
+          const s = Math.sin(pose.yaw), c = Math.cos(pose.yaw);
+          for (const [u, v] of [[0, -length], [0, length], [beam, 0], [-beam, 0]]) {
+            const x = pose.x + c * u + s * v, z = pose.z - s * u + c * v;
+            assert.ok(Math.abs(x - riverCenter(z, width)) < bankEdge(z, width), `on the water (${screen.w}, ${n}, ${p.toFixed(3)}, ${time.toFixed(1)}s)`);
+            assert.ok(!underJetty(x, z, width), `clear of the jetty (${screen.w}, ${n}, ${p.toFixed(3)}, ${time.toFixed(1)}s)`);
+            const dx = x - cat.x, dz = z - cat.z, cs = Math.cos(cat.yaw), sn = Math.sin(cat.yaw);
+            const across = cs * dx - sn * dz, along = sn * dx + cs * dz;
+            assert.ok(Math.abs(across) > half + .15 || along < ends[0] - .15 || along > ends[1] + .15, `clear of the catamaran (${screen.w}, ${n}, boat ${i}, ${p.toFixed(3)}, ${time.toFixed(1)}s)`);
+          }
+          for (const other of poses.slice(i + 1)) assert.ok(Math.hypot(pose.x - other.x, pose.z - other.z) > 1.3 * beam, `clear of each other (${screen.w}, ${n}, ${time.toFixed(1)}s)`);
+        });
+        last = poses;
+        if (time >= cap) break;
+      }
     }
   }
 });
 
-test('they come into the picture well before they moor, coming up the river towards the camera', () => {
-  for (const screen of SCREENS.slice(0, 2)) {
-    const { width, h } = screen;
-    // From when the copy starts to show, every boat is in the picture, low, under way.
-    for (const p of [VOYAGE_END, (VOYAGE_END + DOCKED) / 2]) {
-      const camera = lens(screen, cameraPose(p, width));
-      for (const pose of guestFleetPoses(p, 3, width, h)) {
-        const [x, y] = onScreen(camera, new THREE.Vector3(pose.x, .5, pose.z));
-        assert.ok(pose.shown && x > 0 && x < 1 && y > .3 && y < 1, `in the picture at ${p.toFixed(3)} on ${screen.w}: ${x.toFixed(2)}, ${y.toFixed(2)}`);
-      }
+test('a guest who sails on at the story\'s full pace sees them coming up the river towards the catamaran for several seconds', () => {
+  for (const screen of SCREENS.slice(0, 3)) for (const n of [1, 2, 3]) {
+    const { width, h } = screen, dt = 1 / 30;
+    let p = GUEST_ARRIVAL.cue, time = 0, seen = 0, coming = 0, last = null;
+    for (let frame = 0; frame < 30 * 12; frame++) {
+      p = Math.min(1, p + MAX_SPEED * dt);
+      time = Math.min(time + dt, guestArrivalCap(p, n, width, h));
+      const camera = lens(screen, cameraPose(p, width)), poses = guestFleetPosesAt(time, n, width, h);
+      const inPicture = poses.filter(pose => {
+        const v = new THREE.Vector3(pose.x, .6, pose.z).project(camera);
+        return v.z < 1 && Math.abs(v.x) < .95 && v.y > -.95 && v.y < .5 && camera.position.distanceTo(new THREE.Vector3(pose.x, 0, pose.z)) < 40;
+      }).length;
+      if (inPicture === n && poses.some(pose => pose.settled < 1)) seen += dt;
+      if (last && poses.some((pose, i) => pose.z > last[i].z + 1e-4) && inPicture) coming += dt;
+      last = poses;
     }
-    // They come upstream.
-    const early = guestFleetPoses(GUEST_ARRIVAL.from + .01, 2, width, h), late = guestFleetPoses(VOYAGE_END, 2, width, h);
-    early.forEach((pose, i) => assert.ok(late[i].z > pose.z + 3));
+    assert.ok(seen > 3, `all in the picture under way for ${seen.toFixed(1)}s (${screen.w}, ${n})`);
+    assert.ok(coming > 2, `coming up the river in the picture for ${coming.toFixed(1)}s (${screen.w}, ${n})`);
+    assert.ok(time >= guestArrivalLength(n) - 1e-9, 'and moored in the end');
   }
 });
