@@ -136,7 +136,7 @@ test('a few trees change, and the ones that do are in view at their season’s m
     // Every featured moment has its tree in the near picture: bare branches
     // in winter, blossom in spring (a couple, not an avenue), gold in autumn.
     for (const id of ['meet', 'snow-2019']) for (const p of [stop(id), still(id)]) assert.ok(pictured(p, layout)[ROLE.sparse] >= 1, `${layout}: a sparse tree at ${id} (${p})`);
-    for (const p of [stop('graduation'), still('graduation'), .41, stop('interim'), still('interim')]) {
+    for (const p of [stop('graduation'), still('graduation'), .42, stop('interim'), still('interim')]) {
       const n = pictured(p, layout)[ROLE.blossom];
       assert.ok(n >= 1 && n <= 3, `${layout}: ${n} blossoming trees at ${p}`);
     }

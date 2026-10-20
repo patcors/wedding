@@ -161,7 +161,7 @@ export const OLD_TREE_AUTUMN = { cards: .45, turn: .55 } as const;
 // still (by id), or a progress. `sparse` trees also turn in autumn.
 export const FEATURED: readonly { role: Role; at: readonly (string | number)[] }[] = [
   { role: ROLE.sparse, at: ['meet', 'snow-2019'] },
-  { role: ROLE.blossom, at: ['graduation', .41, 'interim'] },
+  { role: ROLE.blossom, at: ['graduation', .42, 'interim'] },
   { role: ROLE.turns, at: ['salsa', 'engaged', 'turkey-greece', .86, .95, 1] },
 ];
 // Where a featured crown must stand: its middle this far in front of the
