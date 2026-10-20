@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as THREE from 'three';
-import { GUEST_ARRIVAL, GUEST_BOAT, GUEST_CARD, GUEST_SCALE, cormorantWidth, guestArrivalCap, guestArrivalLength, guestBerths, guestBoatStems, guestCard, guestCardScale, guestRound, guestFleetPoses, guestFleetPosesAt, guestNames, guestRig, guestScale } from '../src/components/garden/guestBoat.ts';
+import { GUEST_ARRIVAL, GUEST_BOAT, GUEST_CARD, GUEST_RETURN, GUEST_SCALE, cormorantWidth, guestArrivalBack, guestArrivalCap, guestArrivalLength, guestArrivalStep, guestReturnCap, guestBerths, guestBoatStems, guestCard, guestCardScale, guestRound, guestFleetPoses, guestFleetPosesAt, guestNames, guestRig, guestScale } from '../src/components/garden/guestBoat.ts';
 import { MAX_SPEED } from '../src/components/garden/journeyPace.ts';
 import { cameraPose, dockView } from '../src/components/garden/cameraRig.ts';
 import { DOCKED, VOYAGE_END, progressAt, DATES } from '../src/components/garden/journey.ts';
@@ -195,5 +195,113 @@ test('a guest who sails on at the story\'s full pace sees them coming up the riv
     assert.ok(seen > 3, `all in the picture under way for ${seen.toFixed(1)}s (${screen.w}, ${n})`);
     assert.ok(coming > 2, `coming up the river in the picture for ${coming.toFixed(1)}s (${screen.w}, ${n})`);
     assert.ok(time >= guestArrivalLength(n) - 1e-9, 'and moored in the end');
+  }
+});
+
+// Why a fleet's poses at progress p aren't clear (on the water, of the jetty,
+// of the catamaran there and of each other's hulls), or null.
+function unclear(poses, p, n, width, h) {
+  const scale = guestScale(width, h, n), length = GUEST_BOAT.halfLength * scale, beam = GUEST_BOAT.halfBeam * scale;
+  const cat = boatPose(p, width), half = (CATAMARAN + HULL_HALF_BEAM.catamaran) * cat.scale, ends = [-1.5 * cat.scale, 1.15 * cat.scale];
+  const corners = pose => [[0, -length], [beam, 0], [0, length], [-beam, 0]].map(([u, v]) => [pose.x + Math.cos(pose.yaw) * u + Math.sin(pose.yaw) * v, pose.z - Math.sin(pose.yaw) * u + Math.cos(pose.yaw) * v]);
+  // Inside another's hull: its diamond, across and along.
+  const inside = (pose, [x, z]) => { const dx = x - pose.x, dz = z - pose.z, c = Math.cos(pose.yaw), s = Math.sin(pose.yaw); return Math.abs(c * dx - s * dz) / beam + Math.abs(s * dx + c * dz) / length < 1; };
+  const edge = pose => Array.from({ length: 16 }, (_, k) => { const [a, b] = [corners(pose)[k >> 2], corners(pose)[((k >> 2) + 1) % 4]], f = (k % 4) / 4; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; });
+  for (const [i, pose] of poses.entries()) {
+    for (const [x, z] of corners(pose)) {
+      if (Math.abs(x - riverCenter(z, width)) >= bankEdge(z, width)) return `boat ${i} off the water`;
+      if (underJetty(x, z, width)) return `boat ${i} under the jetty`;
+      const dx = x - cat.x, dz = z - cat.z, across = Math.cos(cat.yaw) * dx - Math.sin(cat.yaw) * dz, along = Math.sin(cat.yaw) * dx + Math.cos(cat.yaw) * dz;
+      if (!(Math.abs(across) > half + .15 || along < ends[0] - .15 || along > ends[1] + .15)) return `boat ${i} into the catamaran`;
+    }
+    for (const [j, other] of poses.entries()) if (j !== i && edge(pose).some(point => inside(other, point))) return `boat ${i} into boat ${j}`;
+  }
+  return null;
+}
+const berthed = (poses, berths) => poses.every((pose, i) => pose.settled === 1 && ['x', 'z', 'yaw', 'card'].every(key => Math.abs(pose[key] - berths[i][key]) < 1e-9));
+
+test('once the catamaran is tied up they come all the way in on their own, with no more scrolling', () => {
+  for (const screen of SCREENS.slice(0, 3)) for (let n = 1; n <= 4; n++) {
+    const { width, h } = screen, { gate } = guestRound(n, width, h), length = guestArrivalLength(n), dt = 1 / 60;
+    assert.equal(guestArrivalCap(gate, n, width, h), length, 'free to come all the way in at the gate');
+    // Scrolling at the story's full pace or slowly, and stopping as the
+    // catamaran is tied up, as it comes to rest, or between.
+    for (const speed of [MAX_SPEED, MAX_SPEED / 6]) for (const stop of [gate, (gate + DOCKED) / 2, DOCKED, .985]) {
+      let p = GUEST_ARRIVAL.cue, last = p, time = 0, seconds = 0;
+      while (p < stop) { last = p; p = Math.min(stop, p + speed * dt); time = guestArrivalStep(time, p, last, dt, n, width, h); }
+      const stopped = time;
+      if (speed < MAX_SPEED && stop === gate) assert.ok(stopped <= GUEST_ARRIVAL.up + dt, `waiting below the jetty as the scroll stops (${screen.w}, ${n})`);
+      for (; seconds < length + 1; seconds += dt) {
+        const next = guestArrivalStep(time, p, p, dt, n, width, h);
+        assert.ok(next >= time && next <= time + dt + 1e-9, 'on in real time');
+        time = next;
+        const why = unclear(guestFleetPosesAt(time, n, width, h), p, n, width, h);
+        assert.equal(why, null, `${why} (${screen.w}, ${n}, stopped at ${stop.toFixed(4)}, ${seconds.toFixed(2)}s on)`);
+      }
+      assert.equal(time, length, `all in (${screen.w}, ${n}, stopped at ${stop.toFixed(4)})`);
+      assert.ok(berthed(guestFleetPosesAt(time, n, width, h), guestBerths(n, width, h)));
+      if (stopped < length - 2) assert.ok(length - stopped <= seconds, 'and only as fast as real time');
+    }
+    // Stopped short of the gate, they wait below the jetty, as they always have.
+    let time = 0;
+    for (let k = 0; k < 600; k++) time = guestArrivalStep(time, gate - .002, gate - .002, dt, n, width, h);
+    assert.ok(time <= GUEST_ARRIVAL.up, `waiting short of the gate (${screen.w}, ${n})`);
+  }
+});
+
+test('scrolling back from the dock takes them back the way they came, smoothly and clear of the catamaran as it puts out', () => {
+  for (const screen of SCREENS.slice(0, 3)) for (let n = 1; n <= 4; n++) {
+    const { width, h } = screen, { gate } = guestRound(n, width, h), length = guestArrivalLength(n), dt = 1 / 60;
+    // The allowances: in step with the scroll going back where it was, all in
+    // at the gate, and back to the cap a span above it.
+    let last = 0;
+    for (let p = GUEST_ARRIVAL.cue; p <= 1; p += .00025) {
+      const cap = guestArrivalCap(p, n, width, h), back = guestArrivalBack(p, n, width, h), most = guestReturnCap(p, n, width, h);
+      assert.ok(back <= cap + 1e-9 && cap <= most + 1e-9 && most >= last - 1e-9, `allowances in order at ${p.toFixed(4)}`);
+      if (p <= gate - GUEST_RETURN.span) assert.ok(Math.abs(most - cap) < 1e-9);
+      last = most;
+    }
+    assert.equal(guestReturnCap(gate, n, width, h), length);
+    assert.equal(guestArrivalBack(1, n, width, h), length);
+    // Wherever they may be going back, they are clear.
+    for (let p = gate - GUEST_RETURN.span; p <= gate; p += .00025) {
+      const top = guestReturnCap(p, n, width, h);
+      for (let time = guestArrivalCap(p, n, width, h); time <= top + 1e-9; time += .05) {
+        const why = unclear(guestFleetPosesAt(time, n, width, h), p, n, width, h);
+        assert.equal(why, null, `${why} (${screen.w}, ${n}, ${p.toFixed(4)}, ${time.toFixed(2)}s)`);
+      }
+    }
+    // From the dock, scrolling back at the story's full pace or slowly,
+    // pausing on the way: they go back down the river with the scroll,
+    // steadily, and come in again when it rests at the dock.
+    for (const speed of [MAX_SPEED, MAX_SPEED / 4]) {
+      let p = 1, time = length, rested = 0, poses = guestFleetPosesAt(time, n, width, h);
+      const pauseAt = (gate + 1) / 2;
+      while (p > GUEST_ARRIVAL.cue + .002) {
+        const before = p;
+        if (p > pauseAt && p - speed * dt <= pauseAt && rested < .5) { rested += dt; p = pauseAt; } else p = Math.max(GUEST_ARRIVAL.cue + .002, p - speed * dt);
+        const next = guestArrivalStep(time, p, before, dt, n, width, h);
+        assert.ok(next <= guestReturnCap(p, n, width, h) + 1e-9 && next >= Math.min(time, guestArrivalBack(p, n, width, h)) - 1e-9);
+        // At their own pace while the catamaran is tied up; above it the scroll may hurry them.
+        if (p < before && p >= gate) assert.ok(next >= time - GUEST_RETURN.pace * dt - 1e-9, 'back at their pace');
+        const now = guestFleetPosesAt(next, n, width, h);
+        // No leaps: never more than about the most the scroll ever took them in a frame.
+        now.forEach((pose, i) => assert.ok(Math.hypot(pose.x - poses[i].x, pose.z - poses[i].z) < .6, `no jumps (${screen.w}, ${n}, back at ${p.toFixed(4)})`));
+        time = next;
+        if (p >= gate - GUEST_RETURN.span) {
+          const why = unclear(now, p, n, width, h);
+          assert.equal(why, null, `${why} (${screen.w}, ${n}, back at ${p.toFixed(4)}, ${time.toFixed(2)}s)`);
+        }
+        poses = now;
+      }
+      assert.ok(time <= guestArrivalCap(p, n, width, h) + 1e-9, 'back in step with the scroll up the river');
+      assert.ok(poses.every(pose => pose.settled === 0));
+    }
+    // Back a little from the dock, and resting there: in again.
+    let p = 1, time = length;
+    for (let k = 0; k < 30; k++) { const before = p; p -= MAX_SPEED / 4 * dt; time = guestArrivalStep(time, p, before, dt, n, width, h); }
+    assert.ok(time < length - .3, 'they set off back as the scroll goes back');
+    for (let k = 0; k < 600; k++) time = guestArrivalStep(time, p, p, dt, n, width, h);
+    assert.equal(time, length, 'and come in again as it rests');
   }
 });

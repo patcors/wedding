@@ -7,7 +7,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { readParty } from '../details/rsvp';
 import { useJourney, type SlotProps } from './JourneyProvider';
-import { GUEST_ARRIVAL, guestArrivalCap, guestBerths, guestFleetPosesAt, guestNames, guestRig, guestScale } from './guestBoat';
+import { GUEST_ARRIVAL, guestArrivalCap, guestArrivalStep, guestBerths, guestFleetPosesAt, guestNames, guestRig, guestScale } from './guestBoat';
 import { cardGeometry, cardTexture, guestHull } from './guestBoatGeometry';
 import { sharpenFlag } from './storyBoatGeometry';
 
@@ -68,11 +68,13 @@ function Fleet({ names, width, height, paused, reduced }: SlotProps & { names: s
       Object.assign(arrival, { time: 0, last: p });
       return;
     }
-    // Their scene plays in real time, as far as the scroll allows. A still, or
-    // a jump (the monogram's "Back to the beginning", say), finds it as far in
-    // as the scroll allows; scrolling back takes them back with it.
-    const step = paused ? 0 : Math.min(dt, .05), cap = guestArrivalCap(p, names.length, width, height);
-    arrival.time = reduced || Math.abs(p - arrival.last) > .02 ? cap : Math.min(arrival.time + step, cap);
+    // Their scene plays in real time, as far as the scroll allows: once the
+    // catamaran is tied up, all the way in, with no more scrolling. A still,
+    // or a jump (the monogram's "Back to the beginning", say), finds it as far
+    // in as the scroll allows; scrolling back takes them back (guestArrivalStep).
+    const step = paused ? 0 : Math.min(dt, .05);
+    arrival.time = reduced || Math.abs(p - arrival.last) > .02 ? guestArrivalCap(p, names.length, width, height)
+      : guestArrivalStep(arrival.time, p, arrival.last, step, names.length, width, height);
     arrival.last = p;
     time.current += step;
     const t = time.current;
