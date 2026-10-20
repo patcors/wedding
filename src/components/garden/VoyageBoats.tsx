@@ -36,16 +36,15 @@ const COMPANIES: Company[] = ['finocomp', 'interim', 'heirwealth'];
 // Each flag's mark in public/textures/garden/ (a 512px PNG on
 // transparency) and the shape its cloth is cut to (FLAGS).
 // The interim flag, for Amelia's months tutoring and selling haircare, is
-// plain paper until she sends their logos: name one here, or for two, add a
-// company to Company and a change to Amelia's FLAG_CHANGES in storyBoats.ts.
-const MARKS: Record<Company, { mark: string | null; shape: FlagShape }> = {
+// Wavves', a disc like FinoComp's (Amelia, October 2026).
+const MARKS: Record<Company, { mark: string; shape: FlagShape }> = {
   finocomp: { mark: 'finocomp-mark.png', shape: 'circle' },
-  interim: { mark: null, shape: 'cloth' },
+  interim: { mark: 'wavves-mark.png', shape: 'circle' },
   heirwealth: { mark: 'heirwealth-crown.png', shape: 'square' },
 };
 // The university's flag is its shield.
 const UNIVERSITY = { mark: 'uow-shield.png', shape: 'shield' } as const;
-const texture = (mark: string | null) => mark && `${import.meta.env.BASE_URL}textures/garden/${mark}`;
+const texture = (mark: string) => `${import.meta.env.BASE_URL}textures/garden/${mark}`;
 // How far a flag runs up its ensign staff, from just clear of the rim to
 // the top; and where the monogram's halyard starts, above the big boom.
 const staffRun = (shape: FlagShape) => ENSIGN.height - FLAGS[shape].height - .06, LOGO_FOOT = BIG_RIG.boom + .55;

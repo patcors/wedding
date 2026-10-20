@@ -322,15 +322,14 @@ export function bigRig(look: CatamaranLook = 'original') {
 // The flag on each ensign staff, its hoist on the staff, its top at y 0 and
 // its fly along +x: the mark of the company each works for, from their
 // internship until they get engaged, and the university's while they're
-// there. Each is cut to its logo's shape: FinoComp's a disc of paper, the
-// university's its shield, HeirWealth's a rounded square of paper round its
-// crown, and the plain interim flag an ordinary flag of paper. On a real
+// there. Each is cut to its logo's shape: FinoComp's and the interim's
+// (Wavves') a disc of paper, the university's its shield, HeirWealth's a
+// rounded square of paper round its crown. On a real
 // phone the marks were too small to make out (Amelia, October 2026), so each
 // is now about 1.4 times the size it was (the disc was .26 across), on a
 // taller staff.
-export type FlagShape = 'cloth' | 'circle' | 'square' | 'shield';
+export type FlagShape = 'circle' | 'square' | 'shield';
 export const FLAGS: Record<FlagShape, { length: number; height: number }> = {
-  cloth: { length: .44, height: .32 },
   circle: { length: .36, height: .36 },
   square: { length: .35, height: .35 },
   // The shield's own proportions (uow-shield.png).
@@ -382,11 +381,10 @@ function markedCloth(width: number, height: number, mark: string | null, { fill,
 // opaque everywhere, so the cut edge never picks up a dark fringe. The
 // shield is its own cloth: uow-shield.png carries the paper inside it, and
 // its navy rim runs out under the cut. Centred, so it sits the same whichever
-// way the flag flies. The plain interim flag needs no cut. FinoComp's round
-// mark fills its disc to a thin rim of paper, and the crown nearly fills its
-// square.
-const MARK_FILL: Record<FlagShape, number> = { cloth: .82, circle: .95, square: .9, shield: 1 };
-export function companyFlagTexture(mark: string | null, shape: FlagShape) {
+// way the flag flies. The round marks fill their discs to a thin rim of
+// paper, and the crown nearly fills its square.
+const MARK_FILL: Record<FlagShape, number> = { circle: .95, square: .9, shield: 1 };
+export function companyFlagTexture(mark: string, shape: FlagShape) {
   const { length, height } = FLAGS[shape], scale = 512 / Math.max(length, height);
   const width = Math.round(length * scale), tall = Math.round(height * scale);
   const canvas = (fill?: string) => {
@@ -403,16 +401,14 @@ export function companyFlagTexture(mark: string | null, shape: FlagShape) {
     return made;
   };
   const cloth = canvas(shape === 'shield' ? '#061b3e' : PAPER), map = texture(cloth.element, true);
-  const cut = shape === 'cloth' ? null : canvas('#000');
-  const alphaMap = cut && texture(cut.element, false);
-  if (cut && shape !== 'shield') {
+  const cut = canvas('#000'), alphaMap = texture(cut.element, false);
+  if (shape !== 'shield') {
     cut.ctx.fillStyle = '#fff';
     cut.ctx.beginPath();
     if (shape === 'circle') cut.ctx.arc(width / 2, tall / 2, Math.min(width, tall) / 2, 0, Math.PI * 2);
     else cut.ctx.roundRect(0, 0, width, tall, Math.min(width, tall) * .14);
     cut.ctx.fill();
   }
-  if (!mark) return { map, alphaMap };
   const image = new Image();
   image.onload = () => {
     const fill = MARK_FILL[shape];
@@ -420,14 +416,14 @@ export function companyFlagTexture(mark: string | null, shape: FlagShape) {
     const x = (width - w) / 2, y = (tall - h) / 2;
     cloth.ctx.drawImage(image, x, y, w, h);
     map.needsUpdate = true;
-    if (cut && shape === 'shield') {
+    if (shape === 'shield') {
       // The shield's silhouette, white on black, from its own alpha.
       const silhouette = canvas();
       silhouette.ctx.drawImage(image, x, y, w, h);
       silhouette.ctx.globalCompositeOperation = 'source-in';
       silhouette.ctx.fillStyle = '#fff'; silhouette.ctx.fillRect(0, 0, width, tall);
       cut.ctx.drawImage(silhouette.element, 0, 0);
-      alphaMap!.needsUpdate = true;
+      alphaMap.needsUpdate = true;
     }
   };
   image.src = mark;
