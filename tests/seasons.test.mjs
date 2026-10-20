@@ -4,8 +4,7 @@ import { AUTUMN, AUTUMN_TREE_COLOURS, BLOSSOM_COLOURS, CLOVER_FLOWERS, FEATURED,
 import { MILESTONES, STOPS, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { treeBase, treePlacements, oldTreePlacement } from '../src/components/garden/gardenTreeSpots.ts';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
-import { LAYOUTS, project, timeline, viewOf } from '../src/components/garden/voyageTimeline.ts';
-import { sceneryCatalog } from '../src/components/garden/sceneryCatalog.ts';
+import { LAYOUTS, project, viewOf } from '../src/components/garden/voyageTimeline.ts';
 
 const AMOUNTS = Object.keys(NEUTRAL);
 const near = (a, b, eps = 1e-9) => AMOUNTS.every(k => Math.abs(a[k] - b[k]) < eps);
