@@ -23,6 +23,7 @@ import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type
 import { GUEST_SOUND, GUEST_SOUND_MODE, REVIEW_SOUND, SOUND_MODES, soundMode, type SoundMode } from './soundChoices';
 import { useSoundscape } from './useSoundscape';
 import { useScrollGuide } from './useScrollGuide';
+import { useLoadingBar } from './useLoadingBar';
 import './garden.css';
 import './gardenScrollCue.css';
 import './gardenLoader.css';
@@ -437,6 +438,9 @@ export default function Garden() {
     try { if (place) sessionStorage.setItem(PLACE_KEY, place); else sessionStorage.removeItem(PLACE_KEY); } catch { /* private mode: back to the title */ }
   };
   const state = failed ? 'error' : ready ? 'ready' : 'loading';
+  // The loading bar under the title (loadingBar.ts), painted by the server.
+  const loadingBar = useRef<HTMLDivElement>(null);
+  useLoadingBar(loadingBar, { prepared, ready, failed });
   return <main ref={scroller} className={`garden-prototype ${sceneOnly ? 'garden-scene-only' : ''}`} data-state={state} data-text={text === 'glow' ? undefined : text} data-golden={REVIEW && inkTurnsWhite(progress) ? '' : undefined} aria-busy={state === 'loading'}>
     <div className="garden-stage">
       <div className={`garden-canvas ${prepared ? 'is-ready' : ''}`} aria-hidden="true">
@@ -494,6 +498,7 @@ export default function Garden() {
       <section ref={arrival} className={`garden-panel garden-arrival ${chapter === 0 ? 'is-active' : ''} ${flight ? 'has-flight' : ''}`} inert={chapter !== 0 || sceneOnly} aria-hidden={chapter !== 0 || sceneOnly}>
         <h1><span className="garden-name" data-name="patrick"><b className="garden-perch">P</b>atrick</span> <span className="garden-amp">&</span> <span className="garden-name" data-name="amelia"><b className="garden-perch">A</b>melia</span></h1>
         <p className="garden-subtitle">the journey so far</p>
+        <div ref={loadingBar} className="garden-loading" role="progressbar" aria-label="Loading the garden" aria-valuemin={0} aria-valuemax={100}><span className="garden-loading-fill" /></div>
         {/* Out of flow, so neither link can move the text above. */}
         <div className="garden-arrival-actions">
           <a className={`garden-skip ${slow && state === 'loading' ? 'is-visible' : ''}`} href={`${BASE}details/`}>Skip to the details <span aria-hidden="true">→</span></a>

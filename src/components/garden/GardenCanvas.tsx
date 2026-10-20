@@ -5,6 +5,12 @@ import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import GardenScene, { preloadGardenAssets } from './GardenScene';
 import { GARDEN_CAMERA } from './gardenGeometry';
+import { reportItems } from './loadingBar';
+
+// The loading bar counts the scene's downloads: every loader here uses three's
+// default manager (loadingBar.ts).
+THREE.DefaultLoadingManager.onStart = (_url, loaded, total) => reportItems(loaded, total);
+THREE.DefaultLoadingManager.onProgress = (_url, loaded, total) => reportItems(loaded, total);
 
 type Frameloop = 'always' | 'demand' | 'never';
 
