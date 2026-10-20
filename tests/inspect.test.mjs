@@ -103,7 +103,7 @@ test('notes copy as Markdown that can be pasted straight to Claude', () => {
 });
 
 test('stored notes come back as they were; anything malformed is dropped', () => {
-  const note = createNote(hit('bullet-ornament', .7), 'make it shine more', 'desktop', 5);
+  const note = createNote(hit('snow-reveal', .7), 'make it sparkle more', 'desktop', 5);
   assert.deepEqual(readNotes(JSON.stringify([note])), [note]);
   assert.deepEqual(readNotes(null), []);
   assert.deepEqual(readNotes('not json'), []);

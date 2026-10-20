@@ -98,7 +98,6 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
   const { nestSpots } = await import('../src/components/garden/eggs/nesting.ts');
   const { ORNAMENTS: WORK, ornamentSpot: workSpot } = await import('../src/components/garden/eggs/careerSpots.ts');
   const { ORNAMENTS: UNI, ornamentSpot: uniSpot } = await import('../src/components/garden/eggs/uniOrnaments.ts');
-  const { bulletSpot } = await import('../src/components/garden/eggs/bulletOrnament.ts');
   const { hagiaSophiaSpot } = await import('../src/components/garden/eggs/balloonCourse.ts');
   const { operaHouseSpot } = await import('../src/components/garden/eggs/harbour.ts');
   for (const [width] of LAYOUTS) {
@@ -111,7 +110,6 @@ test('each keeps clear of the year markers and the other eggs on the banks', asy
       ...Object.values(nestSpots(width)).map(house => ['birdhouse', house]),
       ...WORK.map(ornament => [`${ornament.facing} ornament`, workSpot(ornament, width)]),
       ...Object.entries(UNI).map(([name, ornament]) => [name, uniSpot(ornament, width)]),
-      ['bullet', bulletSpot(width)],
       ['Hagia Sophia', hagiaSophiaSpot('2026-07', width)],
       ['Opera House', operaHouseSpot(width)],
     ];

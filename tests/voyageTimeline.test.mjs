@@ -13,7 +13,7 @@ const catalogues = Object.fromEntries(Object.entries(LAYOUTS).map(([name, lens])
 const seenAt = (piece, lens, p) => trackOf(piece, lens, [p]).seen[0] >= IN_PICTURE.shown;
 
 test('the numbers copied from components match their source', () => {
-  for (const file of ['eggs/SnowTrip.tsx', 'eggs/SecondSnowTrip.tsx']) assert.match(source(file), new RegExp(`scale=\\{${COMPONENT.snowScale}\\}`));
+  for (const [year, file] of [[2019, 'eggs/SnowTrip.tsx'], [2025, 'eggs/SecondSnowTrip.tsx']]) assert.match(source(file), new RegExp(`scale=\\{${COMPONENT.snowScale[year]}\\}`));
   const reveal = source('eggs/SnowReveal.tsx'), { across, up, along } = COMPONENT.flurryBox;
   assert.match(reveal, new RegExp(`const BOX = \\{ across: ${across}, up: ${up}, along: ${along} \\}`));
   assert.match(reveal, new RegExp(`size \\* \\(mobile \\? ${String(COMPONENT.snowMobile).replace(/^0/, '')} : 1\\) \\* growth\\(mobile, SNOW_GROW\\)`));

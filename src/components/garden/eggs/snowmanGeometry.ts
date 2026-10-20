@@ -1,6 +1,6 @@
 // A snowman in one mesh with vertex colours: three balls of snow, coal eyes
 // and buttons, a carrot nose, a knitted scarf and two stick arms. With
-// `sling`, its left arm is bent across its middle with a white cast on its
+// `sling`, its left arm is bent across its middle with a purple cast on its
 // wrist, held in a sling hung from its neck. With `hold`, the arm on that
 // side (+1 is +x) reaches out and down to hold the hand of another snowman
 // standing HOLD.apart away, holding its own out to this one. `simple` builds
@@ -11,7 +11,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 type Point = [number, number, number];
 export type SnowmanOptions = { sling?: boolean; scarf?: string; hold?: 1 | -1; simple?: boolean };
-const SNOW = '#f3f5f7', SNOW_SHADE = '#cfd8e2', COAL = '#2b2725', CARROT = '#e07a2e', STICK = '#6b4a2f', CAST = '#fbfbf8', SLING = '#d9e2ea';
+const SNOW = '#f3f5f7', SNOW_SHADE = '#cfd8e2', COAL = '#2b2725', CARROT = '#e07a2e', STICK = '#6b4a2f', CAST = '#8a52c4', SLING = '#d9e2ea';
 // The three balls, bottom to top: radius and the height of the centre.
 export const SNOWMAN = { balls: [[.42, .36], [.3, .9], [.21, 1.3]] as const, height: 1.52 };
 // Two snowmen holding hands stand this far apart, middle to middle; their
@@ -86,13 +86,14 @@ export function snowmanGeometry({ sling = false, scarf = '#4d827f', hold, simple
   else if (!sling) stick([-mr * .9, my + .05, 0], [-.78, my + .3, .02], [[-.9, my + .4, .03], [-.88, my + .22, .01]]);
   else {
     // Its left arm in a sling: upper arm down from the shoulder, forearm
-    // bent across the front, in a white cast at the wrist, the sling's cloth
+    // bent across the front, in a purple cast at the wrist (purple so it
+    // shows against the snow, Amelia, October 2026), the sling's cloth
     // cradling it and its strap round the neck.
     const elbow: Point = [-mr * 1.02, my - .1, mr * .55], wrist: Point = [mr * .05, my - .02, mr * 1.02];
     rod([-mr * .9, my + .05, 0], elbow, .022, .019, STICK);
     rod(elbow, wrist, .019, .015, STICK);
-    rod([wrist[0] - .03, wrist[1], wrist[2]], [wrist[0] + .14, wrist[1] + .02, wrist[2] - .02], .05, .046, CAST, 8);
-    for (const twig of [[.24, my + .06, mr * .96], [.22, my - .06, mr * .99]] as Point[]) rod([wrist[0] + .12, wrist[1] + .01, wrist[2] - .02], twig, .011, .006, STICK, 4);
+    rod([wrist[0] - .04, wrist[1], wrist[2]], [wrist[0] + .16, wrist[1] + .02, wrist[2] - .02], .058, .054, CAST, 8);
+    for (const twig of [[.24, my + .06, mr * .96], [.22, my - .06, mr * .99]] as Point[]) rod([wrist[0] + .15, wrist[1] + .01, wrist[2] - .02], twig, .011, .006, STICK, 4);
     // The cloth: a shallow pocket under the forearm, from elbow to wrist.
     const cloth = new THREE.CylinderGeometry(.075, .075, .44, 10, 1, true, Math.PI * .5, Math.PI);
     cloth.rotateZ(Math.PI / 2).rotateY(-.42).translate(-mr * .48, my - .1, mr * .84);

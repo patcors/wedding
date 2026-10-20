@@ -8,7 +8,8 @@ import { ROOM, progressAt, routeAtMonth } from '../journey.ts';
 // Where on the bank: `ahead`, how far past where the boats are as the date
 // shows, the `side` bank (+1 is +x) and how far `inland` from the water's
 // edge at desktop's width (portrait's is 60%, or `mobileInland` where given).
-export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number; mobileInland?: number };
+// `mobile`, if set, is where it falls on a phone instead, bank and all.
+export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number; mobileInland?: number; mobile?: { ahead: number; side: 1 | -1; inland: number } };
 // Where each snow trip's flurry falls. July 2019's is Amelia's, so on her
 // bank, the left, a little ahead of the boats as its date shows, in view on
 // both compositions and clear of the boats in portrait. It falls short of
@@ -16,12 +17,19 @@ export type SnowSpot = { ahead: number; side: 1 | -1; inland?: number; mobileInl
 // and to the right of the statistics carved into a tree on her bank
 // (uniOrnaments.ts) in the picture once the flurry clears, and near the water
 // on a phone; either way 2020's carving shows above its head as 2020 turns.
-// August 2025's is on the left, a little ahead of the boats, between 2025's
-// oar and the lyra's ashes, near the water on desktop. On a phone, where the
-// river's bend to the left turns the camera along that bank and the boats
-// sit right of the middle, it stands a little back from the water, left of
-// the boats.
-export const SNOW_SPOTS = { 2019: { ahead: 7.5, side: -1, inland: 1.5, mobileInland: .35 }, 2025: { ahead: 3.7, side: -1, inland: .4, mobileInland: .8 } } as const satisfies Record<number, SnowSpot>;
+// August 2025's was a trip of them both, so it falls on Patrick's bank, the
+// right (Amelia, October 2026: that stretch of her bank, with 2025's oar,
+// her birdhouse and the lyra, was too busy), a little further ahead of the
+// boats than July 2019's, set back from the water. A phone's narrow lens has his bank at the very edge of its picture
+// there, as the river starts to bend left (2025's oar and 2026's arch stand
+// on the left for the same reason), too far out for the pair to stand whole
+// in it at the trip's stop wherever they stood on it, so on a phone they
+// stay on Amelia's bank where they always were, a little back from the water
+// left of the boats, and 2025's oar stands out of their way (yearMarkerSpots.ts).
+export const SNOW_SPOTS = {
+  2019: { ahead: 7.5, side: -1, inland: 1.5, mobileInland: .35 },
+  2025: { ahead: 5.5, side: 1, inland: 1.2, mobile: { ahead: 3.7, side: -1, inland: 1 } },
+} as const satisfies Record<number, SnowSpot>;
 
 // How much the snow trips grow (EGG_GROWTH in egg.ts): less than the other
 // eggs, as a snowman near the water already stands large beside the boats.
@@ -42,7 +50,8 @@ export const gustAt = (t: number) => -1 + 2 * smooth(t / FLURRY.gone);
 
 // The spot in the world: on the ground, turned to face the boats' approach
 // as the date holds.
-export function snowSpot({ ahead, side, inland = 1, mobileInland }: SnowSpot, month: string, width: number) {
+export function snowSpot(where: SnowSpot, month: string, width: number) {
+  const { ahead, side, inland = 1, mobileInland } = width < 1 && where.mobile ? { ...where.mobile, mobileInland: where.mobile.inland } : where;
   const z = routeAtMonth(month) - ahead;
   const x = riverCenter(z, width) + side * (bankEdge(z, width) + (width < 1 ? mobileInland ?? inland * .6 : inland));
   const [cx, , cz] = cameraPose(progressAt(month) + .2 * ROOM, width).position;
