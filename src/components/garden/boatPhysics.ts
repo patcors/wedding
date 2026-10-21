@@ -1,5 +1,5 @@
 // Small planar rigid bodies: a few floaters need no general-purpose 3D engine.
-export const BOAT_KINDS = ['paper', 'sailboat', 'tugboat', 'duck'] as const;
+export const BOAT_KINDS = ['paper', 'tugboat', 'duck'] as const;
 export type BoatKind = typeof BOAT_KINDS[number];
 export type BoatLaunch = { id: number; z: number; lateral: number; kind: BoatKind; yaw?: number };
 export const BOAT_MARGIN = .88;
@@ -29,7 +29,6 @@ const sections = (values: number[][]): Point[] => [
 // Spin scales the slow eddy turn: ducks twirl so their faces come round.
 const HULLS: Record<BoatKind, { mass: number; points: Point[]; spin?: number }> = {
   paper: { mass: .65, points: [{ x: 0, z: -.82 }, { x: .43, z: 0 }, { x: 0, z: .82 }, { x: -.43, z: 0 }] },
-  sailboat: { mass: 1.4, points: sections([[-.78, .015], [-.55, .23], [-.12, .36], [.30, .33], [.66, .22]]) },
   tugboat: { mass: 2.4, points: sections([[-.76, .015], [-.58, .24], [-.25, .34], [.20, .34], [.56, .27], [.68, .15]]) },
   // The duck's round body at the waterline; the beak and tail overhang it.
   duck: { mass: .5, spin: 4, points: Array.from({ length: 10 }, (_, i) => ({ x: Math.sin(i / 10 * Math.PI * 2) * .26, z: .02 - Math.cos(i / 10 * Math.PI * 2) * .34 })) },

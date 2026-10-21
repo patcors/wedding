@@ -3,14 +3,13 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { BOAT_LIFETIME, RIPPLE_COUNT, RIPPLE_INTERVAL, type BoatBody, type BoatKind } from './boatPhysics';
 import { foldedPaper } from './paperBoatGeometry';
-import { woodenSailboat } from './woodenSailboatGeometry';
 import { toyTugboat } from './tugboatGeometry';
 import { rubberDuck } from './rubberDuckGeometry';
 
 const RIPPLE_LIFETIME = RIPPLE_COUNT * RIPPLE_INTERVAL;
 // Every boat of a kind shares one model, so launching more never builds or leaks geometry.
-const MODELS = { paper: foldedPaper, sailboat: woodenSailboat, tugboat: toyTugboat, duck: rubberDuck };
-const NAMES = { paper: 'paper-boat', sailboat: 'wooden-sailboat', tugboat: 'tugboat', duck: 'rubber-duck' };
+const MODELS = { paper: foldedPaper, tugboat: toyTugboat, duck: rubberDuck };
+const NAMES = { paper: 'paper-boat', tugboat: 'tugboat', duck: 'rubber-duck' };
 const models = new Map<BoatKind, ReturnType<typeof foldedPaper>>();
 const model = (kind: BoatKind) => models.get(kind) ?? models.set(kind, MODELS[kind]()).get(kind)!;
 // Boats fade out over their last five seconds.

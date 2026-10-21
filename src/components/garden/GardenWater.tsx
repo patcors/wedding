@@ -64,9 +64,11 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
   const nextId = useRef(0), lastRequest = useRef(launchRequest);
   const launch = useCallback((x: number, z: number) => {
     const halfWidth = Math.max(.1, bankEdge(z, width) - BOAT_MARGIN);
-    // Decide once per launch, so rerenders and animation never change the model.
+    // Decide once per launch, so rerenders and animation never change the
+    // model: a tugboat or a paper boat, now and then a duck (no wooden
+    // sailboat since Amelia, October 2026).
     const roll = Math.random();
-    const kind = roll < .3 ? 'sailboat' : roll < .6 ? 'tugboat' : roll < .9 ? 'paper' : 'duck';
+    const kind = roll < .45 ? 'tugboat' : roll < .9 ? 'paper' : 'duck';
     const boat: BoatLaunch = { id: ++nextId.current, z, lateral: THREE.MathUtils.clamp((x - riverCenter(z, width)) / halfWidth, -1, 1), kind,
       // Boats set off bow first; a duck can be dropped in facing any way.
       ...kind === 'duck' && { yaw: Math.random() * Math.PI * 2 } };

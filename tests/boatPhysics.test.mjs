@@ -58,7 +58,7 @@ test('every launch stays, and overlapping launches separate without an explosive
 test('fixed timesteps give matching collision paths at 30 and 120 fps', () => {
   const run = fps => {
     const world = new BoatSimulation(river, MOBILE_RIVER_WIDTH);
-    for (let id = 1; id <= 4; id++) world.launch({ id, kind: id === 3 ? 'sailboat' : 'paper', lateral: 0, z: 8 }, MOBILE_RIVER_WIDTH);
+    for (let id = 1; id <= 4; id++) world.launch({ id, kind: id === 3 ? 'tugboat' : 'paper', lateral: 0, z: 8 }, MOBILE_RIVER_WIDTH);
     for (let i = 0; i < fps * 4; i++) world.advance(1 / fps, MOBILE_RIVER_WIDTH, false);
     return world.bodies;
   };
@@ -102,7 +102,7 @@ const reeds = (width, mobile) => ['reed', 'cattail'].flatMap(kind => plantSites(
   .map(site => ({ x: site.x, z: site.z, radius: (kind === 'reed' ? .07 : .05) * site.scale })));
 
 test('a stem inside or touching any hull pushes it away from the stem', () => {
-  for (const kind of ['paper', 'sailboat', 'tugboat', 'duck']) {
+  for (const kind of ['paper', 'tugboat', 'duck']) {
     const a = body(1, kind);
     for (const side of [-1, 1]) {
       for (const x of [.05, .15, .25]) {
@@ -116,7 +116,7 @@ test('a stem inside or touching any hull pushes it away from the stem', () => {
 
 test('a hull drifting into a stem turns aside and loses speed instead of passing through', () => {
   const world = new BoatSimulation(river, 1);
-  const a = world.launch({ id: 1, kind: 'sailboat', lateral: 0, z: 8 }, 1);
+  const a = world.launch({ id: 1, kind: 'tugboat', lateral: 0, z: 8 }, 1);
   const stem = { x: a.x + .1, z: a.z - 1.5, radius: .07 };
   world.setStems([stem], 1);
   let hit = false;
@@ -135,7 +135,7 @@ test('boats launched into the reed beds start clear of the stems and never cross
     const world = new BoatSimulation(river, width);
     world.setStems(stems, width);
     let id = 0;
-    for (const z of [8, -4, -22]) for (const lateral of [-1, 1]) world.launch({ id: ++id, kind: id % 2 ? 'sailboat' : 'paper', lateral, z }, width);
+    for (const z of [8, -4, -22]) for (const lateral of [-1, 1]) world.launch({ id: ++id, kind: id % 2 ? 'tugboat' : 'paper', lateral, z }, width);
     for (const a of world.bodies) assert.ok(stems.every(stem => !stemContact(a, stem)), `launch overlaps a stem at ${a.z}`);
     for (let i = 0; i < 60 * 20; i++) {
       world.advance(1 / 60, width, false);
@@ -171,7 +171,7 @@ test('boats keep to the channels round the island and bump off the jetty and the
     let id = 0;
     // Dropped above the island's head and beside it. (In portrait the channels
     // at the head are narrower than a paper boat, which may catch there.)
-    for (const z of [16, 12, 6, -2]) for (const lateral of [-.8, -.1, .1, .8]) world.launch({ id: ++id, kind: id % 3 ? 'sailboat' : 'duck', lateral, z }, width);
+    for (const z of [16, 12, 6, -2]) for (const lateral of [-.8, -.1, .1, .8]) world.launch({ id: ++id, kind: id % 3 ? 'tugboat' : 'duck', lateral, z }, width);
     const { jetty } = voyageLandmarks(width);
     // Out in the river they slide past the catamaran and the jetty's end; one
     // beside the bank may come to rest in the corner of the jetty's head.
@@ -200,7 +200,7 @@ test('boats bump off the little jetties at the start and glance on down their ch
     let id = 0;
     // Dropped upstream, out by the banks where the current carries them onto
     // the jetties. (A paper boat may catch on the island's head in portrait.)
-    for (const z of [16, 12, 9]) for (const lateral of [-.95, -.8, .8, .95]) world.launch({ id: ++id, kind: ['sailboat', 'tugboat', 'duck'][id % 3], lateral, z }, width);
+    for (const z of [16, 12, 9]) for (const lateral of [-.95, -.8, .8, .95]) world.launch({ id: ++id, kind: ['paper', 'tugboat', 'duck'][id % 3], lateral, z }, width);
     const jetty = Math.min(...launchJetties(width).map(j => j.z));
     for (let i = 0; i < 60 * 40; i++) {
       world.advance(1 / 60, width, false);
@@ -220,7 +220,7 @@ test('boats part round Sydney\'s rock, never cross onto it, and bump off the bri
     world.setStems(stems, width);
     let id = 0;
     // Dropped above the rock's nose, down the middle and out towards the banks.
-    for (const z of [VOYAGE.rock.from + 6, VOYAGE.rock.from + 3, VOYAGE.rock.from + 1]) for (const lateral of [-.8, -.3, 0, .3, .8]) world.launch({ id: ++id, kind: ['sailboat', 'tugboat', 'duck', 'paper'][id % 4], lateral, z }, width);
+    for (const z of [VOYAGE.rock.from + 6, VOYAGE.rock.from + 3, VOYAGE.rock.from + 1]) for (const lateral of [-.8, -.3, 0, .3, .8]) world.launch({ id: ++id, kind: ['tugboat', 'duck', 'paper'][id % 3], lateral, z }, width);
     for (let i = 0; i < 60 * 25; i++) {
       world.advance(1 / 60, width, false);
       if (i % 10) continue;

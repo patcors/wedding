@@ -80,7 +80,7 @@ const PATTERNS: readonly [RegExp, (match: RegExpMatchArray) => InspectEntry][] =
   [/^garden-bank-\d+$/, () => ({ name: 'bank (ground)', file: `${G}GardenGround.tsx` })],
   [/^garden-plants-(.+)$/, ([, kind]) => ({ name: `${kind} plants`, file: `${G}GardenPlants.tsx` })],
   [/^garden-moss-rock-\d+$/, () => ({ name: 'mossy rock', file: `${G}GardenRocks.tsx` })],
-  [/^(paper-boat|wooden-sailboat|tugboat|rubber-duck)-\d+$/, ([, kind]) => ({ name: `a guest’s ${kind.replace('-', ' ')}`, file: `${G}PaperBoat.tsx` })],
+  [/^(paper-boat|tugboat|rubber-duck)-\d+$/, ([, kind]) => ({ name: `a guest’s ${kind.replace('-', ' ')}`, file: `${G}PaperBoat.tsx` })],
 ];
 // By the ids given to <Inspectable> where a slot or egg is mounted
 // (GardenScene.tsx, eggs/index.tsx): parts with no name of their own, and
