@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as THREE from 'three';
-import { NodeIO } from '@gltf-transform/core';
-import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
@@ -22,6 +20,7 @@ import { RIGS, hangSpot, rigShown, rigTree } from '../src/components/garden/eggs
 import { harbourShown, operaHouseSpot } from '../src/components/garden/eggs/harbour.ts';
 import { nestSpots } from '../src/components/garden/eggs/nesting.ts';
 import { CANDLE, CANDLES, CANDLESTICKS, ORNAMENTS as WORK_ORNAMENTS, PIE, ornamentShown as workShown, ornamentSpot as workSpot } from '../src/components/garden/eggs/careerSpots.ts';
+import { treeIO } from './treeModels.mjs';
 
 const degrees = radians => radians * 180 / Math.PI;
 const WIDTHS = [1, MOBILE_RIVER_WIDTH];
@@ -45,7 +44,8 @@ const span = (from, to, step = .002) => Array.from({ length: Math.floor((to - fr
 
 // The carvings' patches, built on the trees' own models as BarkCarvings.tsx builds them.
 await MeshoptDecoder.ready;
-const io = new NodeIO().registerExtensions([EXTMeshoptCompression]).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
+// The models as the scene loads them (tests/treeModels.mjs).
+const io = treeIO;
 const MODELS = ['ash-1', 'ash-2', 'ash-1-distant', 'ash-2-distant'];
 const meshes = await Promise.all(MODELS.map(async file => {
   const document = await io.read(`public/models/garden/${file}.glb`);

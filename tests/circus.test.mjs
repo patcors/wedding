@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { NodeIO } from '@gltf-transform/core';
-import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
 import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
@@ -10,9 +8,11 @@ import { treePlacements } from '../src/components/garden/gardenTreeSpots.ts';
 import { cameraHeading } from '../src/components/garden/eggs/egg.ts';
 import { LYRA, RIGS, SILK, hangSpot, onTree, rigShown, rigTree } from '../src/components/garden/eggs/circusRigs.ts';
 import { YEAR_MARKERS, yearMarkerSpot } from '../src/components/garden/eggs/yearMarkerSpots.ts';
+import { treeIO } from './treeModels.mjs';
 
 await MeshoptDecoder.ready;
-const io = new NodeIO().registerExtensions([EXTMeshoptCompression]).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
+// The models as the scene loads them (tests/treeModels.mjs).
+const io = treeIO;
 // The models GardenTrees.tsx draws for each type of tree, near enough to be seen.
 const MODELS = ['ash-1', 'ash-2', 'ash-1-distant', 'ash-2-distant'];
 const branches = {};

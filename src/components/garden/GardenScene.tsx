@@ -16,6 +16,7 @@ import GardenWater, { WATER_NORMALS, createWaterTint } from './GardenWater';
 import GardenSky, { type SkyStyle } from './GardenSky';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { preloadGardenTextures, useGardenTextures } from './gardenTextures';
+import { dequantizeModel } from './gardenModels';
 import { JourneyProvider, type SlotProps } from './JourneyProvider';
 import type { Pace } from './journeyPace';
 import VoyageCamera from './VoyageCamera';
@@ -53,7 +54,8 @@ export function preloadGardenAssets(choices: AssetChoices) {
 function useGardenAssets(choices: AssetChoices) {
   preloadGardenAssets(choices);
   const { models, textures } = gardenAssets(choices);
-  models.forEach(urls => useGLTF(urls));
+  // Stored quantized: back to world-unit floats before any part reads them (gardenModels.ts).
+  models.forEach(urls => useGLTF(urls).forEach(dequantizeModel));
   textures.forEach(([urls, flipY]) => useGardenTextures(urls, { flipY }));
 }
 type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook;

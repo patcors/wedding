@@ -8,7 +8,7 @@ import { riverCenter } from './gardenGeometry';
 import { routeAt } from './journey';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import type { WaterTint } from './GardenWater';
-import { MIST_KEYS, SKY_KEYS, hex, skyAt, waterIn, type Rgb, type Sky, type WaterStyle } from './skyCycle';
+import { MIST_KEYS, SKY_KEYS, hex, skyAt, waterIn, type Rgb, type Sky } from './skyCycle';
 import { currentSeason } from './GardenSeasons';
 import { seasonLight } from './seasons';
 
