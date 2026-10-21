@@ -22,9 +22,17 @@ export const OPENING_TREE_MODELS = TREE_MODELS.filter(url => url !== OLD_TREE_MO
 // The opening's models by tree type (gardenTreeSpots.ts), for the eggs set on
 // the trees. No planting is the old tree (type 4), so its slot holds ash 1.
 type TreeGLTF = { scene: THREE.Object3D; nodes: Record<string, THREE.Object3D> };
+// The same list every render while the models stay the same: the eggs that
+// borrow the trees' bark (the birdhouses, the carvings, the year markers)
+// rebuild their materials when it changes, and a new list every render had
+// the birdhouses throw theirs away while three was still compiling them, so
+// on a phone the scene never got past preparing (October 2026).
 export function useTreeModels() {
-  const [ash1, ash2, ash1Distant, ash2Distant, bush, ash1Far, ash2Far] = (useGLTF(OPENING_TREE_MODELS) as unknown as TreeGLTF[]).map(model => dequantizeModel(model));
-  return [ash1, ash2, ash1Distant, ash2Distant, ash1, bush, ash1Far, ash2Far];
+  const models = useGLTF(OPENING_TREE_MODELS) as unknown as TreeGLTF[];
+  return useMemo(() => {
+    const [ash1, ash2, ash1Distant, ash2Distant, bush, ash1Far, ash2Far] = models.map(model => dequantizeModel(model));
+    return [ash1, ash2, ash1Distant, ash2Distant, ash1, bush, ash1Far, ash2Far];
+  }, [models]);
 }
 // Stretches of river at least this far ahead of the camera, deep in the mist,
 // draw the distant ashes' far branches: the same silhouette with a third of
