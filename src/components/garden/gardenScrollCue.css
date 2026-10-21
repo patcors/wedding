@@ -77,13 +77,18 @@
 .garden-prototype .garden-wander:not(:focus-visible) { width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
 .garden-wander.is-done { visibility: hidden; }
 
-/* "Sail on" under the date: glides to the dock without stopping, and while
-   it does reads "Pause". Large enough to read on a phone, white on a small
-   pane of the slate shade, so it holds its contrast over the bright sky. */
-.garden-prototype .garden-glide { display: inline-flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 22px 11px 18px; border-radius: 999px;
+/* "Sail on" at the foot of the screen, in the middle, as the bottom bar sits
+   (Amelia, October 2026: it was under the date): glides to the dock without
+   stopping, and while it does reads "Pause". Large enough to read on a
+   phone, white on a small pane of the slate shade, so it holds its contrast
+   over the water. */
+.garden-sail { left: 0; right: 0; bottom: calc(44px - var(--garden-edge-clear)); }
+@media (max-width: 700px) { .garden-sail { bottom: calc(16px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); } }
+@media (orientation: landscape) and (max-height: 500px) { .garden-sail { bottom: calc(10px + env(safe-area-inset-bottom) - var(--garden-edge-clear)); } }
+.garden-prototype .garden-glide { display: inline-flex; align-items: center; gap: 10px; padding: 10px 22px 11px 18px; border-radius: 999px;
   font: italic 400 22px/1 'Cormorant Garamond', Georgia, serif; letter-spacing: .01em; color: #fff; text-shadow: none;
   background: rgba(16, 24, 36, .46); border: 1px solid rgba(255, 255, 255, .45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .garden-glide svg { flex: none; margin-top: 1px; }
 .garden-glide:hover { background: rgba(16, 24, 36, .58); }
-@media (max-width: 700px) { .garden-prototype .garden-glide { margin-top: 10px; font-size: 21px; padding: 9px 20px 10px 16px; } }
-@media (orientation: landscape) and (max-height: 500px) { .garden-prototype .garden-glide { margin-top: 6px; font-size: 19px; padding: 7px 18px 8px 14px; } }
+@media (max-width: 700px) { .garden-prototype .garden-glide { font-size: 21px; padding: 9px 20px 10px 16px; } }
+@media (orientation: landscape) and (max-height: 500px) { .garden-prototype .garden-glide { font-size: 19px; padding: 7px 18px 8px 14px; } }

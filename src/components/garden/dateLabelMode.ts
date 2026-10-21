@@ -4,8 +4,15 @@
 // so it can be tested.
 import { DATES, MILESTONES, monthIndex } from './journey.ts';
 
-export const DATE_LABEL_MODES = { full: 'Month & year', year: 'Year only', digits: 'Digits', off: 'Off' } as const;
+// Digits come in three looks to compare (Amelia, October 2026): each digit
+// flipping over like a flip clock's card (`digits`, as guests see it), simply
+// changing with no animation (`blink`), or rolling like a cryptex's ring or
+// an old iPhone's date picker (`roll`).
+export const DATE_LABEL_MODES = { full: 'Month & year', year: 'Year only', digits: 'Digits, flipping', blink: 'Digits, no animation', roll: 'Digits, rolling', off: 'Off' } as const;
 export type DateLabelMode = keyof typeof DATE_LABEL_MODES;
+export type DigitLook = 'flip' | 'blink' | 'roll';
+export const digitLook = (mode: DateLabelMode): DigitLook | null =>
+  mode === 'digits' ? 'flip' : mode === 'blink' || mode === 'roll' ? mode : null;
 
 // A remembered choice, or the default for anything else.
 export const DEFAULT_DATE_LABEL: DateLabelMode = 'digits';
@@ -71,6 +78,11 @@ export function digitDate(month: number) {
   const two = (n: number) => String(n).padStart(2, '0');
   return `${two(date.getUTCDate())}-${two(date.getUTCMonth() + 1)}-${date.getUTCFullYear()}`;
 }
+
+// Whether digits "DD-MM-YYYY" `next` are an earlier date than `shown`, so a
+// rolling digit rolls back the other way.
+const sortable = (digits: string) => digits.split('-').reverse().join('');
+export const goesBack = (shown: string, next: string) => sortable(next) < sortable(shown);
 
 // How often the day, the month and the year may flip, in ms (each flip's
 // animation takes this long), so a fast scroll steps the days along a few at

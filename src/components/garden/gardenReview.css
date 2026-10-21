@@ -51,18 +51,20 @@
 .garden-creature-actions button:disabled { opacity: .45; cursor: default; }
 .garden-boat-launch { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0; }
 .garden-boat-launch span { font: italic 16px 'Cormorant Garamond', Georgia, serif; }
-/* Dev only: lift the test buttons above the Review panel, two rows of it on narrower screens. */
+/* Dev only: lift the test buttons above the Review panel, two rows of it on narrower screens.
+   "Sail on" is lifted with them. */
 @media (min-width: 701px) {
-  .garden-prototype:has(.garden-review) .garden-creature-actions { transform: translateY(-44px); }
+  .garden-prototype:has(.garden-review) :is(.garden-creature-actions, .garden-sail.is-active) { transform: translateY(-44px); }
 }
 @media (min-width: 701px) and (max-width: 1700px) {
-  .garden-prototype:has(.garden-review) .garden-creature-actions { transform: translateY(-84px); }
+  .garden-prototype:has(.garden-review) :is(.garden-creature-actions, .garden-sail.is-active) { transform: translateY(-84px); }
 }
-/* Phones: the test buttons sit in a row at the foot of the screen, or just
-   above the Review panel while it is open. */
+/* Phones: the test buttons sit in a row just above "Sail on" at the foot of
+   the screen, and both just above the Review panel while it is open. */
 @media (max-width: 700px) {
-  .garden-creature-actions { position: absolute; left: 0; right: 0; bottom: 0; justify-content: center; gap: 20px; }
-  .garden-prototype:has(.garden-review) .garden-bottom .garden-creature-actions { bottom: 204px; }
+  .garden-creature-actions { position: absolute; left: 0; right: 0; bottom: 52px; justify-content: center; gap: 20px; }
+  .garden-prototype:has(.garden-review) .garden-bottom .garden-creature-actions { bottom: 344px; }
+  .garden-prototype:has(.garden-review) .garden-sail { bottom: 296px; }
   .garden-boat-launch { gap: 6px; }
   .garden-boat-launch span { font-size: 14px; }
 }

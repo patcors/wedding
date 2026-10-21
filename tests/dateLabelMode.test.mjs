@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DATE_LABEL_MODES, FLIP_EVERY, MET_ON, MILESTONE_DAY, MILESTONE_DAYS, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
+  DATE_LABEL_MODES, FLIP_EVERY, MET_ON, digitLook, goesBack, MILESTONE_DAY, MILESTONE_DAYS, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
 } from '../src/components/garden/dateLabelMode.ts';
 import { ARRIVAL_END, MILESTONES, STOPS, VOYAGE_END, progressAt, storyMonth } from '../src/components/garden/journey.ts';
 
@@ -9,6 +9,19 @@ test('the date label reads month and year unless the Review panel chose otherwis
   assert.equal(dateLabelMode(null), 'digits');
   for (const mode of Object.keys(DATE_LABEL_MODES)) assert.equal(dateLabelMode(mode), mode);
   for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'digits');
+});
+
+test('the three digit looks are flipping (as guests see it), no animation and rolling; the others are words', () => {
+  assert.deepEqual(['digits', 'blink', 'roll', 'full', 'year', 'off'].map(digitLook), ['flip', 'blink', 'roll', null, null, null]);
+  for (const mode of ['blink', 'roll']) assert.deepEqual(shownDate('July 2017', mode), { month: '', year: '' });
+});
+
+test('a rolling date rolls back only when the date goes back, however its digits change', () => {
+  assert.equal(goesBack('25-07-2017', '26-07-2017'), false);
+  assert.equal(goesBack('31-12-2019', '01-01-2020'), false);
+  assert.equal(goesBack('01-01-2020', '31-12-2019'), true);
+  assert.equal(goesBack('09-08-2024', '30-07-2024'), true);
+  assert.equal(goesBack('16-04-2027', '16-04-2027'), false);
 });
 
 test('each mode shows the month and year, the year alone, or nothing', () => {

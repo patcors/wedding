@@ -174,12 +174,13 @@ function course(points: Point[]) {
 
 // Their way in round the moored catamaran: the line `above` its stern they
 // come back across the river on, and how far `wide` of its hulls they pass.
-// They wait (if they must) `before` units below the jetty, in sight: on
-// desktop out in the river wide of the catamaran, and on a phone, whose
-// narrow picture looks straight down the river past the catamaran's sail,
-// on the jetty's side below it, `near` the bank, under the old tree, until the catamaran is tied up (`gate`, in
-// progress: its stern below the line, with a margin).
-const ROUND = { above: .35, margin: .2, wide: .75, before: { desktop: 4.5, mobile: 4.6 }, near: .95 };
+// They wait (if they must) `before` units below the jetty, in sight, out in
+// the river wide of where the catamaran comes in, until it is tied up
+// (`gate`, in progress: its stern below the line, with a margin). On a phone
+// they used to wait on the jetty's side, under the old tree, and cross back
+// below the catamaran's bow to come round it; now they come straight round,
+// as on desktop (Amelia, October 2026).
+const ROUND = { above: .35, margin: .2, wide: .75, before: { desktop: 4.5, mobile: 4.6 } };
 const rounds = new Map<string, { line: number; gate: number }>();
 export function guestRound(count: number, width: number, height = Infinity) {
   const key = `${fleetSize(count)} ${width} ${height}`;
@@ -249,10 +250,10 @@ export function guestArrivalStep(time: number, p: number, last: number, dt: numb
 }
 
 // Each boat's course in, in two legs. Up: from far down the river, up its
-// far side and in towards the middle, to wait (if it must) below the jetty,
-// the later boats in file below it. Round: up past the moored catamaran wide
-// of its far hull, back across the river above its stern, and down beside
-// it into its berth.
+// far side, to wait (if it must) below the jetty wide of where the catamaran
+// comes in, the later boats in file below it. Round: straight on up past the
+// moored catamaran wide of its far hull, back across the river above its
+// stern, and down beside it into its berth.
 export function guestCourses(count: number, width: number, height = Infinity) {
   const n = fleetSize(count), scale = guestScale(width, height, n), { jetty } = voyageLandmarks(width);
   const length = GUEST_BOAT.halfLength * scale, beam = GUEST_BOAT.halfBeam * scale, { line } = guestRound(n, width, height);
@@ -263,15 +264,10 @@ export function guestCourses(count: number, width: number, height = Infinity) {
   const far = (z: number, share: number) => offBank(bankEdge(z, width) * 2 * share, z, width);
   return guestBerths(n, width, height).map(berth => {
     const i = berth.order, spacing = 2.6 * length, before = ROUND.before[layout(width)];
-    // On a phone they come up the far side, in sight beside the catamaran, and
-    // cross below where it will moor to wait on the jetty's side.
-    const phone = width < 1;
     const start = far(jetty.z - before - GUEST_ARRIVAL.run - i * spacing, .66);
-    const wait = offBank(phone ? ROUND.near : wide, jetty.z - before - i * spacing, width);
-    const up = course([start, far(jetty.z - before - GUEST_ARRIVAL.run / 2 - i * spacing, phone ? .6 : .62), wait]);
-    // Round the catamaran's bow first, from the jetty's side.
-    const bow = phone ? [offBank(wide, moored.z - 1.5 * moored.scale - .5 - length, width)] : [];
-    const round = course([wait, ...bow, offBank(wide, moored.z - (phone ? 0 : 1.5 * moored.scale), width), offBank(wide, line - .3, width),
+    const wait = offBank(wide, jetty.z - before - i * spacing, width);
+    const up = course([start, far(jetty.z - before - GUEST_ARRIVAL.run / 2 - i * spacing, .62), wait]);
+    const round = course([wait, offBank(wide, moored.z - 1.5 * moored.scale, width), offBank(wide, line - .3, width),
       offBank((wide + out(berth)) / 2, line + .1, width), offBank(out(berth), line, width), berth]);
     return { berth, up, across: round };
   });

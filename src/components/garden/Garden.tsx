@@ -15,7 +15,7 @@ import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, 
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
 import { PLACE_KEY, placeToKeep, placeToReopen, progressFor, scrollFor } from './voyagePlace';
-import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, flipTowards, shownDate, startFlips, type DateLabelMode, type Flips } from './dateLabelMode';
+import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, digitLook, flipTowards, goesBack, shownDate, startFlips, type DateLabelMode, type DigitLook, type Flips } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices';
@@ -228,15 +228,17 @@ function Crossfade({ value, className }: { value: string; className: string }) {
   return <span className={className}>{layers.map((text, i) => <span key={i} className={i === front ? 'is-shown' : ''}>{text}</span>)}</span>;
 }
 
-// Dev only (Review "Digits"): the date as DD-MM-YYYY, read from the eased
-// story time every frame. Each digit flips over on its own as it changes, like
-// an old flip clock's cards; the day, the month and the year each flip
+// The date as DD-MM-YYYY, read from the eased story time every frame. Each
+// digit changes on its own: flipping over like an old flip clock's cards
+// (`look` flip, as guests see it), rolling like a cryptex's ring, down as the
+// story goes on and up as it goes back (roll, Review only), or simply
+// changing (blink, Review only). The day, the month and the year each change
 // together, no faster than their pace (FLIP_EVERY), so a fast scroll flicks
 // the days without strobing. Under reduced motion each still's date simply shows.
-type Clock = Flips & { was: string[]; flips: number[] };
-function DigitClock({ month, reduced }: { month: () => number; reduced: boolean }) {
+type Clock = Flips & { was: string[]; flips: number[]; back: boolean[] };
+function DigitClock({ month, reduced, look }: { month: () => number; reduced: boolean; look: DigitLook }) {
   const clock = useRef<Clock | null>(null);
-  clock.current ??= { ...startFlips(digitDate(month())), was: [], flips: [] };
+  clock.current ??= { ...startFlips(digitDate(month())), was: [], flips: [], back: [] };
   const [, setShown] = useState('');
   useEffect(() => {
     let frame = 0;
@@ -244,9 +246,10 @@ function DigitClock({ month, reduced }: { month: () => number; reduced: boolean 
       const current = clock.current!, target = digitDate(month());
       const next = reduced ? (target === current.shown ? current : startFlips(target)) : flipTowards(current, target, now);
       if (next !== current) {
-        const flipped = (i: number) => next.shown[i] !== current.shown[i];
+        const flipped = (i: number) => next.shown[i] !== current.shown[i], back = goesBack(current.shown, next.shown);
         clock.current = { ...next, was: [...next.shown].map((_, i) => flipped(i) ? current.shown[i] : current.was[i]),
-          flips: [...next.shown].map((_, i) => (current.flips[i] ?? 0) + (flipped(i) ? 1 : 0)) };
+          flips: [...next.shown].map((_, i) => (current.flips[i] ?? 0) + (flipped(i) ? 1 : 0)),
+          back: [...next.shown].map((_, i) => flipped(i) ? back : current.back[i] ?? false) };
         setShown(next.shown);
       }
       frame = requestAnimationFrame(tick);
@@ -254,12 +257,12 @@ function DigitClock({ month, reduced }: { month: () => number; reduced: boolean 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [month, reduced]);
-  const { shown, was, flips } = clock.current;
-  return <span className="garden-voyage-digits">{[...shown].map((char, i) => char === '-'
+  const { shown, was, flips, back } = clock.current, moves = !reduced && look !== 'blink';
+  return <span className="garden-voyage-digits" data-look={look}>{[...shown].map((char, i) => char === '-'
     ? <span key={i} className="garden-digit-dash">{char}</span>
-    : <span key={i} className="garden-digit" style={{ '--flip': `${FLIP_EVERY[i]}ms` } as CSSProperties}>
-      {!reduced && flips[i] > 0 && <span key={`was${flips[i]}`} className="is-out">{was[i]}</span>}
-      <span key={flips[i] ?? 0} className={!reduced && flips[i] > 0 ? 'is-in' : undefined}>{char}</span>
+    : <span key={i} className="garden-digit" data-back={back[i] ? '' : undefined} style={{ '--flip': `${FLIP_EVERY[i]}ms` } as CSSProperties}>
+      {moves && flips[i] > 0 && <span key={`was${flips[i]}`} className="is-out">{was[i]}</span>}
+      <span key={flips[i] ?? 0} className={moves && flips[i] > 0 ? 'is-in' : undefined}>{char}</span>
     </span>)}</span>;
 }
 
@@ -540,19 +543,23 @@ export default function Garden() {
       <section className={`garden-panel garden-voyage ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
         <h2 className="garden-visually-hidden">Our story</h2>
         <p className="garden-voyage-date" aria-hidden="true" data-mode={dateMode === 'full' ? undefined : dateMode}>
-          {dateMode === 'digits' ? <DigitClock month={easedMonth} reduced={reduced} /> : <>
+          {digitLook(dateMode) ? <DigitClock month={easedMonth} reduced={reduced} look={digitLook(dateMode)!} /> : <>
             {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
             <Crossfade className="garden-voyage-year" value={year} />
           </>}
         </p>
-        {/* Glides on to the dock without stopping; while it does, it pauses the glide. */}
+      </section>
+
+      {/* At the foot of the screen through the voyage: glides on to the dock
+          without stopping; while it does, it pauses the glide. */}
+      <div className={`garden-panel garden-sail ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
         <button className="garden-glide" onClick={voyage.glide} data-gliding={voyage.gliding ? '' : undefined}>
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
             {voyage.gliding ? <path d="M3 1.5v9M9 1.5v9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /> : <path d="M3 1.2 10.4 6 3 10.8Z" fill="currentColor" />}
           </svg>
           {voyage.gliding ? 'Pause' : 'Sail on'}
         </button>
-      </section>
+      </div>
 
       <section className={`garden-panel garden-celebrate ${chapter === 2 ? 'is-active' : ''}`} inert={chapter !== 2 || sceneOnly} aria-hidden={chapter !== 2 || sceneOnly}>
         <p className="garden-eyebrow">We’re getting married</p>
