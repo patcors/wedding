@@ -22,6 +22,7 @@ import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices';
 import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLookChoices';
 import { GUEST_SOUND, GUEST_SOUND_MODE, REVIEW_SOUND, SOUND_MODES, soundMode, type SoundMode } from './soundChoices';
 import { useSoundscape } from './useSoundscape';
+import { REVIEW_SCROLL, scrollInverted, storyScroll } from './scrollChoices';
 import { useScrollGuide } from './useScrollGuide';
 import { useLoadingBar } from './useLoadingBar';
 import './garden.css';
@@ -48,12 +49,16 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
 // the dock until the guest takes over. `still`: the story has as good as
 // come to rest (atRest). When the screen changes shape (a phone turning) the
 // story keeps its place, and coming back from the details it reopens where
-// the guest left (voyagePlace.ts).
+// the guest left (voyagePlace.ts). `inverted` (dev only, scrollChoices.ts):
+// the story runs up the page instead of down it.
 const DATE_EVERY = 400, ANNOUNCE_AFTER = 700;
-function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
+function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean, inverted: boolean) {
   const pace = useMemo(createPace, []);
   // Read once, on the first mount: where to reopen after the details, if anywhere.
   const reopen = useRef<number | null | undefined>(undefined);
+  // The scroll's last progress, kept across the effect's runs, so turning the
+  // scroll over (or reduced motion changing) leaves the story where it was.
+  const place = useRef(0);
   // The raw scroll, 0 to 1.
   const [progress, setProgress] = useState(0);
   const [chapter, setChapter] = useState<Chapter>('arrival');
@@ -67,17 +72,21 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
   useEffect(() => {
     const element = scroller.current!;
     const span = () => Math.max(1, element.scrollHeight - element.clientHeight);
+    // The scroll from the story's start, and setting it so.
+    const top = () => storyScroll(element.scrollTop, span(), inverted);
+    const setTop = (story: number) => { element.scrollTop = storyScroll(story, span(), inverted); };
     if (reopen.current === undefined) {
       try {
         reopen.current = placeToReopen(sessionStorage.getItem(PLACE_KEY));
         sessionStorage.removeItem(PLACE_KEY);
       } catch { reopen.current = null; }
-      if (reopen.current !== null) element.scrollTop = scrollFor(reopen.current, span());
+      if (reopen.current !== null) place.current = reopen.current;
     }
+    setTop(scrollFor(place.current, span()));
     // `travelling`: the scroll was sent to a stop, so it may be further ahead than the leash allows.
     // `kept`: the scroll's last progress, and `spanned`, the span it was read in.
     let frame = 0, shown: string | null | undefined, changed = -Infinity, travelling = false;
-    let kept = progressFor(element.scrollTop, span()), spanned = span();
+    let kept = progressFor(top(), span()), spanned = span();
     const show = (p: number, settled: boolean, now: number) => {
       setChapter(chapterAt(p));
       setAway(namesAway(p));
@@ -93,7 +102,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       const now = performance.now();
       advancePace(pace, now);
       // The glide moves the scroll with it, so a guest who takes over carries on from there.
-      if (pace.glide) element.scrollTop = scrollFor(pace.progress, span());
+      if (pace.glide) setTop(scrollFor(pace.progress, span()));
       setGliding(pace.glide !== null);
       const settled = !pace.glide && pace.progress === pace.target;
       setStill(atRest(pace));
@@ -106,10 +115,10 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       // nothing glides). Setting it scrolls, which comes back here.
       if (span() !== spanned) {
         spanned = span();
-        element.scrollTop = scrollFor(kept, spanned);
+        setTop(scrollFor(kept, spanned));
         return;
       }
-      const scroll = kept = progressFor(element.scrollTop, span());
+      const scroll = kept = place.current = progressFor(top(), span());
       if (reduced) {
         // The scene cuts to each milestone's still, and so does the page.
         const still = stillProgress(scroll);
@@ -121,7 +130,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       if (!pace.glide && !travelling) {
         // However far a fling goes, the page stays within reach of the story.
         target = leashed(scroll, pace.progress);
-        if (target !== scroll) element.scrollTop = target > scroll ? Math.ceil(scrollAtProgress(target) * span()) : Math.floor(scrollAtProgress(target) * span());
+        if (target !== scroll) setTop(target > scroll ? Math.ceil(scrollAtProgress(target) * span()) : Math.floor(scrollAtProgress(target) * span()));
       }
       if (!pace.glide) pace.target = target;
       setProgress(target);
@@ -144,7 +153,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       if (jump || reduced) pace.progress = next;
       pace.target = next;
       setProgress(next);
-      element.scrollTo({ top: span() * scrollAtProgress(next), behavior: 'instant' });
+      element.scrollTo({ top: storyScroll(span() * scrollAtProgress(next), span(), inverted), behavior: 'instant' });
       wake();
     };
     controls.current = {
@@ -164,7 +173,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       takeOver(event);
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft')) return;
       if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable], .garden-review, dialog')) return;
-      const at = progressFor(element.scrollTop, span());
+      const at = progressFor(top(), span());
       event.preventDefault();
       go(event.key === 'ArrowRight' ? nextStop(at) : previousStop(at));
     };
@@ -172,7 +181,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
     // Safari, but others may): it is already there, so drop the place, or a
     // later reload would open at it.
     const restored = (event: PageTransitionEvent) => { if (event.persisted) try { sessionStorage.removeItem(PLACE_KEY); } catch { /* nothing kept */ } };
-    pace.progress = pace.target = progressFor(element.scrollTop, span());
+    pace.progress = pace.target = progressFor(top(), span());
     update();
     addEventListener('pageshow', restored);
     element.addEventListener('scroll', update, { passive: true });
@@ -189,7 +198,7 @@ function useVoyage(scroller: RefObject<HTMLElement | null>, reduced: boolean) {
       element.removeEventListener('pointerdown', takeOver);
       removeEventListener('keydown', onKey); removeEventListener('pageshow', restored);
     };
-  }, [scroller, pace, reduced]);
+  }, [scroller, pace, reduced, inverted]);
   // Screen readers hear the milestone once the guest settles on it.
   const [announced, setAnnounced] = useState<Milestone | null>(null);
   useEffect(() => {
@@ -290,6 +299,8 @@ export default function Garden() {
   const [boatStyle, setBoatStyle] = useState<BoatLook>(BOAT_LOOK);
   // The year turning in the canopy, grass and light; the Review panel can turn it off (seasons.ts).
   const [seasons, setSeasons] = useState(SEASONS);
+  // Dev only: the Review's "Scroll" (scrollChoices.ts), read after hydration.
+  const [inverted, setInverted] = useState(false);
   const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [openingReleased, setOpeningReleased] = useState(false);
@@ -360,7 +371,7 @@ export default function Garden() {
     query.addEventListener('change', updatePreference);
     return () => query.removeEventListener('change', updatePreference);
   }, []);
-  const voyage = useVoyage(scroller, reduced);
+  const voyage = useVoyage(scroller, reduced, inverted);
   const { progress } = voyage;
   // Screen readers' and keyboards' "Wander with us" goes for good once the guest has scrolled a little.
   const [explored, setExplored] = useState(false);
@@ -414,6 +425,7 @@ export default function Garden() {
   useEffect(() => { if (REVIEW) setText(textLook(localStorage.getItem(REVIEW_TEXT))); }, []);
   useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
   useEffect(() => { if (REVIEW) setSeasons(seasonsOn(localStorage.getItem(REVIEW_SEASONS))); }, []);
+  useEffect(() => { if (REVIEW) setInverted(scrollInverted(localStorage.getItem(REVIEW_SCROLL))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   // Under reduced motion the scene shows each milestone's still, so the date shows its day too.
   const easedMonth = useCallback(() => storyMonth(reduced ? stillProgress(voyage.pace.progress) : voyage.pace.progress), [voyage.pace, reduced]);
@@ -460,21 +472,32 @@ export default function Garden() {
       openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
     {/* The scroll helper over the scene (scrollGuide.ts): decorative, letting every touch through. */}
     <div className="garden-chrome-layer garden-guide-layer" aria-hidden="true">
-      <div className={`garden-guide ${guiding ? 'is-shown' : ''}`}>
-        <svg className="garden-guide-hand" viewBox="0 -16 90 156" fill="none">
-          <path className="garden-guide-chevron" d="m25 16 11-10 11 10" />
-          <path className="garden-guide-chevron" d="m25 0 11-10 11 10" />
-          <g className="garden-guide-finger">
+      {/* Inverted (dev only), the finger sweeps down over chevrons below it and the wheel turns up; each pair's chevrons still go in turn the way to move. */}
+      <div className={`garden-guide ${guiding ? 'is-shown' : ''}`} data-inverted={inverted ? '' : undefined}>
+        <svg className="garden-guide-hand" viewBox={inverted ? '0 0 90 156' : '0 -16 90 156'} fill="none">
+          {inverted ? <>
+            <path className="garden-guide-chevron" d="m25 124 11 10 11-10" />
+            <path className="garden-guide-chevron" d="m25 140 11 10 11-10" />
+          </> : <>
+            <path className="garden-guide-chevron" d="m25 16 11-10 11 10" />
+            <path className="garden-guide-chevron" d="m25 0 11-10 11 10" />
+          </>}
+          <g transform={inverted ? 'translate(0 -36)' : undefined}><g className="garden-guide-finger">
             <path d="M30 100V54a6 6 0 0 1 12 0v32-6a6 6 0 0 1 12 0v8-4a5.5 5.5 0 0 1 11 0v8-2a5 5 0 0 1 10 0v18c0 14-7 24-19 26H42c-8 0-12-4-16-10l-12-18a5.5 5.5 0 0 1 8.5-7l7.5 8Z" />
-          </g>
+          </g></g>
         </svg>
         <svg className="garden-guide-mouse" viewBox="0 0 48 116" fill="none">
           <rect x="7" y="2" width="34" height="54" rx="17" />
           <path className="garden-guide-wheel" d="M24 13v9" />
-          <path className="garden-guide-chevron" d="m14 72 10 9 10-9" />
-          <path className="garden-guide-chevron" d="m14 88 10 9 10-9" />
+          {inverted ? <>
+            <path className="garden-guide-chevron" d="m14 97 10-9 10 9" />
+            <path className="garden-guide-chevron" d="m14 81 10-9 10 9" />
+          </> : <>
+            <path className="garden-guide-chevron" d="m14 72 10 9 10-9" />
+            <path className="garden-guide-chevron" d="m14 88 10 9 10-9" />
+          </>}
         </svg>
-        <p><span className="garden-guide-touch">Swipe up to sail</span><span className="garden-guide-wheel-label">Scroll to sail</span></p>
+        <p><span className="garden-guide-touch">{inverted ? 'Swipe down to sail' : 'Swipe up to sail'}</span><span className="garden-guide-wheel-label">{inverted ? 'Scroll up to sail' : 'Scroll to sail'}</span></p>
       </div>
     </div>
     {/* The chrome sits in pinned layers inside the scroller, so a drag that starts on it still scrolls. */}
@@ -612,6 +635,12 @@ export default function Garden() {
         setSeasons(!seasons);
       }} aria-pressed={seasons} title={seasons ? 'Show the garden the same all year' : 'Turn the year in the canopy, grass and light'}>
         Seasons: {seasons ? 'On' : 'Off'}
+      </button>
+      <button onClick={() => {
+        localStorage.setItem(REVIEW_SCROLL, inverted ? 'normal' : 'inverted');
+        setInverted(!inverted);
+      }} aria-pressed={inverted} title={inverted ? 'Scroll down, or swipe up, to sail on' : 'Scroll up, or swipe down, to sail on'}>
+        Scroll: {inverted ? 'Inverted' : 'Normal'}
       </button>
       <button onClick={() => setPaused(!paused)} disabled={reduced} aria-pressed={paused || reduced}>
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
