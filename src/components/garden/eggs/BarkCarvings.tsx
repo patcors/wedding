@@ -9,10 +9,9 @@
 // call each, 8 to 28 triangles; no shadows cast.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useJourney, type SlotProps } from '../JourneyProvider';
-import { TREE_MODELS } from '../GardenTrees';
+import { useTreeModels } from '../GardenTrees';
 import { CARVINGS, carvedOn, carvedTree, carvingFaces, carvingShown, grownCut, type BarkCarving, type CarvingId } from './uniOrnaments';
 import { barkCarvingTextures, barkPatchGeometry, treeMatrix, type TreeMesh } from './barkCarvingGeometry';
 
@@ -29,7 +28,7 @@ export function treeMesh(geometry: THREE.BufferGeometry): TreeMesh {
 
 function Carving({ id, width }: SlotProps & { id: CarvingId }) {
   const clock = useJourney();
-  const models = useGLTF(TREE_MODELS);
+  const models = useTreeModels();
   const carving: BarkCarving = useMemo(() => grownCut(CARVINGS[id], width), [id, width]);
   const tree = useMemo(() => carvedTree(carving, width), [carving, width]);
   const geometry = useMemo(() => {

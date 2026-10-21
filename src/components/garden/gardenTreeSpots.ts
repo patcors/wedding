@@ -108,6 +108,10 @@ export function treePlacements(width: number, mobile: boolean): Placement[] {
   return [...avenue, ...groves, ...headland, ...shrubs].filter(clear);
 }
 
+// The old tree loads after the opening (GardenTrees.tsx); a scene opening
+// this far along (back from the details) waits for it like everything else,
+// well before it first comes into the picture (tests/gardenTreeAssets.test.mjs).
+export const OLD_TREE_FIRST = .4;
 export function oldTreePlacement(width: number, mobile: boolean): Placement {
   const { tree } = voyageLandmarks(width);
   // Turned so its longest limb reaches inland, and the shorter ones shade

@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { groundHeight, riverChunks } from './gardenGeometry';
@@ -7,12 +7,25 @@ import { TREE_SINK, oldTreePlacement, treePlacements, type Placement } from './g
 import { useGardenTextures } from './gardenTextures';
 import { useRiverReach } from './useRiverReach';
 import { seasonRoles, seasonalLeaves } from './GardenSeasons';
+import { dequantizeModel } from './gardenModels';
 
 const BASE = `${import.meta.env.BASE_URL}models/garden/`;
 // The four ash models, the old tree at Jasper's Berry where the boats dock, a
 // shrub, and the far branches of the two distant ashes.
 export const TREE_MODELS = ['ash-1.glb', 'ash-2.glb', 'ash-1-distant.glb', 'ash-2-distant.glb', 'old-tree.glb', 'bush.glb',
   'ash-1-far.glb', 'ash-2-far.glb'].map(file => BASE + file);
+// The old tree only stands at the dock, at the end of the story, so the
+// opening doesn't wait for it: it loads on its own once everything else has
+// (OldTree below), a fifth of the trees' download (docs/VOYAGE.md, "Scene ready").
+export const OLD_TREE_MODEL = TREE_MODELS[4];
+export const OPENING_TREE_MODELS = TREE_MODELS.filter(url => url !== OLD_TREE_MODEL);
+// The opening's models by tree type (gardenTreeSpots.ts), for the eggs set on
+// the trees. No planting is the old tree (type 4), so its slot holds ash 1.
+type TreeGLTF = { scene: THREE.Object3D; nodes: Record<string, THREE.Object3D> };
+export function useTreeModels() {
+  const [ash1, ash2, ash1Distant, ash2Distant, bush, ash1Far, ash2Far] = (useGLTF(OPENING_TREE_MODELS) as unknown as TreeGLTF[]).map(model => dequantizeModel(model));
+  return [ash1, ash2, ash1Distant, ash2Distant, ash1, bush, ash1Far, ash2Far];
+}
 // Stretches of river at least this far ahead of the camera, deep in the mist,
 // draw the distant ashes' far branches: the same silhouette with a third of
 // the faces. The leaves don't change.
@@ -87,10 +100,12 @@ function TreeChunk({ model, far, materials, placements, mobile, width }: {
   </group>;
 }
 
-export default function GardenTrees({ width, mobile, paused, lightTrees }: {
+export default function GardenTrees({ width, mobile, paused, lightTrees, oldTreeFirst = false }: {
   width: number; mobile: boolean; paused: boolean; lightTrees: boolean;
+  // Opening near the dock: the old tree is part of the first view.
+  oldTreeFirst?: boolean;
 }) {
-  const models = useGLTF(TREE_MODELS);
+  const models = useTreeModels();
   // Only the palette in use downloads; the other is a Review variant. These
   // geometry-only GLBs preserve EZ-Tree's original UVs. No exporter texture flip
   // was baked in, so the maps load flipped, the source TextureLoader convention.
@@ -155,12 +170,28 @@ export default function GardenTrees({ width, mobile, paused, lightTrees }: {
     return [0, 1, 2, 3, 5].map(type => riverChunks(all.filter(p => p.type === type)));
   }, [width, mobile]);
   const oldTree = useMemo(() => [oldTreePlacement(width, mobile)], [width, mobile]);
-  const [ash1, ash2, ash1Distant, ash2Distant, old, bush, ash1Far, ash2Far] = models;
+  // Asked for only once the scene is prepared and starts to run (the frame
+  // loop leaves "never", see Garden.tsx), so neither its download nor its
+  // arrival gets in the way of building and preparing the rest.
+  const running = useThree(state => state.frameloop !== 'never');
+  const [oldTreeNext, setOldTreeNext] = useState(false);
+  if (running && !oldTreeNext) setOldTreeNext(true);
+  const [ash1, ash2, ash1Distant, ash2Distant, , bush, ash1Far, ash2Far] = models;
   const far = [undefined, undefined, ash1Far, ash2Far, undefined];
 
   return <group name="ez-tree-grove" dispose={null}>
     {[ash1, ash2, ash1Distant, ash2Distant, bush].map((model, i) => placements[i].map((chunk, j) => <TreeChunk key={`${i}-${j}-${chunk.length}`}
       model={model} far={far[i]} materials={materials} placements={chunk} mobile={mobile} width={width} />))}
-    <TreeChunk model={old} materials={materials} placements={oldTree} mobile={mobile} width={width} />
+    {oldTreeFirst ? <OldTree materials={materials} placements={oldTree} mobile={mobile} width={width} />
+      : oldTreeNext && <Suspense fallback={null}><OldTree materials={materials} placements={oldTree} mobile={mobile} width={width} /></Suspense>}
   </group>;
+}
+
+// Fetched once the rest of the scene is prepared, as it is revealed, and
+// drawn as soon as it lands, within a second or two and long before the
+// camera can near the dock (tests/oldTreeDeferral.test.mjs). A scene opening
+// part way along (back from the details) waits for it like everything else.
+function OldTree(props: Omit<Parameters<typeof TreeChunk>[0], 'model'>) {
+  const old = dequantizeModel(useGLTF(OLD_TREE_MODEL) as unknown as TreeGLTF);
+  return <TreeChunk model={old} {...props} />;
 }
