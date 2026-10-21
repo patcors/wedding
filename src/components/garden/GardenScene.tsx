@@ -67,7 +67,9 @@ type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: bool
   arrival?: RefObject<HTMLElement | null> };
 
 export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook, arrival, seasons = false }: SceneProps) {
-  const [oldTreeFirst] = useState(() => progress >= OLD_TREE_FIRST);
+  // Under reduced motion the story cuts straight to wherever the guest
+  // scrolls, the dock included, so there it waits for the old tree too.
+  const [oldTreeFirst] = useState(() => progress >= OLD_TREE_FIRST || matchMedia('(prefers-reduced-motion: reduce)').matches);
   useGardenAssets({ groundStyle, rockStyle, lightTrees, oldTreeFirst });
   const size = useThree(state => state.size);
   // On touch screens the canvas runs on under Safari's toolbar (see

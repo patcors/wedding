@@ -11,7 +11,8 @@ import { paceToward } from '../src/components/garden/journeyPace.ts';
 // guest can see it before it can have arrived: it must first come into the
 // picture (even a sliver through the haze) well after a scene opening at
 // the title could get there, and after OLD_TREE_FIRST, past which a scene
-// opening part way along waits for it.
+// opening part way along waits for it, as does one under reduced motion,
+// which cuts straight to wherever the guest scrolls.
 const source = file => readFileSync(new URL(`../src/components/garden/${file}`, import.meta.url), 'utf8');
 
 test('nobody can see the old tree before it has loaded', () => {
@@ -35,7 +36,8 @@ test('the opening waits for every tree but the old one, which follows at once', 
   assert.match(trees, /const running = useThree\(state => state\.frameloop !== 'never'\);/);
   assert.match(trees, /if \(running && !oldTreeNext\) setOldTreeNext\(true\);/);
   assert.match(trees, /oldTreeNext && <Suspense fallback=\{null\}><OldTree/);
-  assert.match(scene, /useState\(\(\) => progress >= OLD_TREE_FIRST\)/);
+  // Reduced motion cuts straight to any point, so it waits for the old tree as well.
+  assert.match(scene, /useState\(\(\) => progress >= OLD_TREE_FIRST \|\| matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\)/);
   // The eggs set on trees take the opening's models, by tree type.
   for (const egg of ['eggs/YearMarkers.tsx', 'eggs/BarkCarvings.tsx', 'eggs/Birdhouses.tsx']) assert.doesNotMatch(source(egg), /useGLTF\(TREE_MODELS\)/, egg);
 });
