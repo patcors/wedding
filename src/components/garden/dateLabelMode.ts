@@ -4,15 +4,16 @@
 // so it can be tested.
 import { DATES, MILESTONES, monthIndex } from './journey.ts';
 
-// Digits come in three looks to compare (Amelia, October 2026): each digit
+// Digits come in four looks to compare (Amelia, October 2026): each digit
 // flipping over like a flip clock's card (`digits`, as guests see it), simply
-// changing with no animation (`blink`), or rolling like a cryptex's ring or
-// an old iPhone's date picker (`roll`).
-export const DATE_LABEL_MODES = { full: 'Month & year', year: 'Year only', digits: 'Digits, flipping', blink: 'Digits, no animation', roll: 'Digits, rolling', off: 'Off' } as const;
+// changing with no animation (`blink`), rolling like a cryptex's ring or an
+// old iPhone's date picker (`roll`), or rolling through every day on the way,
+// skipping none (`count`).
+export const DATE_LABEL_MODES = { full: 'Month & year', year: 'Year only', digits: 'Digits, flipping', blink: 'Digits, no animation', roll: 'Digits, rolling', count: 'Digits, rolling every day', off: 'Off' } as const;
 export type DateLabelMode = keyof typeof DATE_LABEL_MODES;
-export type DigitLook = 'flip' | 'blink' | 'roll';
+export type DigitLook = 'flip' | 'blink' | 'roll' | 'count';
 export const digitLook = (mode: DateLabelMode): DigitLook | null =>
-  mode === 'digits' ? 'flip' : mode === 'blink' || mode === 'roll' ? mode : null;
+  mode === 'digits' ? 'flip' : mode === 'blink' || mode === 'roll' || mode === 'count' ? mode : null;
 
 // A remembered choice, or the default for anything else.
 export const DEFAULT_DATE_LABEL: DateLabelMode = 'digits';
@@ -74,15 +75,39 @@ export function digitDate(month: number) {
   const [[ma, da], [mb, db]] = [KNOTS[i - 1], KNOTS[i]];
   const t = Math.min(1, Math.max(0, (month - ma) / (mb - ma)));
   // Hold exactly on a day despite rounding in story time.
-  const date = new Date(Math.floor(da + (db - da) * t + 1e-4) * DAY);
-  const two = (n: number) => String(n).padStart(2, '0');
-  return `${two(date.getUTCDate())}-${two(date.getUTCMonth() + 1)}-${date.getUTCFullYear()}`;
+  return dayDigits(Math.floor(da + (db - da) * t + 1e-4));
 }
+const dayDigits = (day: number) => {
+  const date = new Date(day * DAY), two = (n: number) => String(n).padStart(2, '0');
+  return `${two(date.getUTCDate())}-${two(date.getUTCMonth() + 1)}-${date.getUTCFullYear()}`;
+};
+const digitsDay = (digits: string) => dayNumber(digits.split('-').reverse().join('-'));
 
 // Whether digits "DD-MM-YYYY" `next` are an earlier date than `shown`, so a
 // rolling digit rolls back the other way.
 const sortable = (digits: string) => digits.split('-').reverse().join('');
 export const goesBack = (shown: string, next: string) => sortable(next) < sortable(shown);
+
+// "Digits, rolling every day": the date steps a day at a time towards the
+// story's, every one a real date, so no number is ever skipped. Each step
+// takes `within` ms shared over the days still to go, no more than `most`
+// and no less than `least` (a frame, near enough), so it keeps close to a
+// guest scrolling steadily; faster than a day a frame (Sail on, the fastest
+// scrolling) it falls behind and catches up while a milestone's date holds.
+// It is never more than `behind` days behind, about two seconds of frames:
+// further (a jump, as "Back to the beginning" makes, or a page reopened part
+// way) it first goes straight to that far short of the date and counts the
+// rest, rather than counting through years. A step is due a few ms early, so
+// frame timing never makes it wait a whole extra frame.
+export const COUNT_PACE = { within: 400, most: 260, least: 16, early: 4, behind: 120 } as const;
+export type Count = { shown: string; at: number; step: number };
+export const startCount = (shown: string): Count => ({ shown, at: -Infinity, step: COUNT_PACE.most });
+export function countTowards(count: Count, target: string, now: number): Count {
+  if (count.shown === target || now - count.at < count.step - COUNT_PACE.early) return count;
+  const to = digitsDay(target), from = Math.min(to + COUNT_PACE.behind, Math.max(to - COUNT_PACE.behind, digitsDay(count.shown))), left = Math.abs(to - from);
+  const step = Math.min(COUNT_PACE.most, Math.max(COUNT_PACE.least, COUNT_PACE.within / left));
+  return { shown: dayDigits(from + Math.sign(to - from)), at: now, step };
+}
 
 // How often the day, the month and the year may flip, in ms (each flip's
 // animation takes this long), so a fast scroll steps the days along a few at

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DATE_LABEL_MODES, FLIP_EVERY, MET_ON, digitLook, goesBack, MILESTONE_DAY, MILESTONE_DAYS, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
+  COUNT_PACE, DATE_LABEL_MODES, FLIP_EVERY, MET_ON, countTowards, digitLook, goesBack, startCount, MILESTONE_DAY, MILESTONE_DAYS, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
 } from '../src/components/garden/dateLabelMode.ts';
 import { ARRIVAL_END, MILESTONES, STOPS, VOYAGE_END, progressAt, storyMonth } from '../src/components/garden/journey.ts';
 
@@ -11,9 +11,9 @@ test('the date label reads month and year unless the Review panel chose otherwis
   for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'digits');
 });
 
-test('the three digit looks are flipping (as guests see it), no animation and rolling; the others are words', () => {
-  assert.deepEqual(['digits', 'blink', 'roll', 'full', 'year', 'off'].map(digitLook), ['flip', 'blink', 'roll', null, null, null]);
-  for (const mode of ['blink', 'roll']) assert.deepEqual(shownDate('July 2017', mode), { month: '', year: '' });
+test('the four digit looks are flipping (as guests see it), no animation, rolling and rolling every day; the others are words', () => {
+  assert.deepEqual(['digits', 'blink', 'roll', 'count', 'full', 'year', 'off'].map(digitLook), ['flip', 'blink', 'roll', 'count', null, null, null]);
+  for (const mode of ['blink', 'roll', 'count']) assert.deepEqual(shownDate('July 2017', mode), { month: '', year: '' });
 });
 
 test('a rolling date rolls back only when the date goes back, however its digits change', () => {
@@ -22,6 +22,50 @@ test('a rolling date rolls back only when the date goes back, however its digits
   assert.equal(goesBack('01-01-2020', '31-12-2019'), true);
   assert.equal(goesBack('09-08-2024', '30-07-2024'), true);
   assert.equal(goesBack('16-04-2027', '16-04-2027'), false);
+});
+
+// Every frame at 60 fps from `from` towards `to`, until it gets there: the dates shown and when.
+const countRun = (from, to, frames = 60 * 60) => {
+  let count = startCount(from), now = 0;
+  const shown = [{ date: from, now }];
+  for (let f = 0; f < frames && count.shown !== to; f++) {
+    now += 1000 / 60;
+    const next = countTowards(count, to, now);
+    if (next !== count) shown.push({ date: next.shown, now });
+    count = next;
+  }
+  return shown;
+};
+
+test('rolling every day steps a real day at a time, skipping none, across months and years, either way', () => {
+  for (const [from, to] of [['25-07-2017', '18-11-2017'], ['28-12-2019', '03-03-2020'], ['16-04-2027', '01-01-2027'], ['02-01-2020', '30-12-2019']]) {
+    const run = countRun(from, to);
+    assert.equal(run.at(-1).date, to, `${from} to ${to}`);
+    for (let i = 1; i < run.length; i++) {
+      assert.equal(Math.abs(day(run[i].date) - day(run[i - 1].date)), 1, `${run[i - 1].date} to ${run[i].date}`);
+      // Every one a real date, as it reads.
+      assert.equal(new Date(day(run[i].date) * 864e5).toISOString().slice(0, 10), run[i].date.split('-').reverse().join('-'));
+    }
+  }
+});
+
+test('rolling every day goes faster the further it has to go, a frame a day at most, and eases as it arrives', () => {
+  const far = countRun('25-07-2017', '18-11-2017'), near = countRun('25-07-2017', '27-07-2017');
+  const gaps = run => run.slice(1).map((s, i) => s.now - run[i].now);
+  assert.ok(Math.min(...gaps(far)) >= 1000 / 60 - 1e-6, 'never two days in a frame');
+  assert.ok(gaps(far).slice(0, 80).every(gap => gap < 17), 'a frame a day while far behind');
+  assert.ok(gaps(near).at(-1) >= COUNT_PACE.within / 2 - 20, 'slower over the last days');
+  assert.ok(far.at(-1).now < 116 * 1000 / 60 + 1000, 'four months in about two seconds');
+});
+
+test('rolling every day is never more than its few months behind: a jump goes straight to that far short and counts the rest', () => {
+  for (const [from, to] of [['01-01-2017', '16-04-2027'], ['16-04-2027', '01-01-2017']]) {
+    const run = countRun(from, to);
+    assert.equal(Math.abs(day(run[1].date) - day(to)), COUNT_PACE.behind - 1, `${from} to ${to}: first step`);
+    for (let i = 2; i < run.length; i++) assert.equal(Math.abs(day(run[i].date) - day(run[i - 1].date)), 1);
+    assert.equal(run.at(-1).date, to);
+    assert.ok(run.at(-1).now < 3000, `there in ${(run.at(-1).now / 1000).toFixed(1)}s`);
+  }
 });
 
 test('each mode shows the month and year, the year alone, or nothing', () => {

@@ -15,7 +15,7 @@ import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, 
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
 import { PLACE_KEY, placeToKeep, placeToReopen, progressFor, scrollFor } from './voyagePlace';
-import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, dateLabelMode, digitDate, digitLook, flipTowards, goesBack, shownDate, startFlips, type DateLabelMode, type DigitLook, type Flips } from './dateLabelMode';
+import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, countTowards, dateLabelMode, digitDate, digitLook, flipTowards, goesBack, shownDate, startCount, startFlips, type DateLabelMode, type DigitLook } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices';
@@ -230,39 +230,60 @@ function Crossfade({ value, className }: { value: string; className: string }) {
 
 // The date as DD-MM-YYYY, read from the eased story time every frame. Each
 // digit changes on its own: flipping over like an old flip clock's cards
-// (`look` flip, as guests see it), rolling like a cryptex's ring, down as the
-// story goes on and up as it goes back (roll, Review only), or simply
-// changing (blink, Review only). The day, the month and the year each change
-// together, no faster than their pace (FLIP_EVERY), so a fast scroll flicks
-// the days without strobing. Under reduced motion each still's date simply shows.
-type Clock = Flips & { was: string[]; flips: number[]; back: boolean[] };
+// (`look` flip, as guests see it), simply changing (blink, Review only), or
+// rolling like a cryptex's ring (roll and count, Review only). The rings
+// turn on round and round, never back through their numbers: down while the
+// story goes on and up while it goes back, whichever way the digit's own
+// number moves. Flip, blink and roll change the day, the month and the year
+// each together, no faster than their pace (FLIP_EVERY), so a fast scroll
+// flicks the days without strobing; count steps through every day on the
+// way (countTowards). Under reduced motion each still's date simply shows.
+type Digits = { shown: string; was: string[]; turns: number[]; back: boolean[]; time: number[] };
 function DigitClock({ month, reduced, look }: { month: () => number; reduced: boolean; look: DigitLook }) {
-  const clock = useRef<Clock | null>(null);
-  clock.current ??= { ...startFlips(digitDate(month())), was: [], flips: [], back: [] };
+  const digits = useRef<Digits | null>(null);
+  digits.current ??= { shown: digitDate(month()), was: [], turns: [], back: [], time: [] };
   const [, setShown] = useState('');
   useEffect(() => {
     let frame = 0;
+    // Each pace picks up from the digits showing, as the look changes.
+    const shownNow = digits.current!.shown;
+    let flips = startFlips(shownNow), count = startCount(shownNow), target = shownNow, back = false;
     const tick = (now: number) => {
-      const current = clock.current!, target = digitDate(month());
-      const next = reduced ? (target === current.shown ? current : startFlips(target)) : flipTowards(current, target, now);
-      if (next !== current) {
-        const flipped = (i: number) => next.shown[i] !== current.shown[i], back = goesBack(current.shown, next.shown);
-        clock.current = { ...next, was: [...next.shown].map((_, i) => flipped(i) ? current.shown[i] : current.was[i]),
-          flips: [...next.shown].map((_, i) => (current.flips[i] ?? 0) + (flipped(i) ? 1 : 0)),
-          back: [...next.shown].map((_, i) => flipped(i) ? back : current.back[i] ?? false) };
-        setShown(next.shown);
+      const current = digits.current!, next = digitDate(month());
+      // Which way the story is going, from the date it shows, not the digits
+      // on the way there (a day can change before its month, reading earlier).
+      if (next !== target) back = goesBack(target, next), target = next;
+      let shown: string, time: (i: number) => number;
+      if (reduced) {
+        shown = target, time = () => 0;
+        flips = startFlips(target), count = startCount(target);
+      } else if (look === 'count') {
+        count = countTowards(count, target, now);
+        shown = count.shown, time = () => count.step;
+      } else {
+        flips = flipTowards(flips, target, now);
+        shown = flips.shown, time = i => FLIP_EVERY[i];
+      }
+      if (shown !== current.shown) {
+        // Counting, the digits roll the way the date they show moves.
+        const turned = (i: number) => shown[i] !== current.shown[i], up = look === 'count' ? goesBack(current.shown, shown) : back;
+        digits.current = { shown, was: [...shown].map((_, i) => turned(i) ? current.shown[i] : current.was[i]),
+          turns: [...shown].map((_, i) => (current.turns[i] ?? 0) + (turned(i) ? 1 : 0)),
+          back: [...shown].map((_, i) => turned(i) ? up : current.back[i] ?? false),
+          time: [...shown].map((_, i) => turned(i) ? time(i) : current.time[i] ?? FLIP_EVERY[i]) };
+        setShown(shown);
       }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [month, reduced]);
-  const { shown, was, flips, back } = clock.current, moves = !reduced && look !== 'blink';
-  return <span className="garden-voyage-digits" data-look={look}>{[...shown].map((char, i) => char === '-'
+  }, [month, reduced, look]);
+  const { shown, was, turns, back, time } = digits.current, moves = !reduced && look !== 'blink';
+  return <span className="garden-voyage-digits" data-look={look === 'count' ? 'roll' : look}>{[...shown].map((char, i) => char === '-'
     ? <span key={i} className="garden-digit-dash">{char}</span>
-    : <span key={i} className="garden-digit" data-back={back[i] ? '' : undefined} style={{ '--flip': `${FLIP_EVERY[i]}ms` } as CSSProperties}>
-      {moves && flips[i] > 0 && <span key={`was${flips[i]}`} className="is-out">{was[i]}</span>}
-      <span key={flips[i] ?? 0} className={moves && flips[i] > 0 ? 'is-in' : undefined}>{char}</span>
+    : <span key={i} className="garden-digit" data-back={back[i] ? '' : undefined} style={{ '--flip': `${time[i] ?? FLIP_EVERY[i]}ms` } as CSSProperties}>
+      {moves && turns[i] > 0 && <span key={`was${turns[i]}`} className="is-out">{was[i]}</span>}
+      <span key={turns[i] ?? 0} className={moves && turns[i] > 0 ? 'is-in' : undefined}>{char}</span>
     </span>)}</span>;
 }
 
