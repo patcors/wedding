@@ -12,6 +12,19 @@ export function random(seed: number) {
   };
 }
 
+// Places that depend only on the composition's river width (the jetties, the
+// old tree, the lawn, Bennelong Point) are worked out once per width: the
+// planting asks for them for each of its tens of thousands of sites, and
+// working them out afresh each time was most of the scene's start-up.
+function perWidth<T>(make: (width: number) => T) {
+  const made = new Map<number, T>();
+  return (width = 1) => {
+    let value = made.get(width);
+    if (value === undefined) { value = make(width); made.set(width, value); }
+    return value;
+  };
+}
+
 // The camera rides `behind` the boats and looks `ahead` of them down the river
 // (see cameraRig.ts). Nothing past the fog is drawn: `far` and `mobileFar`
 // clear the fog's far distance on each composition.
@@ -89,13 +102,21 @@ export const sydneyWiden = (z: number, width = 1) => {
   return widen * width * Math.min(smootherstep((from + 6 - z) / 6), smootherstep((z - to + 6) / 6));
 };
 
+// The ground and planting ask for the same z many times running (a row of
+// the bank's vertices, a site and then its height), so each keeps its last answer.
+let centerAt = NaN, centerWidth = NaN, center = 0;
 export function riverCenter(z: number, width = 1) {
-  return (Math.sin(z * .12 + .7) * 1.15 + Math.sin(z * .26 - 1.2) * .25) * width
+  if (z === centerAt && width === centerWidth) return center;
+  centerAt = z; centerWidth = width;
+  return center = (Math.sin(z * .12 + .7) * 1.15 + Math.sin(z * .26 - 1.2) * .25) * width
     + (leftSwing(z, width) - rightSwing(z, width)) / 2 + bendShift(z);
 }
 
+let edgeAt = NaN, edgeWidth = NaN, edge = 0;
 export function bankEdge(z: number, width = 1) {
-  return (5.5 + Math.sin(z * .17) * 1.15 + Math.sin(z * .48) * .38) * width
+  if (z === edgeAt && width === edgeWidth) return edge;
+  edgeAt = z; edgeWidth = width;
+  return edge = (5.5 + Math.sin(z * .17) * 1.15 + Math.sin(z * .48) * .38) * width
     - (leftSwing(z, width) + rightSwing(z, width)) / 2 + openingWiden(z, width) + sydneyWiden(z, width);
 }
 
@@ -135,7 +156,7 @@ export const channelOffset = (z: number, width = 1) => (islandHalfWidth(z, width
 
 // The jetty runs out from the bank on the dock side; the catamaran moors at its
 // end. The old tree stands inland of it, a little downstream.
-export function voyageLandmarks(width = 1) {
+export const voyageLandmarks = perWidth(function voyageLandmarks(width: number) {
   const { z, side, jetty } = VOYAGE.dock;
   const bank = riverCenter(z, width) + side * bankEdge(z, width);
   const reach = jetty * Math.max(width, .6);
@@ -145,7 +166,7 @@ export function voyageLandmarks(width = 1) {
     mooring: { x: bank - side * (reach + .8), z },
     tree: { x: riverCenter(tree, width) + side * (bankEdge(tree, width) + VOYAGE.tree.inland * Math.max(width, .6)), z: tree },
   };
-}
+});
 
 // Each boat sets out from its own little jetty on its channel's outer bank,
 // beside where it starts under the opening title: Amelia's on the −x bank,
@@ -157,7 +178,7 @@ export function voyageLandmarks(width = 1) {
 // a short landing stage along the bank, where the river opens out under the
 // title (OPENING_WIDEN), so its boat lies out by the bank there too.
 export const LAUNCH_JETTY = { reach: 1.05, mobileReach: .27, headDepth: .4, neck: .5, landing: .5 } as const;
-export function launchJetties(width = 1) {
+export const launchJetties = perWidth(function launchJetties(width: number) {
   const middle = riverCenter(ROUTE.start, width);
   const banks = ([[-1, .25, 1.15], [1, .4, 1.4]] as const).map(([side, dz, head]) => {
     const z = ROUTE.start + dz;
@@ -170,7 +191,7 @@ export function launchJetties(width = 1) {
     const reach = (width < 1 ? LAUNCH_JETTY.mobileReach : LAUNCH_JETTY.reach) + Math.abs(bank.x - middle) - nearest;
     return { ...bank, reach, headDepth: Math.min(LAUNCH_JETTY.headDepth, reach) };
   });
-}
+});
 
 // Ground kept clear of generated planting: the old tree's trunk and roots,
 // the level lawn far off past the bend, Bennelong Point, and the jetties with
@@ -224,11 +245,11 @@ export function groundHeight(x: number, z: number, width = 1) {
 // of the Hagia Sophia), and its height, the bank's level top without the
 // wobble. It lies `inland` from the water, far enough that it is level
 // beyond the bank's rise (2.4), which it leaves as it was.
-export function lawnSpot(width = 1) {
+export const lawnSpot = perWidth(function lawnSpot(width: number) {
   const { z, side, inland: desktop, mobileInland, radius, mobileRadius, field, mobileField } = VOYAGE.lawn;
   const inland = width < 1 ? mobileInland : desktop;
   return { x: riverCenter(z, width) + side * (bankEdge(z, width) + inland), z, radius: width < 1 ? mobileRadius : radius, field: width < 1 ? mobileField : field, height: bankRise(inland) };
-}
+});
 // Bennelong Point (`VOYAGE.point`): where it meets the water's edge on its
 // bank, how far it juts `out` into the river and runs `back` into the bank
 // from there (well back, the bank cut down round it, see underPoint, so the
@@ -237,10 +258,10 @@ export function lawnSpot(width = 1) {
 // a little further down, so the Opera House on it is seen over Amelia's
 // sails as August 2022 shows, but not so far that it is still beside the
 // boats once she is back in March 2023. Built in voyageRock.ts.
-export function pointSpot(width = 1) {
+export const pointSpot = perWidth(function pointSpot(width: number) {
   const { side, mobile, ...desktop } = VOYAGE.point, { z, out, back, wide, top } = width < 1 ? mobile : desktop;
   return { x: riverCenter(z, width) + side * bankEdge(z, width), z, side, out, back, wide, top };
-}
+});
 // How far in from the point's waterline a spot is (negative off it): its
 // outline is a rectangle with corners rounded `POINT_ROUND` of its width, so planting and guests' boats
 // keep off it.
@@ -285,7 +306,8 @@ export function bankGeometry(side: number, width = 1) {
   const position = geometry.attributes.position;
   const uv = geometry.attributes.uv;
   const colors = [], inlands = [];
-  const color = new THREE.Color();
+  // Parsed once, not for each vertex.
+  const shore = new THREE.Color('#797866'), grass = new THREE.Color('#e3dfc8');
   for (let i = 0; i < position.count; i++) {
     const z = position.getY(i) + (RIVER_REACH.from + RIVER_REACH.to) / 2;
     const inland = position.getX(i) + 27;
@@ -294,7 +316,7 @@ export function bankGeometry(side: number, width = 1) {
     const y = groundHeight(x, z, width);
     position.setXYZ(i, x, y, z);
     uv.setXY(i, x / 16, z / 16);
-    color.set(inland < .6 ? '#797866' : '#e3dfc8');
+    const color = inland < .6 ? shore : grass;
     colors.push(color.r, color.g, color.b);
   }
   // PlaneGeometry faces +Z; mapping to X/Y/Z here needs the opposite winding on +X.

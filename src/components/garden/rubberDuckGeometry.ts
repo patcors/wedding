@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { BAKED_DUCK } from './rubberDuckBaked.ts';
 
 // A bath duck facing -z like the boats' bows: round body with an upturned
 // tail, a big head, an orange beak, and black eyes with a glint.
@@ -50,8 +51,19 @@ export function rubberDuck() {
 }
 
 // The duck with only `keep` of its vertices, for ducks seen at a distance in
-// the voyage: no creases, and indexed.
+// the voyage: no creases, and indexed. The voyage's tenth is baked
+// (rubberDuckBaked.ts, by scripts/bake-rubber-duck.mjs), as simplifying the
+// full duck was half a second of a slow phone's start-up.
 export function simplifiedRubberDuck(keep: number) {
+  if (keep !== BAKED_DUCK.keep) return computeSimplifiedRubberDuck(keep);
+  const decode = (data: string) => Uint8Array.from(atob(data), c => c.charCodeAt(0)).buffer;
+  const geometry = new THREE.BufferGeometry();
+  for (const [name, { size, data }] of Object.entries(BAKED_DUCK.attributes)) geometry.setAttribute(name, new THREE.BufferAttribute(new Float32Array(decode(data)), size));
+  const index = decode(BAKED_DUCK.index.data);
+  geometry.setIndex(new THREE.BufferAttribute(BAKED_DUCK.index.type === 'uint16' ? new Uint16Array(index) : new Uint32Array(index), 1));
+  return geometry;
+}
+export function computeSimplifiedRubberDuck(keep: number) {
   const { geometry, creases } = rubberDuck();
   creases.dispose();
   const merged = mergeVertices(geometry, 1e-4);

@@ -7,11 +7,10 @@
 // only one or two cost anything at a time.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useJourney } from '../JourneyProvider';
 import type { SlotProps } from '../JourneyProvider';
-import { TREE_MODELS } from '../GardenTrees';
+import { useTreeModels } from '../GardenTrees';
 import { YEAR_MARKERS, markerSide, yearCarving, yearMarkerShown, yearMarkerSpot, type YearCarving, type YearMarker } from './yearMarkerSpots';
 import { yearAtlas, yearCarvingTextures, yearMarkerModel } from './yearMarkerGeometry';
 import { barkPatchGeometry, treeMatrix } from './barkCarvingGeometry';
@@ -22,7 +21,7 @@ import { treeMesh } from './BarkCarvings';
 // in and out as the other markers do. One draw call, a dozen triangles.
 function CarvedYear({ marker, mobile, width }: { marker: YearMarker & { carved: YearCarving }; mobile: boolean; width: number }) {
   const clock = useJourney();
-  const models = useGLTF(TREE_MODELS);
+  const models = useTreeModels();
   const { tree, carving } = useMemo(() => yearCarving(marker, width), [marker, width]);
   const spot = useMemo(() => yearMarkerSpot(marker, width), [marker, width]);
   const geometry = useMemo(() => {

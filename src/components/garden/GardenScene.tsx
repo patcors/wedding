@@ -1,10 +1,11 @@
 // The Garden's 3D scene: wiring only. Each part lives in its own component,
 // so it can be worked on without touching the others (see docs/VOYAGE.md).
-import { Suspense, lazy, useMemo, type RefObject } from 'react';
+import { Suspense, lazy, useMemo, useState, type RefObject } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { MOBILE_RIVER_WIDTH } from './gardenGeometry';
-import GardenTrees, { TREE_MODELS, treeTextures } from './GardenTrees';
+import { OLD_TREE_FIRST } from './gardenTreeSpots';
+import GardenTrees, { OLD_TREE_MODEL, OPENING_TREE_MODELS, treeTextures } from './GardenTrees';
 import GardenPreparation from './GardenPreparation.tsx';
 import GardenGround, { groundTextures, type GroundStyle, type RockStyle } from './GardenGround';
 import GardenRocks, { ROCK_MODEL, ROCK_TEXTURES } from './GardenRocks';
@@ -16,6 +17,7 @@ import GardenWater, { WATER_NORMALS, createWaterTint } from './GardenWater';
 import GardenSky, { type SkyStyle } from './GardenSky';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { preloadGardenTextures, useGardenTextures } from './gardenTextures';
+import { dequantizeModel } from './gardenModels';
 import { JourneyProvider, type SlotProps } from './JourneyProvider';
 import type { Pace } from './journeyPace';
 import VoyageCamera from './VoyageCamera';
@@ -30,12 +32,13 @@ import Inspectable from './inspect/Inspectable';
 // Dev only: the Review panel's inspect mode (inspect/).
 const InspectProbe = import.meta.env.DEV ? lazy(() => import('./inspect/InspectProbe')) : null;
 
-type AssetChoices = { groundStyle: GroundStyle; rockStyle: RockStyle; lightTrees: boolean };
+type AssetChoices = { groundStyle: GroundStyle; rockStyle: RockStyle; lightTrees: boolean; oldTreeFirst?: boolean };
+
 // Every model and texture the scene needs, with the orientation its maps load in.
-function gardenAssets({ groundStyle, rockStyle, lightTrees }: AssetChoices) {
+function gardenAssets({ groundStyle, rockStyle, lightTrees, oldTreeFirst = false }: AssetChoices) {
   const moss = rockStyle === 'moss';
   return {
-    models: [TREE_MODELS, ...moss ? [[ROCK_MODEL]] : []],
+    models: [OPENING_TREE_MODELS, ...moss ? [[ROCK_MODEL]] : [], ...oldTreeFirst ? [[OLD_TREE_MODEL]] : []],
     textures: [[groundTextures(groundStyle), true], [WATER_NORMALS, true], [treeTextures(lightTrees), true],
       ...moss ? [[ROCK_TEXTURES, false]] : []] as [string[], boolean][],
   };
@@ -53,7 +56,8 @@ export function preloadGardenAssets(choices: AssetChoices) {
 function useGardenAssets(choices: AssetChoices) {
   preloadGardenAssets(choices);
   const { models, textures } = gardenAssets(choices);
-  models.forEach(urls => useGLTF(urls));
+  // Stored quantized: back to world-unit floats before any part reads them (gardenModels.ts).
+  models.forEach(urls => useGLTF(urls).forEach(dequantizeModel));
   textures.forEach(([urls, flipY]) => useGardenTextures(urls, { flipY }));
 }
 type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: boolean; reduced: boolean; onReady: () => void; onError: () => void; boatLaunchRequest: number; lightTrees: boolean; groundStyle: GroundStyle; rockStyle: RockStyle; plantStyle: PlantStyle; skyStyle: SkyStyle; boatLook?: BoatLook;
@@ -63,7 +67,10 @@ type SceneProps = { prepare: boolean; progress: number; pace: Pace; paused: bool
   arrival?: RefObject<HTMLElement | null> };
 
 export default function GardenScene({ prepare, progress, pace, paused, reduced, onReady, onError, boatLaunchRequest, lightTrees, groundStyle, rockStyle, plantStyle, skyStyle, boatLook, arrival, seasons = false }: SceneProps) {
-  useGardenAssets({ groundStyle, rockStyle, lightTrees });
+  // Under reduced motion the story cuts straight to wherever the guest
+  // scrolls, the dock included, so there it waits for the old tree too.
+  const [oldTreeFirst] = useState(() => progress >= OLD_TREE_FIRST || matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useGardenAssets({ groundStyle, rockStyle, lightTrees, oldTreeFirst });
   const size = useThree(state => state.size);
   // On touch screens the canvas runs on under Safari's toolbar (see
   // garden.css), so framing is worked out for the part above it.
@@ -78,7 +85,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
     <GardenSeasons on={seasons} />
     <Inspectable id="sky"><GardenSky {...slot} skyStyle={skyStyle} waterTint={waterTint} seasons={seasons} /></Inspectable>
     <GardenGround width={width} style={groundStyle} />
-    <GardenTrees width={width} mobile={mobile} paused={still} lightTrees={lightTrees} />
+    <GardenTrees width={width} mobile={mobile} paused={still} lightTrees={lightTrees} oldTreeFirst={oldTreeFirst} />
     <GardenBankDetails width={width} rockStyle={rockStyle} plantStyle={plantStyle} />
     {plantStyle === 'varied' && <GardenPlants width={width} mobile={mobile} paused={still} visible />}
     {rockStyle === 'moss' && <GardenRocks width={width} visible />}

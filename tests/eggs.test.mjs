@@ -4,6 +4,7 @@ import { cameraPose } from '../src/components/garden/cameraRig.ts';
 import { MILESTONES, ROOM, STOPS, VOYAGE_END, progressAt, stillProgress } from '../src/components/garden/journey.ts';
 import { GARDEN_CAMERA, MOBILE_RIVER_WIDTH, bankEdge, riverCenter } from '../src/components/garden/gardenGeometry.ts';
 import { cameraHeading, eggTime, heightAt, inView, overRiver } from '../src/components/garden/eggs/egg.ts';
+import { treeIO } from './treeModels.mjs';
 
 const degrees = radians => radians * 180 / Math.PI;
 const trip = MILESTONES.find(m => m.egg === 'balloon');
@@ -372,8 +373,6 @@ test('Patrick\'s bird flies home across the river as July 2024 shows, before the
 
 test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark, and both house numbers read from the boats', async () => {
   const THREE = await import('three');
-  const { NodeIO } = await import('@gltf-transform/core');
-  const { EXTMeshoptCompression } = await import('@gltf-transform/extensions');
   const { MeshoptDecoder } = await import('meshoptimizer');
   const { treePlacements, treeBase } = await import('../src/components/garden/gardenTreeSpots.ts');
   const { treeMatrix } = await import('../src/components/garden/eggs/barkCarvingGeometry.ts');
@@ -381,7 +380,8 @@ test('a Church St sign is fixed to the tree beside Amelia\'s house, on its bark,
   const { PLAQUE, birdhousesGeometry } = await import('../src/components/garden/eggs/birdhouseGeometry.ts');
   const { NEST_EVENTS, SIGN, nestSpots, nestTriggers, signFaces, signTree } = await import('../src/components/garden/eggs/nesting.ts');
   await MeshoptDecoder.ready;
-  const io = new NodeIO().registerExtensions([EXTMeshoptCompression]).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
+  // The models as the scene loads them (tests/treeModels.mjs).
+  const io = treeIO;
   const models = {};
   for (const [type, file] of ['ash-1', 'ash-2', 'ash-1-distant', 'ash-2-distant'].entries()) {
     const primitive = (await io.read(`public/models/garden/${file}.glb`)).getRoot().listNodes().find(n => n.getName() === 'branches').getMesh().listPrimitives()[0];

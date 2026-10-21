@@ -7,12 +7,11 @@
 // birds, and the street sign on the tree beside hers.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { cameraPose } from '../cameraRig';
 import { ROOM } from '../journey';
 import { useJourney } from '../JourneyProvider';
-import { TREE_MODELS } from '../GardenTrees';
+import { useTreeModels } from '../GardenTrees';
 import { treeBase } from '../gardenTreeSpots';
 import { NESTS, NEST_EVENTS, SIGN, birdPoses, fired, nestSpots, nestTriggers, signFaces, signTree } from './nesting';
 import { birdhousesGeometry, birdsGeometry, writeBird } from './birdhouseGeometry';
@@ -44,7 +43,7 @@ function treeMesh(geometry: THREE.BufferGeometry): TreeMesh {
 
 export default function Birdhouses({ paused, reduced, width }: EggProps) {
   const clock = useJourney();
-  const models = useGLTF(TREE_MODELS);
+  const models = useTreeModels();
   const spots = useMemo(() => nestSpots(width), [width]);
   const triggers = useMemo(() => nestTriggers(), []);
   const tree = useMemo(() => {

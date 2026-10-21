@@ -67,6 +67,8 @@ async function writeTree(tree, name, { scale = .20, leaves = true } = {}) {
   await document.transform(dedup(), reorder({ encoder: MeshoptEncoder, target: 'size' }));
   // FILTER retains world-unit vertex positions, including leaf centres, so
   // meshes can be instanced directly without quantization node transforms.
+  // (Guests' copies are then quantized by scripts/quantize-garden-models.mjs,
+  // which gardenModels.ts undoes as they load: run it after this.)
   document.createExtension(EXTMeshoptCompression).setRequired(true)
     .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
   const compressed = await io.writeBinary(document);
