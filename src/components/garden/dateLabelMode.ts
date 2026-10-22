@@ -1,14 +1,14 @@
-// How the voyage's running date reads: in digits, as guests see it (Amelia,
-// October 2026), or, in the Review panel only, as month and year, the year
+// How the voyage's running date reads: in digits rolling day by day, as
+// guests see it (Amelia, October 2026), or, in the Review panel only, as month and year, the year
 // alone or not at all. Screen readers hear each milestone either way. Pure,
 // so it can be tested.
 import { DATES, MILESTONES, monthIndex } from './journey.ts';
 
 // Digits come in four looks to compare (Amelia, October 2026): each digit
-// flipping over like a flip clock's card (`digits`, as guests see it), simply
-// changing with no animation (`blink`), rolling like a cryptex's ring or an
-// old iPhone's date picker (`roll`), or rolling through every day on the way,
-// skipping none (`count`).
+// flipping over like a flip clock's card (`digits`), simply changing with no
+// animation (`blink`), rolling like a cryptex's ring or an old iPhone's date
+// picker (`roll`), or rolling through every day on the way (`count`, as
+// guests see it since Amelia chose it, October 2026).
 export const DATE_LABEL_MODES = { full: 'Month & year', year: 'Year only', digits: 'Digits, flipping', blink: 'Digits, no animation', roll: 'Digits, rolling', count: 'Digits, rolling every day', off: 'Off' } as const;
 export type DateLabelMode = keyof typeof DATE_LABEL_MODES;
 export type DigitLook = 'flip' | 'blink' | 'roll' | 'count';
@@ -16,7 +16,7 @@ export const digitLook = (mode: DateLabelMode): DigitLook | null =>
   mode === 'digits' ? 'flip' : mode === 'blink' || mode === 'roll' || mode === 'count' ? mode : null;
 
 // A remembered choice, or the default for anything else.
-export const DEFAULT_DATE_LABEL: DateLabelMode = 'digits';
+export const DEFAULT_DATE_LABEL: DateLabelMode = 'count';
 export const dateLabelMode = (stored: string | null): DateLabelMode =>
   stored !== null && Object.hasOwn(DATE_LABEL_MODES, stored) ? stored as DateLabelMode : DEFAULT_DATE_LABEL;
 
@@ -89,17 +89,17 @@ const sortable = (digits: string) => digits.split('-').reverse().join('');
 export const goesBack = (shown: string, next: string) => sortable(next) < sortable(shown);
 
 // "Digits, rolling every day": the date steps a day at a time towards the
-// story's, every one a real date, so no number is ever skipped. Each step
-// takes `within` ms shared over the days still to go, no more than `most`
-// and no less than `least` (a frame, near enough), so it keeps close to a
-// guest scrolling steadily; faster than a day a frame (Sail on, the fastest
-// scrolling) it falls behind and catches up while a milestone's date holds.
-// It is never more than `behind` days behind, about two seconds of frames:
-// further (a jump, as "Back to the beginning" makes, or a page reopened part
-// way) it first goes straight to that far short of the date and counts the
-// rest, rather than counting through years. A step is due a few ms early, so
-// frame timing never makes it wait a whole extra frame.
-export const COUNT_PACE = { within: 400, most: 260, least: 16, early: 4, behind: 120 } as const;
+// story's, every one a real date. Each step takes `within` ms shared over
+// the days still to go, no more than `most` and no less than `least` (a
+// frame, near enough), so it keeps close to a guest scrolling steadily. It
+// is never more than `behind` days behind: scrolled faster than it can
+// count (Sail on, a quick scroll, a jump as "Back to the beginning" makes or
+// a page reopened part way), it skips days to stay that close, so when the
+// guest stops it counts those last two weeks and settles in under a second.
+// It counted up to 120 days, which Amelia found took too long to settle
+// (October 2026). A step is due a few ms early, so frame timing never makes
+// it wait a whole extra frame.
+export const COUNT_PACE = { within: 400, most: 260, least: 16, early: 4, behind: 14 } as const;
 export type Count = { shown: string; at: number; step: number };
 export const startCount = (shown: string): Count => ({ shown, at: -Infinity, step: COUNT_PACE.most });
 export function countTowards(count: Count, target: string, now: number): Count {

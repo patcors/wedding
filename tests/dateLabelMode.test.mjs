@@ -5,10 +5,10 @@ import {
 } from '../src/components/garden/dateLabelMode.ts';
 import { ARRIVAL_END, MILESTONES, STOPS, VOYAGE_END, progressAt, storyMonth } from '../src/components/garden/journey.ts';
 
-test('the date label reads month and year unless the Review panel chose otherwise', () => {
-  assert.equal(dateLabelMode(null), 'digits');
+test('the date label rolls day by day unless the Review panel chose otherwise', () => {
+  assert.equal(dateLabelMode(null), 'count');
   for (const mode of Object.keys(DATE_LABEL_MODES)) assert.equal(dateLabelMode(mode), mode);
-  for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'digits');
+  for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'count');
 });
 
 test('the four digit looks are flipping (as guests see it), no animation, rolling and rolling every day; the others are words', () => {
@@ -37,8 +37,8 @@ const countRun = (from, to, frames = 60 * 60) => {
   return shown;
 };
 
-test('rolling every day steps a real day at a time, skipping none, across months and years, either way', () => {
-  for (const [from, to] of [['25-07-2017', '18-11-2017'], ['28-12-2019', '03-03-2020'], ['16-04-2027', '01-01-2027'], ['02-01-2020', '30-12-2019']]) {
+test('rolling every day steps a real day at a time, skipping none within its two weeks, across months and years, either way', () => {
+  for (const [from, to] of [['25-07-2017', '08-08-2017'], ['28-12-2019', '03-01-2020'], ['16-04-2027', '02-04-2027'], ['02-01-2020', '30-12-2019'], ['27-02-2020', '02-03-2020']]) {
     const run = countRun(from, to);
     assert.equal(run.at(-1).date, to, `${from} to ${to}`);
     for (let i = 1; i < run.length; i++) {
@@ -50,21 +50,21 @@ test('rolling every day steps a real day at a time, skipping none, across months
 });
 
 test('rolling every day goes faster the further it has to go, a frame a day at most, and eases as it arrives', () => {
-  const far = countRun('25-07-2017', '18-11-2017'), near = countRun('25-07-2017', '27-07-2017');
+  const far = countRun('25-07-2017', '08-08-2017'), near = countRun('25-07-2017', '27-07-2017');
   const gaps = run => run.slice(1).map((s, i) => s.now - run[i].now);
   assert.ok(Math.min(...gaps(far)) >= 1000 / 60 - 1e-6, 'never two days in a frame');
-  assert.ok(gaps(far).slice(0, 80).every(gap => gap < 17), 'a frame a day while far behind');
+  assert.ok(gaps(far)[0] < 17, 'a frame a day while furthest behind');
   assert.ok(gaps(near).at(-1) >= COUNT_PACE.within / 2 - 20, 'slower over the last days');
-  assert.ok(far.at(-1).now < 116 * 1000 / 60 + 1000, 'four months in about two seconds');
 });
 
-test('rolling every day is never more than its few months behind: a jump goes straight to that far short and counts the rest', () => {
-  for (const [from, to] of [['01-01-2017', '16-04-2027'], ['16-04-2027', '01-01-2017']]) {
+test('rolling every day is never more than two weeks behind: further, it skips to that far short and counts the rest, settling within a second', () => {
+  assert.equal(COUNT_PACE.behind, 14);
+  for (const [from, to] of [['01-01-2017', '16-04-2027'], ['16-04-2027', '01-01-2017'], ['25-07-2017', '18-11-2017']]) {
     const run = countRun(from, to);
     assert.equal(Math.abs(day(run[1].date) - day(to)), COUNT_PACE.behind - 1, `${from} to ${to}: first step`);
     for (let i = 2; i < run.length; i++) assert.equal(Math.abs(day(run[i].date) - day(run[i - 1].date)), 1);
     assert.equal(run.at(-1).date, to);
-    assert.ok(run.at(-1).now < 3000, `there in ${(run.at(-1).now / 1000).toFixed(1)}s`);
+    assert.ok(run.at(-1).now < 1000, `there in ${(run.at(-1).now / 1000).toFixed(1)}s`);
   }
 });
 

@@ -230,14 +230,15 @@ function Crossfade({ value, className }: { value: string; className: string }) {
 
 // The date as DD-MM-YYYY, read from the eased story time every frame. Each
 // digit changes on its own: flipping over like an old flip clock's cards
-// (`look` flip, as guests see it), simply changing (blink, Review only), or
-// rolling like a cryptex's ring (roll and count, Review only). The rings
+// (`look` flip, Review only), simply changing (blink, Review only), or
+// rolling like a cryptex's ring (roll, Review only, and count, as guests see
+// it). The rings
 // turn on round and round, never back through their numbers: down while the
 // story goes on and up while it goes back, whichever way the digit's own
 // number moves. Flip, blink and roll change the day, the month and the year
 // each together, no faster than their pace (FLIP_EVERY), so a fast scroll
-// flicks the days without strobing; count steps through every day on the
-// way (countTowards). Under reduced motion each still's date simply shows.
+// flicks the days without strobing; count steps a day at a time, skipping
+// only what keeps it within two weeks of the story (countTowards). Under reduced motion each still's date simply shows.
 type Digits = { shown: string; was: string[]; turns: number[]; back: boolean[]; time: number[] };
 function DigitClock({ month, reduced, look }: { month: () => number; reduced: boolean; look: DigitLook }) {
   const digits = useRef<Digits | null>(null);
