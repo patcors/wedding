@@ -49,22 +49,24 @@ test('rolling every day steps a real day at a time, skipping none within its two
   }
 });
 
-test('rolling every day goes faster the further it has to go, a frame a day at most, and eases as it arrives', () => {
+test('rolling every day goes faster the further it has to go, twenty days a second at most, and eases as it arrives', () => {
   const far = countRun('25-07-2017', '08-08-2017'), near = countRun('25-07-2017', '27-07-2017');
   const gaps = run => run.slice(1).map((s, i) => s.now - run[i].now);
-  assert.ok(Math.min(...gaps(far)) >= 1000 / 60 - 1e-6, 'never two days in a frame');
-  assert.ok(gaps(far)[0] < 17, 'a frame a day while furthest behind');
+  assert.equal(COUNT_PACE.least, 50);
+  // The first day goes at once; from then on a day takes 50ms or more.
+  assert.ok(Math.min(...gaps(far).slice(1)) >= 50 - 1e-6, 'never more than twenty days a second');
+  assert.ok(gaps(far)[1] < 51, 'that fast while furthest behind');
   assert.ok(gaps(near).at(-1) >= COUNT_PACE.within / 2 - 20, 'slower over the last days');
 });
 
-test('rolling every day is never more than two weeks behind: further, it skips to that far short and counts the rest, settling within a second', () => {
+test('rolling every day is never more than two weeks behind: further, it skips to that far short and counts the rest, settling in about a second', () => {
   assert.equal(COUNT_PACE.behind, 14);
   for (const [from, to] of [['01-01-2017', '16-04-2027'], ['16-04-2027', '01-01-2017'], ['25-07-2017', '18-11-2017']]) {
     const run = countRun(from, to);
     assert.equal(Math.abs(day(run[1].date) - day(to)), COUNT_PACE.behind - 1, `${from} to ${to}: first step`);
     for (let i = 2; i < run.length; i++) assert.equal(Math.abs(day(run[i].date) - day(run[i - 1].date)), 1);
     assert.equal(run.at(-1).date, to);
-    assert.ok(run.at(-1).now < 1000, `there in ${(run.at(-1).now / 1000).toFixed(1)}s`);
+    assert.ok(run.at(-1).now < 1100, `there in ${(run.at(-1).now / 1000).toFixed(1)}s`);
   }
 });
 

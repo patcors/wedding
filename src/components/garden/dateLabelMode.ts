@@ -90,8 +90,10 @@ export const goesBack = (shown: string, next: string) => sortable(next) < sortab
 
 // "Digits, rolling every day": the date steps a day at a time towards the
 // story's, every one a real date. Each step takes `within` ms shared over
-// the days still to go, no more than `most` and no less than `least` (a
-// frame, near enough), so it keeps close to a guest scrolling steadily. It
+// the days still to go, no more than `most` and no less than `least`, so it
+// keeps close to a guest scrolling steadily but never rolls more than twenty
+// days a second (it could reach thirty, a touch too quick for Patrick,
+// October 2026). It
 // is never more than `behind` days behind: scrolled faster than it can
 // count (Sail on, a quick scroll, a jump as "Back to the beginning" makes or
 // a page reopened part way), it skips days to stay that close, so when the
@@ -99,7 +101,7 @@ export const goesBack = (shown: string, next: string) => sortable(next) < sortab
 // It counted up to 120 days, which Amelia found took too long to settle
 // (October 2026). A step is due a few ms early, so frame timing never makes
 // it wait a whole extra frame.
-export const COUNT_PACE = { within: 400, most: 260, least: 16, early: 4, behind: 14 } as const;
+export const COUNT_PACE = { within: 400, most: 260, least: 50, early: 4, behind: 14 } as const;
 export type Count = { shown: string; at: number; step: number };
 export const startCount = (shown: string): Count => ({ shown, at: -Infinity, step: COUNT_PACE.most });
 export function countTowards(count: Count, target: string, now: number): Count {
