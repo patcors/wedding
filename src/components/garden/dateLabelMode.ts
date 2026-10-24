@@ -7,8 +7,10 @@ import { DATES, MILESTONES, monthIndex } from './journey.ts';
 // Digits come in four looks to compare (Amelia, October 2026): each digit
 // flipping over like a flip clock's card (`digits`), simply changing with no
 // animation (`blink`), rolling like a cryptex's ring or an old iPhone's date
-// picker (`roll`), or rolling through every day on the way (`count`, as
-// guests see it since Amelia chose it, October 2026).
+// picker (`roll`, as guests see it), or rolling through every day on the way
+// (`count`). Guests saw `count` for a while, but every day was too fast and
+// the flip clock's pace too slow, so `roll` turns at twice that pace
+// (ROLL_EVERY; Amelia, October 2026).
 export const DATE_LABEL_MODES = { full: 'Month & year', year: 'Year only', digits: 'Digits, flipping', blink: 'Digits, no animation', roll: 'Digits, rolling', count: 'Digits, rolling every day', off: 'Off' } as const;
 export type DateLabelMode = keyof typeof DATE_LABEL_MODES;
 export type DigitLook = 'flip' | 'blink' | 'roll' | 'count';
@@ -16,7 +18,7 @@ export const digitLook = (mode: DateLabelMode): DigitLook | null =>
   mode === 'digits' ? 'flip' : mode === 'blink' || mode === 'roll' || mode === 'count' ? mode : null;
 
 // A remembered choice, or the default for anything else.
-export const DEFAULT_DATE_LABEL: DateLabelMode = 'count';
+export const DEFAULT_DATE_LABEL: DateLabelMode = 'roll';
 export const dateLabelMode = (stored: string | null): DateLabelMode =>
   stored !== null && Object.hasOwn(DATE_LABEL_MODES, stored) ? stored as DateLabelMode : DEFAULT_DATE_LABEL;
 
@@ -120,16 +122,18 @@ export function countTowards(count: Count, target: string, now: number): Count {
 // month never read as one that can't be (a "32" or an "18"). A group that may
 // not flip yet catches up once it may, straight to the date then showing.
 export const FLIP_EVERY = [300, 300, 0, 500, 500, 0, 700, 700, 700, 700] as const;
+// "Digits, rolling", as guests see it: twice the flip clock's pace.
+export const ROLL_EVERY = FLIP_EVERY.map(ms => ms / 2);
 const GROUPS = [[0, 2], [3, 5], [6, 10]] as const;
 export type Flips = { shown: string; at: readonly number[] };
 export const startFlips = (shown: string): Flips => ({ shown, at: GROUPS.map(() => -Infinity) });
 // The digits showing at `now` (ms) on their way to `target`; the same object
 // while nothing flips.
-export function flipTowards(flips: Flips, target: string, now: number): Flips {
+export function flipTowards(flips: Flips, target: string, now: number, every: readonly number[] = FLIP_EVERY): Flips {
   if (flips.shown === target) return flips;
   let shown = flips.shown, changed = false;
   const at = GROUPS.map(([from, to], g) => {
-    if (shown.slice(from, to) === target.slice(from, to) || now - flips.at[g] < FLIP_EVERY[from]) return flips.at[g];
+    if (shown.slice(from, to) === target.slice(from, to) || now - flips.at[g] < every[from]) return flips.at[g];
     shown = shown.slice(0, from) + target.slice(from, to) + shown.slice(to);
     changed = true;
     return now;

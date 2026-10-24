@@ -152,7 +152,7 @@ html[data-garden-return=place] .garden-prototype[data-state=loading] :is(.garden
    and the venue as they show; leaving, it all fades at once. */
 .garden-celebrate > * { opacity: 0; transition: opacity .7s ease; }
 .garden-celebrate.is-active > * { opacity: 1; }
-.garden-celebrate.is-active > :is(.garden-eyebrow, h2) { transition-delay: .6s; }
+.garden-celebrate.is-active > h2 { transition-delay: .6s; }
 .garden-celebrate.is-active > :is(.garden-venue, .garden-date) { transition-delay: .95s; }
 .garden-celebrate.is-active > .garden-button { transition-delay: 1.05s; }
 .garden-panel h2 { font: 400 clamp(48px, 5vw, 76px)/.98 'Cormorant Garamond', Georgia, serif; letter-spacing: -.045em; margin: 24px 0; }
@@ -232,8 +232,6 @@ html[data-garden-return=place] .garden-prototype[data-state=loading] :is(.garden
   .garden-venue { font-size: 19px; margin: 12px 0 4px; }
   .garden-date { font-size: 20px; }
   .garden-date .garden-voyage-digits { font-size: 27px; }
-  /* "Join us for the next milestone" on one line on a 320px phone. */
-  .garden-celebrate .garden-eyebrow { font-size: 10px; letter-spacing: .18em; }
   .garden-button { margin-top: 8px; padding: 15px 22px; }
 }
 /* Phones on their side: too short for the stacked copy, which ran off the

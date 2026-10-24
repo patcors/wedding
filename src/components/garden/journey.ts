@@ -9,7 +9,9 @@ export type EggId = 'balloon' | 'university' | 'snow-2019' | 'graduation' | 'syd
 // paced years the months have no pace of their own, so there a
 // milestone's room runs up to the next date (see YEAR). `hold` is how long its
 // date holds, in shares, where that isn't the usual (see HOLD).
-export type Milestone = { id: string; month: string; description: string; egg?: EggId; room?: number; hold?: number };
+// `digitsHold` is how long the running date's digits hold there, where that is
+// shorter than the scenery's hold (see digitsMonth).
+export type Milestone = { id: string; month: string; description: string; egg?: EggId; room?: number; hold?: number; digitsHold?: number };
 
 // When Amelia left FinoComp. Her flag changes as it shows (see FLAG_CHANGES
 // in storyBoats.ts).
@@ -55,7 +57,10 @@ export const MILESTONES: readonly Milestone[] = [
   { id: 'salsa', month: '2026-01', description: 'They start salsa classes.', room: .7 },
   { id: 'engaged', month: '2026-04', description: 'They get engaged.', room: .82 },
   // The last stretch rounds the bend to the wedding.
-  { id: 'turkey-greece', month: '2026-07', description: 'A trip to Turkey and Greece.', egg: 'balloon', room: 2.98 },
+  // The digits hold on its day as briefly as most dates', then roll on through
+  // the rest of its long room: held for its whole hold, a screen's scroll,
+  // the date stalled on 07-07-2026 (Amelia, October 2026).
+  { id: 'turkey-greece', month: '2026-07', description: 'A trip to Turkey and Greece.', egg: 'balloon', room: 2.98, digitsHold: .35 },
 ];
 
 export const DATES = { meet: '2017-07', sydney: '2021-02', leftFinoComp: AMELIA_LEFT_FINOCOMP, joinedHeirWealth: '2023-01', back: '2023-03', dating: '2024-08', engaged: '2026-04', wedding: '2027-04' } as const;
@@ -117,20 +122,25 @@ export const ROOM = (VOYAGE_END - ARRIVAL_END) / TOTAL_ROOM;
 // Story time at the start of the voyage, on each January of the paced years,
 // and at each milestone's date and the end of its hold; straight lines between.
 type Anchor = { p: number; m: number };
-const ANCHORS: Anchor[] = (() => {
+const anchorsWith = (hold: (milestone: Milestone) => number): Anchor[] => {
   const anchors = [{ p: ARRIVAL_END, m: monthIndex(VOYAGE_START) }];
   let p = ARRIVAL_END + START_ROOM * ROOM;
   for (let m = monthIndex(MILESTONES[0].month); m < monthIndex(DATES.wedding); m++) {
     const milestone = MILESTONES.find(({ month }) => monthIndex(month) === m);
     if (milestone) {
-      anchors.push({ p, m }, { p: p + holdOf(milestone) * ROOM, m });
+      anchors.push({ p, m }, { p: p + hold(milestone) * ROOM, m });
       p += roomOf(milestone) * ROOM;
     } else if (m % 12 === 0 && pacedYear(yearOf(m))) anchors.push({ p, m });
     p += pace(yearOf(m)) * ROOM;
   }
   anchors.push({ p, m: monthIndex(DATES.wedding) }, { p: VOYAGE_END, m: monthIndex(DATES.wedding) });
   return anchors;
-})();
+};
+const ANCHORS = anchorsWith(holdOf);
+// The running date's digits keep their own time: the same, but holding only
+// `digitsHold` where a milestone has one, so they move on while the scenery
+// still holds there. Every date still first shows at its own stop.
+const DIGIT_ANCHORS = anchorsWith(milestone => milestone.digitsHold ?? holdOf(milestone));
 
 // Piecewise-linear through points sorted by `from`.
 function interpolate<T>(points: T[], value: number, from: (point: T) => number, to: (point: T) => number) {
@@ -144,6 +154,8 @@ function interpolate<T>(points: T[], value: number, from: (point: T) => number, 
 
 // Continuous story time at progress p. Before the voyage it is the start, after it the wedding.
 export const storyMonth = (p: number) => interpolate(ANCHORS, p, a => a.p, a => a.m);
+// Story time for the running date's digits (digitDate), at progress p.
+export const digitsMonth = (p: number) => interpolate(DIGIT_ANCHORS, p, a => a.p, a => a.m);
 
 // The first progress at which story time reaches `month` (a 'YYYY-MM' string
 // or a story month). For a milestone, that's when its date first shows.

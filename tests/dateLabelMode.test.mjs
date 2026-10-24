@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  COUNT_PACE, DATE_LABEL_MODES, FLIP_EVERY, MET_ON, countTowards, digitLook, goesBack, startCount, MILESTONE_DAY, MILESTONE_DAYS, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
+  COUNT_PACE, DATE_LABEL_MODES, FLIP_EVERY, ROLL_EVERY, MET_ON, countTowards, digitLook, goesBack, startCount, MILESTONE_DAY, MILESTONE_DAYS, WEDDING_ON, dateLabelMode, digitDate, flipTowards, settledOn, shownDate, startFlips,
 } from '../src/components/garden/dateLabelMode.ts';
-import { ARRIVAL_END, MILESTONES, STOPS, VOYAGE_END, progressAt, storyMonth } from '../src/components/garden/journey.ts';
+import { ARRIVAL_END, MILESTONES, STOPS, VOYAGE_END, digitsMonth, progressAt, storyMonth } from '../src/components/garden/journey.ts';
 
 test('the date label rolls day by day unless the Review panel chose otherwise', () => {
-  assert.equal(dateLabelMode(null), 'count');
+  assert.equal(dateLabelMode(null), 'roll');
   for (const mode of Object.keys(DATE_LABEL_MODES)) assert.equal(dateLabelMode(mode), mode);
-  for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'count');
+  for (const stored of ['', 'month', 'toString', 'constructor']) assert.equal(dateLabelMode(stored), 'roll');
 });
 
 test('the four digit looks are flipping (as guests see it), no animation, rolling and rolling every day; the others are words', () => {
@@ -126,23 +126,40 @@ test('the digits\' days never run backwards and tick over a few at a time as the
 
 test('each digit flips on its own, no faster than its pace, never reads as a day or month that can\'t be, and settles once the scroll stops', () => {
   assert.ok(FLIP_EVERY[1] < FLIP_EVERY[4] && FLIP_EVERY[4] < FLIP_EVERY[9]);
-  // A very fast scroll: ten years in ten seconds at 60 frames a second.
-  let flips = startFlips(digitDate(0)), now = 0;
-  const flipped = FLIP_EVERY.map(() => -Infinity);
-  for (let frame = 0; frame <= 600; frame++, now += 1000 / 60) {
-    const next = flipTowards(flips, digitDate(frame * 123 / 600), now);
-    [...next.shown].forEach((c, i) => {
-      if (c === flips.shown[i]) return;
-      assert.ok(now - flipped[i] >= FLIP_EVERY[i], `digit ${i} flipped again after ${now - flipped[i]}ms`);
-      flipped[i] = now;
-    });
-    const [d, m] = next.shown.split('-').map(Number);
-    assert.ok(d >= 1 && d <= 31 && m >= 1 && m <= 12, next.shown);
-    flips = next;
+  assert.deepEqual(ROLL_EVERY, FLIP_EVERY.map(ms => ms / 2), 'rolling at twice the pace');
+  // A very fast scroll: ten years in ten seconds at 60 frames a second, at the flip clock's pace and the rolling one's.
+  for (const every of [FLIP_EVERY, ROLL_EVERY]) {
+    let flips = startFlips(digitDate(0)), now = 0;
+    const flipped = every.map(() => -Infinity);
+    for (let frame = 0; frame <= 600; frame++, now += 1000 / 60) {
+      const next = flipTowards(flips, digitDate(frame * 123 / 600), now, every);
+      [...next.shown].forEach((c, i) => {
+        if (c === flips.shown[i]) return;
+        assert.ok(now - flipped[i] >= every[i], `digit ${i} flipped again after ${now - flipped[i]}ms`);
+        flipped[i] = now;
+      });
+      const [d, m] = next.shown.split('-').map(Number);
+      assert.ok(d >= 1 && d <= 31 && m >= 1 && m <= 12, next.shown);
+      flips = next;
+    }
+    const settled = now;
+    for (; flips.shown !== '16-04-2027' && now < settled + 1000; now += 1000 / 60) flips = flipTowards(flips, '16-04-2027', now, every);
+    assert.equal(flips.shown, '16-04-2027');
+    assert.ok(now - settled <= Math.max(...every) + 17);
+    assert.equal(flipTowards(flips, '16-04-2027', now + 1000, every), flips);
   }
-  const settled = now;
-  for (; flips.shown !== '16-04-2027' && now < settled + 1000; now += 1000 / 60) flips = flipTowards(flips, '16-04-2027', now);
-  assert.equal(flips.shown, '16-04-2027');
-  assert.ok(now - settled <= Math.max(...FLIP_EVERY) + 17);
-  assert.equal(flipTowards(flips, '16-04-2027', now + 1000), flips);
+});
+
+test('through the trip the digits roll on from 07-07-2026 while the scenery still holds, and keep the story\'s time everywhere else', () => {
+  const trip = progressAt('2026-07'), stepP = 1e-5;
+  let left = null, last = -Infinity;
+  for (let p = ARRIVAL_END; p <= VOYAGE_END; p += stepP) {
+    const m = digitsMonth(p);
+    assert.ok(m >= last - 1e-9, `the digits never go back (${p.toFixed(5)})`);
+    last = m;
+    if (p < trip) assert.ok(Math.abs(m - storyMonth(p)) < 1e-9, `before the trip, the story's time (${p.toFixed(5)})`);
+    if (p > trip && left === null && digitDate(m) !== '07-07-2026') left = p;
+  }
+  assert.equal(digitDate(digitsMonth(trip + stepP)), '07-07-2026', 'the trip\'s day shows at its stop');
+  assert.ok(left !== null && storyMonth(left) === storyMonth(trip), 'leaves 07-07-2026 while the scenery still holds the trip');
 });

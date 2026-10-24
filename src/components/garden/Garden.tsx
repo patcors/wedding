@@ -11,11 +11,11 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './skyStyle';
 import { WATERS, type WaterStyle } from './skyCycle';
-import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, scrollAtProgress, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
+import { chapterAt, dateLabel, digitsMonth, milestoneAt, nextStop, previousStop, progressAt, scrollAtProgress, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
 import { PLACE_KEY, placeToKeep, placeToReopen, progressFor, scrollFor } from './voyagePlace';
-import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, WEDDING_ON, countTowards, dateLabelMode, digitDate, digitLook, flipTowards, goesBack, shownDate, startCount, startFlips, type DateLabelMode, type DigitLook } from './dateLabelMode';
+import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, ROLL_EVERY, WEDDING_ON, countTowards, dateLabelMode, digitDate, digitLook, flipTowards, goesBack, shownDate, startCount, startFlips, type DateLabelMode, type DigitLook } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices';
@@ -231,14 +231,15 @@ function Crossfade({ value, className }: { value: string; className: string }) {
 // The date as DD-MM-YYYY, read from the eased story time every frame. Each
 // digit changes on its own: flipping over like an old flip clock's cards
 // (`look` flip, Review only), simply changing (blink, Review only), or
-// rolling like a cryptex's ring (roll, Review only, and count, as guests see
-// it). The rings
-// turn on round and round, never back through their numbers: down while the
-// story goes on and up while it goes back, whichever way the digit's own
-// number moves. Flip, blink and roll change the day, the month and the year
-// each together, no faster than their pace (FLIP_EVERY), so a fast scroll
-// flicks the days without strobing; count steps a day at a time, skipping
-// only what keeps it within two weeks of the story (countTowards). Under reduced motion each still's date simply shows.
+// rolling like a cryptex's ring (roll, as guests see it, and count, Review
+// only). The rings turn on round and round, never back through their
+// numbers: down while the story goes on and up while it goes back, whichever
+// way the digit's own number moves. Flip, blink and roll change the day, the
+// month and the year each together, no faster than their pace (FLIP_EVERY,
+// and twice that for roll, ROLL_EVERY), so a fast scroll flicks the days
+// without strobing; count steps a day at a time, skipping only what keeps it
+// within two weeks of the story (countTowards). Under reduced motion each
+// still's date simply shows.
 type Digits = { shown: string; was: string[]; turns: number[]; back: boolean[]; time: number[] };
 function DigitClock({ month, reduced, look }: { month: () => number; reduced: boolean; look: DigitLook }) {
   const digits = useRef<Digits | null>(null);
@@ -262,8 +263,9 @@ function DigitClock({ month, reduced, look }: { month: () => number; reduced: bo
         count = countTowards(count, target, now);
         shown = count.shown, time = () => count.step;
       } else {
-        flips = flipTowards(flips, target, now);
-        shown = flips.shown, time = i => FLIP_EVERY[i];
+        const every = look === 'roll' ? ROLL_EVERY : FLIP_EVERY;
+        flips = flipTowards(flips, target, now, every);
+        shown = flips.shown, time = i => every[i];
       }
       if (shown !== current.shown) {
         // Counting, the digits roll the way the date they show moves.
@@ -500,7 +502,8 @@ export default function Garden() {
   useEffect(() => { if (REVIEW) setInverted(scrollInverted(localStorage.getItem(REVIEW_SCROLL))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   // Under reduced motion the scene shows each milestone's still, so the date shows its day too.
-  const easedMonth = useCallback(() => storyMonth(reduced ? stillProgress(voyage.pace.progress) : voyage.pace.progress), [voyage.pace, reduced]);
+  // The digits keep their own time (digitsMonth), rolling on through the trip's long hold.
+  const easedMonth = useCallback(() => reduced ? storyMonth(stillProgress(voyage.pace.progress)) : digitsMonth(voyage.pace.progress), [voyage.pace, reduced]);
   const docksDate = digitLook(dateMode) !== null;
   const runningDate = useDockedDate(docksDate);
   // Optional sound (soundChoices.ts), off by default: the Review panel's
@@ -629,7 +632,6 @@ export default function Garden() {
       </div>
 
       <section className={`garden-panel garden-celebrate ${chapter === 2 ? 'is-active' : ''}`} inert={chapter !== 2 || sceneOnly} aria-hidden={chapter !== 2 || sceneOnly}>
-        <p className="garden-eyebrow">Join us for the next milestone</p>
         <h2>We’re getting<br /><em>married!</em></h2>
         <p className="garden-venue">Jasper’s Berry, NSW</p>
         {/* The wedding's date as the running date shows it, which comes down
