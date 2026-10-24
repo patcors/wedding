@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LAUNCH_JETTY, groundHeight, launchJetties, random, voyageLandmarks } from './gardenGeometry.ts';
+import { DOCKED } from './journey.ts';
+import { CATAMARAN, boatPose } from './storyBoats.ts';
 
 // `beyond`: where the head ends, from the jetty's reach. It ran .25 past it,
 // and the moored catamaran's near hull ran in under the head's end with the
@@ -10,6 +12,11 @@ import { LAUNCH_JETTY, groundHeight, launchJetties, random, voyageLandmarks } fr
 // a little short and the catamaran moors a little further out, so the hull
 // lies a hand's width off it (tests/storyBoats.test.mjs).
 export const JETTY = { deck: .36, breadth: .95, landing: 1.3, head: 2.5, headDepth: .62, beyond: -.05 } as const;
+// Where the jetty's mooring lines meet the moored catamaran, in model units:
+// the near edge of its deck (VoyageBoats' planks run CATAMARAN + .07 out and
+// ±.71 along, their tops at .23), a little in from its ends; and how low the
+// lines dip between.
+const MOORING_LINE = { edge: CATAMARAN + .06, deck: .23, along: .6, sag: .05 } as const;
 
 // A small weathered jetty: planks laid across two bearers on pairs of piles,
 // running from a landing on the bank out to a T-shaped head where the
@@ -55,12 +62,15 @@ export function jettyGeometry(width = 1) {
     for (const z of [-head - .02, head + .02]) pile(along, z, JETTY.deck + (along === end - .08 && z < 0 ? .95 : .02));
   }
   // Bollards near each end of the head, with mooring lines dipping slackly
-  // down to the catamaran's near hull, which lies just off the head.
+  // across the gap to the near edge of the moored catamaran's deck. They ran
+  // on out under its deck (Amelia, October 2026).
+  const moored = boatPose(DOCKED, width), c = Math.cos(moored.yaw), s = Math.sin(moored.yaw);
   for (const z of [-head + .28, head - .28]) {
     add(new THREE.CylinderGeometry(.06, .075, .2, 8), end - .2, JETTY.deck + .1, z, '#5d5142');
     const from = new THREE.Vector3(worldX(end - .2), JETTY.deck + .17, jetty.z + z);
-    const to = new THREE.Vector3(worldX(jetty.reach + .55), .22, jetty.z + z * 1.25);
-    const middle = from.clone().lerp(to, .5).setY(Math.min(from.y, to.y) - .1);
+    const u = jetty.side * MOORING_LINE.edge * moored.scale, v = Math.sign(z) * MOORING_LINE.along * moored.scale;
+    const to = new THREE.Vector3(moored.x + c * u + s * v, MOORING_LINE.deck * moored.scale - .02, moored.z - s * u + c * v);
+    const middle = from.clone().lerp(to, .5).setY(Math.min(from.y, to.y) - MOORING_LINE.sag);
     const line = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(from, middle, to), 8, .014, 4, false);
     line.translate(-worldX(0), 0, -jetty.z);
     add(line, 0, 0, 0, '#cbbd9c');
