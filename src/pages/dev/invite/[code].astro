@@ -4,8 +4,9 @@
 // invites/out/<code>.png. getStaticPaths returns nothing in a production
 // build, so this page never reaches patrickandamelia.com.
 //
-// ?crop=<name in CROPS> picks a crop; ?photo=none leaves the photograph out.
-// (Read in the browser: a static page never sees its query string.)
+// ?style=<name in STYLES> tries another look, ?crop=<name in CROPS> another
+// crop, and ?photo=none leaves the photograph out. (Read in the browser: a
+// static page never sees its query string.)
 import { parties, type Party } from '../../../data/parties';
 
 export function getStaticPaths() {
@@ -14,17 +15,135 @@ export function getStaticPaths() {
 
 // The words. Caps lines are set in caps by the CSS, so write them normally.
 const COPY = {
-  invited: ['You’re', 'invited'], // caps, then the script accent
-  lead: 'To the wedding of',
-  couple: ['Patrick', 'Amelia'],  // joined by a script &
+  headline: ['You’re invited', 'to the wedding of'], // two lines, unless a style sets headline: 'one'
+  couple: ['Patrick', 'Amelia'],
   date: '16 April 2027',
   venue: 'Jasper’s Berry',
   town: 'Berry, NSW',
+  region: 'NSW', // venue: 'one' sets "Jasper’s Berry · NSW" on one line instead of the town
 };
 
-// Two typefaces from Google Fonts: the site's serif, and a script for the accents.
+// Two typefaces from Google Fonts: the site's serif, and one script per style.
+// ?script=<name> (or pnpm invites --script=<name>) swaps the script in any
+// style, sized so it looks as big as the style's own script did.
+// `stroke` thins a font by outlining it in the page colour; `scale` nudges
+// the automatic sizing when a font still looks too big or small.
 const SERIF = 'Cormorant Garamond';
-const SCRIPT = 'Monsieur La Doulaise';
+const SCRIPTS: Record<string, { family?: string, stroke?: string, scale?: number }> = {
+  'Great Vibes': {},
+  'Great Vibes Thin': { family: 'Great Vibes', stroke: '.45px' },
+  'Monsieur La Doulaise': { scale: .82 }, // its lowercase is tiny next to its capitals
+  'MonteCarlo': {},
+  'Imperial Script': {},
+  'Corinthia': {},
+  'Italianno': {},
+  'Ephesis': {},
+};
+
+// Each style is a complete look. STYLE is the one pnpm invites renders.
+//   greeting: caps (small spaced capitals) | italic (serif italic) | script
+//   names:    caps (spaced capitals) | serif (large title case) | script
+//   amp:      script | italic (serif italic) | serif
+//   headline: two (default) | one line
+// vars override the CSS variables at the top of the <style>.
+const V5 = { page: '#fdf9ea', ink: '#4e3324', headline: '120px', names: '104px', 'names-weight': '500', 'photo-width': '860px', 'photo-height': '430px' };
+// caps' names and headline, shared with photo-first.
+const CAPS = { 'greeting-size': 'var(--middle)', names: '88px', 'line-gap': '-30px', 'line2-shift': '70px', 'amp-size': '1.75em', 'amp-left': '0em', 'amp-right': '.12em', 'amp-drop': '.14em' };
+const STYLES: Record<string, { script: string, vars: Record<string, string>, [option: string]: string | Record<string, string> }> = {
+  // v2's structure in cream and espresso. Identical to vibes except the script.
+  monsieur: {
+    script: 'Monsieur La Doulaise', greeting: 'caps', names: 'caps', amp: 'script',
+    vars: { page: '#fdfbf3', ink: '#2e211a', headline: '108px', names: '74px' },
+  },
+  vibes: {
+    script: 'Great Vibes', greeting: 'caps', names: 'caps', amp: 'script',
+    vars: { page: '#fdfbf3', ink: '#2e211a', headline: '84px', names: '74px', 'amp-size': '1.3em', 'amp-space': '.1em' },
+  },
+  // Buttery page, warm chocolate, names in large title-case serif with an italic &.
+  butter: {
+    script: 'Monsieur La Doulaise', greeting: 'italic', names: 'serif', amp: 'italic',
+    vars: { page: '#fbf4dc', ink: '#4e3324', headline: '100px', names: '104px', 'names-weight': '500', 'greeting-size': '40px' },
+  },
+  // Amelia's picks: gilded's page, butter's names and greeting (larger), a smaller Great Vibes headline.
+  combo: {
+    script: 'Great Vibes', greeting: 'italic', names: 'serif', amp: 'italic',
+    vars: { page: '#fdf9ea', ink: '#4e3324', headline: '66px', names: '104px', 'names-weight': '500', 'greeting-size': '54px' },
+  },
+  // Olive-brown, and the names in script too: the most romantic, least formal.
+  flourish: {
+    script: 'Great Vibes', greeting: 'caps', names: 'script', amp: 'script', headline: 'one',
+    vars: { page: '#fcf9ec', ink: '#453c2a', headline: '60px', names: '128px', 'greeting-spacing': '.4em' },
+  },
+  // Light caps with wide spacing, the greeting in script, & and date in muted gold.
+  gilded: {
+    script: 'Monsieur La Doulaise', greeting: 'script', names: 'caps', amp: 'script',
+    vars: {
+      page: '#fdf9ea', ink: '#36251a', accent: '#a07f45', headline: '100px', names: '60px',
+      'names-weight': '500', 'names-spacing': '.2em', 'greeting-size': '64px',
+    },
+  },
+  // A big script headline over small spaced caps, a plain serif &, sage date.
+  sage: {
+    script: 'Great Vibes', greeting: 'caps', names: 'caps', amp: 'serif',
+    vars: {
+      page: '#fbf6e2', ink: '#503a2c', accent: '#76825f', headline: '96px', names: '50px',
+      'names-spacing': '.3em', 'greeting-spacing': '.36em',
+    },
+  },
+
+  // v5: the grouped layout. Script only on "You’re invited", three serif sizes
+  // (names 104, greeting or date 44, small capitals 32), at most three
+  // treatments, a warmer and closer photo, and the logo signing off the details.
+  //   greeting: also dear ("Dear Dean & Kelly," in italic)
+  //   names:    also italic
+  //   headline: mixed (script "You’re invited" over small capitals)
+  //   date:     plain | caps | italic          venue: one ("Jasper’s Berry · NSW") | two
+  //   photo:    torn | arch                    order: words-first | photo-first
+  // Closest to the Jack & Nat reference: small caps greeting, script & in title-case names.
+  lockup: {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'caps', headline: 'mixed', names: 'serif', amp: 'script',
+    date: 'plain', venue: 'one', crop: 'close',
+    vars: { ...V5, 'greeting-size': 'var(--small)' },
+  },
+  // Names in capitals with a big script & between them; the script headline
+  // overlaps the capitals under it, like "SAVE the DATE".
+  caps: {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'dear', headline: 'mixed', names: 'caps', amp: 'script',
+    date: 'caps', venue: 'one', crop: 'close',
+    vars: { ...V5, ...CAPS, 'lockup-bottom': '19px' },
+  },
+  // caps' tucked headline over lockup's title-case names, with more room above the photo's hands.
+  tucked: {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'dear', headline: 'mixed', names: 'serif', amp: 'script',
+    date: 'plain', venue: 'one', crop: 'roomy',
+    vars: { ...V5, 'greeting-size': 'var(--middle)', 'line-gap': '-30px', 'line2-shift': '70px', rim: 'transparent' }, // no paper edge behind the tear
+  },
+  // tucked with lockup's small capitals greeting: three treatments instead of four.
+  'tucked-caps': {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'caps', headline: 'mixed', names: 'serif', amp: 'script',
+    date: 'plain', venue: 'one', crop: 'roomy',
+    vars: { ...V5, 'greeting-size': 'var(--small)', 'line-gap': '-30px', 'line2-shift': '70px' },
+  },
+  // A letter: "Dear Dean & Kelly," in italic, quieter italic names, a smaller photo, more air.
+  salutation: {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'dear', headline: 'mixed', names: 'italic', amp: 'italic',
+    date: 'italic', venue: 'one', crop: 'close', salutation: 'left',
+    vars: { ...V5, 'greeting-size': 'var(--middle)', names: '88px', 'photo-width': '700px', 'photo-height': '320px', gap: '84px', 'lockup-bottom': '-9px' },
+  },
+  // caps' words (the strongest of the three) over an arched photo instead of torn paper.
+  arch: {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'dear', headline: 'mixed', names: 'caps', amp: 'script',
+    date: 'caps', venue: 'one', photo: 'arch', crop: 'arch',
+    vars: { ...V5, ...CAPS, 'photo-width': '420px', 'photo-height': '460px', gap: '56px', 'lockup-bottom': '23px' },
+  },
+  // The torn photo first, bleeding off both sides, then lockup's words and the details.
+  'photo-first': {
+    script: 'Great Vibes Thin', layout: 'grouped', greeting: 'caps', headline: 'mixed', names: 'serif', amp: 'script',
+    date: 'plain', venue: 'one', order: 'photo-first', crop: 'bleed',
+    vars: { ...V5, 'greeting-size': 'var(--small)', 'photo-width': '1110px', 'photo-height': '450px', 'lockup-bottom': '20px' },
+  },
+};
+const STYLE: keyof typeof STYLES = 'tucked';
 
 // The photograph is cropped into a PHOTO_WIDTH × PHOTO_HEIGHT box with torn
 // top and bottom edges. In each crop, `focus` is a point in the photo (0–1
@@ -33,6 +152,10 @@ const SCRIPT = 'Monsieur La Doulaise';
 const CROPS = {
   centred: { file: 'gerringong-film-10.jpg', focus: [0.52, 0.52], at: [0.5, 0.56], zoom: 1 },
   offset: { file: 'gerringong-film-10.jpg', focus: [0.52, 0.52], at: [0.36, 0.55], zoom: 1.15 },
+  close: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.49], zoom: 1.35 }, // less sky, the couple bigger
+  roomy: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.56], zoom: 1.2 }, // close, with more room above the hands
+  bleed: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.5], zoom: 1.1 }, // photo-first's full-width strip
+  arch: { file: 'gerringong-film-10.jpg', focus: [0.53, 0.512], at: [0.5, 0.56], zoom: 2.9 },
 };
 const CROP: keyof typeof CROPS = 'centred';
 const PHOTO_ALT = 'Patrick twirling Amelia on a green hillside at golden hour';
@@ -77,10 +200,12 @@ const rimMask = mask(tornPath(PHOTO_TEAR.rim, 4));
 
 const { party } = Astro.props as { party: Party };
 const BASE = import.meta.env.BASE_URL;
-const fonts = `https://fonts.googleapis.com/css2?family=${SERIF.replaceAll(' ', '+')}:wght@500;600&family=${SCRIPT.replaceAll(' ', '+')}&display=block`;
-const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`500 1em "${SERIF}"`, `600 1em "${SERIF}"`, `1em "${SCRIPT}"`] };
+const family = (name: string) => `family=${name.replaceAll(' ', '+')}`;
+const families = [...new Set(Object.entries(SCRIPTS).map(([name, script]) => script.family ?? name))];
+const fonts = `https://fonts.googleapis.com/css2?${family(SERIF)}:ital,wght@0,500;0,600;1,400;1,500&${families.map(family).join('&')}&display=block`;
+const settings = { styles: STYLES, style: STYLE, scripts: SCRIPTS, serif: SERIF, crops: CROPS, crop: CROP, photos: `${BASE}photos/`, logo: `${BASE}logo.png` };
 ---
-<html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px; --serif: '${SERIF}', Georgia, serif; --script: '${SCRIPT}', cursive`}>
+<html lang="en" style={`--invite-width: ${WIDTH}px; --invite-height: ${HEIGHT}px; --photo-width: ${PHOTO_WIDTH}px; --photo-height: ${PHOTO_HEIGHT}px; --serif: '${SERIF}', Georgia, serif; --logo: url(${BASE}logo.png)`}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content={`width=${WIDTH}`} />
@@ -92,28 +217,46 @@ const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`
   </head>
   <body>
     <main class="invite">
-      <p class="small caps greeting"><span data-fit>{party.greeting}</span></p>
-      <h1 class="big caps">{COPY.invited[0]} <em>{COPY.invited[1]}</em></h1>
-      <p class="small caps">{COPY.lead}</p>
-      <p class="big caps">{COPY.couple[0]} <em>&amp;</em> {COPY.couple[1]}</p>
-      <figure class="photo" style={`width: ${PHOTO_WIDTH}px; height: ${PHOTO_HEIGHT}px; --photo-mask: ${photoMask}; --rim-mask: ${rimMask}`}>
+      <div class="group lockup">
+        <p class="greeting"><span data-fit><span class="dear">Dear </span>{party.greeting}<span class="comma">,</span></span></p>
+        <h1 class="headline">{COPY.headline.map((line, i) => <>{i > 0 && <> <br /></>}<span class={`line line-${i + 1}`}>{line.split('’').map((part, j) => <>{j > 0 && <span class="apostrophe">’</span>}{part}</>)}</span></>)}</h1>
+        <p class="names"><span>{COPY.couple[0]}</span> <em>&amp;</em> <span>{COPY.couple[1]}</span></p>
+      </div>
+      <figure class="photo" style={`--photo-mask: ${photoMask}; --rim-mask: ${rimMask}`}>
         <div class="rim"></div>
         <div class="frame"><img alt={PHOTO_ALT} /></div>
       </figure>
-      <p class="date">{COPY.date}</p>
-      <p class="small caps">{COPY.venue}</p>
-      <p class="small">{COPY.town}</p>
-      <img class="logo" src={`${BASE}logo.png`} alt="P A" />
+      <div class="group details">
+        <p class="date">{COPY.date}</p>
+        <p class="venue">{COPY.venue}<span class="region"> · {COPY.region}</span></p>
+        <p class="town">{COPY.town}</p>
+        <div class="logo" role="img" aria-label="P A"></div>
+      </div>
     </main>
     <script is:inline define:vars={{ settings }}>
       // make-invites.mjs waits on this before its screenshot: the photo is
       // cropped, fonts and images are in, and the greeting fits on one line.
       window.inviteReady = (async () => {
         const params = new URLSearchParams(location.search);
+        const style = settings.styles[params.get('style') || settings.style];
+        if (!style) throw new Error(`No style called ${params.get('style')}`);
+        const scriptName = params.get('script') || style.script;
+        const script = settings.scripts[scriptName];
+        if (!script) throw new Error(`No script called ${scriptName}`);
+        const scriptFamily = script.family ?? scriptName;
+        const root = document.documentElement;
+        Object.assign(root.dataset, {
+          greeting: style.greeting, names: style.names, amp: style.amp, headline: style.headline ?? 'two',
+          layout: style.layout ?? 'classic', salutation: style.salutation ?? 'centred', date: style.date ?? 'spaced', venue: style.venue ?? 'two', photo: style.photo ?? 'torn', order: style.order ?? 'words-first',
+          script: scriptFamily.toLowerCase().replaceAll(' ', '-'),
+        });
+        root.style.setProperty('--script', `'${scriptFamily}', cursive`);
+        root.style.setProperty('--script-stroke', script.stroke ?? '0');
+        for (const [name, value] of Object.entries(style.vars)) root.style.setProperty(`--${name}`, value);
         const figure = document.querySelector('.photo');
         if (params.get('photo') === 'none') figure.remove();
         else {
-          const crop = settings.crops[params.get('crop') || settings.crop];
+          const crop = settings.crops[params.get('crop') || style.crop || settings.crop];
           if (!crop) throw new Error(`No crop called ${params.get('crop')}`);
           const img = figure.querySelector('img');
           img.src = settings.photos + crop.file;
@@ -129,10 +272,27 @@ const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`
           });
         }
         const text = document.body.textContent;
-        const loaded = await Promise.all(settings.faces.map(face => document.fonts.load(face, text)));
-        const missing = settings.faces.filter((_, i) => !loaded[i].length);
+        const ownFamily = settings.scripts[style.script].family ?? style.script;
+        const faces = [`500 1em "${settings.serif}"`, `600 1em "${settings.serif}"`, `italic 400 1em "${settings.serif}"`, `1em "${scriptFamily}"`, `1em "${ownFamily}"`];
+        const loaded = await Promise.all(faces.map(face => document.fonts.load(face, text)));
+        const missing = faces.filter((_, i) => !loaded[i].length);
         if (missing.length) throw new Error(`Fonts did not load: ${missing.join(', ')}`);
-        await Promise.all([...document.images].map(img => img.decode().catch(() => { throw new Error(`Image did not load: ${img.src}`); })));
+        if (scriptFamily !== ownFamily) {
+          // Match how big the headline looks, not its font-size: average the
+          // ratios of lowercase height and of the headline's width.
+          const headline = document.querySelector('.headline');
+          const context = document.createElement('canvas').getContext('2d');
+          const measure = family => {
+            context.font = `100px "${family}"`;
+            return { x: context.measureText('nmeoaw').actualBoundingBoxAscent, width: context.measureText(headline.textContent).width };
+          };
+          const own = measure(ownFamily), swapped = measure(scriptFamily);
+          const ratio = Math.sqrt(own.x / swapped.x * own.width / swapped.width) * (script.scale ?? 1) / (settings.scripts[style.script].scale ?? 1);
+          root.style.setProperty('--headline', `${parseFloat(getComputedStyle(root).getPropertyValue('--headline')) * ratio}px`);
+        }
+        const logo = new Image();
+        logo.src = settings.logo; // drawn as a CSS mask, so it isn't in document.images
+        await Promise.all([...document.images, logo].map(img => img.decode().catch(() => { throw new Error(`Image did not load: ${img.src}`); })));
         for (const line of document.querySelectorAll('[data-fit]')) {
           const box = line.parentElement;
           let size = parseFloat(getComputedStyle(box).fontSize);
@@ -143,42 +303,129 @@ const settings = { crops: CROPS, crop: CROP, photos: `${BASE}photos/`, faces: [`
     </script>
     <style is:global>
       :root {
-        --page: #fdfcf8;
-        --rim: #ede8dc;       /* the torn paper showing around the photo */
-        --ink: #384135;
-        --big: 76px;          /* YOU’RE, PATRICK, AMELIA */
-        --script-size: 120px; /* invited, & */
+        --page: #fdfbf3;
+        --ink: #2e211a;
+        --accent: var(--ink);   /* the & and the date */
+        --rim: color-mix(in srgb, var(--page) 88%, var(--ink)); /* torn paper around the photo */
+        --greeting-size: 26px;
+        --greeting-spacing: .3em;
+        --headline: 92px;       /* the script headline */
+        --names: 74px;
+        --names-weight: 600;
+        --names-spacing: .03em;
+        --amp-size: 1.45em;     /* relative to the names */
         --date: 46px;
-        --small: 26px;        /* every other line */
-        --logo-width: 64px;
+        --small: 26px;          /* venue and town */
+        --logo-width: 72px;
+        --photo-filter: none;
       }
       html, body { margin: 0; width: var(--invite-width); height: var(--invite-height); overflow: hidden; background: var(--page); }
       body { -webkit-font-smoothing: antialiased; }
       .invite {
-        box-sizing: border-box; height: 100%; padding: 0 80px 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        box-sizing: border-box; height: 100%; padding: 0 80px 130px; display: flex; flex-direction: column; align-items: center; justify-content: center;
         color: var(--ink); font-family: var(--serif); font-weight: 500; text-align: center;
       }
       p, h1, figure { margin: 0; }
-      .caps { text-transform: uppercase; }
-      .small { font-size: var(--small); line-height: 1.5; letter-spacing: .26em; margin-right: -.26em; }
-      .greeting { align-self: stretch; }
-      .greeting span { display: inline-block; white-space: nowrap; }
-      .big { font-size: var(--big); line-height: 1; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
-      .big em {
-        font: normal 400 var(--script-size)/0 var(--script); text-transform: none; letter-spacing: 0;
-        position: relative; top: .04em; margin: 0 -.04em;
-      }
-      h1 em { margin-left: .14em; }
-      .greeting + .big { margin-top: 44px; }
-      .big + .small { margin-top: 50px; }
-      .small + .big { margin-top: 44px; }
-      .photo { position: relative; margin: 56px 0 40px; }
+
+      .greeting { align-self: stretch; font-size: var(--greeting-size); line-height: 1.3; }
+      .greeting [data-fit] { display: inline-block; white-space: nowrap; }
+      .dear, .comma, .region { display: none; }
+      .group { display: contents; } /* only the grouped layout lays these out as blocks */
+      [data-greeting='caps'] .greeting { text-transform: uppercase; letter-spacing: var(--greeting-spacing); margin-right: calc(-1 * var(--greeting-spacing)); }
+      [data-greeting='italic'] .greeting { font-style: italic; font-weight: 400; letter-spacing: .02em; }
+      [data-greeting='script'] .greeting { font-family: var(--script); font-weight: 400; line-height: 1.1; }
+
+      .headline { margin-top: 30px; font: 400 var(--headline)/1.06 var(--script); white-space: nowrap; -webkit-text-stroke: var(--script-stroke) var(--page); }
+      [data-headline='one'] .headline br { display: none; }
+      /* Monsieur La Doulaise sets its apostrophe wide: "You ’re". */
+      [data-script='monsieur-la-doulaise'] .apostrophe { margin: 0 -.04em 0 -.32em; }
+      /* Great Vibes leaves a gap after its apostrophe: "You’ re". */
+      [data-script='great-vibes'] .apostrophe { margin-right: -.08em; }
+
+      .names { margin-top: 36px; font-size: var(--names); line-height: 1; white-space: nowrap; }
+      .names em { font-style: normal; color: var(--accent); }
+      [data-names='caps'] .names { text-transform: uppercase; font-weight: var(--names-weight); letter-spacing: var(--names-spacing); margin-right: calc(-1 * var(--names-spacing)); }
+      [data-names='serif'] .names { font-weight: var(--names-weight); letter-spacing: -.01em; }
+      [data-names='script'] .names { font-family: var(--script); font-weight: 400; line-height: 1.1; }
+      [data-amp='script'] .names em { font: 400 var(--amp-size)/0 var(--script); letter-spacing: 0; position: relative; top: .04em; margin: 0 var(--amp-space, .02em); }
+      [data-names='script'] .names em { font-size: 1em; }
+      [data-amp='italic'] .names em { font-style: italic; font-weight: 400; }
+      [data-amp='serif'] .names em { font-weight: 500; }
+
+      .photo { position: relative; flex: none; width: var(--photo-width); height: var(--photo-height); margin: 46px 0 34px; }
       .photo > * { position: absolute; inset: 0; mask: var(--mask) center / 100% 100% no-repeat; }
       .rim { --mask: var(--rim-mask); background: var(--rim); }
       .frame { --mask: var(--photo-mask); overflow: hidden; }
-      .frame img { position: absolute; display: block; }
-      .date { font-variant-numeric: lining-nums; font-size: var(--date); letter-spacing: .14em; margin: 0 -.14em 22px 0; }
-      .logo { position: absolute; bottom: 64px; width: var(--logo-width); height: auto; opacity: .85; }
+      .frame img { position: absolute; display: block; filter: var(--photo-filter); }
+      .date { font-variant-numeric: lining-nums; font-size: var(--date); letter-spacing: .14em; margin: 0 -.14em 22px 0; color: var(--accent); }
+      .venue, .town { font-size: var(--small); line-height: 1.5; letter-spacing: .26em; margin-right: -.26em; }
+      .venue { text-transform: uppercase; }
+      /* logo.png recoloured to the text colour: the PNG is only a mask. */
+      .logo { position: absolute; bottom: 60px; width: var(--logo-width); aspect-ratio: 284 / 192; background: var(--ink); mask: var(--logo) center / contain no-repeat; }
+
+      /* The grouped layout (lockup, caps, salutation, arch, photo-first): three
+         groups (the words, the photo, the details) with equal gaps between them.
+         Three serif sizes only: --names, --middle (greeting or date) and --small. */
+      [data-layout='grouped'] {
+        --names: 104px; --middle: 44px; --small: 32px; --date: var(--middle);
+        --caps-spacing: .1em;     /* every line of capitals */
+        --gap: 72px;              /* between the three groups */
+        --lift: 16px;             /* the block sits this much above the true centre */
+        --greeting-gap: 30px; --line-gap: 6px; --names-gap: 22px;
+        --venue-gap: 14px; --logo-gap: 40px; --logo-width: 76px;
+        --amp-size: 1.3em; --amp-drop: .06em; --amp-left: .02em; --amp-right: .1em; /* Great Vibes' & reaches right */
+        --line2-shift: 0px;       /* moves "TO THE WEDDING OF" sideways, to nest it beside the Y's swash */
+        --headline-shift: -12px;    /* nudges the script line sideways when its swashes pull it off centre */
+        --rim: color-mix(in srgb, var(--page) 66%, #e2c99a); /* warm light paper, not grey */
+        --photo-filter: sepia(.14) saturate(1.04) brightness(1.02);
+      }
+      [data-layout='grouped'] .invite { padding: 0 60px calc(2 * var(--lift)); gap: var(--gap); }
+      [data-layout='grouped'] .group { display: flex; flex-direction: column; align-items: center; align-self: stretch; }
+      [data-layout='grouped'] .lockup { margin: var(--lockup-top, 0px) 0 var(--lockup-bottom, 0px); } /* evens out the gaps the & and swashes leave */
+      [data-layout='grouped'] .photo { margin: 0; }
+      [data-order='photo-first'] .photo { order: -1; }
+
+      [data-layout='grouped'] .greeting { margin-bottom: var(--greeting-gap); line-height: 1.2; }
+      [data-layout='grouped'][data-greeting='caps'] .greeting { --greeting-spacing: var(--caps-spacing); }
+      [data-greeting='dear'] .greeting { font-style: italic; font-weight: 400; }
+      [data-greeting='dear'] .dear, [data-greeting='dear'] .comma { display: inline; }
+      /* A letter's salutation: flush left, in line with the photo's left edge. */
+      [data-salutation='left'] .greeting { text-align: left; padding-left: calc((100% - var(--photo-width)) / 2); }
+      [data-layout='grouped'][data-greeting='italic'] .greeting, [data-layout='grouped'][data-greeting='dear'] .greeting { letter-spacing: 0; }
+
+      /* "You’re invited" in script, "TO THE WEDDING OF" in small capitals. */
+      [data-headline='mixed'] .headline { margin: 0; line-height: 1; white-space: normal; -webkit-text-stroke: 0; }
+      [data-headline='mixed'] .headline br { display: none; }
+      [data-headline='mixed'] .line { display: block; white-space: nowrap; }
+      [data-headline='mixed'] .line-1 { font-size: var(--headline); line-height: 1.12; -webkit-text-stroke: var(--script-stroke) var(--page); position: relative; left: var(--headline-shift); }
+      [data-headline='mixed'] .line-2 {
+        position: relative; left: var(--line2-shift); margin: var(--line-gap) calc(-1 * var(--caps-spacing)) 0 0;
+        font: 500 var(--small)/1.2 var(--serif); text-transform: uppercase; letter-spacing: var(--caps-spacing);
+      }
+
+      [data-layout='grouped'] .names { margin-top: var(--names-gap); letter-spacing: 0; }
+      [data-layout='grouped'][data-names='caps'] .names { --names-spacing: var(--caps-spacing); }
+      [data-layout='grouped'][data-names='italic'] .names { font-style: italic; font-weight: 400; }
+      [data-layout='grouped'][data-amp='script'] .names em { top: var(--amp-drop); margin: 0 var(--amp-right) 0 var(--amp-left); -webkit-text-stroke: var(--script-stroke) var(--page); }
+
+      [data-layout='grouped'] .date { margin: 0; line-height: 1.2; }
+      [data-date='plain'] .date { letter-spacing: 0; }
+      [data-date='italic'] .date { font-style: italic; font-weight: 400; letter-spacing: 0; margin-right: 0; }
+      [data-date='caps'] .date { text-transform: uppercase; letter-spacing: var(--caps-spacing); margin-right: calc(-1 * var(--caps-spacing)); }
+      [data-layout='grouped'] .venue, [data-layout='grouped'] .town { margin-top: var(--venue-gap); line-height: 1.2; letter-spacing: var(--caps-spacing); margin-right: calc(-1 * var(--caps-spacing)); }
+      [data-layout='grouped'] .town { margin-top: 4px; }
+      [data-venue='one'] .region { display: inline; }
+      [data-venue='one'] .town { display: none; }
+      [data-layout='grouped'] .logo { position: static; flex: none; margin-top: var(--logo-gap); }
+
+      /* An arch instead of torn paper: straight sides, a round top, and a fine
+         line of ink tracing it a little way out. */
+      [data-photo='arch'] .frame { mask: none; border-radius: calc(var(--photo-width) / 2) calc(var(--photo-width) / 2) 0 0; }
+      [data-photo='arch'] .rim {
+        mask: none; inset: calc(-1 * var(--arch-gap, 14px)); background: none;
+        border: 1.5px solid color-mix(in srgb, var(--ink) 55%, var(--page));
+        border-radius: calc(var(--photo-width) / 2 + var(--arch-gap, 14px)) calc(var(--photo-width) / 2 + var(--arch-gap, 14px)) 0 0;
+      }
     </style>
   </body>
 </html>
