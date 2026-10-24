@@ -33,7 +33,7 @@ const venue = {
   travel: [
     { name: 'Driving', note: 'About 45 minutes south of Wollongong, and there is plenty of parking on site.' },
     { name: 'Bus', note: tbc('We’re running a bus to and from the venue. We’ll confirm where it stops once we know where everyone’s staying.') },
-    { name: 'Train', note: 'South Coast line, then hop on the wedding bus. Taxis and Ubers are hard to come by, so book in advance if you need one.' },
+    { name: 'Train', note: 'South Coast line to Kiama, then hop on the wedding bus. Taxis and Ubers are hard to come by, so book in advance if you need one.' },
   ],
 };
 
@@ -80,10 +80,6 @@ const photos = {
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
     <meta name="theme-color" content="#fdf9ea" />
-    {import.meta.env.DEV && <script is:inline>
-      // Dev only: the theme chosen with the button at the foot of the page, before the page paints.
-      try { if (localStorage.getItem('pa_dev_details_theme') === 'sage') { document.documentElement.dataset.theme = 'sage'; document.querySelector('meta[name="theme-color"]').content = '#eeeee5'; } } catch {}
-    </script>}
     <title>Patrick &amp; Amelia · The details</title>
     <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, the garden, where to stay." />
     <SiteFonts display="swap" />
@@ -184,8 +180,6 @@ const photos = {
         <RsvpForm {...rsvp} />
       </section>
 
-      {import.meta.env.DEV && <button type="button" class="info-theme-toggle" data-theme-toggle>Theme: <span data-theme-name>Invitation</span></button>}
-
       <footer class="info-footer">
         <span class="info-monogram" style={`--logo: url(${BASE}logo.png)`}><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></span>
         <p>Friday 16 April 2027 · {venue.name}, {venue.place}</p>
@@ -207,31 +201,15 @@ const photos = {
   }
 </script>
 
-<script>
-  // Dev only: switch between the invitation's cream and brown and the original sage, remembered.
-  const toggle = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
-  if (toggle) {
-    const show = () => { toggle.querySelector('[data-theme-name]')!.textContent = document.documentElement.dataset.theme === 'sage' ? 'Original sage' : 'Invitation'; };
-    show();
-    toggle.addEventListener('click', () => {
-      const sage = document.documentElement.dataset.theme !== 'sage';
-      if (sage) document.documentElement.dataset.theme = 'sage'; else delete document.documentElement.dataset.theme;
-      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!.content = sage ? '#eeeee5' : '#fdf9ea';
-      try { if (sage) localStorage.setItem('pa_dev_details_theme', 'sage'); else localStorage.removeItem('pa_dev_details_theme'); } catch {}
-      show();
-    });
-  }
-</script>
-
 <style is:global>
   @view-transition { navigation: auto; }
-  /* Two colour themes (Amelia, October 2026): the invitations' cream paper and
-     dark brown ink, as sampled from the invitation sent to the Parties, and
-     the original sage. In development the button at the foot of the page
-     switches between them (pa_dev_details_theme); guests see the invitation’s. */
+  /* The invitations' cream paper and dark brown ink (Amelia, October 2026),
+     as in the invitation sent to the Parties (STYLES in dev/invite). The
+     original sage is kept below in case Patrick prefers it: set
+     data-theme="sage" on <html>, and theme-color to #eeeee5. */
   :root { --page: #fdf9ea; --ink: #4e3324; --soft: #6b4f3e; --muted: #85705f; --leaf: #a08b74; --deep: #4e3324; --on-deep: #fdf9ea;
     --paper: #fffcf2; --line: #8a7663; --shadow: #5a4030; --focus: #8a6a50; --select: #eadfbf; }
-  :root[data-theme=sage] { --page: #eeeee5; --ink: #384135; --soft: var(--soft); --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --on-deep: #f6f3e7;
+  :root[data-theme=sage] { --page: #eeeee5; --ink: #384135; --soft: #59634f; --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --on-deep: #f6f3e7;
     --paper: #f7f3e8; --line: #737967; --shadow: #48513a; --focus: #6e775c; --select: #b9c2a7; }
   html { background: var(--page); scroll-behavior: smooth; }
   body { margin: 0; }
@@ -250,10 +228,6 @@ const photos = {
   h1 { font-size: clamp(58px, 6.8vw, 108px); line-height: .98; font-weight: 300; }
   h1 em, h2 em { font-weight: 300; color: var(--soft); }
   h2 { font-size: clamp(42px, 4.4vw, 66px); line-height: 1; }
-
-  /* Dev only: the theme switch, out of the way at the foot of the screen. */
-  .info-theme-toggle { position: fixed; z-index: 10; right: 14px; bottom: 14px; font: 500 9px 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase;
-    color: var(--on-deep); background: var(--deep); border: 0; border-radius: 999px; padding: 10px 14px; cursor: pointer; opacity: .85; }
 
   .is-tbc { position: relative; }
   .is-tbc::after { content: 'to confirm'; font: 500 7px 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase;

@@ -30,7 +30,7 @@ export const parties: Party[] = [
   { code: "numpy", greeting: "Daniel", guests: ["Daniel"] },
   { code: "magic", greeting: "Josh & Annabelle", guests: ["Josh", "Annabelle"] },
   { code: "brandon", greeting: "Sie", guests: ["Sie"] },
-  { code: "make-your-move", greeting: "Tara & Scott", guests: ["Tara", "Scott"] },
+  { code: "make-your-move", greeting: "Tara", guests: ["Tara"] },
   { code: "b1", greeting: "Georgia & Reynor", guests: ["Georgia", "Reynor"] },
   { code: "chiropracter", greeting: "Sophie & Sam", guests: ["Sophie", "Sam"] },
   { code: "row-a", greeting: "Payton", guests: ["Payton"] },
