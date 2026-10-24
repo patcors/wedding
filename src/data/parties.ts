@@ -61,4 +61,5 @@ export const parties: Party[] = [
   { code: "zuko", greeting: "Andrea", guests: ["Andrea"] },
   { code: "koncerning", greeting: "Megan", guests: ["Megan"] },
   { code: "berry", greeting: "Chelsea", guests: ["Chelsea"] },
+  { code: "german", greeting: "Viviene & Mats", guests: ["Viviene", "Mats"] }, // placeholder code
 ];
