@@ -32,8 +32,8 @@ const venue = {
   appleMapsUrl: 'https://maps.apple.com/?daddr=4+O%27Keeffes+Lane,+Jaspers+Brush+NSW+2535',
   travel: [
     { name: 'Driving', note: 'About 45 minutes south of Wollongong, and there is plenty of parking on site.' },
-    { name: 'Bus', note: tbc('We’re running a bus to and from the venue, stopping in Berry on Queen Street, in Gerringong on Belinda Street and at Kiama station. Times to come.') },
-    { name: 'Train', note: 'South Coast line to Kiama, then hop on the wedding bus. Taxis and Ubers are hard to come by, so book in advance if you need one.' },
+    { name: 'Bus', note: tbc('We’re running a bus to and from the venue. We’ll confirm where it stops once we know where everyone’s staying.') },
+    { name: 'Train', note: 'South Coast line, then hop on the wedding bus. Taxis and Ubers are hard to come by, so book in advance if you need one.' },
   ],
 };
 
@@ -43,8 +43,8 @@ const nightBefore = 'On Thursday 15 April, the night before, we’re booking som
 
 const stay = [
   { name: 'In Berry village', note: 'Guesthouses and cottages a short drive from the venue. Berry weekends fill up, so book early.' },
-  { name: 'In Gerringong', note: 'By the sea, with a bus stop there on the way to the venue and home again.' },
-  { name: 'In Kiama', note: 'The most hotels, apartments and holiday parks, by the station, with a bus stop there too.' },
+  { name: 'In Gerringong', note: 'By the sea, a short drive from the venue.' },
+  { name: 'In Kiama', note: 'The most hotels, apartments and holiday parks, by the station.' },
   { name: 'Around the countryside', note: 'Airbnbs across Jaspers Brush, Broughton Village and the surrounding hills.' },
   { name: 'Our recommendations', note: tbc('We’ll add specific places we love here.') },
 ];
@@ -60,7 +60,7 @@ const faqs = [
 
 const rsvp = {
   replyBy: '16 February 2027',
-  busHint: 'Stopping in Berry on Queen Street, in Gerringong on Belinda Street and at Kiama station. Times to come.',
+  busHint: 'We’ll confirm where it stops once we know where everyone’s staying.',
   // Where guests can reach us if the form fails to send.
   email: 'patrickcorbett12@gmail.com',
   phone: '0435 597 406',
@@ -79,7 +79,11 @@ const photos = {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
-    <meta name="theme-color" content="#fdfcf8" />
+    <meta name="theme-color" content="#fdf9ea" />
+    {import.meta.env.DEV && <script is:inline>
+      // Dev only: the theme chosen with the button at the foot of the page, before the page paints.
+      try { if (localStorage.getItem('pa_dev_details_theme') === 'sage') { document.documentElement.dataset.theme = 'sage'; document.querySelector('meta[name="theme-color"]').content = '#eeeee5'; } } catch {}
+    </script>}
     <title>Patrick &amp; Amelia · The details</title>
     <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, the garden, where to stay." />
     <SiteFonts display="swap" />
@@ -87,7 +91,7 @@ const photos = {
   <body>
     <main class="info">
       <header class="info-header">
-        <a class="info-monogram" href={BASE} data-story aria-label="Back to the story"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
+        <a class="info-monogram" href={BASE} data-story aria-label="Back to the story" style={`--logo: url(${BASE}logo.png)`}><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
         <span class="info-header-date">16 APRIL 2027</span>
         <div class="info-header-links">
           <a class="info-story-link" href={BASE} data-story>The story</a>
@@ -180,8 +184,10 @@ const photos = {
         <RsvpForm {...rsvp} />
       </section>
 
+      {import.meta.env.DEV && <button type="button" class="info-theme-toggle" data-theme-toggle>Theme: <span data-theme-name>Invitation</span></button>}
+
       <footer class="info-footer">
-        <span class="info-monogram"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></span>
+        <span class="info-monogram" style={`--logo: url(${BASE}logo.png)`}><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></span>
         <p>Friday 16 April 2027 · {venue.name}, {venue.place}</p>
       </footer>
     </main>
@@ -201,26 +207,53 @@ const photos = {
   }
 </script>
 
+<script>
+  // Dev only: switch between the invitation's cream and brown and the original sage, remembered.
+  const toggle = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+  if (toggle) {
+    const show = () => { toggle.querySelector('[data-theme-name]')!.textContent = document.documentElement.dataset.theme === 'sage' ? 'Original sage' : 'Invitation'; };
+    show();
+    toggle.addEventListener('click', () => {
+      const sage = document.documentElement.dataset.theme !== 'sage';
+      if (sage) document.documentElement.dataset.theme = 'sage'; else delete document.documentElement.dataset.theme;
+      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!.content = sage ? '#eeeee5' : '#fdf9ea';
+      try { if (sage) localStorage.setItem('pa_dev_details_theme', 'sage'); else localStorage.removeItem('pa_dev_details_theme'); } catch {}
+      show();
+    });
+  }
+</script>
+
 <style is:global>
   @view-transition { navigation: auto; }
-  /* The invitations' paper (#fdfcf8) and ink (#384135; Amelia, October 2026). */
-  html { background: #fdfcf8; scroll-behavior: smooth; }
+  /* Two colour themes (Amelia, October 2026): the invitations' cream paper and
+     dark brown ink, as sampled from the invitation sent to the Parties, and
+     the original sage. In development the button at the foot of the page
+     switches between them (pa_dev_details_theme); guests see the invitation’s. */
+  :root { --page: #fdf9ea; --ink: #4e3324; --soft: #6b4f3e; --muted: #85705f; --leaf: #a08b74; --deep: #4e3324; --on-deep: #fdf9ea;
+    --paper: #fffcf2; --line: #8a7663; --shadow: #5a4030; --focus: #8a6a50; --select: #eadfbf; }
+  :root[data-theme=sage] { --page: #eeeee5; --ink: #384135; --soft: var(--soft); --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --on-deep: #f6f3e7;
+    --paper: #f7f3e8; --line: #737967; --shadow: #48513a; --focus: #6e775c; --select: #b9c2a7; }
+  html { background: var(--page); scroll-behavior: smooth; }
   body { margin: 0; }
-  ::selection { background: #b9c2a7; color: #30382e; }
+  ::selection { background: var(--select); color: var(--ink); }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 
 <style>
-  .info { --ink: #384135; --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --paper: #f7f3e8; --info-header-h: 86px;
+  .info { --info-header-h: 86px;
     color: var(--ink); font-family: 'Montserrat', sans-serif; overflow-x: clip; }
   .info a { color: inherit; text-decoration: none; }
-  .info a:focus-visible { outline: 2px solid #6e775c; outline-offset: 7px; }
+  .info a:focus-visible { outline: 2px solid var(--focus); outline-offset: 7px; }
 
   .info-eyebrow { font-size: 9px; text-transform: uppercase; letter-spacing: .28em; line-height: 1.8; color: var(--muted); margin: 0; }
   h1, h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; letter-spacing: -.045em; margin: 20px 0 18px; }
   h1 { font-size: clamp(58px, 6.8vw, 108px); line-height: .98; font-weight: 300; }
-  h1 em, h2 em { font-weight: 300; color: #59634f; }
+  h1 em, h2 em { font-weight: 300; color: var(--soft); }
   h2 { font-size: clamp(42px, 4.4vw, 66px); line-height: 1; }
+
+  /* Dev only: the theme switch, out of the way at the foot of the screen. */
+  .info-theme-toggle { position: fixed; z-index: 10; right: 14px; bottom: 14px; font: 500 9px 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--on-deep); background: var(--deep); border: 0; border-radius: 999px; padding: 10px 14px; cursor: pointer; opacity: .85; }
 
   .is-tbc { position: relative; }
   .is-tbc::after { content: 'to confirm'; font: 500 7px 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase;
@@ -231,19 +264,23 @@ const photos = {
      header, its top tucked beneath the header's soft edge, rather than
      sliding under it (October 2026). */
   .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;
-    height: var(--info-header-h); padding: 0 48px; background: linear-gradient(#fdfcf8 calc(100% - 16px), #fdfcf800); }
+    height: var(--info-header-h); padding: 0 48px; background: linear-gradient(var(--page) calc(100% - 16px), color-mix(in srgb, var(--page) 0%, transparent)); }
   .info-monogram { display: block; line-height: 0; }
   .info-header .info-monogram { padding: 5px 0; }
   .info-monogram img { display: block; width: auto; height: 34px; }
+  /* The monogram in the theme's ink, as on the invitations: the image keeps
+     its size and alt text, and its shape masks the ink over it. */
+  .info-monogram { background: var(--ink); -webkit-mask: var(--logo) content-box center / contain no-repeat; mask: var(--logo) content-box center / contain no-repeat; }
+  .info-monogram img { opacity: 0; }
   .info-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
-  .info .info-rsvp-link { position: relative; font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--paper);
+  .info .info-rsvp-link { position: relative; font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--on-deep);
     background: var(--deep); border-radius: 999px; padding: 11px 19px 11px 21px; transition: background-color .3s; }
   /* A thumb-sized target round the slim pill. */
   .info .info-rsvp-link::after { content: ''; position: absolute; inset: -6px -4px; }
-  .info .info-rsvp-link:hover { background: #59634f; }
+  .info .info-rsvp-link:hover { background: var(--soft); }
   .info-header-links { display: flex; align-items: center; gap: 26px; }
   .info .info-story-link { position: relative; font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
-    text-decoration: underline; text-decoration-color: #73796770; text-underline-offset: 6px; }
+    text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--line) 44%, transparent); text-underline-offset: 6px; }
   .info .info-story-link::after { content: ''; position: absolute; inset: -14px -8px; }
 
   .info-hero { display: flex; align-items: center; gap: clamp(40px, 6vw, 90px); max-width: 1180px; margin: 0 auto; padding: clamp(30px, 6vh, 80px) 48px 40px; }
@@ -251,19 +288,19 @@ const photos = {
   .info-date-row { margin-top: 34px; display: flex; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 9px; text-transform: uppercase; letter-spacing: .23em; }
   .info-date-row i { width: 3px; height: 3px; border-radius: 50%; background: var(--leaf); }
 
-  .info-photo { flex: 1; margin: 0; padding: 12px; background: var(--paper); box-shadow: 0 14px 50px #48513a24; max-width: 400px; }
+  .info-photo { flex: 1; margin: 0; padding: 12px; background: var(--paper); box-shadow: 0 14px 50px color-mix(in srgb, var(--shadow) 14%, transparent); max-width: 400px; }
   .info-photo img { width: 100%; height: auto; display: block; }
   .info-hero-photo { rotate: 2deg; }
   .info-photo-tilt-left { rotate: -2.5deg; }
   .info-photo-tilt-right { rotate: 2deg; }
 
   .info-nav { position: sticky; top: calc(var(--info-header-h) - 16px); z-index: 4; display: flex; gap: clamp(18px, 3.5vw, 44px);
-    padding: 6px 24px 14px; margin: 20px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .2em; background: linear-gradient(#fdfcf8 calc(100% - 14px), #fdfcf800); }
+    padding: 6px 24px 14px; margin: 20px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .2em; background: linear-gradient(var(--page) calc(100% - 14px), color-mix(in srgb, var(--page) 0%, transparent)); }
   /* Centred while they fit; from the start, scrolling sideways, when they don't. */
   .info-nav a:first-child { margin-left: auto; }
   .info-nav a:last-child { margin-right: auto; }
   .info-nav a { flex: none; display: flex; align-items: center; min-height: 44px; box-sizing: border-box; padding-top: 2px; border-bottom: 1px solid transparent; transition: border-color .3s; white-space: nowrap; }
-  .info-nav a:hover { border-color: #73796770; }
+  .info-nav a:hover { border-color: color-mix(in srgb, var(--line) 44%, transparent); }
   /* A link to a section lands below the header and nav. */
   .info section[id] { scroll-margin-top: calc(var(--info-header-h) + 50px); }
 
@@ -290,8 +327,8 @@ const photos = {
   @media (prefers-reduced-motion: reduce) { .info-stop-party > [aria-hidden] { animation: none; } }
 
   /* The schedule as a printed order of service, framed like the photos. */
-  .info-schedule { list-style: none; margin: 50px auto 0; max-width: 400px; padding: 56px 40px; background: var(--paper); box-shadow: 0 14px 50px #48513a24;
-    outline: 1px solid #7379673d; outline-offset: -14px; rotate: -1deg; }
+  .info-schedule { list-style: none; margin: 50px auto 0; max-width: 400px; padding: 56px 40px; background: var(--paper); box-shadow: 0 14px 50px color-mix(in srgb, var(--shadow) 14%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--line) 24%, transparent); outline-offset: -14px; rotate: -1deg; }
   .info-schedule li { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .info-schedule li + li::before { content: ''; width: 3px; height: 3px; border-radius: 50%; background: var(--leaf); margin: 14px 0 12px; }
 
@@ -302,7 +339,7 @@ const photos = {
   .info-split { display: flex; align-items: center; gap: clamp(45px, 7vw, 110px); }
   .info-split > div { flex: 1.15; }
   .info-split-reverse { flex-direction: row-reverse; }
-  .info-venue-name { font: italic 23px 'Cormorant Garamond', Georgia, serif; color: #59634f; margin: 6px 0 4px; }
+  .info-venue-name { font: italic 23px 'Cormorant Garamond', Georgia, serif; color: var(--soft); margin: 6px 0 4px; }
   .info-address { font-size: 11px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
   .info-list { margin: 26px 0 0; }
   .info-night-before { font: 20px/1.5 'Cormorant Garamond', Georgia, serif; max-width: 430px; margin: 22px 0 0; }
@@ -310,8 +347,8 @@ const photos = {
   .info-list dd { font: 18px/1.5 'Cormorant Garamond', Georgia, serif; margin: 7px 0 0; max-width: 430px; }
   .info-map-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
   .info .info-map-link { font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--deep);
-    border: 1px solid #414d3d80; border-radius: 999px; padding: 13px 19px 13px 21px; transition: background-color .3s, color .3s; }
-  .info .info-map-link:hover { background: var(--deep); color: var(--paper); }
+    border: 1px solid color-mix(in srgb, var(--deep) 50%, transparent); border-radius: 999px; padding: 13px 19px 13px 21px; transition: background-color .3s, color .3s; }
+  .info .info-map-link:hover { background: var(--deep); color: var(--on-deep); }
 
   .info-faq-section h2 { text-align: center; }
   .info-faqs { margin: 45px auto 0; columns: 2; column-gap: clamp(45px, 6vw, 90px); max-width: 1020px; }
@@ -319,7 +356,7 @@ const photos = {
   .info-faq h3 { font: 500 23px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin: 0 0 8px; }
   .info-faq p { font: 17px/1.5 'Cormorant Garamond', Georgia, serif; color: var(--ink); margin: 0; max-width: 430px; }
   /* Numbers in the answers ring when tapped. */
-  .info .info-tel { white-space: nowrap; border-bottom: 1px solid #73796770; }
+  .info .info-tel { white-space: nowrap; border-bottom: 1px solid color-mix(in srgb, var(--line) 44%, transparent); }
 
   .info-rsvp { text-align: center; max-width: 700px; margin: 0 auto; padding: clamp(80px, 13vh, 150px) 48px; }
   .info-boat { color: var(--leaf); }
@@ -357,7 +394,7 @@ const photos = {
 
   @media (hover: hover) and (prefers-reduced-motion: no-preference) {
     .info-photo { transition: translate .5s ease, box-shadow .5s ease; }
-    .info-photo:hover { translate: 0 -8px; box-shadow: 0 24px 60px #48513a30; }
+    .info-photo:hover { translate: 0 -8px; box-shadow: 0 24px 60px color-mix(in srgb, var(--shadow) 19%, transparent); }
   }
 
   @media (max-width: 860px) {

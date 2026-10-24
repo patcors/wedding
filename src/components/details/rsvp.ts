@@ -4,27 +4,27 @@
 
 export type Answer = 'yes' | 'no';
 
-/** Where the bus stops, in the order the form offers them. Change stops here. */
-export const BUS_STOPS = ['Berry', 'Gerringong', 'Kiama'];
-
-/** A bus answer: '' when not coming or not answered, 'none', or a stop from BUS_STOPS. */
-export type BusChoice = string;
+/** A bus answer: '' when not coming or not answered, 'yes' or 'none'. The
+    stops aren't named until the couple know where everyone's staying
+    (Amelia, October 2026); a guest taking the bus leaves a mobile so they can
+    sort out where. Older replies named a stop, which reads as 'yes'. */
+export type BusChoice = '' | 'yes' | 'none';
+const busChoice = (value: string): BusChoice => value === '' || value === 'none' ? value : 'yes';
 
 export interface GuestReply {
   name: string;
   attending: Answer;
   dietary: string;     // only for Guests who are coming
-  busTo: BusChoice;    // where they get on to come to the venue
-  busFrom: BusChoice;  // where they get off on the way home
+  busTo: BusChoice;    // the bus to the venue
+  busFrom: BusChoice;  // the bus home
   dinner: Answer | ''; // dinner at the Berry Hotel the night before; '' when not coming or not answered
 }
 
-// No contact any more (Amelia, October 2026): older replies' `contact` is
-// read past and dropped.
 export interface Rsvp {
   submitted_at: string;
   code: string;      // the Party's Invite code
   party: string;     // the Party's greeting
+  contact: string;   // a mobile, asked for only when someone takes the bus
   song: string;
   message: string;   // a note for us
   guests: GuestReply[];
@@ -87,14 +87,15 @@ export function toRsvp(value: unknown): Rsvp | null {
     submitted_at: text(v.submitted_at),
     code: text(v.code),
     party: text(v.party),
+    contact: text(v.contact),
     song: text(v.song),
     message: text(v.message),
     guests: guests.map(g => ({
       name: g.name as string,
       attending: g.attending as Answer,
       dietary: text(g.dietary),
-      busTo: text(g.busTo),
-      busFrom: text(g.busFrom),
+      busTo: busChoice(text(g.busTo)),
+      busFrom: busChoice(text(g.busFrom)),
       dinner: isAnswer(g.dinner) ? g.dinner : '',
     })),
   };
@@ -131,13 +132,23 @@ export function toParams(rsvp: Rsvp): URLSearchParams {
     submitted_at: rsvp.submitted_at,
     code: rsvp.code,
     party: rsvp.party,
+    contact: rsvp.contact,
     song: rsvp.song,
     message: rsvp.message,
     guests: JSON.stringify(rsvp.guests),
   });
 }
 
-const isStop = (choice: BusChoice) => choice !== '' && choice !== 'none';
+/** Whether anyone in the reply is taking the bus, either way. */
+export const takesBus = (guests: GuestReply[]) => guests.some(g => g.busTo === 'yes' || g.busFrom === 'yes');
+
+/** Why a mobile for the bus isn't usable, or null when it looks like a phone number. */
+export function phoneProblem(phone: string): string | null {
+  const value = phone.trim();
+  if (!value) return 'We need a mobile to sort out where the bus picks you up.';
+  const digits = value.replace(/\D/g, '').length;
+  return /^[\d\s()+.-]+$/.test(value) && digits >= 8 && digits <= 15 ? null : 'That doesn’t look like a mobile number.';
+}
 
 /** When the Party's reply was sent, as "24 October", or '' if the time can't be read. */
 export function sentOn(submittedAt: string): string {
@@ -145,15 +156,15 @@ export function sentOn(submittedAt: string): string {
   return Number.isNaN(time) ? '' : new Date(time).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', timeZone: 'Australia/Sydney' });
 }
 
-/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus from Kiama, bus home to Berry, dinner the night before." */
+/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus there and back, dinner the night before." */
 export function describeGuest(guest: GuestReply): string {
   if (guest.attending === 'no') return `${guest.name}: can’t make it.`;
   const parts = ['coming'];
   const dietary = guest.dietary.trim().replace(/[.\s]+$/, '');
   if (dietary) parts.push(dietary);
-  if (isStop(guest.busTo)) parts.push(`bus from ${guest.busTo}`);
-  if (isStop(guest.busFrom)) parts.push(`bus home to ${guest.busFrom}`);
-  if (!isStop(guest.busTo) && !isStop(guest.busFrom) && (guest.busTo === 'none' || guest.busFrom === 'none')) parts.push('no bus');
+  const [there, home] = [guest.busTo === 'yes', guest.busFrom === 'yes'];
+  if (there || home) parts.push(there && home ? 'bus there and back' : there ? 'bus there' : 'bus home');
+  else if (guest.busTo === 'none' || guest.busFrom === 'none') parts.push('no bus');
   if (guest.dinner === 'yes') parts.push('dinner the night before');
   return `${guest.name}: ${parts.join(', ')}.`;
 }
