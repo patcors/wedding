@@ -170,8 +170,14 @@ export default function VoyageBoats({ paused, reduced, mobile, width, look = BOA
       sails.current[i]?.rotation.set(0, side * SAIL_EASED * (1 - .85 * Math.max(pose.docking, pose.berthed)), 0);
       sails.current[i]?.scale.set(1, 1, 1 - .97 * rig.furl);
       // The toy sloop's jib rolls up round its forestay with the main, and
-      // its cabin is taken in as the hull grows long and slim.
-      jibs.current[i]?.scale.set(1 - .97 * rig.furl, 1, 1 - .97 * rig.furl);
+      // its cabin is taken in as the hull grows long and slim. Once rolled up
+      // it goes: a white thread across the deck didn't read as a sail
+      // (Amelia, October 2026).
+      const jib = jibs.current[i];
+      if (jib) {
+        jib.visible = rig.furl < 1;
+        jib.scale.set(1 - .97 * rig.furl, 1, 1 - .97 * rig.furl);
+      }
       const cabin = cabins.current[i];
       if (cabin) {
         const keep = Math.max(0, 1 - join.morph * 1.6);
