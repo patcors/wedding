@@ -32,17 +32,19 @@ const venue = {
   appleMapsUrl: 'https://maps.apple.com/?daddr=4+O%27Keeffes+Lane,+Jaspers+Brush+NSW+2535',
   travel: [
     { name: 'Driving', note: 'About 45 minutes south of Wollongong, and there is plenty of parking on site.' },
-    { name: 'Bus', note: tbc('We’re running a bus to and from the venue, stopping at Wollongong, Gerringong and Berry. Times to come.') },
-    { name: 'Train', note: 'South Coast line to Berry station, then a ten-minute taxi.' },
+    { name: 'Bus', note: tbc('We’re running a bus to and from the venue, stopping in Berry on Queen Street, in Gerringong on Belinda Street and at Kiama station. Times to come.') },
+    { name: 'Train', note: 'South Coast line to Kiama, then hop on the wedding bus. Taxis and Ubers are hard to come by, so book in advance if you need one.' },
   ],
 };
 
-// Before the places to stay, as a paragraph of its own: it isn't one of them.
-const nightBefore = 'On Thursday 15 April, the night before, we’re booking some large tables at the Berry Hotel for dinner at 6 pm, for anyone who’d like to join us. Let us know in your RSVP.';
+// Before the places to stay, as paragraphs of their own: they aren't places.
+const schoolHolidays = 'The wedding falls in the NSW school holidays, so places book out early. We’d book as soon as you can.';
+const nightBefore = 'On Thursday 15 April, the night before, we’re booking some large tables at the Berry Hotel for dinner at 6pm, for anyone who’d like to join us. Let us know in your RSVP.';
 
 const stay = [
   { name: 'In Berry village', note: 'Guesthouses and cottages a short drive from the venue. Berry weekends fill up, so book early.' },
   { name: 'In Gerringong', note: 'By the sea, with a bus stop there on the way to the venue and home again.' },
+  { name: 'In Kiama', note: 'The most hotels, apartments and holiday parks, by the station, with a bus stop there too.' },
   { name: 'Around the countryside', note: 'Airbnbs across Jaspers Brush, Broughton Village and the surrounding hills.' },
   { name: 'Our recommendations', note: tbc('We’ll add specific places we love here.') },
 ];
@@ -58,7 +60,7 @@ const faqs = [
 
 const rsvp = {
   replyBy: '16 February 2027',
-  busHint: 'Stopping at Wollongong, Gerringong and Berry. Times to come.',
+  busHint: 'Stopping in Berry on Queen Street, in Gerringong on Belinda Street and at Kiama station. Times to come.',
   // Where guests can reach us if the form fails to send.
   email: 'patrickcorbett12@gmail.com',
   phone: '0435 597 406',
@@ -77,7 +79,7 @@ const photos = {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
-    <meta name="theme-color" content="#eeeee5" />
+    <meta name="theme-color" content="#fdfcf8" />
     <title>Patrick &amp; Amelia · The details</title>
     <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, the garden, where to stay." />
     <SiteFonts display="swap" />
@@ -147,6 +149,7 @@ const photos = {
           <p class="info-eyebrow">Make a weekend of it</p>
           <h2>Where <em>to stay.</em></h2>
           <p class="info-night-before">{nightBefore}</p>
+          <p class="info-night-before">{schoolHolidays}</p>
           <dl class="info-list">
             {stay.map(row => <>
               <dt>{row.name}</dt>
@@ -200,7 +203,8 @@ const photos = {
 
 <style is:global>
   @view-transition { navigation: auto; }
-  html { background: #eeeee5; scroll-behavior: smooth; }
+  /* The invitations' paper (#fdfcf8) and ink (#384135; Amelia, October 2026). */
+  html { background: #fdfcf8; scroll-behavior: smooth; }
   body { margin: 0; }
   ::selection { background: #b9c2a7; color: #30382e; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
@@ -227,7 +231,7 @@ const photos = {
      header, its top tucked beneath the header's soft edge, rather than
      sliding under it (October 2026). */
   .info-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;
-    height: var(--info-header-h); padding: 0 48px; background: linear-gradient(#eeeee5 calc(100% - 16px), #eeeee500); }
+    height: var(--info-header-h); padding: 0 48px; background: linear-gradient(#fdfcf8 calc(100% - 16px), #fdfcf800); }
   .info-monogram { display: block; line-height: 0; }
   .info-header .info-monogram { padding: 5px 0; }
   .info-monogram img { display: block; width: auto; height: 34px; }
@@ -254,7 +258,7 @@ const photos = {
   .info-photo-tilt-right { rotate: 2deg; }
 
   .info-nav { position: sticky; top: calc(var(--info-header-h) - 16px); z-index: 4; display: flex; gap: clamp(18px, 3.5vw, 44px);
-    padding: 6px 24px 14px; margin: 20px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .2em; background: linear-gradient(#eeeee5 calc(100% - 14px), #eeeee500); }
+    padding: 6px 24px 14px; margin: 20px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .2em; background: linear-gradient(#fdfcf8 calc(100% - 14px), #fdfcf800); }
   /* Centred while they fit; from the start, scrolling sideways, when they don't. */
   .info-nav a:first-child { margin-left: auto; }
   .info-nav a:last-child { margin-right: auto; }

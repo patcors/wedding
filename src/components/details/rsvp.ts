@@ -5,7 +5,7 @@
 export type Answer = 'yes' | 'no';
 
 /** Where the bus stops, in the order the form offers them. Change stops here. */
-export const BUS_STOPS = ['Berry', 'Gerringong', 'Wollongong'];
+export const BUS_STOPS = ['Berry', 'Gerringong', 'Kiama'];
 
 /** A bus answer: '' when not coming or not answered, 'none', or a stop from BUS_STOPS. */
 export type BusChoice = string;
@@ -145,7 +145,7 @@ export function sentOn(submittedAt: string): string {
   return Number.isNaN(time) ? '' : new Date(time).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', timeZone: 'Australia/Sydney' });
 }
 
-/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus from Wollongong, bus home to Berry, dinner the night before." */
+/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus from Kiama, bus home to Berry, dinner the night before." */
 export function describeGuest(guest: GuestReply): string {
   if (guest.attending === 'no') return `${guest.name}: can’t make it.`;
   const parts = ['coming'];
