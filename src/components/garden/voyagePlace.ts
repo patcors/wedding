@@ -20,6 +20,15 @@ export const progressFor = (top: number, span: number) => progressAtScroll(top /
 // there once, at the dock if they left from the dock. A fresh visit, a new tab
 // or a reload after that opens at the title as always.
 export const PLACE_KEY = 'pa_voyage_place';
+// And the Details page's "The story" link and monogram go back to the Garden
+// straight into the scene (Amelia, October 2026): they leave BACK_KEY, and
+// coming back by them, by the browser's back button or by any link with a
+// place kept, the Garden skips the opening's butterflies, which used to land
+// on the title over a cover already showing the kept place's date. With a
+// place kept, the cover shows only the loading bar until the scene is up
+// there. GardenPage's first script reads both before the page paints and
+// marks <html data-garden-return="place" | "start">.
+export const BACK_KEY = 'pa_voyage_back';
 
 // What to keep on leaving from eased progress `p`, or null to keep nothing:
 // from the opening there is nothing to come back to. Any Garden reopens

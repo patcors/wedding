@@ -80,9 +80,12 @@ const photos = {
   <body>
     <main class="info">
       <header class="info-header">
-        <a class="info-monogram" href={BASE} aria-label="Back to the garden"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
+        <a class="info-monogram" href={BASE} data-story aria-label="Back to the story"><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
         <span class="info-header-date">16 APRIL 2027</span>
-        <a class="info-rsvp-link" href="#rsvp">RSVP</a>
+        <div class="info-header-links">
+          <a class="info-story-link" href={BASE} data-story>The story</a>
+          <a class="info-rsvp-link" href="#rsvp">RSVP</a>
+        </div>
       </header>
 
       <section class="info-hero">
@@ -173,6 +176,19 @@ const photos = {
   </body>
 </html>
 
+<script>
+  // "The story" and the monogram go back to the Garden: to the guest's own
+  // Personal link when this browser has been given one, and straight into
+  // the scene, without the opening's butterflies, at the place they left if
+  // the Garden kept one (pa_voyage_back and pa_voyage_place, voyagePlace.ts).
+  import { readParty } from '../components/details/rsvp';
+  const party = (() => { try { return readParty(localStorage.getItem('pa_party')); } catch { return null; } })();
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-story]')) {
+    if (party && /^[a-z0-9-]+$/.test(party.code)) link.href = `${import.meta.env.BASE_URL}${party.code}/`;
+    link.addEventListener('click', () => { try { sessionStorage.setItem('pa_voyage_back', '1'); } catch { /* private mode: the opening as usual */ } });
+  }
+</script>
+
 <style is:global>
   @view-transition { navigation: auto; }
   html { background: #eeeee5; scroll-behavior: smooth; }
@@ -212,6 +228,10 @@ const photos = {
   /* A thumb-sized target round the slim pill. */
   .info .info-rsvp-link::after { content: ''; position: absolute; inset: -6px -4px; }
   .info .info-rsvp-link:hover { background: #59634f; }
+  .info-header-links { display: flex; align-items: center; gap: 26px; }
+  .info .info-story-link { position: relative; font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
+    text-decoration: underline; text-decoration-color: #73796770; text-underline-offset: 6px; }
+  .info .info-story-link::after { content: ''; position: absolute; inset: -14px -8px; }
 
   .info-hero { display: flex; align-items: center; gap: clamp(40px, 6vw, 90px); max-width: 1180px; margin: 0 auto; padding: clamp(30px, 6vh, 80px) 48px 40px; }
   .info-hero-copy { flex: 1.2; }

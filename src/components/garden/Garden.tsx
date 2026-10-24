@@ -15,7 +15,7 @@ import { chapterAt, dateLabel, milestoneAt, nextStop, previousStop, progressAt, 
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
 import { PLACE_KEY, placeToKeep, placeToReopen, progressFor, scrollFor } from './voyagePlace';
-import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, countTowards, dateLabelMode, digitDate, digitLook, flipTowards, goesBack, shownDate, startCount, startFlips, type DateLabelMode, type DigitLook } from './dateLabelMode';
+import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, WEDDING_ON, countTowards, dateLabelMode, digitDate, digitLook, flipTowards, goesBack, shownDate, startCount, startFlips, type DateLabelMode, type DigitLook } from './dateLabelMode';
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices';
@@ -288,6 +288,44 @@ function DigitClock({ month, reduced, look }: { month: () => number; reduced: bo
     </span>)}</span>;
 }
 
+// The wedding's date in digits, "16-04-2027".
+const WEDDING_DIGITS = WEDDING_ON.split('-').reverse().join('-');
+
+// At the dock the running date no longer fades out with the voyage: it glides
+// down into the invitation to be its date line (Amelia, October 2026), onto
+// the copy of the wedding's digits there (.garden-date-slot), set at the
+// invitation's size and hidden under it. Where that is, and how much smaller,
+// is measured without transforms, from each panel's place in the pinned
+// layer, whenever either changes size, and handed to the CSS as
+// --garden-dock-x, --garden-dock-y and --garden-dock-scale on the voyage panel.
+function useDockedDate(docks: boolean) {
+  const date = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    const running = date.current, panel = running?.closest<HTMLElement>('.garden-voyage');
+    const slot = document.querySelector<HTMLElement>('.garden-date-slot');
+    if (!docks || !running || !panel || !slot) return;
+    const centre = (element: HTMLElement) => {
+      let x = element.offsetWidth / 2, y = element.offsetHeight / 2;
+      for (let at: HTMLElement | null = element; at && !at.classList.contains('garden-panels'); at = at.offsetParent as HTMLElement | null) x += at.offsetLeft, y += at.offsetTop;
+      return { x, y, width: element.offsetWidth };
+    };
+    const update = () => {
+      const from = centre(running.querySelector<HTMLElement>('.garden-voyage-digits') ?? running), to = centre(slot);
+      if (!from.width) return;
+      panel.style.setProperty('--garden-dock-x', `${to.x - from.x}px`);
+      panel.style.setProperty('--garden-dock-y', `${to.y - from.y}px`);
+      panel.style.setProperty('--garden-dock-scale', `${to.width / from.width}`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(running); observer.observe(slot);
+    addEventListener('resize', update);
+    void document.fonts.ready.then(update);
+    return () => { observer.disconnect(); removeEventListener('resize', update); };
+  }, [docks]);
+  return date;
+}
+
 class CanvasFallback extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -337,6 +375,9 @@ export default function Garden() {
   const [prepared, setPrepared] = useState(false);
   const [failed, setFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // Back from the Details page, straight into the scene (voyagePlace.ts):
+  // GardenPage marks it before the first paint.
+  const [returning, setReturning] = useState(false);
   const [slow, setSlow] = useState(false);
   // Dev only: seconds from navigation to the cover lifting, for comparing the Review's load choices.
   const [readyIn, setReadyIn] = useState<number | null>(null);
@@ -355,6 +396,7 @@ export default function Garden() {
     history.scrollRestoration = 'manual';
     scroller.current?.scrollTo(0, 0);
     setMounted(true);
+    setReturning(!!document.documentElement.dataset.gardenReturn);
     // Dev only: ?slow=8000 holds the cover for 8s from navigation, ?fail fails WebGL.
     if (import.meta.env.DEV && new URLSearchParams(location.search).has('fail')) setFailed(true);
     if (REVIEW && localStorage.getItem(REVIEW_HIDDEN)) setShowReview(false);
@@ -417,7 +459,7 @@ export default function Garden() {
   // as they start to move.
   const flight = ready && !failed && !reduced;
   const arrival = useRef<HTMLElement>(null);
-  const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready, away: flight && voyage.away });
+  const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready, away: flight && voyage.away, opening: !returning });
   // Prepared early, the scene still waits for the opening flock to land on
   // the names before it starts behind the cover and fades in (loadChoices.ts),
   // so their flight isn't hitched by the scene's first frames.
@@ -459,6 +501,8 @@ export default function Garden() {
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
   // Under reduced motion the scene shows each milestone's still, so the date shows its day too.
   const easedMonth = useCallback(() => storyMonth(reduced ? stillProgress(voyage.pace.progress) : voyage.pace.progress), [voyage.pace, reduced]);
+  const docksDate = digitLook(dateMode) !== null;
+  const runningDate = useDockedDate(docksDate);
   // Optional sound (soundChoices.ts), off by default: the Review panel's
   // choice while developing, remembered, and a speaker button for guests
   // once GUEST_SOUND is set. Either starts only from a tap, click or key.
@@ -562,9 +606,10 @@ export default function Garden() {
 
       {/* Wordless but for the date: the scenery tells the story. Screen readers
           hear each milestone instead, from the status line below. */}
-      <section className={`garden-panel garden-voyage ${chapter === 1 ? 'is-active' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
+      {/* At the dock the digits stay, gliding down into the invitation below (useDockedDate). */}
+      <section className={`garden-panel garden-voyage ${chapter === 1 || (chapter === 2 && docksDate) ? 'is-active' : ''} ${chapter === 2 ? 'is-docked' : ''}`} inert={chapter !== 1 || sceneOnly} aria-hidden={chapter !== 1 || sceneOnly}>
         <h2 className="garden-visually-hidden">Our story</h2>
-        <p className="garden-voyage-date" aria-hidden="true" data-mode={dateMode === 'full' ? undefined : dateMode}>
+        <p ref={runningDate} className="garden-voyage-date" aria-hidden="true" data-mode={dateMode === 'full' ? undefined : dateMode}>
           {digitLook(dateMode) ? <DigitClock month={easedMonth} reduced={reduced} look={digitLook(dateMode)!} /> : <>
             {dateMode === 'full' && <Crossfade className="garden-voyage-month" value={month} />}
             <Crossfade className="garden-voyage-year" value={year} />
@@ -584,10 +629,17 @@ export default function Garden() {
       </div>
 
       <section className={`garden-panel garden-celebrate ${chapter === 2 ? 'is-active' : ''}`} inert={chapter !== 2 || sceneOnly} aria-hidden={chapter !== 2 || sceneOnly}>
-        <p className="garden-eyebrow">We’re getting married</p>
-        <h2><b className="garden-perch">M</b>eet us<br /><em>in the garden.</em></h2>
-        <p className="garden-venue">Jasper’s Berry · Berry, NSW</p>
-        <p className="garden-date">Friday, 16 April 2027</p>
+        <p className="garden-eyebrow">Join us for the next milestone</p>
+        <h2>We’re getting<br /><em>married!</em></h2>
+        <p className="garden-venue">Jasper’s Berry, NSW</p>
+        {/* The wedding's date as the running date shows it, which comes down
+            to lie over this copy; read out in words. */}
+        <p className="garden-date" data-docked={docksDate ? '' : undefined}>
+          <span className="garden-visually-hidden">Friday, 16 April 2027</span>
+          <span className="garden-voyage-digits garden-date-slot" aria-hidden="true">{[...WEDDING_DIGITS].map((char, i) => char === '-'
+            ? <span key={i} className="garden-digit-dash">{char}</span>
+            : <span key={i} className="garden-digit"><span>{char}</span></span>)}</span>
+        </p>
         <a className="garden-button" href={`${BASE}details/`} onClick={keepPlace}>The details &amp; RSVP <span aria-hidden="true">→</span></a>
       </section>
     </div>

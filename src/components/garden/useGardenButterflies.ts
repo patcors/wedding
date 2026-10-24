@@ -28,8 +28,10 @@ function measurePerch(perch: { node: Text; offset: number }, height: number, con
 // `away`: the opening title's names have flown off towards their boats
 // (openingNames.ts), so there is nowhere to perch on them, and any butterfly
 // there lets go; they are measured again once the names are home.
-export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, ready, away = false }: {
-  chapter: number; paused: boolean; disabled: boolean; sceneOnly: boolean; ready: boolean; away?: boolean;
+// `opening`: whether the opening flock lands on the title; not when the
+// guest comes back from the details (voyagePlace.ts).
+export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, ready, away = false, opening = true }: {
+  chapter: number; paused: boolean; disabled: boolean; sceneOnly: boolean; ready: boolean; away?: boolean; opening?: boolean;
 }) {
   const [visits, setVisits] = useState<ButterflyVisit[]>([]);
   const [spots, setSpots] = useState<MeasuredPerch[]>([]);
@@ -118,19 +120,19 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
   }, [enabled, paused, ready]);
 
   useEffect(() => {
-    if (!enabled || !fontsReady || !spots.length || initialReleased.current) return;
+    if (!enabled || !opening || !fontsReady || !spots.length || initialReleased.current) return;
     initialReleased.current = true;
     // The opening flock lands on the names over the cover and stays while the
     // garden loads, using the same reservations as manual releases.
     for (let i = 0; i < Math.min(MAX_BUTTERFLIES, spots.length); i++) release(true);
     openingCount.current = reservations.current.size;
-  }, [enabled, fontsReady, spots.length, release]);
+  }, [enabled, opening, fontsReady, spots.length, release]);
 
   const land = useCallback(() => setLanded(count => count + 1), []);
   // Settled once the opening flock is perched, or there is none to wait for.
   useEffect(() => {
-    if (!enabled || (fontsReady && (openingCount.current ? landed >= openingCount.current : !spots.length))) setSettled(true);
-  }, [enabled, fontsReady, landed, spots.length]);
+    if (!enabled || !opening || (fontsReady && (openingCount.current ? landed >= openingCount.current : !spots.length))) setSettled(true);
+  }, [enabled, opening, fontsReady, landed, spots.length]);
   useEffect(() => {
     const timer = setTimeout(() => setSettled(true), SETTLE_LIMIT);
     return () => clearTimeout(timer);

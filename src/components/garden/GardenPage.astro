@@ -61,6 +61,14 @@ const devMist = import.meta.env.DEV && opening(MIST_DAWN);
         addEventListener('scroll', pin, { passive: true });
         addEventListener('resize', pin);
         addEventListener('pageshow', pin);
+        // Back from the Details page (voyagePlace.ts: PLACE_KEY, BACK_KEY),
+        // marked before the first paint so the title never shows over the
+        // cover of a place further on.
+        try {
+          var place = sessionStorage.getItem('pa_voyage_place'), back = sessionStorage.getItem('pa_voyage_back');
+          sessionStorage.removeItem('pa_voyage_back');
+          if (place || back) document.documentElement.dataset.gardenReturn = place ? 'place' : 'start';
+        } catch (e) {}
       })();
     </script>
     <style is:global>@view-transition { navigation: auto; } html { background: var(--garden-page); } body { margin: 0; } ::selection { background: #b9c2a7; color: #30382e; }</style>
