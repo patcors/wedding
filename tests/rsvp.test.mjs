@@ -21,7 +21,7 @@ test('each Party remembers its own RSVP', () => {
 const dean = { name: 'Dean', attending: 'yes', dietary: '', busTo: 'Wollongong', busFrom: 'none', dinner: 'yes' };
 const saved = {
   submitted_at: '2026-10-17T00:00:00.000Z', code: 'curry', party: 'Dean & Kelly',
-  song: '', message: '', notes: '', guests: [dean],
+  song: '', message: '', guests: [dean],
 };
 
 test('a saved RSVP must have answered Guests', () => {
@@ -35,10 +35,10 @@ test('an RSVP saved before the bus had stops still loads, with the bus unanswere
   assert.deepEqual(readSaved(JSON.stringify(old)).guests, [{ name: 'Dean', attending: 'yes', dietary: 'vegan', busTo: '', busFrom: '', dinner: '' }]);
 });
 
-test('an RSVP saved with a contact, before the night-before dinner and the notes, still loads without them', () => {
+test('an RSVP saved with a contact, before the night-before dinner, still loads without the contact', () => {
   const old = { submitted_at: saved.submitted_at, code: 'curry', party: 'Dean & Kelly', contact: 'a@b.co', song: 'September', message: 'Yay',
     guests: [{ name: 'Dean', attending: 'yes', dietary: 'Vego', busTo: 'Berry', busFrom: 'none' }] };
-  assert.deepEqual(readSaved(JSON.stringify(old)), { submitted_at: saved.submitted_at, code: 'curry', party: 'Dean & Kelly', song: 'September', message: 'Yay', notes: '',
+  assert.deepEqual(readSaved(JSON.stringify(old)), { submitted_at: saved.submitted_at, code: 'curry', party: 'Dean & Kelly', song: 'September', message: 'Yay',
     guests: [{ name: 'Dean', attending: 'yes', dietary: 'Vego', busTo: 'Berry', busFrom: 'none', dinner: '' }] });
   assert.equal(readSaved(JSON.stringify({ ...saved, guests: [{ ...dean, dinner: 'maybe' }] })).guests[0].dinner, '');
 });
@@ -77,10 +77,9 @@ test('the body carries every field, with guests as a JSON string', () => {
   const guests = [{ name: 'Dean', attending: 'yes', dietary: 'Vegetarian', busTo: 'Wollongong', busFrom: 'Berry', dinner: 'no' }];
   const params = toParams({
     submitted_at: '2026-09-30T00:00:00.000Z', code: 'curry', party: 'Dean & Kelly',
-    song: 'September', message: 'Yay', notes: 'Bringing a pram', guests,
+    song: 'September', message: 'Yay', guests,
   });
-  assert.deepEqual([...params.keys()], ['submitted_at', 'code', 'party', 'song', 'message', 'notes', 'guests']);
-  assert.equal(params.get('notes'), 'Bringing a pram');
+  assert.deepEqual([...params.keys()], ['submitted_at', 'code', 'party', 'song', 'message', 'guests']);
   assert.deepEqual(JSON.parse(params.get('guests')), guests);
 });
 

@@ -27,7 +27,6 @@ export interface Rsvp {
   party: string;     // the Party's greeting
   song: string;
   message: string;   // a note for us
-  notes: string;     // anything else we should know
   guests: GuestReply[];
 }
 
@@ -90,7 +89,6 @@ export function toRsvp(value: unknown): Rsvp | null {
     party: text(v.party),
     song: text(v.song),
     message: text(v.message),
-    notes: text(v.notes),
     guests: guests.map(g => ({
       name: g.name as string,
       attending: g.attending as Answer,
@@ -135,7 +133,6 @@ export function toParams(rsvp: Rsvp): URLSearchParams {
     party: rsvp.party,
     song: rsvp.song,
     message: rsvp.message,
-    notes: rsvp.notes,
     guests: JSON.stringify(rsvp.guests),
   });
 }

@@ -37,10 +37,6 @@ const phoneHref = telHref(phone);
         <input class="rsvp-input" name="song" type="text" autocomplete="off" />
       </label>
       <label class="rsvp-field">
-        <span class="rsvp-label">Anything else we should know <i>optional</i></span>
-        <textarea class="rsvp-input" name="notes" rows="2"></textarea>
-      </label>
-      <label class="rsvp-field">
         <span class="rsvp-label">A note for us <i>optional</i></span>
         <textarea class="rsvp-input" name="message" rows="2"></textarea>
       </label>
@@ -62,7 +58,6 @@ const phoneHref = telHref(phone);
     </p>
     <ul class="rsvp-summary" data-rsvp-summary></ul>
     <p class="rsvp-note" data-rsvp-song hidden></p>
-    <p class="rsvp-note" data-rsvp-notes hidden></p>
     <p class="rsvp-note" data-rsvp-reach></p>
     <button type="button" class="rsvp-button rsvp-button-quiet" data-rsvp-change>Change our answer</button>
   </div>
@@ -245,7 +240,6 @@ const phoneHref = telHref(phone);
       party: party.greeting,
       song: field('song').value.trim(),
       message: field('message').value.trim(),
-      notes: field('notes').value.trim(),
       guests,
     };
   }
@@ -294,7 +288,6 @@ const phoneHref = telHref(phone);
     setHeading(`${party.greeting}, we’d love to`, 'know you’re coming.');
     field('song').value = previous?.song ?? '';
     field('message').value = previous?.message ?? '';
-    field('notes').value = previous?.notes ?? '';
     subtitle.textContent = `Please reply by ${replyBy}.`;
     loading.hidden = true;
     thanks.hidden = true;
@@ -317,9 +310,6 @@ const phoneHref = telHref(phone);
     const song = $('[data-rsvp-song]');
     song.hidden = !rsvp.song;
     song.textContent = rsvp.song ? `Your song request: ${rsvp.song}.` : '';
-    const notes = $('[data-rsvp-notes]');
-    notes.hidden = !rsvp.notes;
-    notes.textContent = rsvp.notes ? `You also told us: ${rsvp.notes}` : '';
     $('[data-rsvp-change]').textContent = rsvp.guests.length > 1 ? 'Change our answer' : 'Change my answer';
     loading.hidden = true;
     form.hidden = true;

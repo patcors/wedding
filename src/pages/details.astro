@@ -11,15 +11,14 @@ const BASE = import.meta.env.BASE_URL;
 const tbcValues = new Set<string>();
 const tbc = (placeholder: string) => { tbcValues.add(placeholder); return placeholder; };
 
-// `note`: a line under the stop, in smaller type.
-const schedule: { time: string; name: string; note?: string }[] = [
+// `note`: a line under the stop, in smaller type; `party`: in rainbow colours.
+const schedule: { time: string; name: string; note?: string; party?: true }[] = [
   { time: '3:00 pm', name: 'Gates open', note: 'Arrive any time before the ceremony' },
   { time: '3:30 pm', name: 'Ceremony' },
   { time: '4:00 pm', name: 'Cocktail hour' },
   { time: '5:30 pm', name: 'Dinner in the Orangery' },
   { time: '7:00 pm', name: 'Speeches & dances' },
-  { time: '8:00 pm', name: 'Party begins' },
-  { time: '8:00 pm', name: 'Dessert' },
+  { time: '8:00 pm', name: 'Party begins', party: true },
   { time: '11:30 pm', name: 'Send-off' },
 ];
 
@@ -38,8 +37,10 @@ const venue = {
   ],
 };
 
+// Before the places to stay, as a paragraph of its own: it isn't one of them.
+const nightBefore = 'On Thursday 15 April, the night before, we’re booking some large tables at the Berry Hotel for dinner, for anyone who’d like to join us. Let us know in your RSVP.';
+
 const stay = [
-  { name: 'The night before', note: 'We’re booking some large tables at the Berry Hotel for dinner on Thursday 15 April, for anyone who’d like to join us. Let us know in your RSVP.' },
   { name: 'In Berry village', note: 'Guesthouses and cottages a short drive from the venue. Berry weekends fill up, so book early.' },
   { name: 'In Gerringong', note: 'By the sea, with a bus stop there on the way to the venue and home again.' },
   { name: 'Around the countryside', note: 'Airbnbs across Jaspers Brush, Broughton Village and the surrounding hills.' },
@@ -52,7 +53,7 @@ const faqs = [
   { q: 'What about dietary requirements?', a: 'Tell us when you RSVP and we’ll take care of the rest.' },
   { q: 'Are there gifts?', a: 'We will have a wishing well on the day.' },
   { q: 'Would you rather lemons for hands or lemons for feet?', a: 'Depends how ripe they are.' },
-  { q: 'Who do I ask about everything else?', a: 'Call Jonathan Dale anytime, day or night, on 0435 597 406.' },
+  { q: 'Who do I ask about everything else?', a: 'Call Jonathon Dale anytime, day or night, on 0435 597 406.' },
 ];
 
 const rsvp = {
@@ -111,7 +112,7 @@ const photos = {
         <ol class="info-schedule">
           {schedule.map(item => <li>
             <span class="info-time">{item.time}</span>
-            <span class="info-stop">{item.name}</span>
+            <span class:list={['info-stop', { 'info-stop-party': item.party }]}>{item.name}</span>
             {item.note && <span class="info-stop-note">{item.note}</span>}
           </li>)}
         </ol>
@@ -143,6 +144,7 @@ const photos = {
         <div>
           <p class="info-eyebrow">Make a weekend of it</p>
           <h2>Where <em>to stay.</em></h2>
+          <p class="info-night-before">{nightBefore}</p>
           <dl class="info-list">
             {stay.map(row => <>
               <dt>{row.name}</dt>
@@ -264,6 +266,14 @@ const photos = {
   .info-time { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
   .info-stop { font: 400 25px/1.2 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; }
   .info-stop-note { font: italic 17px/1.3 'Cormorant Garamond', Georgia, serif; color: var(--muted); }
+  /* "Party begins" in a rainbow sliding through the letters, a calmer cousin
+     of Slack's party parrot (Amelia, October 2026); held still under reduced
+     motion. The colours are deep enough to read on the paper. */
+  .info-stop-party { font-weight: 500; color: transparent; -webkit-background-clip: text; background-clip: text;
+    background-image: linear-gradient(90deg, #c8463d, #d27a1e, #b8961a, #4d9447, #2f86a6, #4b62c2, #8a4fb8, #c24589, #c8463d);
+    background-size: 200% 100%; animation: info-party 4s linear infinite; }
+  @keyframes info-party { to { background-position: 200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .info-stop-party { animation: none; } }
 
   /* The schedule as a printed order of service, framed like the photos. */
   .info-schedule { list-style: none; margin: 50px auto 0; max-width: 400px; padding: 56px 40px; background: var(--paper); box-shadow: 0 14px 50px #48513a24;
@@ -281,6 +291,7 @@ const photos = {
   .info-venue-name { font: italic 23px 'Cormorant Garamond', Georgia, serif; color: #59634f; margin: 6px 0 4px; }
   .info-address { font-size: 11px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
   .info-list { margin: 26px 0 0; }
+  .info-night-before { font: 20px/1.5 'Cormorant Garamond', Georgia, serif; max-width: 430px; margin: 22px 0 0; }
   .info-list dt { font-size: 9px; text-transform: uppercase; letter-spacing: .22em; color: var(--muted); padding-top: 18px; }
   .info-list dd { font: 18px/1.5 'Cormorant Garamond', Georgia, serif; margin: 7px 0 0; max-width: 430px; }
   .info-map-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
@@ -352,7 +363,7 @@ const photos = {
     .info-section { padding: 65px 28px 0; }
     .info-split, .info-split-reverse { flex-direction: column; align-items: center; text-align: center; }
     .info-split .info-photo, .info-photo-break { max-width: 300px; }
-    .info-list dd, .info-faq p { margin-inline: auto; }
+    .info-list dd, .info-faq p, .info-night-before { margin-inline: auto; }
     .info-stop { font-size: 23px; }
     .info-schedule { padding: 48px 24px; }
     .info-day { padding-top: 24px; }
