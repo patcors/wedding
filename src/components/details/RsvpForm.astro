@@ -33,17 +33,12 @@ const phoneHref = telHref(phone);
 
     <div class="rsvp-party">
       <label class="rsvp-field">
-        <span class="rsvp-label">Email or mobile</span>
-        <!-- Either will do, so it stays a text field (type=email would refuse a
-             mobile), but asks for the email keyboard: most reply by email, it
-             has @ and . to hand and numbers a tap away, and autofill offers
-             their address. No capitals or corrections, which spoil an address. -->
-        <input class="rsvp-input" name="contact" type="text" inputmode="email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="rsvp-contact-error" data-rsvp-contact />
-      </label>
-      <p class="rsvp-error" id="rsvp-contact-error" hidden></p>
-      <label class="rsvp-field">
         <span class="rsvp-label">A song to get you dancing <i>optional</i></span>
         <input class="rsvp-input" name="song" type="text" autocomplete="off" />
+      </label>
+      <label class="rsvp-field">
+        <span class="rsvp-label">Anything else we should know <i>optional</i></span>
+        <textarea class="rsvp-input" name="notes" rows="2"></textarea>
       </label>
       <label class="rsvp-field">
         <span class="rsvp-label">A note for us <i>optional</i></span>
@@ -60,9 +55,15 @@ const phoneHref = telHref(phone);
   </form>
 
   <div class="rsvp-thanks" data-rsvp-thanks hidden>
+    <!-- Plain to see that it went through: just sent, or coming back to the page. -->
+    <p class="rsvp-received" data-rsvp-received>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7.4" stroke="currentColor" stroke-width=".9" /><path d="m4.8 8.3 2.2 2.2 4.3-4.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <span data-rsvp-received-text></span>
+    </p>
     <ul class="rsvp-summary" data-rsvp-summary></ul>
-    <p class="rsvp-note" data-rsvp-reach></p>
     <p class="rsvp-note" data-rsvp-song hidden></p>
+    <p class="rsvp-note" data-rsvp-notes hidden></p>
+    <p class="rsvp-note" data-rsvp-reach></p>
     <button type="button" class="rsvp-button rsvp-button-quiet" data-rsvp-change>Change our answer</button>
   </div>
 
@@ -87,7 +88,7 @@ const phoneHref = telHref(phone);
             {DIETARY_OPTIONS.map(option => (
               <label class="rsvp-pill"><input type="checkbox" value={option} data-guest-diet /><span>{option}</span></label>
             ))}
-            <label class="rsvp-pill rsvp-pill-other"><input type="checkbox" data-guest-diet-other /><span>Other</span></label>
+            <label class="rsvp-pill"><input type="checkbox" data-guest-diet-other /><span>Other</span></label>
           </div>
           <label class="rsvp-field rsvp-diet-other" data-guest-diet-other-field hidden>
             <span class="rsvp-visually-hidden">Other dietary requirements</span>
@@ -109,6 +110,13 @@ const phoneHref = telHref(phone);
           </div>
         </fieldset>
         <p class="rsvp-hint">{busHint}</p>
+        <fieldset class="rsvp-dinner">
+          <legend class="rsvp-label">Dinner at the Berry Hotel the night before? <i>Thursday 15 April</i></legend>
+          <div class="rsvp-pills">
+            <label class="rsvp-pill"><input type="radio" value="yes" data-guest-dinner /><span>Count me in</span></label>
+            <label class="rsvp-pill"><input type="radio" value="no" data-guest-dinner /><span>No thanks</span></label>
+          </div>
+        </fieldset>
       </div>
     </div>
   </template>
@@ -116,7 +124,7 @@ const phoneHref = telHref(phone);
 
 <script>
   import {
-    contactProblem, describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, readLookup, readParty, readSaved, storageKey,
+    describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, readLookup, readParty, readSaved, sentOn, storageKey,
     toParams,
     type Answer, type GuestReply, type RememberedParty, type Rsvp,
   } from './rsvp';
@@ -132,8 +140,6 @@ const phoneHref = telHref(phone);
   const noLink = $('[data-rsvp-no-link]');
   const loading = $('[data-rsvp-loading]');
   const guestList = $('[data-rsvp-guests]');
-  const contact = $<HTMLInputElement>('[data-rsvp-contact]');
-  const contactError = $('#rsvp-contact-error');
   const submit = $<HTMLButtonElement>('[data-rsvp-submit]');
   const failure = $('[data-rsvp-failure]');
   const thanks = $('[data-rsvp-thanks]');
@@ -177,6 +183,7 @@ const phoneHref = telHref(phone);
     row.querySelectorAll<HTMLInputElement>('[data-guest-attending]').forEach(r => { r.name = `${id}-attending`; });
     row.querySelectorAll<HTMLInputElement>('[data-guest-bus-to]').forEach(r => { r.name = `${id}-bus-to`; });
     row.querySelectorAll<HTMLInputElement>('[data-guest-bus-from]').forEach(r => { r.name = `${id}-bus-from`; });
+    row.querySelectorAll<HTMLInputElement>('[data-guest-dinner]').forEach(r => { r.name = `${id}-dinner`; });
     attendError.id = `${id}-attend-error`;
     $('[data-guest-attend]', row).setAttribute('aria-describedby', attendError.id);
 
@@ -191,6 +198,7 @@ const phoneHref = telHref(phone);
       otherInput.value = other;
       if (answer.busTo) check(row, 'data-guest-bus-to', answer.busTo);
       if (answer.busFrom) check(row, 'data-guest-bus-from', answer.busFrom);
+      if (answer.dinner) check(row, 'data-guest-dinner', answer.dinner);
     }
     extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
     otherField.hidden = !otherToggle.checked;
@@ -228,15 +236,16 @@ const phoneHref = telHref(phone);
         dietary: coming ? dietaryOf(row) : '',
         busTo: coming ? checked(row, 'data-guest-bus-to') : '',
         busFrom: coming ? checked(row, 'data-guest-bus-from') : '',
+        dinner: coming ? checked(row, 'data-guest-dinner') as Answer | '' : '',
       };
     });
     return {
       submitted_at: new Date().toISOString(),
       code: party.code,
       party: party.greeting,
-      contact: contact.value.trim(),
       song: field('song').value.trim(),
       message: field('message').value.trim(),
+      notes: field('notes').value.trim(),
       guests,
     };
   }
@@ -250,13 +259,8 @@ const phoneHref = telHref(phone);
       showError($('[data-guest-attend-error]', row), unanswered ? `Let us know if ${row.dataset.name} can make it.` : null);
       if (unanswered) flag($('[data-guest-attending]', row));
     }
-    const problem = contactProblem(contact.value);
-    showError(contactError, problem, contact);
-    if (problem) flag(contact);
     return first;
   }
-
-  contact.addEventListener('input', () => showError(contactError, null, contact));
 
   // ---- Sending --------------------------------------------------------------
 
@@ -288,9 +292,9 @@ const phoneHref = telHref(phone);
     });
     submit.textContent = party.guests.length > 1 ? 'Send our reply' : 'Send my reply';
     setHeading(`${party.greeting}, we’d love to`, 'know you’re coming.');
-    contact.value = previous?.contact ?? '';
     field('song').value = previous?.song ?? '';
     field('message').value = previous?.message ?? '';
+    field('notes').value = previous?.notes ?? '';
     subtitle.textContent = `Please reply by ${replyBy}.`;
     loading.hidden = true;
     thanks.hidden = true;
@@ -307,10 +311,15 @@ const phoneHref = telHref(phone);
       item.append(Object.assign(document.createElement('strong'), { textContent: `${who}:` }), ` ${rest.join(': ')}`);
       return item;
     }));
-    $('[data-rsvp-reach]').textContent = `We’ll reach you at ${rsvp.contact}. You can change your answer any time before ${replyBy}.`;
+    const on = sentOn(rsvp.submitted_at);
+    $('[data-rsvp-received-text]').textContent = justSent ? 'Your RSVP has been sent' : on ? `We received your RSVP on ${on}` : 'We have your RSVP';
+    $('[data-rsvp-reach]').textContent = `You can change your answer any time before ${replyBy}.`;
     const song = $('[data-rsvp-song]');
     song.hidden = !rsvp.song;
     song.textContent = rsvp.song ? `Your song request: ${rsvp.song}.` : '';
+    const notes = $('[data-rsvp-notes]');
+    notes.hidden = !rsvp.notes;
+    notes.textContent = rsvp.notes ? `You also told us: ${rsvp.notes}` : '';
     $('[data-rsvp-change]').textContent = rsvp.guests.length > 1 ? 'Change our answer' : 'Change my answer';
     loading.hidden = true;
     form.hidden = true;
@@ -449,10 +458,11 @@ const phoneHref = telHref(phone);
   .rsvp-dietary { margin-top: 24px; }
   .rsvp-dietary legend { margin-bottom: 12px; }
   .rsvp-pills-diet { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-  .rsvp-pills-diet .rsvp-pill-other { grid-column: 1 / -1; }
   .rsvp-diet-other { margin-top: 14px; }
   .rsvp-bus { margin-top: 24px; }
   .rsvp-bus + .rsvp-hint { margin-top: 12px; }
+  .rsvp-dinner { margin-top: 24px; }
+  .rsvp-dinner legend { margin-bottom: 12px; }
   .rsvp-bus legend { margin-bottom: 12px; }
 
   .rsvp-field { display: block; margin-top: 24px; }
@@ -480,6 +490,9 @@ const phoneHref = telHref(phone);
   .rsvp-failure { margin-top: 16px; }
 
   .rsvp-thanks { text-align: center; }
+  .rsvp-received { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 26px; font: 500 11px 'Montserrat', sans-serif;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--deep); }
+  .rsvp-received svg { flex: none; }
   .rsvp-summary { list-style: none; margin: 0; padding: 0; text-align: left; border-bottom: 1px solid #7379672e; }
   .rsvp-summary :global(li) { font: 21px/1.45 'Cormorant Garamond', Georgia, serif; padding: 16px 0; border-top: 1px solid #7379672e; }
   .rsvp-summary :global(strong) { font-weight: 500; }

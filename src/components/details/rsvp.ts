@@ -16,15 +16,18 @@ export interface GuestReply {
   dietary: string;     // only for Guests who are coming
   busTo: BusChoice;    // where they get on to come to the venue
   busFrom: BusChoice;  // where they get off on the way home
+  dinner: Answer | ''; // dinner at the Berry Hotel the night before; '' when not coming or not answered
 }
 
+// No contact any more (Amelia, October 2026): older replies' `contact` is
+// read past and dropped.
 export interface Rsvp {
   submitted_at: string;
   code: string;      // the Party's Invite code
   party: string;     // the Party's greeting
-  contact: string;
   song: string;
-  message: string;
+  message: string;   // a note for us
+  notes: string;     // anything else we should know
   guests: GuestReply[];
 }
 
@@ -36,9 +39,11 @@ export interface RememberedParty {
 }
 
 /** The dietary buttons, in order. Anything else goes in "Other". */
-export const DIETARY_OPTIONS = ['Vego', 'Vegan', 'No peanuts', 'Gluten free'] as const;
+export const DIETARY_OPTIONS = ['Vegetarian', 'Vegan', 'Dairy free', 'No peanuts', 'Gluten free'] as const;
+/** What older replies called a button: "Vego" is now "Vegetarian". */
+const DIETARY_ALIASES: Record<string, (typeof DIETARY_OPTIONS)[number]> = { vego: 'Vegetarian' };
 
-/** The sheet keeps dietary needs as one line: "Vego, No peanuts, shellfish". */
+/** The sheet keeps dietary needs as one line: "Vegetarian, No peanuts, shellfish". */
 export function formatDietary(choices: string[], other: string): string {
   return [...choices, other.trim()].filter(Boolean).join(', ');
 }
@@ -48,7 +53,7 @@ export function parseDietary(dietary: string): { choices: string[]; other: strin
   const choices: string[] = [];
   const rest: string[] = [];
   for (const part of dietary.split(',').map(p => p.trim()).filter(Boolean)) {
-    const option = DIETARY_OPTIONS.find(o => o.toLowerCase() === part.toLowerCase());
+    const option = DIETARY_OPTIONS.find(o => o.toLowerCase() === part.toLowerCase()) ?? DIETARY_ALIASES[part.toLowerCase()];
     if (option && !choices.includes(option)) choices.push(option);
     else if (!option) rest.push(part);
   }
@@ -76,22 +81,23 @@ const text = (value: unknown) => (isString(value) ? value : '');
     the old yes/no `bus`) are dropped, and missing bus answers read as unanswered. */
 export function toRsvp(value: unknown): Rsvp | null {
   const v = value as Partial<Record<keyof Rsvp, unknown>> | null;
-  if (!v || typeof v !== 'object' || !Array.isArray(v.guests) || !v.guests.length || !isString(v.contact)) return null;
+  if (!v || typeof v !== 'object' || !Array.isArray(v.guests) || !v.guests.length) return null;
   const guests = v.guests as Partial<Record<keyof GuestReply, unknown>>[];
   if (!guests.every(g => g && isString(g.name) && isAnswer(g.attending))) return null;
   return {
     submitted_at: text(v.submitted_at),
     code: text(v.code),
     party: text(v.party),
-    contact: v.contact,
     song: text(v.song),
     message: text(v.message),
+    notes: text(v.notes),
     guests: guests.map(g => ({
       name: g.name as string,
       attending: g.attending as Answer,
       dietary: text(g.dietary),
       busTo: text(g.busTo),
       busFrom: text(g.busFrom),
+      dinner: isAnswer(g.dinner) ? g.dinner : '',
     })),
   };
 }
@@ -127,26 +133,22 @@ export function toParams(rsvp: Rsvp): URLSearchParams {
     submitted_at: rsvp.submitted_at,
     code: rsvp.code,
     party: rsvp.party,
-    contact: rsvp.contact,
     song: rsvp.song,
     message: rsvp.message,
+    notes: rsvp.notes,
     guests: JSON.stringify(rsvp.guests),
   });
 }
 
-/** Why a contact isn't usable, or null when it looks like an email or phone number. */
-export function contactProblem(contact: string): string | null {
-  const value = contact.trim();
-  if (!value) return 'We need an email or mobile so we can reach you.';
-  const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  const digits = value.replace(/\D/g, '').length;
-  const looksLikePhone = /^[\d\s()+.-]+$/.test(value) && digits >= 8 && digits <= 15;
-  return looksLikeEmail || looksLikePhone ? null : 'That doesn’t look like an email or mobile number.';
-}
-
 const isStop = (choice: BusChoice) => choice !== '' && choice !== 'none';
 
-/** One Guest's answer as a sentence: "Dean: coming, vegetarian, bus from Wollongong, bus home to Berry." */
+/** When the Party's reply was sent, as "24 October", or '' if the time can't be read. */
+export function sentOn(submittedAt: string): string {
+  const time = Date.parse(submittedAt);
+  return Number.isNaN(time) ? '' : new Date(time).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', timeZone: 'Australia/Sydney' });
+}
+
+/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus from Wollongong, bus home to Berry, dinner the night before." */
 export function describeGuest(guest: GuestReply): string {
   if (guest.attending === 'no') return `${guest.name}: can’t make it.`;
   const parts = ['coming'];
@@ -155,5 +157,6 @@ export function describeGuest(guest: GuestReply): string {
   if (isStop(guest.busTo)) parts.push(`bus from ${guest.busTo}`);
   if (isStop(guest.busFrom)) parts.push(`bus home to ${guest.busFrom}`);
   if (!isStop(guest.busTo) && !isStop(guest.busFrom) && (guest.busTo === 'none' || guest.busFrom === 'none')) parts.push('no bus');
+  if (guest.dinner === 'yes') parts.push('dinner the night before');
   return `${guest.name}: ${parts.join(', ')}.`;
 }

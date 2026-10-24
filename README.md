@@ -100,8 +100,10 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    // so the Details page can show it on any device.
    const RSVP_SHEET = 'RSVPs';
    const LOG_SHEET = 'Log';
-   const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus_to', 'bus_from', 'contact', 'song', 'message'];
-   const LOG_HEADERS = ['submitted_at', 'code', 'party', 'contact', 'song', 'message', 'guests'];
+   // New columns go on the end, so rows already in the sheet keep theirs;
+   // `contact` stays for the replies sent before the form stopped asking.
+   const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus_to', 'bus_from', 'contact', 'song', 'message', 'dinner', 'notes'];
+   const LOG_HEADERS = ['submitted_at', 'code', 'party', 'contact', 'song', 'message', 'guests', 'notes'];
 
    function doPost(e) {
      const lock = LockService.getScriptLock();
@@ -123,7 +125,7 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
        appendText(rsvps, guests.map((g) => [
          p.submitted_at || '', code, p.party || '',
          g.name || '', g.attending || '', g.dietary || '', g.busTo || '', g.busFrom || '',
-         p.contact || '', p.song || '', p.message || '',
+         p.contact || '', p.song || '', p.message || '', g.dinner || '', p.notes || '',
        ]));
 
        return json({ ok: true });
@@ -134,7 +136,7 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
 
    // { ok: true, rsvp: null } when the Party hasn't replied; otherwise rsvp
    // is shaped like the reply the page saves: { submitted_at, code, party,
-   // contact, song, message, guests: [{ name, attending, dietary, busTo, busFrom }] }.
+   // song, message, notes, guests: [{ name, attending, dietary, busTo, busFrom, dinner }] }.
    function doGet(e) {
      const p = (e && e.parameter) || {};
      const code = String(p.code || '').trim();
@@ -157,9 +159,9 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
      const first = rows[0];
      return {
        submitted_at: first.submitted_at, code, party: first.party,
-       contact: first.contact, song: first.song, message: first.message,
+       song: first.song, message: first.message, notes: first.notes,
        guests: rows.map((r) => ({
-         name: r.guest, attending: r.attending, dietary: r.dietary, busTo: r.bus_to, busFrom: r.bus_from,
+         name: r.guest, attending: r.attending, dietary: r.dietary, busTo: r.bus_to, busFrom: r.bus_from, dinner: r.dinner,
        })),
      };
    }
@@ -218,9 +220,9 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    changes nothing on the live site.
 
 The form only appears for a Party remembered from their Personal link, and
-posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`,
-`song`, `message`, and `guests` as a JSON string of
-`[{ name, attending, dietary, busTo, busFrom }]`) with `mode: "no-cors"`. The response is
+posts urlencoded fields (`submitted_at`, `code`, `party`, `song`,
+`message`, `notes`, and `guests` as a JSON string of
+`[{ name, attending, dietary, busTo, busFrom, dinner }]`) with `mode: "no-cors"`. The response is
 opaque, so the page treats fetch resolving as success. With no endpoint set, a
 dev server logs the payload to the console and shows the thank-you. A
 production build shows the "email or text us" failure message.
@@ -228,6 +230,11 @@ production build shows the "email or text us" failure message.
 `busTo` (where a Guest gets on to come to the venue) and `busFrom` (where they
 get off on the way home) are `''` when the Guest isn't coming or didn't
 answer, `none`, or a stop from `BUS_STOPS` in `src/components/details/rsvp.ts`.
+`dinner` (dinner at the Berry Hotel the night before) is `yes`, `no`, or `''`
+when the Guest isn't coming or didn't answer. `notes` is the form's "Anything
+else we should know", and `message` its "A note for us". The form stopped
+asking for an email or mobile in October 2026, so `contact` is empty in new
+rows.
 The script keeps the RSVPs header row in step with `RSVP_HEADERS`, but rows
 already in the sheet keep the columns they were written with. After changing
 columns (as when `bus` became `bus_to` and `bus_from`), delete the old test
@@ -238,8 +245,7 @@ The page also reads a Party's reply back with a plain `GET …/exec?code=<code>`
 redirect to `script.googleusercontent.com`). It shows this device's saved copy
 straight away, swaps in the Sheet's copy if that was sent later, and quietly
 keeps what it has if the lookup fails or takes more than 5 seconds. Anyone who
-knows an Invite code can read that Party's reply this way, contact details
-included.
+knows an Invite code can read that Party's reply this way.
 
 Every new deployment of the Apps Script gets a **new URL**. To change the
 script and keep the same URL:
