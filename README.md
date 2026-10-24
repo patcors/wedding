@@ -230,11 +230,13 @@ opaque, so the page treats fetch resolving as success. With no endpoint set, a
 dev server logs the payload to the console and shows the thank-you. A
 production build shows the "email or text us" failure message.
 
-`busTo` (the bus to the venue) and `busFrom` (the bus home) are `yes`,
-`none`, or `''` when the Guest isn't coming or didn't answer. The stops aren't
-named yet, so `contact` is a mobile, asked for only when someone in the Party
-takes the bus, to sort out where; it's empty otherwise. Older rows may name a
-stop (Berry, Gerringong, Wollongong), which the page reads as `yes`. `dinner`
+`busTo` (where the Guest gets on to come to the venue) and `busFrom` (where
+they get off on the way home) are a town from `BUS_STOPS` in
+`src/components/details/rsvp.ts` (Berry, Gerringong or Kiama), `none`, or `''`
+when the Guest isn't coming or didn't answer. The exact stops aren't named yet,
+so `contact` is a mobile, asked for only when someone in the Party takes the
+bus, to sort out stops and times; it's empty otherwise. A town no longer in
+`BUS_STOPS` reads back as unanswered. `dinner`
 (dinner at the Berry Hotel the night before) is `yes`, `no`, or `''` when the
 Guest isn't coming or didn't answer. `message` is the form's "A note for us".
 The script keeps the RSVPs header row in step with `RSVP_HEADERS`, but rows

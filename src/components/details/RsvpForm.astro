@@ -4,7 +4,7 @@
 // localStorage (pa_party). Every RSVP belongs to a Party, so without one the
 // visitor is pointed back to their Personal link (or to us) instead of a form.
 // The guest list itself is never shipped here.
-import { DIETARY_OPTIONS } from './rsvp';
+import { BUS_STOPS, DIETARY_OPTIONS } from './rsvp';
 import { telHref } from './phone';
 
 interface Props {
@@ -101,17 +101,17 @@ const phoneHref = telHref(phone);
           </label>
         </fieldset>
         <fieldset class="rsvp-bus">
-          <legend class="rsvp-label">Bus to the venue?</legend>
-          <div class="rsvp-pills">
-            <label class="rsvp-pill"><input type="radio" value="yes" data-guest-bus-to /><span>Yes please</span></label>
+          <legend class="rsvp-label">Bus to the venue? <i>where you’ll get on</i></legend>
+          <div class="rsvp-pills rsvp-pills-bus">
             <label class="rsvp-pill"><input type="radio" value="none" data-guest-bus-to /><span>No thanks</span></label>
+            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-to /><span>{stop}</span></label>)}
           </div>
         </fieldset>
         <fieldset class="rsvp-bus">
-          <legend class="rsvp-label">Bus home?</legend>
-          <div class="rsvp-pills">
-            <label class="rsvp-pill"><input type="radio" value="yes" data-guest-bus-from /><span>Yes please</span></label>
+          <legend class="rsvp-label">Bus home? <i>where you’ll get off</i></legend>
+          <div class="rsvp-pills rsvp-pills-bus">
             <label class="rsvp-pill"><input type="radio" value="none" data-guest-bus-from /><span>No thanks</span></label>
+            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-from /><span>{stop}</span></label>)}
           </div>
         </fieldset>
         <p class="rsvp-hint">{busHint}</p>
@@ -129,9 +129,9 @@ const phoneHref = telHref(phone);
 
 <script>
   import {
-    describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOn, storageKey,
+    describeGuest, formatDietary, isStop, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOn, storageKey,
     takesBus, toParams,
-    type Answer, type BusChoice, type GuestReply, type RememberedParty, type Rsvp,
+    type Answer, type GuestReply, type RememberedParty, type Rsvp,
   } from './rsvp';
 
   const ENDPOINT: string = import.meta.env.PUBLIC_RSVP_ENDPOINT ?? '';
@@ -242,8 +242,8 @@ const phoneHref = telHref(phone);
         name: row.dataset.name!,
         attending,
         dietary: coming ? dietaryOf(row) : '',
-        busTo: coming ? checked(row, 'data-guest-bus-to') as BusChoice : '',
-        busFrom: coming ? checked(row, 'data-guest-bus-from') as BusChoice : '',
+        busTo: coming ? checked(row, 'data-guest-bus-to') : '',
+        busFrom: coming ? checked(row, 'data-guest-bus-from') : '',
         dinner: coming ? checked(row, 'data-guest-dinner') as Answer | '' : '',
       };
     });
@@ -273,10 +273,10 @@ const phoneHref = telHref(phone);
     return first;
   }
 
-  /** Whether anyone coming has said yes to the bus, so the mobile is asked for. */
+  /** Whether anyone coming has picked a bus stop, so the mobile is asked for. */
   function busNeedsPhone() {
     return rows().some(row => checked(row, 'data-guest-attending') === 'yes'
-      && (checked(row, 'data-guest-bus-to') === 'yes' || checked(row, 'data-guest-bus-from') === 'yes'));
+      && (isStop(checked(row, 'data-guest-bus-to')) || isStop(checked(row, 'data-guest-bus-from'))));
   }
   const showPhone = () => { phoneField.hidden = !busNeedsPhone(); };
   form.addEventListener('change', showPhone);
@@ -336,7 +336,7 @@ const phoneHref = telHref(phone);
     $('[data-rsvp-received-text]').textContent = justSent ? 'Your RSVP has been sent' : on ? `We received your RSVP on ${on}` : 'We have your RSVP';
     const bus = $('[data-rsvp-bus]');
     bus.hidden = !(takesBus(rsvp.guests) && rsvp.contact);
-    bus.textContent = bus.hidden ? '' : `We’ll text you on ${rsvp.contact} to sort out the bus.`;
+    bus.textContent = bus.hidden ? '' : `We’ll text you on ${rsvp.contact} about the bus.`;
     $('[data-rsvp-reach]').textContent = `You can change your answer any time before ${replyBy}.`;
     const song = $('[data-rsvp-song]');
     song.hidden = !rsvp.song;
@@ -476,6 +476,8 @@ const phoneHref = telHref(phone);
   .rsvp-extras { margin-top: 6px; padding-left: 20px; border-left: 1px solid color-mix(in srgb, var(--leaf) 40%, transparent); }
   .rsvp-dietary { margin-top: 24px; }
   .rsvp-dietary legend { margin-bottom: 12px; }
+  .rsvp-pills-bus { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .rsvp-pills-bus .rsvp-pill span { padding: 14px 6px; }
   .rsvp-pills-diet { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
   .rsvp-diet-other { margin-top: 14px; }
   .rsvp-bus { margin-top: 24px; }
@@ -520,6 +522,8 @@ const phoneHref = telHref(phone);
     .rsvp-form, .rsvp-thanks { margin-top: 36px; }
     .rsvp-button { width: 100%; }
     .rsvp-extras { padding-left: 16px; }
+    /* Two to a row, so "Gerringong" fits at the answers' 12px. */
+    .rsvp-pills-bus { grid-template-columns: 1fr 1fr; }
   }
   /* Each answer on one line on the narrowest phones. */
   @media (max-width: 360px) {

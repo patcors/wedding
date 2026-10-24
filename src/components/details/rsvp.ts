@@ -4,19 +4,26 @@
 
 export type Answer = 'yes' | 'no';
 
-/** A bus answer: '' when not coming or not answered, 'yes' or 'none'. The
-    stops aren't named until the couple know where everyone's staying
-    (Amelia, October 2026); a guest taking the bus leaves a mobile so they can
-    sort out where. Older replies named a stop, which reads as 'yes'. */
-export type BusChoice = '' | 'yes' | 'none';
-const busChoice = (value: string): BusChoice => value === '' || value === 'none' ? value : 'yes';
+/** The towns the bus stops in, in the order the form offers them. Change
+    them here. The exact stops aren't named until the couple know where
+    everyone's staying (Amelia, October 2026); a guest taking the bus leaves a
+    mobile so the stops and times can be sorted out with them. */
+export const BUS_STOPS = ['Berry', 'Gerringong', 'Kiama'];
+
+/** A bus answer: '' when not coming or not answered, 'none', or a town from
+    BUS_STOPS. Anything else (a town since dropped, or the plain 'yes' of the
+    week the towns weren't named) reads as unanswered, so the form asks again. */
+export type BusChoice = string;
+const busChoice = (value: string): BusChoice => value === 'none' || BUS_STOPS.includes(value) ? value : '';
+/** Whether a bus answer is a town, so the Guest is taking the bus that way. */
+export const isStop = (choice: BusChoice) => BUS_STOPS.includes(choice);
 
 export interface GuestReply {
   name: string;
   attending: Answer;
   dietary: string;     // only for Guests who are coming
-  busTo: BusChoice;    // the bus to the venue
-  busFrom: BusChoice;  // the bus home
+  busTo: BusChoice;    // where they get on to come to the venue
+  busFrom: BusChoice;  // where they get off on the way home
   dinner: Answer | ''; // dinner at the Berry Hotel the night before; '' when not coming or not answered
 }
 
@@ -140,12 +147,12 @@ export function toParams(rsvp: Rsvp): URLSearchParams {
 }
 
 /** Whether anyone in the reply is taking the bus, either way. */
-export const takesBus = (guests: GuestReply[]) => guests.some(g => g.busTo === 'yes' || g.busFrom === 'yes');
+export const takesBus = (guests: GuestReply[]) => guests.some(g => isStop(g.busTo) || isStop(g.busFrom));
 
 /** Why a mobile for the bus isn't usable, or null when it looks like a phone number. */
 export function phoneProblem(phone: string): string | null {
   const value = phone.trim();
-  if (!value) return 'We need a mobile to sort out where the bus picks you up.';
+  if (!value) return 'We need a mobile to sort out the bus with you.';
   const digits = value.replace(/\D/g, '').length;
   return /^[\d\s()+.-]+$/.test(value) && digits >= 8 && digits <= 15 ? null : 'That doesn’t look like a mobile number.';
 }
@@ -156,15 +163,15 @@ export function sentOn(submittedAt: string): string {
   return Number.isNaN(time) ? '' : new Date(time).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', timeZone: 'Australia/Sydney' });
 }
 
-/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus there and back, dinner the night before." */
+/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus from Kiama, bus home to Berry, dinner the night before." */
 export function describeGuest(guest: GuestReply): string {
   if (guest.attending === 'no') return `${guest.name}: can’t make it.`;
   const parts = ['coming'];
   const dietary = guest.dietary.trim().replace(/[.\s]+$/, '');
   if (dietary) parts.push(dietary);
-  const [there, home] = [guest.busTo === 'yes', guest.busFrom === 'yes'];
-  if (there || home) parts.push(there && home ? 'bus there and back' : there ? 'bus there' : 'bus home');
-  else if (guest.busTo === 'none' || guest.busFrom === 'none') parts.push('no bus');
+  if (isStop(guest.busTo)) parts.push(`bus from ${guest.busTo}`);
+  if (isStop(guest.busFrom)) parts.push(`bus home to ${guest.busFrom}`);
+  if (!isStop(guest.busTo) && !isStop(guest.busFrom) && (guest.busTo === 'none' || guest.busFrom === 'none')) parts.push('no bus');
   if (guest.dinner === 'yes') parts.push('dinner the night before');
   return `${guest.name}: ${parts.join(', ')}.`;
 }
