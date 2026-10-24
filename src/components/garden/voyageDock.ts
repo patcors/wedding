@@ -4,7 +4,12 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LAUNCH_JETTY, groundHeight, launchJetties, random, voyageLandmarks } from './gardenGeometry.ts';
 
-export const JETTY = { deck: .36, breadth: .95, landing: 1.3, head: 2.5, headDepth: .62 } as const;
+// `beyond`: where the head ends, from the jetty's reach. It ran .25 past it,
+// and the moored catamaran's near hull ran in under the head's end with the
+// lantern post up through its deck (Amelia, October 2026); now the head stops
+// a little short and the catamaran moors a little further out, so the hull
+// lies a hand's width off it (tests/storyBoats.test.mjs).
+export const JETTY = { deck: .36, breadth: .95, landing: 1.3, head: 2.5, headDepth: .62, beyond: -.05 } as const;
 
 // A small weathered jetty: planks laid across two bearers on pairs of piles,
 // running from a landing on the bank out to a T-shaped head where the
@@ -13,7 +18,7 @@ export const JETTY = { deck: .36, breadth: .95, landing: 1.3, head: 2.5, headDep
 export function jettyGeometry(width = 1) {
   const { jetty } = voyageLandmarks(width);
   const rand = random(4423), parts: THREE.BufferGeometry[] = [], color = new THREE.Color();
-  const end = jetty.reach + .25, half = JETTY.breadth / 2, head = JETTY.head / 2;
+  const end = jetty.reach + JETTY.beyond, half = JETTY.breadth / 2, head = JETTY.head / 2;
   // `along` runs from the bank out over the water.
   const worldX = (along: number) => jetty.x - jetty.side * along;
   const add = (geometry: THREE.BufferGeometry, along: number, y: number, z: number, shade: string) => {
@@ -71,7 +76,7 @@ export function jettyGeometry(width = 1) {
 // along and round the end rather than sticking there.
 export function jettyStems(width = 1) {
   const { jetty } = voyageLandmarks(width);
-  const end = jetty.reach + .25, neck = end - JETTY.headDepth, half = JETTY.breadth / 2, head = JETTY.head / 2;
+  const end = jetty.reach + JETTY.beyond, neck = end - JETTY.headDepth, half = JETTY.breadth / 2, head = JETTY.head / 2;
   const outline: [number, number][] = [[0, half], [neck, half], [neck, head], [end, head], [end, -head], [neck, -head], [neck, -half], [0, -half]];
   const stems: { x: number; z: number; radius: number; grip: number }[] = [];
   outline.slice(1).forEach(([along, z], i) => {
@@ -87,14 +92,14 @@ export function jettyStems(width = 1) {
 // Whether a point over the water lies under the jetty.
 export function underJetty(x: number, z: number, width = 1) {
   const { jetty } = voyageLandmarks(width);
-  const along = (jetty.x - x) * jetty.side, end = jetty.reach + .25;
+  const along = (jetty.x - x) * jetty.side, end = jetty.reach + JETTY.beyond;
   return along > -.2 && along < end && Math.abs(z - jetty.z) < (along > end - JETTY.headDepth ? JETTY.head : JETTY.breadth) / 2;
 }
 
 // Where the jetty's lantern hangs, from the taller post at the head's corner.
 export function jettyLantern(width = 1) {
   const { jetty } = voyageLandmarks(width);
-  return new THREE.Vector3(jetty.x - jetty.side * (jetty.reach + .17), JETTY.deck + 1.03, jetty.z - JETTY.head / 2 - .02);
+  return new THREE.Vector3(jetty.x - jetty.side * (jetty.reach + JETTY.beyond - .08), JETTY.deck + 1.03, jetty.z - JETTY.head / 2 - .02);
 }
 
 // The little jetties the boats set out from, in the dock's weathered wood at

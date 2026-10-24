@@ -179,8 +179,9 @@ function course(points: Point[]) {
 // (`gate`, in progress: its stern below the line, with a margin). On a phone
 // they used to wait on the jetty's side, under the old tree, and cross back
 // below the catamaran's bow to come round it; now they come straight round,
-// as on desktop (Amelia, October 2026).
-const ROUND = { above: .35, margin: .2, wide: .75, before: { desktop: 4.5, mobile: 4.6 } };
+// as on desktop (Amelia, October 2026). A phone's narrow river leaves them a
+// little less room wide of the catamaran since it moored a little further out.
+const ROUND = { above: .35, margin: .2, wide: { desktop: .75, mobile: .65 }, before: { desktop: 4.5, mobile: 4.6 } };
 const rounds = new Map<string, { line: number; gate: number }>();
 export function guestRound(count: number, width: number, height = Infinity) {
   const key = `${fleetSize(count)} ${width} ${height}`;
@@ -260,7 +261,7 @@ export function guestCourses(count: number, width: number, height = Infinity) {
   const out = (point: Point) => (bankAt(point.z, width).x - point.x) * VOYAGE.dock.side;
   const moored = boatPose(DOCKED, width), half = (CATAMARAN + HULL_HALF_BEAM.catamaran) * moored.scale;
   // Wide of the catamaran's far hull.
-  const wide = out(moored) + half + beam + ROUND.wide;
+  const wide = out(moored) + half + beam + ROUND.wide[layout(width)];
   const far = (z: number, share: number) => offBank(bankEdge(z, width) * 2 * share, z, width);
   return guestBerths(n, width, height).map(berth => {
     const i = berth.order, spacing = 2.6 * length, before = ROUND.before[layout(width)];

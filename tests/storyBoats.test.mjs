@@ -113,7 +113,8 @@ test('larger on a phone than on desktop through the voyage, both larger than bef
   }
 });
 
-test('moored off the jetty from DOCKED, the outer hull just clear of its end', () => {
+test('moored off the jetty from DOCKED, the outer hull just clear of its end', async () => {
+  const { JETTY } = await import('../src/components/garden/voyageDock.ts');
   for (const width of widths) {
     const { mooring, jetty } = voyageLandmarks(width);
     for (const p of [DOCKED, (DOCKED + 1) / 2, 1]) {
@@ -121,9 +122,14 @@ test('moored off the jetty from DOCKED, the outer hull just clear of its end', (
       assert.ok(Math.abs(pose.x - mooring.x) < 1e-9 && Math.abs(pose.z - mooring.z) < 1e-9);
       assert.deepEqual(boatPose(p, width).yaw, boatPose(DOCKED, width).yaw);
     }
-    const outer = (CATAMARAN + hullHalfBeam(1)) * boatPose(DOCKED, width).scale;
-    const end = jetty.x - jetty.side * jetty.reach;
-    assert.ok(Math.abs(mooring.x - end) > outer, `clear of the jetty (${width})`);
+    // The near hull's outer edge at bow and stern, turned with the boat,
+    // against the head's planks' end: clear, but not far off.
+    const { yaw, scale } = boatPose(DOCKED, width), end = jetty.x - jetty.side * (jetty.reach + JETTY.beyond);
+    for (const along of [-1.5, 1.15]) {
+      const u = -jetty.side * -(CATAMARAN + hullHalfBeam(1)), x = mooring.x + (Math.cos(yaw) * u + Math.sin(yaw) * along) * scale;
+      const clear = (end - x) * jetty.side;
+      assert.ok(clear > .05 && clear < .3, `clear of the jetty's head by ${clear.toFixed(2)} (${width}, ${along})`);
+    }
   }
 });
 

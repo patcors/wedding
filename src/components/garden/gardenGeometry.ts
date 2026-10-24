@@ -155,7 +155,9 @@ export function rockHalfWidth(z: number, width = 1) {
 export const channelOffset = (z: number, width = 1) => (islandHalfWidth(z, width) + bankEdge(z, width)) / 2;
 
 // The jetty runs out from the bank on the dock side; the catamaran moors at its
-// end. The old tree stands inland of it, a little downstream.
+// end, its near hull just off the head (it was .8 out, with the hull in under
+// the head's end: see JETTY.beyond). The old tree stands inland of it, a
+// little downstream.
 export const voyageLandmarks = perWidth(function voyageLandmarks(width: number) {
   const { z, side, jetty } = VOYAGE.dock;
   const bank = riverCenter(z, width) + side * bankEdge(z, width);
@@ -163,7 +165,7 @@ export const voyageLandmarks = perWidth(function voyageLandmarks(width: number) 
   const tree = VOYAGE.tree.z;
   return {
     jetty: { x: bank, z, side, reach },
-    mooring: { x: bank - side * (reach + .8), z },
+    mooring: { x: bank - side * (reach + .9), z },
     tree: { x: riverCenter(tree, width) + side * (bankEdge(tree, width) + VOYAGE.tree.inland * Math.max(width, .6)), z: tree },
   };
 });
