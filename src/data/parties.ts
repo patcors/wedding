@@ -60,4 +60,5 @@ export const parties: Party[] = [
   { code: "zuko", greeting: "Andrea", guests: ["Andrea"] },
   { code: "flammekueche", greeting: "Viviene & Mats", guests: ["Viviene", "Mats"] },
   { code: "holden", greeting: "Arthur & Carol", guests: ["Arthur", "Carol"] },
+  { code: "gum", greeting: "Kevin & Judith", guests: ["Kevin", "Judith"] },
 ];
