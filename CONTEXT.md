@@ -23,7 +23,7 @@ The web address on a Party's digital card, made from their Invite code. Opening 
 _Avoid_: Invitation link, magic link
 
 **RSVP**:
-A Party's reply: for each Guest, whether they're coming and what they can't eat, one email or phone number to reach the Party, plus optional notes for the couple. A Party may reply more than once; the latest reply stands. Every RSVP comes through the Party's Personal link; there is no RSVP without one.
+A Party's reply: for each Guest, whether they're coming, what they can't eat, whether they're taking the bus (with a mobile if they are) and whether they'll come to dinner the night before, plus optional notes for the couple. A Party may reply more than once; the latest reply stands. Every RSVP comes through the Party's Personal link; there is no RSVP without one.
 
 ### The site
 

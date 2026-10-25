@@ -33,7 +33,7 @@ Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Ga
 
 ## Editing content
 
-- Details page facts (schedule, venue, travel, where to stay, FAQs): the objects at the top of `src/pages/details.astro`. Wrap anything unconfirmed in `tbc()` and it shows a "to confirm" tag. A phone number in an answer (`0435 597 406`) becomes a tap-to-call link (`withPhoneLinks` in `src/components/details/phone.ts`).
+- Details page facts (schedule, venue, travel, where to stay, FAQs): the objects at the top of `src/pages/details.astro`. A phone number in an answer (`0435 597 406`) becomes a tap-to-call link (`withPhoneLinks` in `src/components/details/phone.ts`).
 - The Garden's story: `MILESTONES` in `src/components/garden/journey.ts`, one per date, oldest first. `month` is `'YYYY-MM'` and shows as the running date; `description` is what screen readers hear there; `room` gives a milestone more or less scroll at its date (a third of a share by default) and `hold` how long its date holds; each year from 2018 gets the same scroll however its milestones fall. See [docs/VOYAGE.md](docs/VOYAGE.md); `node --test tests/*.test.mjs` checks the story still runs in order.
 - Link preview image: `public/og.jpg` (1200×630).
 
@@ -104,7 +104,7 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    const RSVP_SHEET = 'RSVPs';
    const LOG_SHEET = 'Log';
    // New columns go on the end, so rows already in the sheet keep theirs.
-   // `contact` is a mobile, given only when someone takes the bus.
+   // `contact` is the Guest's mobile, given only when they take the bus.
    const RSVP_HEADERS = ['submitted_at', 'code', 'party', 'guest', 'attending', 'dietary', 'bus_to', 'bus_from', 'contact', 'song', 'message', 'dinner'];
    const LOG_HEADERS = ['submitted_at', 'code', 'party', 'contact', 'song', 'message', 'guests'];
 
@@ -128,7 +128,7 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
        appendText(rsvps, guests.map((g) => [
          p.submitted_at || '', code, p.party || '',
          g.name || '', g.attending || '', g.dietary || '', g.busTo || '', g.busFrom || '',
-         p.contact || '', p.song || '', p.message || '', g.dinner || '',
+         g.mobile || '', p.song || '', p.message || '', g.dinner || '',
        ]));
 
        return json({ ok: true });
@@ -139,7 +139,7 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
 
    // { ok: true, rsvp: null } when the Party hasn't replied; otherwise rsvp
    // is shaped like the reply the page saves: { submitted_at, code, party,
-   // contact, song, message, guests: [{ name, attending, dietary, busTo, busFrom, dinner }] }.
+   // contact, song, message, guests: [{ name, attending, dietary, busTo, busFrom, mobile, dinner }] }.
    function doGet(e) {
      const p = (e && e.parameter) || {};
      const code = String(p.code || '').trim();
@@ -162,9 +162,10 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
      const first = rows[0];
      return {
        submitted_at: first.submitted_at, code, party: first.party,
-       contact: first.contact, song: first.song, message: first.message,
+       contact: [...new Set(rows.map((r) => r.contact).filter(Boolean))].join(', '),
+       song: first.song, message: first.message,
        guests: rows.map((r) => ({
-         name: r.guest, attending: r.attending, dietary: r.dietary, busTo: r.bus_to, busFrom: r.bus_from, dinner: r.dinner,
+         name: r.guest, attending: r.attending, dietary: r.dietary, busTo: r.bus_to, busFrom: r.bus_from, mobile: r.contact, dinner: r.dinner,
        })),
      };
    }
@@ -225,20 +226,27 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
 The form only appears for a Party remembered from their Personal link, and
 posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`, `song`,
 `message`, and `guests` as a JSON string of
-`[{ name, attending, dietary, busTo, busFrom, dinner }]`) with `mode: "no-cors"`. The response is
-opaque, so the page treats fetch resolving as success. With no endpoint set, a
-dev server logs the payload to the console and shows the thank-you. A
-production build shows the "email or text us" failure message.
+`[{ name, attending, dietary, busTo, busFrom, mobile, dinner }]`). Apps Script
+answers through the same redirect as the lookup below, so the page can read
+it: the thank-you only shows once it says `{ ok: true }`. If that answer can't
+be read, the page asks the Sheet for the Party's reply and counts it as sent
+only if the Sheet has this very one (same `submitted_at`); otherwise the guest
+sees the "email or text us" failure message, and nothing is saved on their
+device. With no endpoint set, a dev server logs the payload to the console and
+shows the thank-you. A production build shows the failure message.
 
 `busTo` (where the Guest gets on to come to the venue) and `busFrom` (where
 they get off on the way home) are a town from `BUS_STOPS` in
-`src/components/details/rsvp.ts` (Berry, Gerringong or Kiama), `none`, or `''`
-when the Guest isn't coming or didn't answer. The exact stops aren't named yet,
-so `contact` is a mobile, asked for only when someone in the Party takes the
-bus, to sort out stops and times; it's empty otherwise. A town no longer in
-`BUS_STOPS` reads back as unanswered. `dinner`
-(dinner at the Berry Hotel the night before) is `yes`, `no`, or `''` when the
-Guest isn't coming or didn't answer. `message` is the form's "A note for us".
+`src/components/details/rsvp.ts` (Berry, Gerringong or Kiama), or `''` when the
+Guest isn't coming or isn't taking the bus that way: the bus questions are
+optional, with no "No thanks". The exact stops aren't named yet, so each Guest
+taking the bus gives a `mobile`, to sort out stops and times; it's empty
+otherwise, and goes in that Guest's `contact` column. The post's own `contact`
+is the Party's bus mobiles, each once, for the Log. A town no longer in
+`BUS_STOPS`, or an older reply's `none`, reads back as not taking the bus.
+`dinner` (dinner at the Berry Hotel the night before) is `yes` or `no` for
+every Guest coming, as the form requires it, and `''` otherwise. `message` is
+the form's "A note for us".
 The script keeps the RSVPs header row in step with `RSVP_HEADERS`, but rows
 already in the sheet keep the columns they were written with. After changing
 columns (as when `bus` became `bus_to` and `bus_from`), delete the old test

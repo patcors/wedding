@@ -6,15 +6,17 @@ export type Answer = 'yes' | 'no';
 
 /** The towns the bus stops in, in the order the form offers them. Change
     them here. The exact stops aren't named until the couple know where
-    everyone's staying (Amelia, October 2026); a guest taking the bus leaves a
-    mobile so the stops and times can be sorted out with them. */
+    everyone's staying (Amelia, October 2026); each Guest taking the bus
+    leaves a mobile so the stops and times can be sorted out with them. */
 export const BUS_STOPS = ['Berry', 'Gerringong', 'Kiama'];
 
-/** A bus answer: '' when not coming or not answered, 'none', or a town from
-    BUS_STOPS. Anything else (a town since dropped, or the plain 'yes' of the
-    week the towns weren't named) reads as unanswered, so the form asks again. */
+/** A bus answer: a town from BUS_STOPS, or '' when not coming or not taking
+    the bus that way. The question is optional, so there's no "No thanks"
+    (Amelia, October 2026). Anything else (that button's old 'none', a town
+    since dropped, or the plain 'yes' of the week the towns weren't named)
+    reads as not taking it. */
 export type BusChoice = string;
-const busChoice = (value: string): BusChoice => value === 'none' || BUS_STOPS.includes(value) ? value : '';
+const busChoice = (value: string): BusChoice => BUS_STOPS.includes(value) ? value : '';
 /** Whether a bus answer is a town, so the Guest is taking the bus that way. */
 export const isStop = (choice: BusChoice) => BUS_STOPS.includes(choice);
 
@@ -24,14 +26,15 @@ export interface GuestReply {
   dietary: string;     // only for Guests who are coming
   busTo: BusChoice;    // where they get on to come to the venue
   busFrom: BusChoice;  // where they get off on the way home
-  dinner: Answer | ''; // dinner at the Berry Hotel the night before; '' when not coming or not answered
+  mobile: string;      // to sort out the bus with them; only when they take it
+  dinner: Answer | ''; // dinner at the Berry Hotel the night before; '' when not coming
 }
 
 export interface Rsvp {
   submitted_at: string;
   code: string;      // the Party's Invite code
   party: string;     // the Party's greeting
-  contact: string;   // a mobile, asked for only when someone takes the bus
+  contact: string;   // the Guests' bus mobiles, each once: "0400 000 000, 0411 111 111"
   song: string;
   message: string;   // a note for us
   guests: GuestReply[];
@@ -84,27 +87,35 @@ export function readParty(raw: string | null): RememberedParty | null {
 const text = (value: unknown) => (isString(value) ? value : '');
 
 /** A complete RSVP from untrusted data, or null. Fields it doesn't know (like
-    the old yes/no `bus`) are dropped, and missing bus answers read as unanswered. */
+    the old yes/no `bus`) are dropped, and missing bus answers read as not
+    taking it. A reply from before each Guest had their own mobile gives the
+    Party's one to everyone taking the bus. */
 export function toRsvp(value: unknown): Rsvp | null {
   const v = value as Partial<Record<keyof Rsvp, unknown>> | null;
   if (!v || typeof v !== 'object' || !Array.isArray(v.guests) || !v.guests.length) return null;
   const guests = v.guests as Partial<Record<keyof GuestReply, unknown>>[];
   if (!guests.every(g => g && isString(g.name) && isAnswer(g.attending))) return null;
+  const contact = text(v.contact);
   return {
     submitted_at: text(v.submitted_at),
     code: text(v.code),
     party: text(v.party),
-    contact: text(v.contact),
+    contact,
     song: text(v.song),
     message: text(v.message),
-    guests: guests.map(g => ({
-      name: g.name as string,
-      attending: g.attending as Answer,
-      dietary: text(g.dietary),
-      busTo: busChoice(text(g.busTo)),
-      busFrom: busChoice(text(g.busFrom)),
-      dinner: isAnswer(g.dinner) ? g.dinner : '',
-    })),
+    guests: guests.map(g => {
+      const busTo = busChoice(text(g.busTo));
+      const busFrom = busChoice(text(g.busFrom));
+      return {
+        name: g.name as string,
+        attending: g.attending as Answer,
+        dietary: text(g.dietary),
+        busTo,
+        busFrom,
+        mobile: busTo || busFrom ? text(g.mobile) || contact : '',
+        dinner: isAnswer(g.dinner) ? g.dinner : '',
+      };
+    }),
   };
 }
 
@@ -123,6 +134,9 @@ export function readLookup(body: unknown, code: string): Rsvp | null {
   const rsvp = toRsvp(value.rsvp);
   return rsvp && rsvp.code === code ? rsvp : null;
 }
+
+/** Whether the Apps Script's answer to a post says it wrote the reply: `{ ok: true }`. */
+export const sentOk = (body: unknown) => (body as { ok?: unknown } | null)?.ok === true;
 
 /** Whichever reply was sent last. Ties, and times that can't be read, keep this device's copy. */
 export function latestReply(local: Rsvp | null, remote: Rsvp | null): Rsvp | null {
@@ -146,8 +160,12 @@ export function toParams(rsvp: Rsvp): URLSearchParams {
   });
 }
 
-/** Whether anyone in the reply is taking the bus, either way. */
-export const takesBus = (guests: GuestReply[]) => guests.some(g => isStop(g.busTo) || isStop(g.busFrom));
+/** Whether a Guest is taking the bus, either way. */
+export const takesBus = (guest: Pick<GuestReply, 'busTo' | 'busFrom'>) => isStop(guest.busTo) || isStop(guest.busFrom);
+
+/** The mobiles the bus will be sorted out on, each once, in the Guests' order. */
+export const busMobiles = (guests: GuestReply[]) =>
+  [...new Set(guests.filter(takesBus).map(g => g.mobile.trim()).filter(Boolean))];
 
 /** Why a mobile for the bus isn't usable, or null when it looks like a phone number. */
 export function phoneProblem(phone: string): string | null {
@@ -163,15 +181,18 @@ export function sentOn(submittedAt: string): string {
   return Number.isNaN(time) ? '' : new Date(time).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', timeZone: 'Australia/Sydney' });
 }
 
-/** One Guest's answer as a sentence: "Dean: coming, Vegetarian, bus from Kiama, bus home to Berry, dinner the night before." */
+/** One Guest's answer as a sentence: "Dean: coming, vegetarian, bus from Kiama, bus home to Berry, dinner the night before."
+    Only what they're having: no bus or no dinner goes unsaid. The dietary
+    buttons are lower case mid-sentence; "Other" stays as typed. */
 export function describeGuest(guest: GuestReply): string {
   if (guest.attending === 'no') return `${guest.name}: can’t make it.`;
   const parts = ['coming'];
-  const dietary = guest.dietary.trim().replace(/[.\s]+$/, '');
-  if (dietary) parts.push(dietary);
+  const { choices, other } = parseDietary(guest.dietary);
+  parts.push(...choices.map(choice => choice.toLowerCase()));
+  const otherDietary = other.replace(/[.\s]+$/, '');
+  if (otherDietary) parts.push(otherDietary);
   if (isStop(guest.busTo)) parts.push(`bus from ${guest.busTo}`);
   if (isStop(guest.busFrom)) parts.push(`bus home to ${guest.busFrom}`);
-  if (!isStop(guest.busTo) && !isStop(guest.busFrom) && (guest.busTo === 'none' || guest.busFrom === 'none')) parts.push('no bus');
   if (guest.dinner === 'yes') parts.push('dinner the night before');
   return `${guest.name}: ${parts.join(', ')}.`;
 }

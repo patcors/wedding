@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOn, storageKey, takesBus, toParams,
+  busMobiles, describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOk, sentOn, storageKey,
+  takesBus, toParams,
 } from '../src/components/details/rsvp.ts';
 
 test('a Party is only trusted when localStorage holds a complete one', () => {
@@ -18,7 +19,7 @@ test('each Party remembers its own RSVP', () => {
   assert.notEqual(storageKey('curry'), storageKey('bridge'));
 });
 
-const dean = { name: 'Dean', attending: 'yes', dietary: '', busTo: 'Kiama', busFrom: 'none', dinner: 'yes' };
+const dean = { name: 'Dean', attending: 'yes', dietary: '', busTo: 'Kiama', busFrom: '', mobile: '0400 000 000', dinner: 'yes' };
 const saved = {
   submitted_at: '2026-10-17T00:00:00.000Z', code: 'curry', party: 'Dean & Kelly',
   contact: '0400 000 000', song: '', message: '', guests: [dean],
@@ -30,19 +31,27 @@ test('a saved RSVP must have answered Guests', () => {
   assert.equal(readSaved(JSON.stringify({ ...saved, guests: [] })), null);
 });
 
-test('an RSVP saved before the bus had stops still loads, with the bus unanswered', () => {
+test('an RSVP saved before the bus had stops still loads, without the bus', () => {
   const old = { ...saved, guests: [{ name: 'Dean', attending: 'yes', dietary: 'vegan', bus: 'yes' }] };
-  assert.deepEqual(readSaved(JSON.stringify(old)).guests, [{ name: 'Dean', attending: 'yes', dietary: 'vegan', busTo: '', busFrom: '', dinner: '' }]);
+  assert.deepEqual(readSaved(JSON.stringify(old)).guests, [{ name: 'Dean', attending: 'yes', dietary: 'vegan', busTo: '', busFrom: '', mobile: '', dinner: '' }]);
 });
 
-test('an RSVP saved before the night-before dinner still loads, with a dropped town or a plain yes as unanswered', () => {
-  const old = { submitted_at: saved.submitted_at, code: 'curry', party: 'Dean & Kelly', contact: 'a@b.co', song: 'September', message: 'Yay',
+test('an RSVP saved before the night-before dinner still loads, with a dropped town, a plain yes or "No thanks" as no bus', () => {
+  const old = { submitted_at: saved.submitted_at, code: 'curry', party: 'Dean & Kelly', contact: '0400 000 000', song: 'September', message: 'Yay',
     guests: [{ name: 'Dean', attending: 'yes', dietary: 'Vego', busTo: 'Berry', busFrom: 'none' }] };
   const dropped = { ...old, guests: [{ ...old.guests[0], busTo: 'Wollongong', busFrom: 'yes' }] };
-  assert.deepEqual(readSaved(JSON.stringify(dropped)).guests[0], { name: 'Dean', attending: 'yes', dietary: 'Vego', busTo: '', busFrom: '', dinner: '' });
-  assert.deepEqual(readSaved(JSON.stringify(old)), { submitted_at: saved.submitted_at, code: 'curry', party: 'Dean & Kelly', contact: 'a@b.co', song: 'September', message: 'Yay',
-    guests: [{ name: 'Dean', attending: 'yes', dietary: 'Vego', busTo: 'Berry', busFrom: 'none', dinner: '' }] });
+  assert.deepEqual(readSaved(JSON.stringify(dropped)).guests[0], { name: 'Dean', attending: 'yes', dietary: 'Vego', busTo: '', busFrom: '', mobile: '', dinner: '' });
+  assert.deepEqual(readSaved(JSON.stringify(old)), { submitted_at: saved.submitted_at, code: 'curry', party: 'Dean & Kelly', contact: '0400 000 000', song: 'September', message: 'Yay',
+    guests: [{ name: 'Dean', attending: 'yes', dietary: 'Vego', busTo: 'Berry', busFrom: '', mobile: '0400 000 000', dinner: '' }] });
   assert.equal(readSaved(JSON.stringify({ ...saved, guests: [{ ...dean, dinner: 'maybe' }] })).guests[0].dinner, '');
+});
+
+test('each Guest on the bus keeps their own mobile, and one from before that gets the Party’s', () => {
+  const kelly = { ...dean, name: 'Kelly', busTo: '', busFrom: 'Berry', mobile: '0411 111 111' };
+  const kai = { ...dean, name: 'Kai', busTo: '', busFrom: '', mobile: '' };
+  assert.deepEqual(readSaved(JSON.stringify({ ...saved, guests: [dean, kelly, kai] })).guests.map(g => g.mobile), ['0400 000 000', '0411 111 111', '']);
+  const before = { ...saved, contact: '0422 222 222', guests: [{ ...dean, mobile: undefined }, { ...kai, mobile: undefined }] };
+  assert.deepEqual(readSaved(JSON.stringify(before)).guests.map(g => g.mobile), ['0422 222 222', '']);
 });
 
 
@@ -76,7 +85,7 @@ test('the reply sent last wins, and this device keeps ties and unreadable times'
 });
 
 test('the body carries every field, with guests as a JSON string', () => {
-  const guests = [{ name: 'Dean', attending: 'yes', dietary: 'Vegetarian', busTo: 'Gerringong', busFrom: 'none', dinner: 'no' }];
+  const guests = [{ name: 'Dean', attending: 'yes', dietary: 'Vegetarian', busTo: 'Gerringong', busFrom: '', mobile: '0400 000 000', dinner: 'no' }];
   const params = toParams({
     submitted_at: '2026-09-30T00:00:00.000Z', code: 'curry', party: 'Dean & Kelly',
     contact: '0400 000 000', song: 'September', message: 'Yay', guests,
@@ -91,14 +100,14 @@ test('the confirmation says when the reply was sent, in Sydney', () => {
   assert.equal(sentOn('soon'), '');
 });
 
-test('answers read back as one sentence per Guest', () => {
-  const guest = (fields) => ({ name: 'Dean', attending: 'yes', dietary: '', busTo: '', busFrom: '', dinner: '', ...fields });
-  assert.equal(describeGuest(guest({ dietary: 'Vegetarian. ', busTo: 'Kiama', busFrom: 'Berry' })), 'Dean: coming, Vegetarian, bus from Kiama, bus home to Berry.');
-  assert.equal(describeGuest(guest({ busTo: 'none', busFrom: 'Gerringong' })), 'Dean: coming, bus home to Gerringong.');
-  assert.equal(describeGuest(guest({ busTo: 'Berry', busFrom: 'none' })), 'Dean: coming, bus from Berry.');
-  assert.equal(describeGuest(guest({ busTo: 'none', busFrom: 'none' })), 'Dean: coming, no bus.');
+test('answers read back as one sentence per Guest, saying only what they’re having', () => {
+  const guest = (fields) => ({ name: 'Dean', attending: 'yes', dietary: '', busTo: '', busFrom: '', mobile: '', dinner: '', ...fields });
+  assert.equal(describeGuest(guest({ dietary: 'Vegetarian, No peanuts', busTo: 'Kiama', busFrom: 'Berry' })), 'Dean: coming, vegetarian, no peanuts, bus from Kiama, bus home to Berry.');
+  assert.equal(describeGuest(guest({ dietary: 'Gluten free, Coeliac, no shellfish. ' })), 'Dean: coming, gluten free, Coeliac, no shellfish.');
+  assert.equal(describeGuest(guest({ busFrom: 'Gerringong' })), 'Dean: coming, bus home to Gerringong.');
+  assert.equal(describeGuest(guest({ busTo: 'Berry' })), 'Dean: coming, bus from Berry.');
   assert.equal(describeGuest(guest({})), 'Dean: coming.');
-  assert.equal(describeGuest(guest({ busTo: 'none', busFrom: 'none', dinner: 'yes' })), 'Dean: coming, no bus, dinner the night before.');
+  assert.equal(describeGuest(guest({ dinner: 'yes' })), 'Dean: coming, dinner the night before.');
   assert.equal(describeGuest(guest({ dinner: 'no' })), 'Dean: coming.');
   assert.equal(describeGuest(guest({ attending: 'no', dietary: 'vegan', busTo: 'Berry' })), 'Dean: can’t make it.');
 });
@@ -117,14 +126,23 @@ test('a saved dietary line splits back into buttons and Other text', () => {
   assert.deepEqual(parseDietary(''), { choices: [], other: '' });
 });
 
-test('a mobile is asked for once anyone takes the bus, either way, and has to look like a phone number', () => {
-  const guest = (busTo, busFrom) => ({ name: 'Dean', attending: 'yes', dietary: '', busTo, busFrom, dinner: '' });
-  assert.equal(takesBus([guest('none', 'none'), guest('', '')]), false);
-  assert.equal(takesBus([guest('none', 'none'), guest('none', 'Kiama')]), true);
-  assert.equal(takesBus([guest('Berry', '')]), true);
+test('a Guest taking the bus either way gives a mobile, which has to look like a phone number', () => {
+  const guest = (busTo, busFrom, mobile = '') => ({ name: 'Dean', attending: 'yes', dietary: '', busTo, busFrom, mobile, dinner: '' });
+  assert.equal(takesBus(guest('', '')), false);
+  assert.equal(takesBus(guest('', 'Kiama')), true);
+  assert.equal(takesBus(guest('Berry', '')), true);
+  assert.deepEqual(busMobiles([guest('Berry', '', '0400 000 000'), guest('', '', '0499 999 999'), guest('', 'Kiama', ' 0400 000 000 '), guest('Kiama', 'Kiama', '0411 111 111')]),
+    ['0400 000 000', '0411 111 111']);
   assert.equal(phoneProblem('0435 597 406'), null);
   assert.equal(phoneProblem('+61 (435) 597-406'), null);
   assert.match(phoneProblem('  '), /need a mobile/);
   assert.match(phoneProblem('dean@example.com'), /doesn’t look like/);
   assert.match(phoneProblem('1234'), /doesn’t look like/);
+});
+
+test('a post only counts as written when the Apps Script says so', () => {
+  assert.equal(sentOk({ ok: true }), true);
+  assert.equal(sentOk({ ok: false, error: 'missing code' }), false);
+  assert.equal(sentOk(null), false);
+  assert.equal(sentOk('ok'), false);
 });

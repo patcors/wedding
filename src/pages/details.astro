@@ -1,19 +1,20 @@
 ---
 // Flat, non-personalised information page: everything guests need, revisitable any time.
 // All content lives in the objects below. Edit there, not in the markup.
-// Anything wrapped in tbc() renders with a soft "to be confirmed" mark until replaced.
 import RsvpForm from '../components/details/RsvpForm.astro';
 import SiteFonts from '../components/SiteFonts.astro';
 import { withPhoneLinks } from '../components/details/phone';
 
 const BASE = import.meta.env.BASE_URL;
 
-const tbcValues = new Set<string>();
-const tbc = (placeholder: string) => { tbcValues.add(placeholder); return placeholder; };
+// The page no longer opens with the date and venue: the invitation sent with
+// the link has both (Amelia, October 2026). The date heads The day, the venue
+// Getting there, and both are in the footer.
+const date = 'Friday 16 April 2027';
 
 // `note`: a line under the stop, in smaller type; `party`: in rainbow colours, its letters in a wave.
 const schedule: { time: string; name: string; note?: string; party?: true }[] = [
-  { time: '3:00 pm', name: 'Gates open', note: 'Arrive any time before the ceremony' },
+  { time: '3:00 pm', name: 'Gates open', note: 'Sandwiches & lemonade' },
   { time: '3:30 pm', name: 'Ceremony' },
   { time: '4:00 pm', name: 'Cocktail hour' },
   { time: '5:30 pm', name: 'Dinner in the Orangery' },
@@ -31,34 +32,38 @@ const venue = {
   googleMapsUrl: 'https://www.google.com/maps/dir/?api=1&destination=4+O%27Keeffes+Lane,+Jaspers+Brush+NSW+2535',
   appleMapsUrl: 'https://maps.apple.com/?daddr=4+O%27Keeffes+Lane,+Jaspers+Brush+NSW+2535',
   travel: [
-    { name: 'Driving', note: 'About 45 minutes south of Wollongong, and there is plenty of parking on site.' },
-    { name: 'Bus', note: 'We’re running a bus between the venue and Berry, Gerringong and Kiama. We’ll confirm exactly where it stops once we know where everyone’s staying.' },
+    { name: 'Driving', note: 'About 45 minutes south of Wollongong. There’s plenty of parking on site.' },
+    { name: 'Bus', note: 'We’re running a bus to the venue from Berry, Gerringong and Kiama, and back again after the send-off. We’ll confirm exactly where it stops once we know where everyone’s staying.' },
     { name: 'Train', note: 'South Coast line to Kiama, then hop on the wedding bus. Taxis and Ubers are hard to come by, so book in advance if you need one.' },
   ],
 };
 
-// Before the places to stay, as paragraphs of their own: they aren't places.
-const schoolHolidays = 'The wedding falls in the NSW school holidays, so places book out early. We’d book as soon as you can.';
-const nightBefore = 'On Thursday 15 April, the night before, we’re booking some large tables at the Berry Hotel for dinner at 6pm, for anyone who’d like to join us. Let us know in your RSVP.';
+// Before the places to stay, as a paragraph of its own: it isn't a place.
+const schoolHolidays = 'The wedding falls in the NSW school holidays, so book in early!';
 
+// The bus stopping in each town is said once, under Getting there.
 const stay = [
-  { name: 'In Berry village', note: 'Guesthouses and cottages a short drive from the venue, with the wedding bus stopping in town.' },
-  { name: 'In Gerringong', note: 'By the sea, a short drive from the venue, with the wedding bus stopping in town.' },
-  { name: 'In Kiama', note: 'The most hotels, apartments and holiday parks, with the wedding bus stopping in town.' },
+  { name: 'In Berry', note: 'Guesthouses and cottages, a short drive from the venue.' },
+  { name: 'In Gerringong', note: 'By the sea, a short drive from the venue.' },
+  { name: 'In Kiama', note: 'The most hotels, apartments and holiday parks.' },
 ];
 
+// Its own section, Make a weekend of it, after Where to stay (Amelia, October 2026).
+const nightBefore = [
+  'On Thursday 15 April, the night before, we’re booking some large tables at the Berry Hotel for dinner at 6pm, for anyone who’d like to join us. Everyone pays for their own meals and drinks.',
+  'Let us know in your RSVP.',
+];
+
+// The serious answers first, then the jokes.
 const faqs = [
   { q: 'What should I wear?', a: 'Black tie optional – suits with ties and longer dresses.' },
+  { q: 'What about gifts?', a: 'We’ll have a wishing well on the day.' },
   { q: 'What if it rains?', a: 'It won’t rain, don’t worry so much.' },
-  { q: 'What about dietary requirements?', a: 'Tell us when you RSVP and we’ll take care of the rest.' },
-  { q: 'Are there gifts?', a: 'We will have a wishing well on the day.' },
-  { q: 'Would you rather lemons for hands or lemons for feet?', a: 'Depends how ripe they are.' },
-  { q: 'Who do I ask about everything else?', a: 'Call Jonathon Dale anytime, day or night, on 0435 597 406.' },
+  { q: 'Who do I ask about everything else?', a: 'Call Jonathon Dale any time, day or night, on 0435 597 406.' },
 ];
 
 const rsvp = {
   replyBy: '16 February 2027',
-  busHint: 'It stops in Berry, Gerringong and Kiama. We’ll confirm exactly where once we know where everyone’s staying.',
   // Where guests can reach us if the form fails to send.
   email: 'patrickcorbett12@gmail.com',
   phone: '0435 597 406',
@@ -79,35 +84,38 @@ const photos = {
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
     <meta name="theme-color" content="#fdf9ea" />
     <title>Patrick &amp; Amelia · The details</title>
-    <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, the garden, where to stay." />
+    <meta name="description" content="Everything you need for Patrick and Amelia’s wedding: the day, where to stay." />
     <SiteFonts display="swap" />
   </head>
   <body>
     <main class="info">
       <header class="info-header">
         <a class="info-monogram" href={BASE} data-story aria-label="Back to the story" style={`--logo: url(${BASE}logo.png)`}><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
-        <span class="info-header-date">16 APRIL 2027</span>
         <div class="info-header-links">
           <a class="info-story-link" href={BASE} data-story>The story</a>
           <a class="info-rsvp-link" href="#rsvp">RSVP</a>
         </div>
       </header>
 
+      <!-- At the top, where the date and venue were, so it's in reach from the
+           first screen on a phone, with short labels so it nearly fits one,
+           and without RSVP, which is always beside it in the header (Amelia,
+           October 2026). The section being read is underlined. -->
+      <nav class="info-nav" aria-label="On this page" data-info-nav>
+        <a href="#day">Day</a><a href="#venue">Travel</a><a href="#stay">Stay</a><a href="#weekend">Weekend</a><a href="#faq">Q&amp;A</a>
+      </nav>
+
       <section class="info-hero">
         <div class="info-hero-copy">
           <h1>What you<br /><em>need to know.</em></h1>
-          <div class="info-date-row"><span>Friday 16 April 2027</span><i></i><span>{venue.name}, {venue.place}</span></div>
         </div>
         <figure class="info-photo info-hero-photo">
           <img src={`${BASE}photos/${photos.hero.src}`} alt={photos.hero.alt} width="1800" height="2714" fetchpriority="high" />
         </figure>
       </section>
 
-      <nav class="info-nav" aria-label="On this page">
-        <a href="#day">The day</a><a href="#venue">Getting there</a><a href="#stay">Where to stay</a><a href="#faq">Questions</a><a href="#rsvp">RSVP</a>
-      </nav>
-
       <section id="day" class="info-section info-day">
+        <p class="info-eyebrow">{date}</p>
         <h2>The <em>day.</em></h2>
         <ol class="info-schedule">
           {schedule.map(item => <li>
@@ -122,7 +130,6 @@ const photos = {
 
       <section id="venue" class="info-section info-venue">
         <div>
-          <p class="info-eyebrow">The garden</p>
           <h2>Getting <em>there.</em></h2>
           <p class="info-venue-name">{venue.name}</p>
           <p class="info-address">{venue.address}</p>
@@ -133,7 +140,7 @@ const photos = {
           <dl class="info-list">
             {venue.travel.map(row => <>
               <dt>{row.name}</dt>
-              <dd class:list={{ 'is-tbc': tbcValues.has(row.note) }}>{row.note}</dd>
+              <dd>{row.note}</dd>
             </>)}
           </dl>
         </div>
@@ -144,17 +151,20 @@ const photos = {
           <img src={`${BASE}photos/${photos.dance.src}`} alt={photos.dance.alt} width="1400" height="2111" loading="lazy" />
         </figure>
         <div>
-          <p class="info-eyebrow">Make a weekend of it</p>
           <h2>Where <em>to stay.</em></h2>
-          <p class="info-night-before">{nightBefore}</p>
-          <p class="info-night-before">{schoolHolidays}</p>
+          <p class="info-lead">{schoolHolidays}</p>
           <dl class="info-list">
             {stay.map(row => <>
               <dt>{row.name}</dt>
-              <dd class:list={{ 'is-tbc': tbcValues.has(row.note) }}>{row.note}</dd>
+              <dd>{row.note}</dd>
             </>)}
           </dl>
         </div>
+      </section>
+
+      <section id="weekend" class="info-section info-weekend">
+        <h2>Make a <em>weekend of it.</em></h2>
+        {nightBefore.map(line => <p class="info-lead">{line}</p>)}
       </section>
 
       <figure class="info-photo info-photo-tilt-left info-photo-break">
@@ -166,7 +176,7 @@ const photos = {
         <div class="info-faqs">
           {faqs.map(faq => <div class="info-faq">
             <h3>{faq.q}</h3>
-            <p class:list={{ 'is-tbc': tbcValues.has(faq.a) }}>{withPhoneLinks(faq.a).map(part => part.tel ? <a class="info-tel" href={part.tel}>{part.text}</a> : part.text)}</p>
+            <p>{withPhoneLinks(faq.a).map(part => part.tel ? <a class="info-tel" href={part.tel}>{part.text}</a> : part.text)}</p>
           </div>)}
         </div>
       </section>
@@ -180,7 +190,7 @@ const photos = {
 
       <footer class="info-footer">
         <span class="info-monogram" style={`--logo: url(${BASE}logo.png)`}><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></span>
-        <p>Friday 16 April 2027 · {venue.name}, {venue.place}</p>
+        <p>{date} · {venue.name}, {venue.place}</p>
       </footer>
     </main>
   </body>
@@ -197,6 +207,34 @@ const photos = {
     if (party && /^[a-z0-9-]+$/.test(party.code)) link.href = `${import.meta.env.BASE_URL}${party.code}/`;
     link.addEventListener('click', () => { try { sessionStorage.setItem('pa_voyage_back', '1'); } catch { /* private mode: the opening as usual */ } });
   }
+
+  // The nav underlines the section being read: the last one whose top has
+  // passed a line a third of the way down the screen. None in the opening,
+  // nor once the RSVP is reached, as it has no link of its own. On a phone,
+  // where the links run off the side, the nav slides to keep that one in view.
+  const nav = document.querySelector<HTMLElement>('[data-info-nav]')!;
+  const links = [...nav.querySelectorAll<HTMLAnchorElement>('a')];
+  const sections = [...links.map(link => document.querySelector<HTMLElement>(link.hash)!), document.getElementById('rsvp')!];
+  let current: HTMLAnchorElement | undefined;
+  let queued = false;
+  function markCurrent() {
+    queued = false;
+    const line = innerHeight / 3;
+    const reading = sections.filter(section => section.getBoundingClientRect().top <= line).at(-1);
+    const link = links.find(link => link.hash === `#${reading?.id}`);
+    if (link === current) return;
+    current?.removeAttribute('aria-current');
+    link?.setAttribute('aria-current', 'location');
+    current = link;
+    if (link && nav.scrollWidth > nav.clientWidth) {
+      const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      nav.scrollTo({ left: link.offsetLeft - (nav.clientWidth - link.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
+    }
+  }
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(markCurrent); } };
+  addEventListener('scroll', queue, { passive: true });
+  addEventListener('resize', queue);
+  markCurrent();
 </script>
 
 <style is:global>
@@ -205,7 +243,7 @@ const photos = {
      as in the invitation sent to the Parties (STYLES in dev/invite). The
      original sage is kept below in case Patrick prefers it: set
      data-theme="sage" on <html>, and theme-color to #eeeee5. */
-  :root { --page: #fdf9ea; --ink: #4e3324; --soft: #6b4f3e; --muted: #85705f; --leaf: #a08b74; --deep: #4e3324; --on-deep: #fdf9ea;
+  :root { --page: #fdf9ea; --ink: #4e3324; --soft: #6b4f3e; --muted: #7d6858; --leaf: #a08b74; --deep: #4e3324; --on-deep: #fdf9ea;
     --paper: #fffcf2; --line: #8a7663; --shadow: #5a4030; --focus: #8a6a50; --select: #eadfbf; }
   :root[data-theme=sage] { --page: #eeeee5; --ink: #384135; --soft: #59634f; --muted: #66715e; --leaf: #7a826d; --deep: #414d3d; --on-deep: #f6f3e7;
     --paper: #f7f3e8; --line: #737967; --shadow: #48513a; --focus: #6e775c; --select: #b9c2a7; }
@@ -221,15 +259,11 @@ const photos = {
   .info a { color: inherit; text-decoration: none; }
   .info a:focus-visible { outline: 2px solid var(--focus); outline-offset: 7px; }
 
-  .info-eyebrow { font-size: 9px; text-transform: uppercase; letter-spacing: .28em; line-height: 1.8; color: var(--muted); margin: 0; }
+  .info-eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .24em; line-height: 1.8; color: var(--muted); margin: 0; }
   h1, h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; letter-spacing: -.045em; margin: 20px 0 18px; }
   h1 { font-size: clamp(58px, 6.8vw, 108px); line-height: .98; font-weight: 300; }
   h1 em, h2 em { font-weight: 300; color: var(--soft); }
   h2 { font-size: clamp(42px, 4.4vw, 66px); line-height: 1; }
-
-  .is-tbc { position: relative; }
-  .is-tbc::after { content: 'to confirm'; font: 500 7px 'Montserrat', sans-serif; letter-spacing: .14em; text-transform: uppercase;
-    color: #8b6158c9; border: 1px solid #8b615826; border-radius: 20px; padding: 2px 7px; margin-left: 9px; vertical-align: 2px; white-space: nowrap; }
 
 
   /* The header and the section nav both stay: the nav sticks just under the
@@ -244,21 +278,18 @@ const photos = {
      its size and alt text, and its shape masks the ink over it. */
   .info-monogram { background: var(--ink); -webkit-mask: var(--logo) content-box center / contain no-repeat; mask: var(--logo) content-box center / contain no-repeat; }
   .info-monogram img { opacity: 0; }
-  .info-header-date { position: absolute; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: .26em; }
-  .info .info-rsvp-link { position: relative; font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--on-deep);
+  .info .info-rsvp-link { position: relative; font-size: 11px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--on-deep);
     background: var(--deep); border-radius: 999px; padding: 11px 19px 11px 21px; transition: background-color .3s; }
   /* A thumb-sized target round the slim pill. */
   .info .info-rsvp-link::after { content: ''; position: absolute; inset: -6px -4px; }
   .info .info-rsvp-link:hover { background: var(--soft); }
   .info-header-links { display: flex; align-items: center; gap: 26px; }
-  .info .info-story-link { position: relative; font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
+  .info .info-story-link { position: relative; font-size: 11px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
     text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--line) 44%, transparent); text-underline-offset: 6px; }
   .info .info-story-link::after { content: ''; position: absolute; inset: -14px -8px; }
 
   .info-hero { display: flex; align-items: center; gap: clamp(40px, 6vw, 90px); max-width: 1180px; margin: 0 auto; padding: clamp(30px, 6vh, 80px) 48px 40px; }
   .info-hero-copy { flex: 1.2; }
-  .info-date-row { margin-top: 34px; display: flex; align-items: center; flex-wrap: wrap; gap: 15px; font-size: 9px; text-transform: uppercase; letter-spacing: .23em; }
-  .info-date-row i { width: 3px; height: 3px; border-radius: 50%; background: var(--leaf); }
 
   .info-photo { flex: 1; margin: 0; padding: 12px; background: var(--paper); box-shadow: 0 14px 50px color-mix(in srgb, var(--shadow) 14%, transparent); max-width: 400px; }
   .info-photo img { width: 100%; height: auto; display: block; }
@@ -267,18 +298,19 @@ const photos = {
   .info-photo-tilt-right { rotate: 2deg; }
 
   .info-nav { position: sticky; top: calc(var(--info-header-h) - 16px); z-index: 4; display: flex; gap: clamp(18px, 3.5vw, 44px);
-    padding: 6px 24px 14px; margin: 20px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .2em; background: linear-gradient(var(--page) calc(100% - 14px), color-mix(in srgb, var(--page) 0%, transparent)); }
+    padding: 6px 24px 14px; margin: -16px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .2em; background: linear-gradient(var(--page) calc(100% - 14px), color-mix(in srgb, var(--page) 0%, transparent)); }
   /* Centred while they fit; from the start, scrolling sideways, when they don't. */
   .info-nav a:first-child { margin-left: auto; }
   .info-nav a:last-child { margin-right: auto; }
   .info-nav a { flex: none; display: flex; align-items: center; min-height: 44px; box-sizing: border-box; padding-top: 2px; border-bottom: 1px solid transparent; transition: border-color .3s; white-space: nowrap; }
   .info-nav a:hover { border-color: color-mix(in srgb, var(--line) 44%, transparent); }
+  .info-nav a[aria-current] { border-color: var(--ink); }
   /* A link to a section lands below the header and nav. */
   .info section[id] { scroll-margin-top: calc(var(--info-header-h) + 50px); }
 
   .info-section { max-width: 1180px; margin: 0 auto; padding: clamp(60px, 10vh, 120px) 48px 0; }
   .info-day { text-align: center; padding-top: clamp(30px, 5vh, 60px); }
-  .info-time { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .info-time { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
   .info-stop { font: 400 25px/1.2 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; }
   .info-stop-note { font: italic 17px/1.3 'Cormorant Garamond', Georgia, serif; color: var(--muted); }
   /* "Paaartayyy" in a rainbow sliding through the letters, a calmer cousin
@@ -312,13 +344,16 @@ const photos = {
   .info-split > div { flex: 1.15; }
   .info-split-reverse { flex-direction: row-reverse; }
   .info-venue-name { font: italic 23px 'Cormorant Garamond', Georgia, serif; color: var(--soft); margin: 6px 0 4px; }
-  .info-address { font-size: 11px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  .info-address { font-size: 13px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
   .info-list { margin: 26px 0 0; }
-  .info-night-before { font: 20px/1.5 'Cormorant Garamond', Georgia, serif; max-width: 430px; margin: 22px 0 0; }
-  .info-list dt { font-size: 9px; text-transform: uppercase; letter-spacing: .22em; color: var(--muted); padding-top: 18px; }
+  .info-lead { font: 20px/1.5 'Cormorant Garamond', Georgia, serif; max-width: 430px; margin: 22px 0 0; }
+  .info-weekend { text-align: center; }
+  .info-weekend .info-lead { margin-inline: auto; }
+  .info-weekend .info-lead + .info-lead { margin-top: 12px; }
+  .info-list dt { font-size: 11px; text-transform: uppercase; letter-spacing: .18em; color: var(--muted); padding-top: 18px; }
   .info-list dd { font: 18px/1.5 'Cormorant Garamond', Georgia, serif; margin: 7px 0 0; max-width: 430px; }
   .info-map-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-  .info .info-map-link { font-size: 9px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--deep);
+  .info .info-map-link { font-size: 11px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--deep);
     border: 1px solid color-mix(in srgb, var(--deep) 50%, transparent); border-radius: 999px; padding: 13px 19px 13px 21px; transition: background-color .3s, color .3s; }
   .info .info-map-link:hover { background: var(--deep); color: var(--on-deep); }
 
@@ -336,7 +371,7 @@ const photos = {
   .info-footer { text-align: center; padding: 30px 24px 55px; }
   .info-footer .info-monogram { display: inline-block; }
   .info-footer .info-monogram img { height: 28px; }
-  .info-footer p { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
+  .info-footer p { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
 
   /* Gentle rise-and-fade as sections enter the viewport; browsers without
      scroll-driven animations (or with reduced motion) simply show everything. */
@@ -364,19 +399,11 @@ const photos = {
     50% { transform: translateY(-6px) rotate(2.5deg); }
   }
 
-  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-    .info-photo { transition: translate .5s ease, box-shadow .5s ease; }
-    .info-photo:hover { translate: 0 -8px; box-shadow: 0 24px 60px color-mix(in srgb, var(--shadow) 19%, transparent); }
-  }
-
   @media (max-width: 860px) {
     .info { --info-header-h: 74px; }
     .info-header { padding: 0 24px; }
     .info-header .info-monogram img { height: 30px; }
-    .info-header-date { display: none; }
     .info-hero { flex-direction: column; padding: 20px 28px 10px; text-align: center; }
-    .info-date-row { flex-direction: column; gap: 10px; }
-    .info-date-row i { display: none; }
     .info-hero-photo { max-width: 330px; margin-top: 20px; }
     /* One row: on a phone it scrolls sideways, its ends fading, rather than
        wrapping into a second row of sticky links. */
@@ -386,7 +413,7 @@ const photos = {
     .info-section { padding: 65px 28px 0; }
     .info-split, .info-split-reverse { flex-direction: column; align-items: center; text-align: center; }
     .info-split .info-photo, .info-photo-break { max-width: 300px; }
-    .info-list dd, .info-faq p, .info-night-before { margin-inline: auto; }
+    .info-list dd, .info-faq p, .info-lead { margin-inline: auto; }
     .info-stop { font-size: 23px; }
     .info-schedule { padding: 48px 24px; }
     .info-day { padding-top: 24px; }
