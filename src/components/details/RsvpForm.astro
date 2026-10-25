@@ -9,11 +9,12 @@ import { telHref } from './phone';
 
 interface Props {
   replyBy: string;   // e.g. "16 February 2027"
+  dinnerWhen: string; // the night-before dinner, e.g. "Thursday 15 April, 6pm"
   email: string;     // fallback contact: no Personal link, or sending fails
   phone: string;
 }
 
-const { replyBy, email, phone } = Astro.props;
+const { replyBy, dinnerWhen, email, phone } = Astro.props;
 const phoneHref = telHref(phone);
 ---
 <div class="rsvp" data-rsvp data-reply-by={replyBy}>
@@ -90,18 +91,18 @@ const phoneHref = telHref(phone);
             <input class="rsvp-input" type="text" autocomplete="off" placeholder="Tell us what you need" data-guest-dietary-other />
           </label>
         </fieldset>
-        <!-- Optional, so no "No thanks": a town is a checkbox that unticks the
-             others, and tapping it again takes the bus back off. -->
+        <!-- Optional, so no "No thanks": tapping the chosen town again takes
+             the bus back off (Space does from the keyboard). -->
         <fieldset class="rsvp-bus">
           <legend class="rsvp-label">Bus to the venue? <i>where you’ll get on, optional</i></legend>
           <div class="rsvp-pills rsvp-pills-bus">
-            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="checkbox" value={stop} data-guest-bus-to /><span>{stop}</span></label>)}
+            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-to /><span>{stop}</span></label>)}
           </div>
         </fieldset>
         <fieldset class="rsvp-bus">
           <legend class="rsvp-label">Bus home? <i>where you’ll get off, optional</i></legend>
           <div class="rsvp-pills rsvp-pills-bus">
-            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="checkbox" value={stop} data-guest-bus-from /><span>{stop}</span></label>)}
+            {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-from /><span>{stop}</span></label>)}
           </div>
         </fieldset>
         <!-- Only while this Guest is taking the bus, either way. -->
@@ -113,7 +114,7 @@ const phoneHref = telHref(phone);
           <p class="rsvp-error" data-guest-mobile-error hidden></p>
         </div>
         <fieldset class="rsvp-dinner" data-guest-dinner-field>
-          <legend class="rsvp-label">Dinner at the Berry Hotel the night before? <i>Thursday 15 April, 6pm</i></legend>
+          <legend class="rsvp-label">Dinner at the Berry Hotel the night before? <i>{dinnerWhen}</i></legend>
           <div class="rsvp-pills">
             <label class="rsvp-pill"><input type="radio" value="yes" data-guest-dinner /><span>Yes!</span></label>
             <label class="rsvp-pill"><input type="radio" value="no" data-guest-dinner /><span>No thanks</span></label>
@@ -161,6 +162,7 @@ const phoneHref = telHref(phone);
     if (input) input.checked = true;  // a stop that's since been removed stays unanswered
   };
   const rows = () => [...guestList.querySelectorAll<HTMLElement>('[data-guest]')];
+  const BUS_HOOKS = ['data-guest-bus-to', 'data-guest-bus-from'];
 
   function setHeading(text: string, emphasis = '') {
     heading.replaceChildren(text);
@@ -189,6 +191,8 @@ const phoneHref = telHref(phone);
     const dinnerError = $('[data-guest-dinner-error]', row);
 
     row.querySelectorAll<HTMLInputElement>('[data-guest-attending]').forEach(r => { r.name = `${id}-attending`; });
+    row.querySelectorAll<HTMLInputElement>('[data-guest-bus-to]').forEach(r => { r.name = `${id}-bus-to`; });
+    row.querySelectorAll<HTMLInputElement>('[data-guest-bus-from]').forEach(r => { r.name = `${id}-bus-from`; });
     row.querySelectorAll<HTMLInputElement>('[data-guest-dinner]').forEach(r => { r.name = `${id}-dinner`; });
     attendError.id = `${id}-attend-error`;
     $('[data-guest-attend]', row).setAttribute('aria-describedby', attendError.id);
@@ -214,17 +218,41 @@ const phoneHref = telHref(phone);
     extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
     otherField.hidden = !otherToggle.checked;
     mobileField.hidden = !rowTakesBus(row);
+    // Each bus question's town before this click, so tapping it again unticks
+    // it. A radio clicked when already checked fires no change, only a click.
+    const chosen = new Map(BUS_HOOKS.map(hook => [hook, checked(row, hook)]));
+    const busHook = (target: HTMLInputElement) => BUS_HOOKS.find(hook => target.matches(`[${hook}]`));
+    const busChanged = (hook: string) => {
+      chosen.set(hook, checked(row, hook));
+      mobileField.hidden = !rowTakesBus(row);
+      // A family usually gives one number: start from the last one given.
+      if (!mobileField.hidden && !mobile.value) mobile.value = rows().map(other => $<HTMLInputElement>('[data-guest-mobile]', other).value.trim()).filter(Boolean).at(-1) ?? '';
+    };
+    // Unticked by Space, so a click some browsers send after it doesn't tick it again.
+    let unticked: HTMLInputElement | null = null;
+    row.addEventListener('click', event => {
+      const target = event.target as HTMLInputElement;
+      const hook = busHook(target);
+      if (!hook) return;
+      if (target === unticked || chosen.get(hook) === target.value) target.checked = false;
+      busChanged(hook);
+    });
+    // Space on the chosen town unticks it too: Chrome sends no click for it.
+    row.addEventListener('keydown', event => {
+      const target = event.target as HTMLInputElement;
+      const hook = busHook(target);
+      if (!hook || event.key !== ' ' || !target.checked) return;
+      event.preventDefault();
+      target.checked = false;
+      unticked = target;
+      busChanged(hook);
+    });
+    row.addEventListener('keyup', () => { setTimeout(() => { unticked = null; }); });
     row.addEventListener('change', event => {
       const target = event.target as HTMLInputElement;
       if (target === otherToggle) {
         otherField.hidden = !otherToggle.checked;
         if (otherToggle.checked) otherInput.focus();
-      } else if (target.matches('[data-guest-bus-to], [data-guest-bus-from]')) {
-        const hook = target.matches('[data-guest-bus-to]') ? 'data-guest-bus-to' : 'data-guest-bus-from';
-        if (target.checked) row.querySelectorAll<HTMLInputElement>(`[${hook}]`).forEach(box => { box.checked = box === target; });
-        mobileField.hidden = !rowTakesBus(row);
-        // A family usually gives one number: start from the last one given.
-        if (!mobileField.hidden && !mobile.value) mobile.value = rows().map(other => $<HTMLInputElement>('[data-guest-mobile]', other).value.trim()).filter(Boolean).at(-1) ?? '';
       } else if (target.matches('[data-guest-dinner]')) {
         showError(dinnerError, null);
       } else if (target.matches('[data-guest-attending]')) {
@@ -548,5 +576,12 @@ const phoneHref = telHref(phone);
     .rsvp-pills { gap: 8px; }
     .rsvp-pill span { font-size: 11px; letter-spacing: .04em; padding: 12px 4px; }
     .rsvp-pills-diet { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  /* On the narrowest phones a one-word answer can't wrap, so the answers
+     close up a little to keep "Gerringong" inside its box. */
+  @media (max-width: 340px) {
+    .rsvp-extras { padding-left: 10px; }
+    .rsvp-pills { gap: 6px; }
+    .rsvp-pill span { font-size: 10.5px; letter-spacing: 0; padding-inline: 2px; }
   }
 </style>
