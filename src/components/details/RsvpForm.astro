@@ -9,12 +9,11 @@ import { telHref } from './phone';
 
 interface Props {
   replyBy: string;   // e.g. "16 February 2027"
-  dinnerWhen: string; // the night-before dinner, e.g. "Thursday 15 April, 6pm"
   email: string;     // fallback contact: no Personal link, or sending fails
   phone: string;
 }
 
-const { replyBy, dinnerWhen, email, phone } = Astro.props;
+const { replyBy, email, phone } = Astro.props;
 const phoneHref = telHref(phone);
 ---
 <div class="rsvp" data-rsvp data-reply-by={replyBy}>
@@ -114,7 +113,9 @@ const phoneHref = telHref(phone);
           <p class="rsvp-error" data-guest-mobile-error hidden></p>
         </div>
         <fieldset class="rsvp-dinner" data-guest-dinner-field>
-          <legend class="rsvp-label">Dinner at the Berry Hotel the night before? <i>{dinnerWhen}</i></legend>
+          <!-- No day or time: guests know the date, and Make a weekend of it,
+               above, says when (Amelia, October 2026). -->
+          <legend class="rsvp-label">Dinner at the Berry Hotel the night before?</legend>
           <div class="rsvp-pills">
             <label class="rsvp-pill"><input type="radio" value="yes" data-guest-dinner /><span>Yes!</span></label>
             <label class="rsvp-pill"><input type="radio" value="no" data-guest-dinner /><span>No thanks</span></label>
