@@ -48,11 +48,14 @@ const stay = [
   { name: 'In Kiama', note: 'The most hotels, apartments and holiday parks.' },
 ];
 
-// Its own section, Make a weekend of it, after Where to stay (Amelia, October 2026).
-const nightBefore = [
-  'On Thursday 15 April, the night before, we’re booking some large tables at the Berry Hotel for dinner at 6pm, for anyone who’d like to join us. Everyone pays for their own meals and drinks.',
-  'Let us know in your RSVP.',
-];
+// Its own section, Make a weekend of it, after Where to stay, beside the photo
+// that used to stand alone below it (Amelia, October 2026). "A casual dinner
+// and drinks" is meant to say, gently, that guests pay their own way.
+const nightBefore = {
+  before: 'On Thursday 15 April, the night before, we’re booking some large tables at the Berry Hotel for 6pm. We’d love you to join us for a casual dinner and drinks. Please see ',
+  menu: { text: 'the menu here', href: 'https://theberryhotel.com.au/wp-content/uploads/2026/10/Bistro_Menu_Sept2026_-_A3_-_The_Berry_Hotel_V5.pdf' },
+  after: ' and let us know in your RSVP.',
+};
 
 // The serious answers first, then the jokes.
 const faqs = [
@@ -102,7 +105,7 @@ const photos = {
            and without RSVP, which is always beside it in the header (Amelia,
            October 2026). The section being read is underlined. -->
       <nav class="info-nav" aria-label="On this page" data-info-nav>
-        <a href="#day">Day</a><a href="#venue">Travel</a><a href="#stay">Stay</a><a href="#weekend">Weekend</a><a href="#faq">Q&amp;A</a>
+        <a href="#day">Day</a><a href="#venue">Travel</a><a href="#stay">Stay</a><a href="#dinner">Dinner</a><a href="#faq">Q&amp;A</a>
       </nav>
 
       <section class="info-hero">
@@ -162,14 +165,15 @@ const photos = {
         </div>
       </section>
 
-      <section id="weekend" class="info-section info-weekend">
-        <h2>Make a <em>weekend of it.</em></h2>
-        {nightBefore.map(line => <p class="info-lead">{line}</p>)}
+      <section id="dinner" class="info-section info-split">
+        <figure class="info-photo info-photo-tilt-left">
+          <img src={`${BASE}photos/${photos.embrace.src}`} alt={photos.embrace.alt} width="1400" height="2111" loading="lazy" />
+        </figure>
+        <div>
+          <h2>Make a <em>weekend of it.</em></h2>
+          <p class="info-lead">{nightBefore.before}<a class="info-text-link" href={nightBefore.menu.href} target="_blank" rel="noopener">{nightBefore.menu.text}</a>{nightBefore.after}</p>
+        </div>
       </section>
-
-      <figure class="info-photo info-photo-tilt-left info-photo-break">
-        <img src={`${BASE}photos/${photos.embrace.src}`} alt={photos.embrace.alt} width="1400" height="2111" loading="lazy" />
-      </figure>
 
       <section id="faq" class="info-section info-faq-section">
         <h2>Q&amp;A</h2>
@@ -339,7 +343,6 @@ const photos = {
   .info-venue { text-align: center; }
   .info-venue .info-list dd { margin-inline: auto; }
   .info-venue .info-map-links { justify-content: center; }
-  .info-photo-break { margin: clamp(70px, 11vh, 130px) auto 0; max-width: 340px; }
   .info-split { display: flex; align-items: center; gap: clamp(45px, 7vw, 110px); }
   .info-split > div { flex: 1.15; }
   .info-split-reverse { flex-direction: row-reverse; }
@@ -347,9 +350,6 @@ const photos = {
   .info-address { font-size: 13px; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
   .info-list { margin: 26px 0 0; }
   .info-lead { font: 20px/1.5 'Cormorant Garamond', Georgia, serif; max-width: 430px; margin: 22px 0 0; }
-  .info-weekend { text-align: center; }
-  .info-weekend .info-lead { margin-inline: auto; }
-  .info-weekend .info-lead + .info-lead { margin-top: 12px; }
   .info-list dt { font-size: 11px; text-transform: uppercase; letter-spacing: .18em; color: var(--muted); padding-top: 18px; }
   .info-list dd { font: 18px/1.5 'Cormorant Garamond', Georgia, serif; margin: 7px 0 0; max-width: 430px; }
   .info-map-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
@@ -362,8 +362,8 @@ const photos = {
   .info-faq { break-inside: avoid; padding: 0 0 34px; }
   .info-faq h3 { font: 500 23px 'Cormorant Garamond', Georgia, serif; letter-spacing: -.02em; margin: 0 0 8px; }
   .info-faq p { font: 17px/1.5 'Cormorant Garamond', Georgia, serif; color: var(--ink); margin: 0; max-width: 430px; }
-  /* Numbers in the answers ring when tapped. */
-  .info .info-tel { white-space: nowrap; border-bottom: 1px solid color-mix(in srgb, var(--line) 44%, transparent); }
+  /* Numbers in the answers ring when tapped; links in running text are underlined the same way. */
+  .info .info-tel, .info .info-text-link { white-space: nowrap; border-bottom: 1px solid color-mix(in srgb, var(--line) 44%, transparent); }
 
   .info-rsvp { text-align: center; max-width: 700px; margin: 0 auto; padding: clamp(80px, 13vh, 150px) 48px; }
   .info-boat { color: var(--leaf); }
@@ -377,7 +377,7 @@ const photos = {
      scroll-driven animations (or with reduced motion) simply show everything. */
   @supports (animation-timeline: view()) {
     @media (prefers-reduced-motion: no-preference) {
-      .info-section > *, .info-rsvp > *, .info-photo-break {
+      .info-section > *, .info-rsvp > * {
         animation: info-rise linear both;
         animation-timeline: view();
         animation-range: entry 0% entry 55%;
@@ -412,7 +412,7 @@ const photos = {
     .info-nav::-webkit-scrollbar { display: none; }
     .info-section { padding: 65px 28px 0; }
     .info-split, .info-split-reverse { flex-direction: column; align-items: center; text-align: center; }
-    .info-split .info-photo, .info-photo-break { max-width: 300px; }
+    .info-split .info-photo { max-width: 300px; }
     .info-list dd, .info-faq p, .info-lead { margin-inline: auto; }
     .info-stop { font-size: 23px; }
     .info-schedule { padding: 48px 24px; }
