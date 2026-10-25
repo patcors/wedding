@@ -43,7 +43,7 @@ Each Party gets an iMessage with a personalised image, a message and their Perso
 
 ```sh
 pnpm invites                              # every Party → invites/out/<code>.png (2160×2700)
-pnpm invites curry crash                  # just these codes
+pnpm invites curry racecar                 # just these codes
 pnpm invites --no-photo                   # without the engagement photo
 pnpm invites --style=vibes                # another look from STYLES in the page
 pnpm invites --script='Imperial Script'   # another script font from SCRIPTS in the page

@@ -3,7 +3,7 @@
 // Needs `pnpm dev` running. See "Invitations" in the README.
 //
 //   node scripts/make-invites.mjs                  every Party
-//   node scripts/make-invites.mjs curry crash      just these codes
+//   node scripts/make-invites.mjs curry racecar    just these codes
 //   --no-photo                                     leave the photograph out
 //   --style=vibes                                  another look from STYLES in the page
 //   --script='Imperial Script'                     another script font from SCRIPTS in the page
