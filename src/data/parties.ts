@@ -44,7 +44,6 @@ export const parties: Party[] = [
   { code: "fish-milkshake", greeting: "Jane & Keyna", guests: ["Jane", "Keyna"] },
   { code: "roomies", greeting: "Sands & Geet", guests: ["Sands", "Geet"] },
   { code: "odd-numbers", greeting: "Cass & Ben", guests: ["Cass", "Ben"] },
-  { code: "artiste", greeting: "Riley", guests: ["Riley"] },
   { code: "ray-and-boss", greeting: "Ray & Chris", guests: ["Ray", "Chris"] },
   { code: "party-blob", greeting: "Daniel & Hannah", guests: ["Daniel", "Hannah"] },
   { code: "rubber-stamp", greeting: "Darren & Megan", guests: ["Darren", "Megan"] },
@@ -59,6 +58,6 @@ export const parties: Party[] = [
   { code: "lucky", greeting: "Debbie & Keith", guests: ["Debbie", "Keith"] },
   { code: "daisy", greeting: "Morgan", guests: ["Morgan"] },
   { code: "zuko", greeting: "Andrea", guests: ["Andrea"] },
-  { code: "koncerning", greeting: "Megan & Kyle", guests: ["Megan", "Kyle"] },
   { code: "flammekueche", greeting: "Viviene & Mats", guests: ["Viviene", "Mats"] },
+  { code: "holden", greeting: "Arthur & Carol", guests: ["Arthur", "Carol"] },
 ];
