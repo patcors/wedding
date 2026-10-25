@@ -9,12 +9,11 @@ import { telHref } from './phone';
 
 interface Props {
   replyBy: string;   // e.g. "16 February 2027"
-  busHint: string;   // shown under the bus questions
   email: string;     // fallback contact: no Personal link, or sending fails
   phone: string;
 }
 
-const { replyBy, busHint, email, phone } = Astro.props;
+const { replyBy, email, phone } = Astro.props;
 const phoneHref = telHref(phone);
 ---
 <div class="rsvp" data-rsvp data-reply-by={replyBy}>
@@ -32,15 +31,6 @@ const phoneHref = telHref(phone);
     <div class="rsvp-guests" data-rsvp-guests></div>
 
     <div class="rsvp-party">
-      <!-- Only while someone in the Party is taking the bus, either way. -->
-      <div data-rsvp-phone-field hidden>
-        <label class="rsvp-field">
-          <span class="rsvp-label">Mobile <i>for the bus</i></span>
-          <input class="rsvp-input" name="contact" type="tel" inputmode="tel" autocomplete="tel" aria-describedby="rsvp-phone-hint rsvp-phone-error" data-rsvp-phone />
-        </label>
-        <p class="rsvp-hint" id="rsvp-phone-hint">So we can work out where to pick you up and drop you off.</p>
-        <p class="rsvp-error" id="rsvp-phone-error" hidden></p>
-      </div>
       <label class="rsvp-field">
         <span class="rsvp-label">A song to get you dancing <i>optional</i></span>
         <input class="rsvp-input" name="song" type="text" autocomplete="off" />
@@ -100,27 +90,37 @@ const phoneHref = telHref(phone);
             <input class="rsvp-input" type="text" autocomplete="off" placeholder="Tell us what you need" data-guest-dietary-other />
           </label>
         </fieldset>
+        <!-- Optional, so no "No thanks": tapping the chosen town again takes
+             the bus back off (Space does from the keyboard). -->
         <fieldset class="rsvp-bus">
-          <legend class="rsvp-label">Bus to the venue? <i>where you’ll get on</i></legend>
+          <legend class="rsvp-label">Bus to the venue? <i>where you’ll get on, optional</i></legend>
           <div class="rsvp-pills rsvp-pills-bus">
-            <label class="rsvp-pill"><input type="radio" value="none" data-guest-bus-to /><span>No thanks</span></label>
             {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-to /><span>{stop}</span></label>)}
           </div>
         </fieldset>
         <fieldset class="rsvp-bus">
-          <legend class="rsvp-label">Bus home? <i>where you’ll get off</i></legend>
+          <legend class="rsvp-label">Bus home? <i>where you’ll get off, optional</i></legend>
           <div class="rsvp-pills rsvp-pills-bus">
-            <label class="rsvp-pill"><input type="radio" value="none" data-guest-bus-from /><span>No thanks</span></label>
             {BUS_STOPS.map(stop => <label class="rsvp-pill"><input type="radio" value={stop} data-guest-bus-from /><span>{stop}</span></label>)}
           </div>
         </fieldset>
-        <p class="rsvp-hint">{busHint}</p>
-        <fieldset class="rsvp-dinner">
-          <legend class="rsvp-label">Dinner at the Berry Hotel the night before? <i>Thursday 15 April, 6pm</i></legend>
+        <!-- Only while this Guest is taking the bus, either way. -->
+        <div data-guest-mobile-field hidden>
+          <label class="rsvp-field">
+            <span class="rsvp-label">Mobile <i>for the bus</i></span>
+            <input class="rsvp-input" type="tel" inputmode="tel" autocomplete="tel" data-guest-mobile />
+          </label>
+          <p class="rsvp-error" data-guest-mobile-error hidden></p>
+        </div>
+        <fieldset class="rsvp-dinner" data-guest-dinner-field>
+          <!-- No day or time: guests know the date, and Make a weekend of it,
+               above, says when (Amelia, October 2026). -->
+          <legend class="rsvp-label">Dinner at the Berry Hotel the night before?</legend>
           <div class="rsvp-pills">
-            <label class="rsvp-pill"><input type="radio" value="yes" data-guest-dinner /><span>Count me in</span></label>
+            <label class="rsvp-pill"><input type="radio" value="yes" data-guest-dinner /><span>Yes!</span></label>
             <label class="rsvp-pill"><input type="radio" value="no" data-guest-dinner /><span>No thanks</span></label>
           </div>
+          <p class="rsvp-error" data-guest-dinner-error hidden></p>
         </fieldset>
       </div>
     </div>
@@ -129,8 +129,8 @@ const phoneHref = telHref(phone);
 
 <script>
   import {
-    describeGuest, formatDietary, isStop, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOn, storageKey,
-    takesBus, toParams,
+    busMobiles, describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOk, sentOn,
+    storageKey, takesBus, toParams,
     type Answer, type GuestReply, type RememberedParty, type Rsvp,
   } from './rsvp';
 
@@ -148,9 +148,6 @@ const phoneHref = telHref(phone);
   const submit = $<HTMLButtonElement>('[data-rsvp-submit]');
   const failure = $('[data-rsvp-failure]');
   const thanks = $('[data-rsvp-thanks]');
-  const phoneField = $('[data-rsvp-phone-field]');
-  const phone = $<HTMLInputElement>('[data-rsvp-phone]');
-  const phoneError = $('#rsvp-phone-error');
   const template = $<HTMLTemplateElement>('[data-rsvp-guest-template]');
   const replyBy = root.dataset.replyBy ?? '';
 
@@ -166,9 +163,11 @@ const phoneHref = telHref(phone);
     if (input) input.checked = true;  // a stop that's since been removed stays unanswered
   };
   const rows = () => [...guestList.querySelectorAll<HTMLElement>('[data-guest]')];
+  const BUS_HOOKS = ['data-guest-bus-to', 'data-guest-bus-from'];
 
-  function setHeading(text: string, emphasis: string) {
-    heading.replaceChildren(`${text} `, Object.assign(document.createElement('em'), { textContent: emphasis }));
+  function setHeading(text: string, emphasis = '') {
+    heading.replaceChildren(text);
+    if (emphasis) heading.append(' ', Object.assign(document.createElement('em'), { textContent: emphasis }));
   }
 
   function showError(el: HTMLElement, message: string | null, control?: HTMLElement) {
@@ -187,6 +186,10 @@ const phoneHref = telHref(phone);
     const otherToggle = $<HTMLInputElement>('[data-guest-diet-other]', row);
     const otherField = $('[data-guest-diet-other-field]', row);
     const otherInput = $<HTMLInputElement>('[data-guest-dietary-other]', row);
+    const mobileField = $('[data-guest-mobile-field]', row);
+    const mobile = $<HTMLInputElement>('[data-guest-mobile]', row);
+    const mobileError = $('[data-guest-mobile-error]', row);
+    const dinnerError = $('[data-guest-dinner-error]', row);
 
     row.querySelectorAll<HTMLInputElement>('[data-guest-attending]').forEach(r => { r.name = `${id}-attending`; });
     row.querySelectorAll<HTMLInputElement>('[data-guest-bus-to]').forEach(r => { r.name = `${id}-bus-to`; });
@@ -194,6 +197,10 @@ const phoneHref = telHref(phone);
     row.querySelectorAll<HTMLInputElement>('[data-guest-dinner]').forEach(r => { r.name = `${id}-dinner`; });
     attendError.id = `${id}-attend-error`;
     $('[data-guest-attend]', row).setAttribute('aria-describedby', attendError.id);
+    mobileError.id = `${id}-mobile-error`;
+    mobile.setAttribute('aria-describedby', mobileError.id);
+    dinnerError.id = `${id}-dinner-error`;
+    $('[data-guest-dinner-field]', row).setAttribute('aria-describedby', dinnerError.id);
 
     row.dataset.name = name;
     $('[data-guest-legend]', row).textContent = name;
@@ -206,21 +213,55 @@ const phoneHref = telHref(phone);
       otherInput.value = other;
       if (answer.busTo) check(row, 'data-guest-bus-to', answer.busTo);
       if (answer.busFrom) check(row, 'data-guest-bus-from', answer.busFrom);
+      mobile.value = answer.mobile;
       if (answer.dinner) check(row, 'data-guest-dinner', answer.dinner);
     }
     extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
     otherField.hidden = !otherToggle.checked;
+    mobileField.hidden = !rowTakesBus(row);
+    // Each bus question's town before this click, so tapping it again unticks
+    // it. A radio clicked when already checked fires no change, only a click.
+    const chosen = new Map(BUS_HOOKS.map(hook => [hook, checked(row, hook)]));
+    const busHook = (target: HTMLInputElement) => BUS_HOOKS.find(hook => target.matches(`[${hook}]`));
+    const busChanged = (hook: string) => {
+      chosen.set(hook, checked(row, hook));
+      mobileField.hidden = !rowTakesBus(row);
+      // A family usually gives one number: start from the last one given.
+      if (!mobileField.hidden && !mobile.value) mobile.value = rows().map(other => $<HTMLInputElement>('[data-guest-mobile]', other).value.trim()).filter(Boolean).at(-1) ?? '';
+    };
+    // Unticked by Space, so a click some browsers send after it doesn't tick it again.
+    let unticked: HTMLInputElement | null = null;
+    row.addEventListener('click', event => {
+      const target = event.target as HTMLInputElement;
+      const hook = busHook(target);
+      if (!hook) return;
+      if (target === unticked || chosen.get(hook) === target.value) target.checked = false;
+      busChanged(hook);
+    });
+    // Space on the chosen town unticks it too: Chrome sends no click for it.
+    row.addEventListener('keydown', event => {
+      const target = event.target as HTMLInputElement;
+      const hook = busHook(target);
+      if (!hook || event.key !== ' ' || !target.checked) return;
+      event.preventDefault();
+      target.checked = false;
+      unticked = target;
+      busChanged(hook);
+    });
+    row.addEventListener('keyup', () => { setTimeout(() => { unticked = null; }); });
     row.addEventListener('change', event => {
-      const target = event.target as HTMLElement;
+      const target = event.target as HTMLInputElement;
       if (target === otherToggle) {
         otherField.hidden = !otherToggle.checked;
         if (otherToggle.checked) otherInput.focus();
-        return;
+      } else if (target.matches('[data-guest-dinner]')) {
+        showError(dinnerError, null);
+      } else if (target.matches('[data-guest-attending]')) {
+        extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
+        showError(attendError, null);
       }
-      if (!target.matches('[data-guest-attending]')) return;
-      extras.hidden = checked(row, 'data-guest-attending') !== 'yes';
-      showError(attendError, null);
     });
+    mobile.addEventListener('input', () => showError(mobileError, null, mobile));
 
     guestList.append(row);
     return row;
@@ -244,14 +285,15 @@ const phoneHref = telHref(phone);
         dietary: coming ? dietaryOf(row) : '',
         busTo: coming ? checked(row, 'data-guest-bus-to') : '',
         busFrom: coming ? checked(row, 'data-guest-bus-from') : '',
-        dinner: coming ? checked(row, 'data-guest-dinner') as Answer | '' : '',
+        mobile: coming && rowTakesBus(row) ? $<HTMLInputElement>('[data-guest-mobile]', row).value.trim() : '',
+        dinner: coming ? checked(row, 'data-guest-dinner') as Answer : '',
       };
     });
     return {
       submitted_at: new Date().toISOString(),
       code: party.code,
       party: party.greeting,
-      contact: takesBus(guests) ? phone.value.trim() : '',
+      contact: busMobiles(guests).join(', '),
       song: field('song').value.trim(),
       message: field('message').value.trim(),
       guests,
@@ -263,37 +305,49 @@ const phoneHref = telHref(phone);
     let first: HTMLElement | null = null;
     const flag = (control: HTMLElement) => { first ??= control; };
     for (const row of rows()) {
-      const unanswered = !checked(row, 'data-guest-attending');
-      showError($('[data-guest-attend-error]', row), unanswered ? `Let us know if ${row.dataset.name} can make it.` : null);
-      if (unanswered) flag($('[data-guest-attending]', row));
+      const name = row.dataset.name;
+      const attending = checked(row, 'data-guest-attending');
+      showError($('[data-guest-attend-error]', row), attending ? null : `Let us know if ${name} can make it.`);
+      if (!attending) flag($('[data-guest-attending]', row));
+      const coming = attending === 'yes';
+      const mobile = $<HTMLInputElement>('[data-guest-mobile]', row);
+      const problem = coming && rowTakesBus(row) ? phoneProblem(mobile.value) : null;
+      showError($('[data-guest-mobile-error]', row), problem, mobile);
+      if (problem) flag(mobile);
+      const noDinner = coming && !checked(row, 'data-guest-dinner');
+      showError($('[data-guest-dinner-error]', row), noDinner ? `Let us know if ${name} can make dinner the night before.` : null);
+      if (noDinner) flag($('[data-guest-dinner]', row));
     }
-    const problem = busNeedsPhone() ? phoneProblem(phone.value) : null;
-    showError(phoneError, problem, phone);
-    if (problem) flag(phone);
     return first;
   }
 
-  /** Whether anyone coming has picked a bus stop, so the mobile is asked for. */
-  function busNeedsPhone() {
-    return rows().some(row => checked(row, 'data-guest-attending') === 'yes'
-      && (isStop(checked(row, 'data-guest-bus-to')) || isStop(checked(row, 'data-guest-bus-from'))));
+  /** Whether a Guest has picked a town either way, so their mobile is asked for. */
+  function rowTakesBus(row: HTMLElement) {
+    return takesBus({ busTo: checked(row, 'data-guest-bus-to'), busFrom: checked(row, 'data-guest-bus-from') });
   }
-  const showPhone = () => { phoneField.hidden = !busNeedsPhone(); };
-  form.addEventListener('change', showPhone);
-  phone.addEventListener('input', () => showError(phoneError, null, phone));
 
   // ---- Sending --------------------------------------------------------------
 
-  async function send(rsvp: Rsvp) {
+  /** Resolves only once the Sheet has the reply; otherwise throws, so the guest sees the failure. */
+  async function send(party: RememberedParty, rsvp: Rsvp) {
     if (!ENDPOINT) {
       if (!import.meta.env.DEV) throw new Error('PUBLIC_RSVP_ENDPOINT was empty at build time');
       console.info('[rsvp] No PUBLIC_RSVP_ENDPOINT set; this would have been sent:', rsvp);
       await new Promise(resolve => setTimeout(resolve, 700));
       return;
     }
-    // Apps Script doesn't send CORS headers, so the response is opaque:
-    // fetch resolving is the only success signal there is.
-    await fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', body: toParams(rsvp) });
+    // The Apps Script answers through a redirect to script.googleusercontent.com,
+    // which lets any page read it, as the lookup does: { ok: true } once written.
+    try {
+      const response = await fetch(ENDPOINT, { method: 'POST', body: toParams(rsvp) });
+      if (response.ok && sentOk(await response.json())) return;
+    } catch (error) {
+      console.warn('[rsvp] Couldn’t read the answer to the post', error);
+    }
+    // No answer saying it was written, perhaps only because it couldn't be
+    // read: it went through if the Sheet now has this very reply.
+    const remote = await sheetReply(party);
+    if (remote?.submitted_at !== rsvp.submitted_at) throw new Error('The Sheet doesn’t have the reply');
   }
 
   // ---- The three states ----------------------------------------------------
@@ -312,8 +366,6 @@ const phoneHref = telHref(phone);
     });
     submit.textContent = party.guests.length > 1 ? 'Send our reply' : 'Send my reply';
     setHeading(`${party.greeting}, we’d love to`, 'know you’re coming.');
-    phone.value = previous?.contact ?? '';
-    showPhone();
     field('song').value = previous?.song ?? '';
     field('message').value = previous?.message ?? '';
     subtitle.textContent = `Please reply by ${replyBy}.`;
@@ -324,7 +376,7 @@ const phoneHref = telHref(phone);
 
   function showThanks(party: RememberedParty, rsvp: Rsvp, justSent: boolean) {
     const anyoneComing = rsvp.guests.some(g => g.attending === 'yes');
-    setHeading(`Thank you, ${party.greeting}.`, anyoneComing ? 'See you in the garden.' : 'We’ll miss you.');
+    setHeading(`Thank you, ${party.greeting}.`, anyoneComing ? '' : 'We’ll miss you.');
     subtitle.textContent = 'Here’s what you told us.';
     $('[data-rsvp-summary]').replaceChildren(...rsvp.guests.map(guest => {
       const item = document.createElement('li');
@@ -334,9 +386,10 @@ const phoneHref = telHref(phone);
     }));
     const on = sentOn(rsvp.submitted_at);
     $('[data-rsvp-received-text]').textContent = justSent ? 'Your RSVP has been sent' : on ? `We received your RSVP on ${on}` : 'We have your RSVP';
+    const mobiles = busMobiles(rsvp.guests);
     const bus = $('[data-rsvp-bus]');
-    bus.hidden = !(takesBus(rsvp.guests) && rsvp.contact);
-    bus.textContent = bus.hidden ? '' : `We’ll text you on ${rsvp.contact} about the bus.`;
+    bus.hidden = !mobiles.length;
+    bus.textContent = bus.hidden ? '' : `We’ll text you about the bus on ${new Intl.ListFormat('en-AU').format(mobiles)}.`;
     $('[data-rsvp-reach]').textContent = `You can change your answer any time before ${replyBy}.`;
     const song = $('[data-rsvp-song]');
     song.hidden = !rsvp.song;
@@ -389,7 +442,7 @@ const phoneHref = telHref(phone);
       submit.disabled = true;
       submit.textContent = 'Sending…';
       try {
-        await send(rsvp);
+        await send(party, rsvp);
         settled = true;
       } catch (error) {
         console.error('[rsvp] Sending failed', error);
@@ -467,7 +520,7 @@ const phoneHref = telHref(phone);
   .rsvp-pills { display: flex; gap: 10px; }
   .rsvp-pill { position: relative; flex: 1; }
   .rsvp-pill input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
-  .rsvp-pill span { display: block; text-align: center; font: 500 12px 'Montserrat', sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  .rsvp-pill span { display: flex; align-items: center; justify-content: center; height: 100%; box-sizing: border-box; text-align: center; font: 500 12px 'Montserrat', sans-serif; letter-spacing: .08em; text-transform: uppercase;
     padding: 16px 12px; border: 1px solid color-mix(in srgb, var(--line) 48%, transparent); color: var(--ink); transition: background-color .2s, color .2s, border-color .2s; }
   .rsvp-pill input:checked + span { background: var(--deep); border-color: var(--deep); color: var(--on-deep); }
   .rsvp-pill input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 3px; }
@@ -476,34 +529,31 @@ const phoneHref = telHref(phone);
   .rsvp-extras { margin-top: 6px; padding-left: 20px; border-left: 1px solid color-mix(in srgb, var(--leaf) 40%, transparent); }
   .rsvp-dietary { margin-top: 24px; }
   .rsvp-dietary legend { margin-bottom: 12px; }
-  .rsvp-pills-bus { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .rsvp-pills-bus .rsvp-pill span { padding: 14px 6px; }
+  .rsvp-pills-bus { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rsvp-pills-diet { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
   .rsvp-diet-other { margin-top: 14px; }
   .rsvp-bus { margin-top: 24px; }
-  .rsvp-bus + .rsvp-hint { margin-top: 12px; }
   .rsvp-dinner { margin-top: 24px; }
   .rsvp-dinner legend { margin-bottom: 12px; }
   .rsvp-bus legend { margin-bottom: 12px; }
 
   .rsvp-field { display: block; margin-top: 24px; }
-  .rsvp-label { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .22em; line-height: 1.8; color: var(--muted); }
-  .rsvp-label i { font-style: normal; letter-spacing: .12em; margin-left: 6px; opacity: .65; }
+  .rsvp-label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .16em; line-height: 1.7; color: var(--muted); }
+  .rsvp-label i { font-style: normal; letter-spacing: .08em; margin-left: 6px; }
   .rsvp-input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px 0 8px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 48%, transparent);
     border-radius: 0; background: transparent; color: var(--ink); font: 21px/1.35 'Cormorant Garamond', Georgia, serif; }
   textarea.rsvp-input { resize: vertical; min-height: 64px; }
   .rsvp-input:focus { outline: none; border-bottom-color: var(--deep); box-shadow: 0 1px 0 var(--deep); }
   .rsvp-input[aria-invalid='true'] { border-bottom-color: #8b6158; }
 
-  .rsvp-error, .rsvp-hint, .rsvp-failure, .rsvp-note { font: italic 17px/1.4 'Cormorant Garamond', Georgia, serif; margin: 8px 0 0; }
+  .rsvp-error, .rsvp-failure, .rsvp-note { font: italic 17px/1.4 'Cormorant Garamond', Georgia, serif; margin: 8px 0 0; }
   .rsvp-error, .rsvp-failure { color: #8b6158; }
-  .rsvp-hint { color: var(--muted); font-size: 16px; }
   .rsvp-note { color: var(--soft); font-size: 19px; margin-top: 18px; }
 
   .rsvp-party { margin-top: 12px; }
 
   .rsvp-actions { margin-top: 38px; text-align: center; }
-  .rsvp-button { display: inline-block; font: 500 10px 'Montserrat', sans-serif; letter-spacing: .1em; padding: 18px 30px; min-width: 210px;
+  .rsvp-button { display: inline-block; font: 500 12px 'Montserrat', sans-serif; letter-spacing: .1em; padding: 18px 30px; min-width: 210px;
     background: var(--deep); color: var(--on-deep); border: 1px solid var(--deep); cursor: pointer; }
   .rsvp-button:disabled { opacity: .6; cursor: progress; }
   .rsvp-button-quiet { background: transparent; color: var(--ink); margin-top: 30px; }
@@ -511,7 +561,7 @@ const phoneHref = telHref(phone);
   .rsvp-failure { margin-top: 16px; }
 
   .rsvp-thanks { text-align: center; }
-  .rsvp-received { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 26px; font: 500 11px 'Montserrat', sans-serif;
+  .rsvp-received { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 26px; font: 500 12px 'Montserrat', sans-serif;
     letter-spacing: .16em; text-transform: uppercase; color: var(--deep); }
   .rsvp-received svg { flex: none; }
   .rsvp-summary { list-style: none; margin: 0; padding: 0; text-align: left; border-bottom: 1px solid color-mix(in srgb, var(--line) 18%, transparent); }
@@ -521,12 +571,18 @@ const phoneHref = telHref(phone);
   @media (max-width: 600px) {
     .rsvp-form, .rsvp-thanks { margin-top: 36px; }
     .rsvp-button { width: 100%; }
-    .rsvp-extras { padding-left: 16px; }
-    /* Two to a row, so "Gerringong" fits at the answers' 12px. */
-    .rsvp-pills-bus { grid-template-columns: 1fr 1fr; }
+    .rsvp-extras { padding-left: 14px; }
+    /* Slimmer answers, three to a row, so a Guest's questions take less of
+       the phone (Amelia, October 2026); a long one wraps rather than squeezing. */
+    .rsvp-pills { gap: 8px; }
+    .rsvp-pill span { font-size: 11px; letter-spacing: .04em; padding: 12px 4px; }
+    .rsvp-pills-diet { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
-  /* Each answer on one line on the narrowest phones. */
-  @media (max-width: 360px) {
-    .rsvp-pill span { letter-spacing: .04em; padding-inline: 6px; }
+  /* On the narrowest phones a one-word answer can't wrap, so the answers
+     close up a little to keep "Gerringong" inside its box. */
+  @media (max-width: 340px) {
+    .rsvp-extras { padding-left: 10px; }
+    .rsvp-pills { gap: 6px; }
+    .rsvp-pill span { font-size: 10.5px; letter-spacing: 0; padding-inline: 2px; }
   }
 </style>
