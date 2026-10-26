@@ -55,6 +55,18 @@ pnpm invites --base=http://localhost:4334 # dev server on another port
 
 It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, styles (fonts, colours, sizes) and photo crops are at the top of `src/pages/dev/invite/[code].astro`, and `STYLE` picks the one that's rendered. Open the page in a browser to tweak it, with `?style=<name>`, `?script=<name>`, `?crop=<name>` or `?photo=none`. `invites/out/` is git-ignored.
 
+### Sending by hand
+
+`invites/message.txt` is the message, with `{greeting}`, `{link}` and `{code}` filled in for each Party. To have every Party's image and message on one page:
+
+```sh
+corepack pnpm invites      # the images, with the dev server running
+corepack pnpm send-kit     # invites/out/index.html
+python3 -m http.server 4362 --bind "$(tailscale ip -4)" --directory invites/out
+```
+
+Then open `http://<this machine>.<tailnet>.ts.net:4362/` on a laptop or phone on the tailnet, and stop the server when you're done. Each Party has its image (right-click to copy it, or tap and hold on a phone to save or share it), its message with a **Copy message** button, and its link. The page refuses to build while `message.txt` is still a draft.
+
 ### Tracking invitations
 
 The RSVP Sheet has two tabs you add once, beside the `RSVPs` and `Log` tabs the Apps Script writes. The script never touches any other tab, so they're safe to edit.

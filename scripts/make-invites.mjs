@@ -138,5 +138,6 @@ try {
     chrome.kill();
     await exited;
   }
-  await rm(profile, { recursive: true, force: true });
+  // Chromium's helpers can still be writing to the profile as it exits.
+  await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }

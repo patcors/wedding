@@ -11,6 +11,7 @@
     "preview": "astro preview",
     "invites": "node scripts/make-invites.mjs",
     "guest-sheet": "node scripts/guest-sheet.mjs",
+    "send-kit": "node scripts/send-kit.mjs",
     "shots": "node scripts/voyage-shots.mjs",
     "astro": "astro",
     "prepare:garden-ground": "node scripts/prepare-garden-ground.mjs",
