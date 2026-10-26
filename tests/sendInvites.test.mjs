@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   displayPhone, logLine, normalisePhone, parseCsv, planSends, readContacts, readSentLog, renderMessage,
-  unknownPlaceholders,
+  sheetRows, toCsv, unknownPlaceholders,
 } from '../scripts/invites.mjs';
 
 const parties = [
@@ -120,4 +120,22 @@ test('the dry run prints each message and sends nothing', () => {
   assert.match(output, /curry \(Dean & Kelly\) → \+61 400 000 000 by iMessage/);
   assert.match(output, /│ Hi Dean & Kelly, it's on! https:\/\/patrickandamelia\.com\/curry/);
   assert.match(output, /Dry run: nothing sent\. Add --send to send 2 messages to 2 Parties\./);
+});
+
+test('the Sheet gets one Invites row per Party and one Guests row per Guest', () => {
+  const { invites, guests } = sheetRows(parties);
+  assert.deepEqual(invites[0], ['code', 'party', 'link', 'sent_via', 'sent_on', 'notes']);
+  assert.deepEqual(invites[1], ['curry', 'Dean & Kelly', 'https://patrickandamelia.com/curry', '', '', '']);
+  assert.equal(invites.length, 4);
+  assert.deepEqual(guests, [
+    ['code', 'party', 'guest'],
+    ['curry', 'Dean & Kelly', 'Dean'], ['curry', 'Dean & Kelly', 'Kelly'],
+    ['bridge', 'Paula', 'Paula'], ['rat', 'Katie', 'Katie'],
+  ]);
+});
+
+test('the Sheet CSVs quote commas and quotes, and read back the same', () => {
+  const rows = [['code', 'party'], ['racecar', 'Kirsten, Michael, Kai & Mia'], ['quote', 'Say "hi"']];
+  assert.equal(toCsv(rows), 'code,party\r\nracecar,"Kirsten, Michael, Kai & Mia"\r\nquote,"Say ""hi"""\r\n');
+  assert.deepEqual(parseCsv(toCsv(rows)).filter((row) => row.join('')), rows);
 });

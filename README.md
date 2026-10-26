@@ -39,7 +39,7 @@ Dev-only tooling appears under `pnpm dev` and is stripped from the build: the Ga
 
 ## Invitations
 
-Each Party gets an iMessage with a personalised image, a message and their Personal link. The image is `/dev/invite/<code>`, a 1080×1350 page greeting the Party by name; with `pnpm dev` running:
+Each Party gets a personalised image, a message and their Personal link. Most are sent by hand, in a Messenger group chat with Patrick, Amelia and the couple; some go by text, by hand or with `scripts/send-invites.mjs` below. Either way, record each one in the Sheet's Invites tab (Tracking invitations, below). The image is `/dev/invite/<code>`, a 1080×1350 page greeting the Party by name; with `pnpm dev` running:
 
 ```sh
 pnpm invites                              # every Party → invites/out/<code>.png (2160×2700)
@@ -54,6 +54,37 @@ pnpm invites --base=http://localhost:4334 # dev server on another port
 ```
 
 It drives headless Chrome (set `CHROME=/path/to/chrome` if it isn't found) and waits for the fonts and photo before each screenshot. The words, styles (fonts, colours, sizes) and photo crops are at the top of `src/pages/dev/invite/[code].astro`, and `STYLE` picks the one that's rendered. Open the page in a browser to tweak it, with `?style=<name>`, `?script=<name>`, `?crop=<name>` or `?photo=none`. `invites/out/` is git-ignored.
+
+### Tracking invitations
+
+The RSVP Sheet has two tabs you add once, beside the `RSVPs` and `Log` tabs the Apps Script writes. The script never touches any other tab, so they're safe to edit.
+
+- **Invites:** one row per Party: `code`, `party`, `link`, then `sent_via`, `sent_on` and `notes` for you to fill in as each invitation goes.
+- **Guests:** one row per Guest, including those who haven't replied, with their RSVP filled in from the `RSVPs` tab as it arrives.
+
+1. Write both tabs from `src/data/parties.ts`:
+
+   ```sh
+   corepack pnpm guest-sheet   # invites/out/invites.csv and invites/out/guests.csv
+   ```
+
+2. In the Sheet, **File → Import → Upload** each file. Choose **Insert new sheet(s)**, untick **Convert text to numbers, dates, and formulas**, and rename the new tabs `Invites` and `Guests`.
+3. In **Invites**, select column D and add **Data → Data validation → Dropdown** with `Messenger`, `Text`, `WhatsApp`, `Email` and `In person`; for column E, a **Date** rule. Freeze row 1 in both tabs (**View → Freeze → 1 row**).
+4. In **Guests**, paste these into D1 and E1. Each fills its whole column, so leave the cells below them empty:
+
+   ```
+   ={"invited"; ARRAYFORMULA(IFERROR(VLOOKUP(A2:A, Invites!A2:D, 4, FALSE), ""))}
+   ```
+
+   ```
+   ={"replied", "attending", "dinner", "dietary", "bus_to", "bus_from", "mobile"; ARRAYFORMULA(IFERROR(VLOOKUP(A2:A & "|" & C2:C, {RSVPs!B2:B & "|" & RSVPs!D2:D, RSVPs!A2:A, RSVPs!E2:E, RSVPs!L2:L, RSVPs!F2:F, RSVPs!G2:G, RSVPs!H2:H, RSVPs!I2:I}, {2, 3, 4, 5, 6, 7, 8}, FALSE), ""))}
+   ```
+
+   `invited` is the Party's `sent_via`; `replied` is when the RSVP was sent. They match each Guest by Invite code and name together, since eight first names (Sam, Josh, Kevin and others) are in two Parties each, and they read `RSVPs` by column letter, so they follow `RSVP_HEADERS` in the Apps Script below.
+
+Some useful counts, in any empty cell: `=COUNTA(Invites!D2:D)` Parties invited, `=COUNTIF(Guests!F2:F, "yes")` Guests coming, `=COUNTIF(Guests!G2:G, "yes")` coming to dinner the night before, `=COUNTIFS(Guests!A2:A, "<>", Guests!E2:E, "")` Guests yet to reply.
+
+When `parties.ts` changes after the import, change the tabs by hand to match: add or delete the Party's row in Invites and a row per Guest in Guests (code, party and guest; the formulas fill in the rest). A Guest renamed in `parties.ts` needs the same name in Guests, or their reply won't show.
 
 ### Sending by text from Messages
 
@@ -92,7 +123,7 @@ How it sends:
 
 The Details page posts each RSVP to a Google Apps Script web app, which writes it to a Google Sheet.
 
-1. Create a Google Sheet. The script creates the `RSVPs` and `Log` tabs and their header rows if they're missing.
+1. Create a Google Sheet. The script creates the `RSVPs` and `Log` tabs and their header rows if they're missing. It leaves every other tab alone, such as the Invites and Guests tabs (Invitations, Tracking invitations).
 2. **Extensions → Apps Script**, replace the contents with:
 
    ```js

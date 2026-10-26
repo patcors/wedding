@@ -90,6 +90,24 @@ export function renderMessage(template, party) {
   return template.replace(/\r\n?/g, '\n').trim().replace(/\{(greeting|link|code)\}/g, (_, name) => values[name]);
 }
 
+// The Sheet's Invites tab, one row per Party with columns to fill in by hand
+// as each invitation goes, and its Guests tab, one row per Guest. See README
+// "Tracking invitations".
+export const INVITE_COLUMNS = ['code', 'party', 'link', 'sent_via', 'sent_on', 'notes'];
+export const GUEST_COLUMNS = ['code', 'party', 'guest'];
+
+export function sheetRows(parties) {
+  return {
+    invites: [INVITE_COLUMNS, ...parties.map((p) => [p.code, p.greeting, personalLink(p.code), '', '', ''])],
+    guests: [GUEST_COLUMNS, ...parties.flatMap((p) => p.guests.map((guest) => [p.code, p.greeting, guest]))],
+  };
+}
+
+// The quoting parseCsv reads: fields with commas, quotes or line breaks are
+// quoted, with quotes doubled.
+export const toCsv = (rows) =>
+  rows.map((row) => row.map((v) => /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v).join(',')).join('\r\n') + '\r\n';
+
 // sent.log: append-only, one tab-separated line per attempt:
 // timestamp, code, phone, status, service, detail.
 // status is sent, partial (the text went but the image didn't), unsure
