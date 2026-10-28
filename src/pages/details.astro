@@ -1,11 +1,18 @@
 ---
 // Flat, non-personalised information page: everything guests need, revisitable any time.
 // All content lives in the objects below. Edit there, not in the markup.
+// Each Party also has their own copy at /<code>/details/ ([code]/details.astro),
+// which the Garden on their Personal link leads to: it knows the Party, so
+// their RSVP form is there whatever the browser kept from the story.
 import RsvpForm from '../components/details/RsvpForm.astro';
 import SiteFonts from '../components/SiteFonts.astro';
 import { withPhoneLinks } from '../components/details/phone';
+import type { Party } from '../data/parties';
 
 const BASE = import.meta.env.BASE_URL;
+const { party } = Astro.props as { party?: Party };
+// Back to the story: the Party's own Garden, or the generic one.
+const story = party ? `${BASE}${party.code}/` : BASE;
 
 // The page no longer opens with the date and venue: the invitation sent with
 // the link has both (Amelia, October 2026). The date heads The day, the venue
@@ -93,9 +100,9 @@ const photos = {
   <body>
     <main class="info">
       <header class="info-header">
-        <a class="info-monogram" href={BASE} data-story aria-label="Back to the story" style={`--logo: url(${BASE}logo.png)`}><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
+        <a class="info-monogram" href={story} data-story aria-label="Back to the story" style={`--logo: url(${BASE}logo.png)`}><img src={`${BASE}logo.png`} alt="P and A monogram" width="284" height="192" /></a>
         <div class="info-header-links">
-          <a class="info-story-link" href={BASE} data-story>The story</a>
+          <a class="info-story-link" href={story} data-story>The story</a>
           <a class="info-rsvp-link" href="#rsvp">RSVP</a>
         </div>
       </header>
@@ -189,7 +196,7 @@ const photos = {
         <svg class="info-boat" width="40" height="34" viewBox="0 0 28 24" fill="none" aria-hidden="true">
           <path d="m2 13 12 3 12-3-6 8H8L2 13Zm5 1 7-11 7 11M14 3v13" stroke="currentColor" stroke-width="1" stroke-linejoin="round" />
         </svg>
-        <RsvpForm {...rsvp} />
+        <RsvpForm {...rsvp} party={party} />
       </section>
 
       <footer class="info-footer">
@@ -202,13 +209,13 @@ const photos = {
 
 <script>
   // "The story" and the monogram go back to the Garden: to the guest's own
-  // Personal link when this browser has been given one, and straight into
+  // Personal link when this page or browser has been given one, and straight into
   // the scene, without the opening's butterflies, at the place they left if
   // the Garden kept one (pa_voyage_back and pa_voyage_place, voyagePlace.ts).
   import { readParty } from '../components/details/rsvp';
   const party = (() => { try { return readParty(localStorage.getItem('pa_party')); } catch { return null; } })();
   for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-story]')) {
-    if (party && /^[a-z0-9-]+$/.test(party.code)) link.href = `${import.meta.env.BASE_URL}${party.code}/`;
+    if (party && /^[a-z0-9-]+$/.test(party.code) && link.getAttribute('href') === import.meta.env.BASE_URL) link.href = `${import.meta.env.BASE_URL}${party.code}/`;
     link.addEventListener('click', () => { try { sessionStorage.setItem('pa_voyage_back', '1'); } catch { /* private mode: the opening as usual */ } });
   }
 

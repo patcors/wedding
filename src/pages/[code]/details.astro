@@ -1,0 +1,13 @@
+---
+// A Party's own Details page, /<code>/details/: the Garden on their Personal
+// link leads here, so the RSVP form knows them from the address alone.
+import Details from '../details.astro';
+import { parties, type Party } from '../../data/parties';
+
+export function getStaticPaths() {
+  return parties.map(party => ({ params: { code: party.code }, props: { party } }));
+}
+
+const { party } = Astro.props as { party: Party };
+---
+<Details party={party} />

@@ -1,22 +1,26 @@
 ---
-// The RSVP at the foot of the Details page. The page is the same for everyone,
-// so the Party is read on the client from what their Personal link left in
-// localStorage (pa_party). Every RSVP belongs to a Party, so without one the
-// visitor is pointed back to their Personal link (or to us) instead of a form.
-// The guest list itself is never shipped here.
+// The RSVP at the foot of the Details page. A Party's own Details page
+// (/<code>/details/) gives the form its Party; the plain /details/ reads it on
+// the client from what their Personal link left in localStorage (pa_party).
+// Every RSVP belongs to a Party, so without one the visitor is pointed back to
+// their Personal link (or to us) instead of a form. Only that one Party's
+// names are ever shipped here, never the guest list.
 import { BUS_STOPS, DIETARY_OPTIONS } from './rsvp';
 import { telHref } from './phone';
+import type { Party } from '../../data/parties';
 
 interface Props {
   replyBy: string;   // e.g. "16 February 2027"
   email: string;     // fallback contact: no Personal link, or sending fails
   phone: string;
+  party?: Party;     // on a Party's own Details page
 }
 
-const { replyBy, email, phone } = Astro.props;
+const { replyBy, email, phone, party } = Astro.props;
 const phoneHref = telHref(phone);
+const remembered = party && JSON.stringify({ code: party.code, greeting: party.greeting, guests: party.guests });
 ---
-<div class="rsvp" data-rsvp data-reply-by={replyBy}>
+<div class="rsvp" data-rsvp data-reply-by={replyBy} data-party={remembered}>
   <h2 class="rsvp-heading" tabindex="-1" data-rsvp-heading>We’d love to <em>know you’re coming.</em></h2>
   <p class="rsvp-subtitle" data-rsvp-subtitle>Please reply by {replyBy}.</p>
 
@@ -151,8 +155,14 @@ const phoneHref = telHref(phone);
   const template = $<HTMLTemplateElement>('[data-rsvp-guest-template]');
   const replyBy = root.dataset.replyBy ?? '';
 
+  // This page's own Party, remembered for the plain /details/ too, or else
+  // the one the browser kept from a Personal link.
   const party: RememberedParty | null = (() => {
-    try { return readParty(localStorage.getItem('pa_party')); } catch { return null; }
+    const own = readParty(root.dataset.party ?? null);
+    try {
+      if (own) localStorage.setItem('pa_party', JSON.stringify(own));
+      return own ?? readParty(localStorage.getItem('pa_party'));
+    } catch { return own; }
   })();
   let rowId = 0;
 

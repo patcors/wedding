@@ -357,7 +357,11 @@ const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
 const InspectLayer = REVIEW ? lazy(() => import('./inspect/InspectTools')) : null;
 const InspectControls = REVIEW ? lazy(() => import('./inspect/InspectTools').then(module => ({ default: module.InspectControls }))) : null;
 
-export default function Garden() {
+// `details`: the Details page this Garden's links go to. A Personal link's
+// is the Party's own (/<code>/details/), so their RSVP form never depends on
+// the browser having kept pa_party from the story (it hadn't for some guests
+// who tapped through soon after the page opened, October 2026).
+export default function Garden({ details = `${BASE}details/` }: { details?: string }) {
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [sceneOnly, setSceneOnly] = useState(false);
@@ -589,8 +593,8 @@ export default function Garden() {
               {sound === 'off' ? <path d="m16 9.5 5 5m0-5-5 5" /> : <path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" />}
             </svg>
           </button>}
-          <a className="garden-invitation-link" href={`${BASE}details/`} onClick={keepPlace}>The details</a>
-          <a className="garden-invitation-link" href={`${BASE}details/#rsvp`} onClick={keepPlace}>RSVP</a>
+          <a className="garden-invitation-link" href={details} onClick={keepPlace}>The details</a>
+          <a className="garden-invitation-link" href={`${details}#rsvp`} onClick={keepPlace}>RSVP</a>
         </div>
       </header>
     </div>
@@ -602,8 +606,8 @@ export default function Garden() {
         <div ref={loadingBar} className="garden-loading" role="progressbar" aria-label="Loading the garden" aria-valuemin={0} aria-valuemax={100}><span className="garden-loading-fill" /></div>
         {/* Out of flow, so neither link can move the text above. */}
         <div className="garden-arrival-actions">
-          <a className={`garden-skip ${slow && state === 'loading' ? 'is-visible' : ''}`} href={`${BASE}details/`}>Skip to the details <span aria-hidden="true">→</span></a>
-          <a className={`garden-button garden-details-fallback ${failed ? 'is-visible' : ''}`} href={`${BASE}details/`}>See the details <span aria-hidden="true">→</span></a>
+          <a className={`garden-skip ${slow && state === 'loading' ? 'is-visible' : ''}`} href={details}>Skip to the details <span aria-hidden="true">→</span></a>
+          <a className={`garden-button garden-details-fallback ${failed ? 'is-visible' : ''}`} href={details}>See the details <span aria-hidden="true">→</span></a>
         </div>
       </section>
 
@@ -642,7 +646,7 @@ export default function Garden() {
             ? <span key={i} className="garden-digit-dash">{char}</span>
             : <span key={i} className="garden-digit"><span>{char}</span></span>)}</span>
         </p>
-        <a className="garden-button" href={`${BASE}details/`} onClick={keepPlace}>The details &amp; RSVP <span aria-hidden="true">→</span></a>
+        <a className="garden-button" href={details} onClick={keepPlace}>The details &amp; RSVP <span aria-hidden="true">→</span></a>
       </section>
     </div>
 

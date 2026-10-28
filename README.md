@@ -9,7 +9,8 @@ Vocabulary (Party, Guest, Invite code, Personal link, RSVP, Garden, Details page
 | Path | What it is |
 |---|---|
 | `/` | The Garden, for anyone without a Personal link |
-| `/<code>` | A Party's Personal link: the Garden, greeting them by name. It remembers the Party so the Details page can show their RSVP |
+| `/<code>` | A Party's Personal link: the Garden, greeting them by name. Its links go to the Party's own Details page, and it remembers the Party so the plain one can show their RSVP too |
+| `/<code>/details` | The Details page for one Party, with their RSVP form whatever the browser has kept |
 | `/details` | Location, times, getting there, where to stay, questions, and the RSVP. Without a remembered Party, the RSVP points visitors to their Personal link instead of showing a form |
 | `/dev/links` | Dev only. Every Party's Personal link with a QR code, for making cards. Never built into the deployed site |
 | `/dev/invite/<code>` | Dev only. A Party's invitation image, screenshotted by `pnpm invites`. Never built into the deployed site |
@@ -266,8 +267,9 @@ The Details page posts each RSVP to a Google Apps Script web app, which writes i
    workflow by hand). The build bakes the URL in, so setting the secret alone
    changes nothing on the live site.
 
-The form only appears for a Party remembered from their Personal link, and
-posts urlencoded fields (`submitted_at`, `code`, `party`, `contact`, `song`,
+The form only appears for a Party: on their own Details page, or remembered
+from their Personal link on the plain one. It posts urlencoded fields
+(`submitted_at`, `code`, `party`, `contact`, `song`,
 `message`, and `guests` as a JSON string of
 `[{ name, attending, dietary, busTo, busFrom, mobile, dinner }]`). Apps Script
 answers through the same redirect as the lookup below, so the page can read

@@ -88,7 +88,7 @@ const devMist = import.meta.env.DEV && opening(MIST_DAWN);
     </script>}
   </head>
   <body>
-    <Garden client:load />
+    <Garden client:load details={party && `${BASE}${party.code}/details/`} />
     <noscript><style>.garden-arrival-actions .garden-details-fallback { opacity: 1; visibility: visible; } .garden-loading { visibility: hidden; }</style></noscript>
   </body>
 </html>
