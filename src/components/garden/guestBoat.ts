@@ -3,6 +3,7 @@
 // comes up the river from beyond the dock as the catamaran rounds the bend to
 // Jasper's, and pulls up at the jetty as the catamaran moors. Pure, so it can
 // be tested; drawn by GuestBoat.tsx with the model in guestBoatGeometry.ts.
+import type { GuestLook } from './boatLookChoices.ts';
 import { DATES, DOCKED, progressAt } from './journey.ts';
 import { CATAMARAN, HULL_HALF_BEAM, boatPose } from './storyBoats.ts';
 import { VOYAGE, bankEdge, riverCenter, voyageLandmarks } from './gardenGeometry.ts';
@@ -25,7 +26,10 @@ import { JETTY } from './voyageDock.ts';
 // four takes smaller hulls (`fleet`, by the number of boats) so they all lie
 // abreast beside the jetty; their cards stay full size, so every name reads
 // as well whatever the Party's size. Every size is here, in one place.
-export const GUEST_BOAT = { halfLength: .82, halfBeam: .43, card: { height: .35, gap: .22 }, foot: .62, above: .1 } as const;
+// The sloop (a Review choice) stands its card `sloop.raise` higher, on a
+// taller mast over its mainsail (Amelia, October 2026); from .45 a card on a
+// 667 × 375 phone on its side rises into the copy's button.
+export const GUEST_BOAT = { halfLength: .82, halfBeam: .43, card: { height: .35, gap: .22 }, foot: .62, above: .1, sloop: { raise: .35 } } as const;
 export const GUEST_SCALE = { desktop: .8, mobile: 1, short: 600, most: 1.4, fleet: { desktop: [1, 1, 1, .9], mobile: [1, .8, .7, .66] } } as const;
 export const GUEST_FLEET = { most: 4 } as const;
 const fleetSize = (n: number) => Math.min(GUEST_FLEET.most, Math.max(1, Math.round(n)));
@@ -69,11 +73,14 @@ export const GUEST_BERTHS: Record<'desktop' | 'mobile', readonly (readonly Slot[
 
 // A boat's mast and card, in its hull's units (the boat is drawn at
 // guestScale): the card's scale against the hull, the card's foot, and the
-// mast's top.
-export function guestRig(tall: 0 | 1, width: number, height = Infinity, count = 1) {
-  const card = guestCardScale(width, height) / guestScale(width, height, count), { foot, above } = GUEST_BOAT;
+// mast's top. The paper boat's card is threaded on its mast at its middle;
+// the sloop's `flies` from its masthead like a flag, its left edge (as the
+// camera it faces sees it) on the mast, as the catamaran's monogram does.
+export function guestRig(tall: 0 | 1, width: number, height = Infinity, count = 1, look: GuestLook = 'paper') {
+  const card = guestCardScale(width, height) / guestScale(width, height, count), { above } = GUEST_BOAT;
+  const foot = GUEST_BOAT.foot + (look === 'sloop' ? GUEST_BOAT.sloop.raise : 0);
   const lift = tall * (GUEST_BOAT.card.height + GUEST_BOAT.card.gap) * card;
-  return { card, foot: foot + lift, top: foot + lift + GUEST_BOAT.card.height * card + above };
+  return { card, foot: foot + lift, top: foot + lift + GUEST_BOAT.card.height * card + above, flies: look === 'sloop' };
 }
 
 // When they come in: a little scene in real time. As the wedding's date is

@@ -25,13 +25,17 @@ const lens = (screen, pose = dockView(screen.width)) => {
 const onScreen = (camera, point) => { const v = point.clone().project(camera); return [(v.x + 1) / 2, (1 - v.y) / 2]; };
 // Every Party, and a Party of four, which none has yet.
 const PARTIES = [...parties.map(party => guestNames(party.guests)), ['Kirsten', 'Michael', 'Kai', 'Lou']];
+// Each look of the guests' boats: the paper boat's card on its mast, the sloop's flying from its masthead.
+const LOOKS = ['paper', 'sloop'];
 // A card's corners on screen when moored, and its distance from the camera.
-function cardOnScreen(berth, name, count, screen, camera) {
-  const scale = guestScale(screen.width, screen.h, count), rig = guestRig(berth.tall, screen.width, screen.h, count), cardScale = rig.card * scale;
+function cardOnScreen(berth, name, count, screen, camera, look = 'paper') {
+  const scale = guestScale(screen.width, screen.h, count), rig = guestRig(berth.tall, screen.width, screen.h, count, look), cardScale = rig.card * scale;
   const half = guestCard(name, cormorantWidth).width / 2 * cardScale, foot = rig.foot * scale, top = foot + GUEST_BOAT.card.height * cardScale;
+  // A flying card's middle is half its width to the right of the mast.
+  const from = rig.flies ? 0 : -half, to = rig.flies ? 2 * half : half;
   const facing = berth.yaw + berth.card, across = new THREE.Vector3(Math.cos(facing), 0, -Math.sin(facing));
-  const corners = [[-half, foot], [half, foot], [-half, top], [half, top]].map(([u, y]) => onScreen(camera, new THREE.Vector3(berth.x, y, berth.z).addScaledVector(across, u)));
-  const middle = new THREE.Vector3(berth.x, (foot + top) / 2, berth.z);
+  const corners = [[from, foot], [to, foot], [from, top], [to, top]].map(([u, y]) => onScreen(camera, new THREE.Vector3(berth.x, y, berth.z).addScaledVector(across, u)));
+  const middle = new THREE.Vector3(berth.x, (foot + top) / 2, berth.z).addScaledVector(across, (from + to) / 2);
   return { box: [Math.min(...corners.map(c => c[0])), Math.min(...corners.map(c => c[1])), Math.max(...corners.map(c => c[0])), Math.max(...corners.map(c => c[1]))], distance: camera.position.distanceTo(middle), cardScale };
 }
 const overlap = (a, b) => Math.min(a[2], b[2]) - Math.max(a[0], b[0]) > .002 && Math.min(a[3], b[3]) - Math.max(a[1], b[1]) > .002;
@@ -63,10 +67,14 @@ test('the cards grow only on short screens, the hulls never; a bigger Party take
   assert.equal(guestScale(MOBILE_RIVER_WIDTH, 844, 1), GUEST_SCALE.mobile);
   for (let n = 2; n <= 4; n++) assert.ok(guestScale(MOBILE_RIVER_WIDTH, 844, n) < guestScale(MOBILE_RIVER_WIDTH, 844, n - 1), 'smaller hulls for a bigger Party on a phone');
   // The mast always reaches above its card.
-  for (const screen of SCREENS) for (let n = 1; n <= 4; n++) for (const tall of [0, 1]) {
-    const rig = guestRig(tall, screen.width, screen.h, n);
+  for (const screen of SCREENS) for (let n = 1; n <= 4; n++) for (const tall of [0, 1]) for (const look of LOOKS) {
+    const rig = guestRig(tall, screen.width, screen.h, n, look);
     assert.ok(rig.top > rig.foot + GUEST_BOAT.card.height * rig.card);
   }
+  // The sloop's mast is taller, its card flying from it; the paper boat's is threaded on its toothpick.
+  assert.ok(guestRig(0, 1, 900, 2, 'sloop').top > guestRig(0, 1, 900, 2).top);
+  assert.equal(guestRig(0, 1, 900, 2).flies, false);
+  assert.equal(guestRig(0, 1, 900, 2, 'sloop').flies, true);
 });
 
 test('moored, every boat lies on the water upstream of the jetty, clear of it, the catamaran and each other', () => {
@@ -94,13 +102,13 @@ test('moored, every boat lies on the water upstream of the jetty, clear of it, t
 });
 
 test('at the dock every name reads at a dozen pixels to the em or more, its card in the picture below the copy, clear of the others and right of the catamaran', () => {
-  for (const screen of SCREENS) {
+  for (const screen of SCREENS) for (const look of LOOKS) {
     const camera = lens(screen);
     const catamaran = Math.max(...mooredStems(screen.width).flatMap(stem => [onScreen(camera, new THREE.Vector3(stem.x, 0, stem.z))[0], onScreen(camera, new THREE.Vector3(stem.x, .45, stem.z))[0]]));
     for (const names of PARTIES) {
       const n = names.length, berths = guestBerths(n, screen.width, screen.h);
       const cards = names.map((name, i) => {
-        const card = cardOnScreen(berths[i], name, n, screen, camera);
+        const card = cardOnScreen(berths[i], name, n, screen, camera, look);
         const pixels = screen.h / 2 / Math.tan(screen.fov / 2 * Math.PI / 180) / card.distance;
         const em = guestCard(name, cormorantWidth).size * card.cardScale * pixels;
         assert.ok(em >= 12, `${name}: ${em.toFixed(1)}px to the em on ${screen.w} × ${screen.h}`);

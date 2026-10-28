@@ -32,11 +32,11 @@ function Fleet({ names, look, width, height, paused, reduced }: SlotProps & { na
   const clock = useJourney();
   const boats = useRef<(THREE.Group | null)[]>([]), cards = useRef<(THREE.Group | null)[]>([]);
   // Each boat's mast and card: every other one stands on a tall mast (guestBerths).
-  const rigs = useMemo(() => guestBerths(names.length, width, height).map(({ tall }) => guestRig(tall, width, height, names.length)), [names, width, height]);
+  const rigs = useMemo(() => guestBerths(names.length, width, height).map(({ tall }) => guestRig(tall, width, height, names.length, look)), [names, width, height, look]);
   // The hull (one for each height of mast), its creases and the card, shared
   // by every boat, and each one's name.
   const model = useMemo(() => {
-    const tops = [...new Set(rigs.map(rig => rig.top))], built = tops.map(top => guestBoatHull(look, top));
+    const tops = [...new Set(rigs.map(rig => rig.top))], built = tops.map(top => guestBoatHull(look, rigs.find(rig => rig.top === top)!));
     for (const { creases } of built.slice(1)) creases?.dispose();
     return {
       hulls: rigs.map(rig => built[tops.indexOf(rig.top)].geometry), creases: built[0].creases, card: cardGeometry(), names: names.map(name => cardTexture(name)),
@@ -96,8 +96,9 @@ function Fleet({ names, look, width, height, paused, reduced }: SlotProps & { na
     <mesh geometry={model.hulls[i]} material={model.hull} />
     {model.creases && <lineSegments geometry={model.creases} material={model.lines} />}
     <group ref={el => { cards.current[i] = el; }} position={[0, rigs[i].foot, 0]} scale={rigs[i].card}>
-      {/* Just in front of the mast, so the mast never shows through the name. */}
-      <mesh geometry={model.card} material={faces[i]} position={[0, 0, .02]} scale={[model.names[i].width, 1, 1]} />
+      {/* Just in front of the mast, so the mast never shows through the name;
+          a sloop's flies from it by its left edge, just clear of the mast. */}
+      <mesh geometry={model.card} material={faces[i]} position={[rigs[i].flies ? model.names[i].width / 2 + .016 : 0, 0, .02]} scale={[model.names[i].width, 1, 1]} />
     </group>
   </group>)}</>;
 }
