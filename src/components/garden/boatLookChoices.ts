@@ -20,11 +20,20 @@ export const CATAMARAN_LOOKS = {
   // Ivory hulls with each one's stripe, the wooden deck, sails edged in the Garden's ink.
   warm: 'Cruiser, warm',
 } as const;
+// The guests' own boats at the end of the story (guestBoatGeometry.ts).
+export const GUEST_LOOKS = {
+  // A folded paper boat on a toothpick mast.
+  paper: 'Paper boat',
+  // A little ivory sloop with a brown stripe, a wooden mast and a jib.
+  sloop: 'Sloop',
+} as const;
 export type DinghyLook = keyof typeof DINGHY_LOOKS;
 export type CatamaranLook = keyof typeof CATAMARAN_LOOKS;
-export type BoatLook = { dinghy: DinghyLook; catamaran: CatamaranLook };
-export const BOAT_LOOK: BoatLook = { dinghy: 'toy', catamaran: 'original' };
-export const boatLook = (dinghy: string | null, catamaran: string | null): BoatLook => ({
+export type GuestLook = keyof typeof GUEST_LOOKS;
+export type BoatLook = { dinghy: DinghyLook; catamaran: CatamaranLook; guest: GuestLook };
+export const BOAT_LOOK: BoatLook = { dinghy: 'toy', catamaran: 'original', guest: 'paper' };
+export const boatLook = (dinghy: string | null, catamaran: string | null, guest: string | null = null): BoatLook => ({
   dinghy: dinghy && dinghy in DINGHY_LOOKS ? dinghy as DinghyLook : BOAT_LOOK.dinghy,
   catamaran: catamaran && catamaran in CATAMARAN_LOOKS ? catamaran as CatamaranLook : BOAT_LOOK.catamaran,
+  guest: guest && guest in GUEST_LOOKS ? guest as GuestLook : BOAT_LOOK.guest,
 });

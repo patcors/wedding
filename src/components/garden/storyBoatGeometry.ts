@@ -128,6 +128,16 @@ export function storyHull(dinghyPaint: HullPaint, catamaranPaint: HullPaint) {
   return geometry;
 }
 
+// The dinghy's hull on its own, in one paint, with no morph: the guests' sloops (guestBoatGeometry.ts).
+export function dinghyHull(paint: HullPaint) {
+  const { positions, colours } = hullPanels(DINGHY, paint);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
+  geometry.setAttribute('normal', flatNormals(positions));
+  return geometry;
+}
+
 // Paints the hull `morph` of the way from the dinghy's paint to the catamaran's.
 export function blendHullPaint(geometry: THREE.BufferGeometry, morph: number) {
   const { dinghy, catamaran } = geometry.userData.paint as { dinghy: Float32Array; catamaran: Float32Array };
@@ -143,7 +153,7 @@ const tinted = (geometry: THREE.BufferGeometry, tint: string) => {
   geometry.setAttribute('color', new THREE.BufferAttribute(values, 3));
   return geometry;
 };
-function spar(a: Point, b: Point, radius: number, tint = '#d8b47d') {
+export function spar(a: Point, b: Point, radius: number, tint = '#d8b47d') {
   const start = new THREE.Vector3(...a), end = new THREE.Vector3(...b);
   const direction = end.clone().sub(start);
   const cylinder = new THREE.CylinderGeometry(radius, radius, direction.length(), 8).toNonIndexed();
@@ -160,7 +170,7 @@ const spars = (...parts: THREE.BufferGeometry[]) => {
 
 // The mainsail as in the wooden sailboat: a gently billowed ivory triangle,
 // with uv across its foot and up its luff for anything painted on it.
-function sail(a: Point, b: Point, c: Point, fullness: number, tint = '#fff6df') {
+export function sail(a: Point, b: Point, c: Point, fullness: number, tint = '#fff6df') {
   const vertices: number[] = [], uvs: number[] = [], indices: number[] = [], rows: number[][] = [];
   const segments = 12;
   for (let i = 0; i <= segments; i++) {

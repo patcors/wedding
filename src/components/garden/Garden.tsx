@@ -19,7 +19,7 @@ import { DATE_LABEL_MODES, DEFAULT_DATE_LABEL, FLIP_EVERY, ROLL_EVERY, WEDDING_O
 import { TEXT_LOOKS, inkTurnsWhite, textLook, type TextLook } from './textLook';
 import { PREPARE, PREPARE_WHEN, REVIEW_PREPARE, REVIEW_TEXTURES, TEXTURE_WEIGHT, TEXTURE_WEIGHTS, type PrepareWhen, type TextureWeight } from './loadChoices';
 import { REVIEW_SEASONS, SEASONS, seasonsOn } from './seasonChoices';
-import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLookChoices';
+import { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, GUEST_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook, type GuestLook } from './boatLookChoices';
 import { GUEST_SOUND, GUEST_SOUND_MODE, REVIEW_SOUND, SOUND_MODES, soundMode, type SoundMode } from './soundChoices';
 import { useSoundscape } from './useSoundscape';
 import { REVIEW_SCROLL, scrollInverted, storyScroll } from './scrollChoices';
@@ -352,7 +352,7 @@ const REVIEW_DATE = 'pa_dev_date_label';
 // Dev only: the Review choice of how the copy is set over the scene (see textLook.ts), remembered across reloads.
 const REVIEW_TEXT = 'pa_dev_text';
 // Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
-const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran';
+const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran', REVIEW_GUEST_BOAT = 'pa_dev_guest_boat';
 // Dev only: inspect the scene and leave notes for Claude, and ?at= (inspect/, see docs/VOYAGE.md).
 const InspectLayer = REVIEW ? lazy(() => import('./inspect/InspectTools')) : null;
 const InspectControls = REVIEW ? lazy(() => import('./inspect/InspectTools').then(module => ({ default: module.InspectControls }))) : null;
@@ -501,7 +501,7 @@ export default function Garden({ details = `${BASE}details/` }: { details?: stri
   // Dev only: the Review panel's copy, in today's glow by default.
   const [text, setText] = useState<TextLook>('white');
   useEffect(() => { if (REVIEW) setText(textLook(localStorage.getItem(REVIEW_TEXT))); }, []);
-  useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN))); }, []);
+  useEffect(() => { if (REVIEW) setBoatStyle(boatLook(localStorage.getItem(REVIEW_DINGHY), localStorage.getItem(REVIEW_CATAMARAN), localStorage.getItem(REVIEW_GUEST_BOAT))); }, []);
   useEffect(() => { if (REVIEW) setSeasons(seasonsOn(localStorage.getItem(REVIEW_SEASONS))); }, []);
   useEffect(() => { if (REVIEW) setInverted(scrollInverted(localStorage.getItem(REVIEW_SCROLL))); }, []);
   const { month, year } = shownDate(voyage.date ?? lastDate ?? '', dateMode);
@@ -749,7 +749,7 @@ export default function Garden({ details = `${BASE}details/` }: { details?: stri
       </label>
       <label className="garden-material-selector">Boats
         <select aria-label="Boats before they join" value={boatStyle.dinghy} onChange={event => {
-          const look = boatLook(event.target.value, boatStyle.catamaran);
+          const look = boatLook(event.target.value, boatStyle.catamaran, boatStyle.guest);
           localStorage.setItem(REVIEW_DINGHY, look.dinghy);
           setBoatStyle(look);
         }}>
@@ -758,11 +758,20 @@ export default function Garden({ details = `${BASE}details/` }: { details?: stri
       </label>
       <label className="garden-material-selector">Catamaran
         <select aria-label="Catamaran" value={boatStyle.catamaran} onChange={event => {
-          const look = boatLook(boatStyle.dinghy, event.target.value);
+          const look = boatLook(boatStyle.dinghy, event.target.value, boatStyle.guest);
           localStorage.setItem(REVIEW_CATAMARAN, look.catamaran);
           setBoatStyle(look);
         }}>
           {(Object.keys(CATAMARAN_LOOKS) as CatamaranLook[]).map(look => <option key={look} value={look}>{CATAMARAN_LOOKS[look]}</option>)}
+        </select>
+      </label>
+      <label className="garden-material-selector">Guests
+        <select aria-label="Guests' boats" value={boatStyle.guest} onChange={event => {
+          const look = boatLook(boatStyle.dinghy, boatStyle.catamaran, event.target.value);
+          localStorage.setItem(REVIEW_GUEST_BOAT, look.guest);
+          setBoatStyle(look);
+        }}>
+          {(Object.keys(GUEST_LOOKS) as GuestLook[]).map(look => <option key={look} value={look}>{GUEST_LOOKS[look]}</option>)}
         </select>
       </label>
       <label className="garden-material-selector">Date

@@ -1,5 +1,6 @@
-// The guests' own paper boats, one for each guest with their first name on
-// its card sail (guestBoat.ts), coming in to the dock with the catamaran.
+// The guests' own paper boats (or sloops, a Review choice: `look`), one for
+// each guest with their first name on its card sail (guestBoat.ts), coming in
+// to the dock with the catamaran.
 // Only on a Personal link, or once one has been opened on this device
 // (GardenPage remembers it as pa_party); the plain Garden shows none.
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -8,7 +9,8 @@ import * as THREE from 'three';
 import { readParty } from '../details/rsvp';
 import { useJourney, type SlotProps } from './JourneyProvider';
 import { GUEST_ARRIVAL, guestArrivalCap, guestArrivalStep, guestBerths, guestFleetPosesAt, guestNames, guestRig, guestScale } from './guestBoat';
-import { cardGeometry, cardTexture, guestHull } from './guestBoatGeometry';
+import { cardGeometry, cardTexture, guestBoatHull } from './guestBoatGeometry';
+import { BOAT_LOOK, type GuestLook } from './boatLookChoices';
 import { sharpenFlag } from './storyBoatGeometry';
 
 export function rememberedParty() {
@@ -18,15 +20,15 @@ export function rememberedParty() {
 export const rememberedNames = () => guestNames(rememberedParty()?.guests ?? []);
 
 // `height` is the visible height in px, for their size on a short screen (guestScale).
-export default function GuestBoat(slot: SlotProps & { height?: number }) {
+export default function GuestBoat({ look = BOAT_LOOK.guest, ...slot }: SlotProps & { height?: number; look?: GuestLook }) {
   const [names] = useState(rememberedNames);
-  return names.length ? <Fleet names={names} {...slot} /> : null;
+  return names.length ? <Fleet names={names} look={look} {...slot} /> : null;
 }
 
 // Each boat's own rocking: a phase and a pace a little apart, so they bob out of step.
 const ROCK = [{ phase: 0, pace: 1 }, { phase: 2.1, pace: .87 }, { phase: 4.3, pace: 1.12 }, { phase: 1.2, pace: .94 }];
 
-function Fleet({ names, width, height, paused, reduced }: SlotProps & { names: string[]; height?: number }) {
+function Fleet({ names, look, width, height, paused, reduced }: SlotProps & { names: string[]; look: GuestLook; height?: number }) {
   const clock = useJourney();
   const boats = useRef<(THREE.Group | null)[]>([]), cards = useRef<(THREE.Group | null)[]>([]);
   // Each boat's mast and card: every other one stands on a tall mast (guestBerths).
@@ -34,14 +36,14 @@ function Fleet({ names, width, height, paused, reduced }: SlotProps & { names: s
   // The hull (one for each height of mast), its creases and the card, shared
   // by every boat, and each one's name.
   const model = useMemo(() => {
-    const tops = [...new Set(rigs.map(rig => rig.top))], built = tops.map(top => guestHull(top));
-    for (const { creases } of built.slice(1)) creases.dispose();
+    const tops = [...new Set(rigs.map(rig => rig.top))], built = tops.map(top => guestBoatHull(look, top));
+    for (const { creases } of built.slice(1)) creases?.dispose();
     return {
       hulls: rigs.map(rig => built[tops.indexOf(rig.top)].geometry), creases: built[0].creases, card: cardGeometry(), names: names.map(name => cardTexture(name)),
       hull: new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 1 }),
       lines: new THREE.LineBasicMaterial({ color: '#8b795a', transparent: true, opacity: .32 }),
     };
-  }, [names, rigs]);
+  }, [names, rigs, look]);
   // Each card a little of its own light, so the names still read in the dusk.
   const faces = useMemo(() => model.names.map(({ texture: map }) => {
     const material = new THREE.MeshStandardMaterial({ map, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: .18, side: THREE.DoubleSide, roughness: 1 });
@@ -50,7 +52,7 @@ function Fleet({ names, width, height, paused, reduced }: SlotProps & { names: s
   }), [model]);
   useEffect(() => () => {
     for (const hull of new Set(model.hulls)) hull.dispose();
-    model.creases.dispose(); model.card.dispose(); model.hull.dispose(); model.lines.dispose();
+    model.creases?.dispose(); model.card.dispose(); model.hull.dispose(); model.lines.dispose();
     for (const { texture } of model.names) texture.dispose();
     for (const face of faces) face.dispose();
   }, [model, faces]);
@@ -92,7 +94,7 @@ function Fleet({ names, width, height, paused, reduced }: SlotProps & { names: s
   const scale = guestScale(width, height, names.length);
   return <>{names.map((name, i) => <group key={`${i}-${name}`} ref={el => { boats.current[i] = el; }} name="guest-boat" visible={false} scale={scale}>
     <mesh geometry={model.hulls[i]} material={model.hull} />
-    <lineSegments geometry={model.creases} material={model.lines} />
+    {model.creases && <lineSegments geometry={model.creases} material={model.lines} />}
     <group ref={el => { cards.current[i] = el; }} position={[0, rigs[i].foot, 0]} scale={rigs[i].card}>
       {/* Just in front of the mast, so the mast never shows through the name. */}
       <mesh geometry={model.card} material={faces[i]} position={[0, 0, .02]} scale={[model.names[i].width, 1, 1]} />

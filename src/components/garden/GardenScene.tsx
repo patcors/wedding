@@ -94,7 +94,7 @@ export default function GardenScene({ prepare, progress, pace, paused, reduced, 
     <FallingLeaves paused={still} width={width} seasons={seasons} />
     <VoyageWorld {...slot} />
     <VoyageBoats {...slot} look={boatLook} />
-    <GuestBoat {...slot} height={visibleHeight} />
+    <GuestBoat {...slot} height={visibleHeight} look={boatLook?.guest} />
     <Eggs {...slot} />
     {arrival && <NameFlight panel={arrival} width={width} />}
     <GardenPreparation start={prepare} onReady={onReady} onError={onError} />

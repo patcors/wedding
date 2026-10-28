@@ -1,11 +1,18 @@
-// A guest's paper boat (guestBoat.ts): the guests' folded paper boat with a
-// toothpick mast, and a card sail with their first name on it, at full size
-// (GuestBoat scales it for the layout, guestScale). Every boat shares the
-// hull, creases and card; only the name's texture is each boat's own.
+// A guest's boat (guestBoat.ts): the guests' folded paper boat with a
+// toothpick mast, or a little sloop (a Review choice, GUEST_LOOKS), and a
+// card sail with their first name on it, at full size (GuestBoat scales it
+// for the layout, guestScale). Every boat shares the hull, creases and card;
+// only the name's texture is each boat's own.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { foldedPaper } from './paperBoatGeometry.ts';
 import { GUEST_BOAT, GUEST_CARD, cormorantWidth, guestCard } from './guestBoat.ts';
+import { GUEST_SLOOP_PAINT, type GuestLook } from './boatLooks.ts';
+import { dinghyHull, sail, spar } from './storyBoatGeometry.ts';
+
+// A guest's hull and mast for a look, and the paper's creases (the sloop has none).
+export const guestBoatHull = (look: GuestLook, top: number): { geometry: THREE.BufferGeometry; creases: THREE.BufferGeometry | null } =>
+  look === 'sloop' ? { geometry: guestSloop(top), creases: null } : guestHull(top);
 
 // The hull and its mast, up to `top`, in one mesh, coloured per vertex, and
 // the hull's creases. In the boat's frame: bow to −z, the water at y 0.
@@ -21,6 +28,25 @@ export function guestHull(top: number) {
   const geometry = mergeGeometries([paper, mast])!;
   paper.dispose(); mast.dispose();
   return { geometry, creases };
+}
+
+// The sloop: the story dinghies' hull a little larger, to the paper boat's
+// length (GUEST_BOAT.halfLength, which the berths keep clear), in the guests' paint, a wooden mast up to `top` where the paper
+// boat's toothpick stands, and a jib from the bow to the mast below the card,
+// eased to starboard so it shows its face beside the card. The card is its
+// main. All one mesh, coloured per vertex. In the boat's frame: bow to −z,
+// the water at y 0.
+const SLOOP = { scale: 1.05, mast: -.012, jib: { head: .57, tack: [0, .2, -.74], clew: [.3, .23, -.02] } } as const;
+export function guestSloop(top: number) {
+  const hull = dinghyHull(GUEST_SLOOP_PAINT);
+  hull.scale(SLOOP.scale, SLOOP.scale, SLOOP.scale);
+  const mast = spar([0, .06, SLOOP.mast], [0, top, SLOOP.mast], .013, '#c9a878');
+  const { head, tack, clew } = SLOOP.jib;
+  const jib = sail([0, head, SLOOP.mast - .02], [...tack], [...clew], .03, '#fbf6ea');
+  jib.deleteAttribute('uv');
+  const geometry = mergeGeometries([hull, mast, jib])!;
+  hull.dispose(); mast.dispose(); jib.dispose();
+  return geometry;
 }
 
 // The card, threaded on the mast at its middle, bowed a little back at its

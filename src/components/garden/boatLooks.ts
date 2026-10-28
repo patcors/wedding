@@ -1,13 +1,14 @@
 // How the story boats look, the two dinghies before they join and the
-// catamaran they become. Guests see BOAT_LOOK: the toy sloops, joining into
-// the original catamaran in their paint. The others are dev-only Review
+// catamaran they become, and the guests' own boats. Guests see BOAT_LOOK: the
+// toy sloops, joining into the original catamaran in their paint, and paper
+// boats for themselves. The others are dev-only Review
 // choices. Each look is paint (hull colours and sail cloth) here, and shape
 // (rig, cabin) in storyBoatGeometry.ts.
 import * as THREE from 'three';
 
 // The looks to choose from, apart so the page's first script needn't load three.
 import type { CatamaranLook, DinghyLook } from './boatLookChoices.ts';
-export { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook } from './boatLookChoices.ts';
+export { BOAT_LOOK, CATAMARAN_LOOKS, DINGHY_LOOKS, GUEST_LOOKS, boatLook, type BoatLook, type CatamaranLook, type DinghyLook, type GuestLook } from './boatLookChoices.ts';
 
 export type Owner = 'amelia' | 'patrick';
 // Each one's colour, carried into every look so the two boats stay told apart.
@@ -54,6 +55,14 @@ export function dinghyPaint(look: DinghyLook, owner: Owner): HullPaint {
     }
   }
 }
+// The guests' sloops: ivory, as their cards are, with a stripe of the
+// invitations' brown under the rim, a warm wooden bottom and floor, so
+// they're never taken for Amelia's teal or Patrick's yellow.
+export const GUEST_SLOOP_PAINT: HullPaint = {
+  strakes: ['#6b4f3e', '#f4efe3', '#f4efe3', '#efe8d8', '#d8c6a2', '#cdb991'],
+  rim: '#f4efe3', wall: '#efe7d4', floor: '#c99f65', transom: '#6b4f3e', bow: '#f4efe3', sheer: .03,
+};
+
 // The catamaran's hull paint, which the dinghy's blends into as the hulls
 // grow long; the original keeps the dinghy's.
 export function catamaranPaint(look: CatamaranLook, owner: Owner, dinghy: HullPaint): HullPaint {
