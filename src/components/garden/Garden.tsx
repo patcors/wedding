@@ -11,7 +11,7 @@ import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './skyStyle';
 import { WATERS, type WaterStyle } from './skyCycle';
-import { chapterAt, dateLabel, digitsMonth, milestoneAt, nextStop, previousStop, progressAt, scrollAtProgress, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
+import { DATES, STOPS, chapterAt, dateLabel, digitsMonth, milestoneAt, nextStop, previousStop, progressAt, scrollAtProgress, stillProgress, storyMonth, type Chapter, type Milestone } from './journey';
 import { advancePace, atRest, createPace, glidePlan, leashed } from './journeyPace';
 import { namesAway } from './openingNames';
 import { PLACE_KEY, placeToKeep, placeToReopen, progressFor, scrollFor } from './voyagePlace';
@@ -353,6 +353,10 @@ const REVIEW_DATE = 'pa_dev_date_label';
 const REVIEW_TEXT = 'pa_dev_text';
 // Dev only: the Review choice of how the boats look (see boatLooks.ts), remembered across reloads.
 const REVIEW_DINGHY = 'pa_dev_dinghy', REVIEW_CATAMARAN = 'pa_dev_catamaran', REVIEW_GUEST_BOAT = 'pa_dev_guest_boat';
+// Dev only: Review's "Skip to the end" cuts to the last milestone before the
+// wedding's date and sails on from there, so the ending plays (the bend, the
+// guests' boats coming in, the mooring) without scrolling the whole story.
+const ENDING = STOPS.findLast(stop => stop < progressAt(DATES.wedding)) ?? 0;
 // Dev only: inspect the scene and leave notes for Claude, and ?at= (inspect/, see docs/VOYAGE.md).
 const InspectLayer = REVIEW ? lazy(() => import('./inspect/InspectTools')) : null;
 const InspectControls = REVIEW ? lazy(() => import('./inspect/InspectTools').then(module => ({ default: module.InspectControls }))) : null;
@@ -738,6 +742,7 @@ export default function Garden({ details = `${BASE}details/` }: { details?: stri
         {reduced ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion'}
       </button>
       <button onClick={() => setSceneOnly(!sceneOnly)} aria-pressed={sceneOnly}>{sceneOnly ? 'Show invitation' : 'Scene only'}</button>
+      <button onClick={() => { goToProgress(ENDING, true); voyage.glide(); }} title="Cut to the last milestone and sail on to the dock">Skip to the end</button>
       <label className="garden-material-selector garden-text-selector">Text
         <select aria-label="Text over the scene" value={text} onChange={event => {
           const look = textLook(event.target.value);

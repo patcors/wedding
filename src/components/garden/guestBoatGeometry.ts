@@ -8,7 +8,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { foldedPaper } from './paperBoatGeometry.ts';
 import { GUEST_BOAT, GUEST_CARD, cormorantWidth, guestCard } from './guestBoat.ts';
 import { GUEST_SLOOP_PAINT, type GuestLook } from './boatLooks.ts';
-import { dinghyHull, sail, spar } from './storyBoatGeometry.ts';
+import { SAIL_EASED, dinghyHull, sail, spar } from './storyBoatGeometry.ts';
+
+type Point = [number, number, number];
 
 // A guest's hull and mast for a look, and the paper's creases (the sloop has none).
 export const guestBoatHull = (look: GuestLook, top: number): { geometry: THREE.BufferGeometry; creases: THREE.BufferGeometry | null } =>
@@ -31,21 +33,47 @@ export function guestHull(top: number) {
 }
 
 // The sloop: the story dinghies' hull a little larger, to the paper boat's
-// length (GUEST_BOAT.halfLength, which the berths keep clear), in the guests' paint, a wooden mast up to `top` where the paper
-// boat's toothpick stands, and a jib from the bow to the mast below the card,
-// eased to starboard so it shows its face beside the card. The card is its
-// main. All one mesh, coloured per vertex. In the boat's frame: bow to −z,
-// the water at y 0.
-const SLOOP = { scale: 1.05, mast: -.012, jib: { head: .57, tack: [0, .2, -.74], clew: [.3, .23, -.02] } } as const;
+// length (GUEST_BOAT.halfLength, which the berths keep clear), in the guests'
+// paint, a wooden mast up to `top` where the paper boat's toothpick stands,
+// with the name's card at its head as on the paper boat, and below the card
+// a mainsail on a boom aft of the mast and a jib to the bow, ivory banded in
+// the invitations' brown as the toy sloops' are in their colours. They're
+// eased wing on wing, the main to starboard and the jib to port, as the
+// story boats' are (SAIL_EASED): on the centreline a phone's dock view, along
+// the boats from above, saw only their edges, and desktop's, off their beam,
+// still sees most of their faces.
+// All one mesh, coloured per vertex. In the boat's frame: bow to −z, the
+// water at y 0.
+const SLOOP = {
+  scale: 1.05, mast: -.012, head: .57, foot: .2, cloth: '#fbf6ea', band: '#6b4f3e',
+  eased: SAIL_EASED, main: { boom: .62, bands: [2, 6] }, jib: { tack: -.74, foot: .5, bands: [3, 7] },
+} as const;
+// A sail's rows run level from its foot to its head (sail: 12 of them), so
+// whole rows painted make straight bands.
+function banded(cloth: THREE.BufferGeometry, rows: readonly number[], foot: number, head: number) {
+  const position = cloth.attributes.position, colour = cloth.attributes.color as THREE.BufferAttribute;
+  const band = new THREE.Color(SLOOP.band);
+  for (let i = 0; i < position.count; i += 3) {
+    const middle = (position.getY(i) + position.getY(i + 1) + position.getY(i + 2)) / 3;
+    if (!rows.includes(Math.floor((middle - foot) / (head - foot) * 12))) continue;
+    for (let k = 0; k < 3; k++) colour.setXYZ(i + k, band.r, band.g, band.b);
+  }
+  cloth.deleteAttribute('uv');
+  return cloth;
+}
 export function guestSloop(top: number) {
   const hull = dinghyHull(GUEST_SLOOP_PAINT);
   hull.scale(SLOOP.scale, SLOOP.scale, SLOOP.scale);
-  const mast = spar([0, .06, SLOOP.mast], [0, top, SLOOP.mast], .013, '#c9a878');
-  const { head, tack, clew } = SLOOP.jib;
-  const jib = sail([0, head, SLOOP.mast - .02], [...tack], [...clew], .03, '#fbf6ea');
-  jib.deleteAttribute('uv');
-  const geometry = mergeGeometries([hull, mast, jib])!;
-  hull.dispose(); mast.dispose(); jib.dispose();
+  const { mast: z, head, foot, eased, main, jib } = SLOOP;
+  const mast = spar([0, .06, z], [0, top, z], .013, '#c9a878');
+  // The boom out to starboard from the mast; the jib's clew out to port, its foot `jib.foot` from the tack.
+  const clew: Point = [Math.sin(eased) * main.boom, foot, z + .02 + Math.cos(eased) * main.boom];
+  const jibClew: Point = [-Math.sin(eased) * jib.foot, foot, jib.tack + Math.cos(eased) * jib.foot];
+  const boom = spar([0, foot, z + .02], clew, .009, '#c9a878');
+  const mainsail = banded(sail([0, head, z + .02], [0, foot, z + .02], clew, .03, SLOOP.cloth), main.bands, foot, head);
+  const jibsail = banded(sail([0, head, z - .02], [0, foot, jib.tack], jibClew, -.03, SLOOP.cloth), jib.bands, foot, head);
+  const geometry = mergeGeometries([hull, mast, boom, mainsail, jibsail])!;
+  for (const part of [hull, mast, boom, mainsail, jibsail]) part.dispose();
   return geometry;
 }
 
