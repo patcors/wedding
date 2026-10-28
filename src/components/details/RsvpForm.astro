@@ -133,7 +133,7 @@ const remembered = party && JSON.stringify({ code: party.code, greeting: party.g
 
 <script>
   import {
-    busMobiles, describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOk, sentOn,
+    busMobiles, describeGuest, formatDietary, latestReply, lookupUrl, ownDetailsPath, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOk, sentOn,
     storageKey, takesBus, toParams,
     type Answer, type GuestReply, type RememberedParty, type Rsvp,
   } from './rsvp';
@@ -496,7 +496,12 @@ const remembered = party && JSON.stringify({ code: party.code, greeting: party.g
     });
   }
 
-  if (party) start(party);
+  // On the plain page, a guest who came from their Personal link goes on to
+  // their own Details page, keeping #rsvp: whatever localStorage holds may be
+  // missing, or another Party's on a shared device.
+  const ownPage = root.dataset.party ? null : ownDetailsPath(document.referrer, location.origin, import.meta.env.BASE_URL);
+  if (ownPage) location.replace(ownPage + location.hash);
+  else if (party) start(party);
   else showNoLink();
 </script>
 

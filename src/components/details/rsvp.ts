@@ -84,6 +84,20 @@ export function readParty(raw: string | null): RememberedParty | null {
   return { code: value.code, greeting: value.greeting, guests: value.guests };
 }
 
+/** The Party's own Details page (/<code>/details/) when the plain one was
+    reached from their Personal link (/<code>/ on this site): a story page
+    opened before Personal links led to their own Details page. The plain page
+    goes there rather than trust localStorage, whose pa_party may not have
+    arrived, or be another Party's on a shared device. Null for anything
+    else, including other pages of this site. */
+export function ownDetailsPath(referrer: string, origin: string, base = '/'): string | null {
+  let from: URL;
+  try { from = new URL(referrer); } catch { return null; }
+  if (from.origin !== origin || !from.pathname.startsWith(base)) return null;
+  const code = /^([a-z0-9-]+)\/?$/.exec(from.pathname.slice(base.length))?.[1];
+  return code && code !== 'details' && code !== 'dev' ? `${base}${code}/details/` : null;
+}
+
 const text = (value: unknown) => (isString(value) ? value : '');
 
 /** A complete RSVP from untrusted data, or null. Fields it doesn't know (like

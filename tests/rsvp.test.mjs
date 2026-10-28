@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  busMobiles, describeGuest, formatDietary, latestReply, lookupUrl, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOk, sentOn, storageKey,
+  busMobiles, describeGuest, formatDietary, latestReply, lookupUrl, ownDetailsPath, parseDietary, phoneProblem, readLookup, readParty, readSaved, sentOk, sentOn, storageKey,
   takesBus, toParams,
 } from '../src/components/details/rsvp.ts';
 
@@ -12,6 +12,19 @@ test('a Party is only trusted when localStorage holds a complete one', () => {
   assert.equal(readParty('not json'), null);
   assert.equal(readParty(JSON.stringify({ ...party, guests: [] })), null);
   assert.equal(readParty(JSON.stringify({ ...party, code: '' })), null);
+});
+
+test('the plain Details page sends a guest from their Personal link on to their own', () => {
+  const site = 'https://patrickandamelia.com';
+  assert.equal(ownDetailsPath(`${site}/serb/`, site), '/serb/details/');
+  assert.equal(ownDetailsPath(`${site}/serb`, site), '/serb/details/');
+  assert.equal(ownDetailsPath(`${site}/hungry-jacks/?at=.5`, site), '/hungry-jacks/details/');
+  // Not from a Personal link: nowhere, the generic Garden, this page, dev pages, other sites.
+  for (const referrer of ['', 'not a url', `${site}/`, `${site}/details/`, `${site}/dev/`, `${site}/dev/links`, `${site}/serb/details/`, `${site}/Serb/`, 'https://example.com/serb/'])
+    assert.equal(ownDetailsPath(referrer, site), null, referrer);
+  // Under a base path.
+  assert.equal(ownDetailsPath(`${site}/wedding/serb/`, site, '/wedding/'), '/wedding/serb/details/');
+  assert.equal(ownDetailsPath(`${site}/serb/`, site, '/wedding/'), null);
 });
 
 test('each Party remembers its own RSVP', () => {
