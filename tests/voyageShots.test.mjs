@@ -31,6 +31,8 @@ test('options parse into what the run needs, and live runs get a looser diff', (
   assert.ok(THRESHOLDS.live.minChanged > THRESHOLDS.still.minChanged);
   assert.equal(parseShotArgs(['--threshold', '0', '--min-changed', '0']).threshold, 0);
   assert.equal(parseShotArgs(['--help']).help, true);
+  assert.deepEqual(parseShotArgs([]).storage, []);
+  assert.deepEqual(parseShotArgs(['--storage', 'pa_dev_guest_boat=sloop', '--storage', 'pa_party={"a":"b=c"}']).storage, [['pa_dev_guest_boat', 'sloop'], ['pa_party', '{"a":"b=c"}']]);
 });
 
 test('bad options are refused with a reason, and never a review server\'s port', () => {
@@ -42,6 +44,8 @@ test('bad options are refused with a reason, and never a review server\'s port',
   refused(['--viewports', 'phone,phone'], /twice/);
   refused(['--compare', 'x', '--compare-url', 'http://a'], /either --compare or --compare-url/);
   refused(['--frobnicate'], /frobnicate/);
+  refused(['--storage', 'sloop'], /key=value/);
+  refused(['--storage', '=sloop'], /key=value/);
   for (const port of RESERVED_PORTS) refused(['--port', String(port)], /review server/);
   refused(['--url', 'http://a', '--port', '4351'], /--port is for --serve/);
   assert.throws(() => parseViewport('99x99'), UsageError);

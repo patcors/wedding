@@ -153,7 +153,7 @@ async function connect(url) {
 
 // A tab set up as the viewport: phone emulation with touch, reduced motion
 // for stills, and the dev Review panel tucked away unless asked for.
-async function openPage(cdp, viewport, { dpr, reduced, review }) {
+async function openPage(cdp, viewport, { dpr, reduced, review, storage = [] }) {
   const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
   const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
   const send = (method, params, timeout) => cdp.send(method, params, sessionId, timeout);
@@ -182,6 +182,8 @@ async function openPage(cdp, viewport, { dpr, reduced, review }) {
   }
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduced ? 'reduce' : 'no-preference' }] });
   if (!review) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.setItem('pa_dev_review_hidden', '1'); } catch {}` });
+  // --storage: Review choices and the like, set before the page's own scripts read them.
+  for (const [key, value] of storage) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.setItem(${JSON.stringify(key)}, ${JSON.stringify(value)}); } catch {}` });
   // The scroll helper (scrollGuide.ts) would come up over a still once the page has been idle: count it as spent.
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { sessionStorage.setItem('pa_scroll_guide_shown', '3'); } catch {}` });
   const evaluate = async (expression, timeout) => {
@@ -240,7 +242,7 @@ class Reloaded extends Error {}
 // Shoots every stop at one viewport into `dir`.
 async function shootViewport(cdp, base, viewport, stops, options, dir) {
   const url = `${base}${options.path}`;
-  const page = await openPage(cdp, viewport, { dpr: options.dpr, reduced: !options.live, review: options.review });
+  const page = await openPage(cdp, viewport, { dpr: options.dpr, reduced: !options.live, review: options.review, storage: options.storage });
   try {
     const { errorText } = await page.send('Page.navigate', { url });
     if (errorText) throw new Error(`Couldn't open ${url}: ${errorText}`);

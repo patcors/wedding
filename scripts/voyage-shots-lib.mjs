@@ -46,6 +46,8 @@ What to shoot:
   --live                  scroll as a guest does and wait for the scene to settle,
                           instead of the reduced-motion stills (not repeatable)
   --review                keep the dev Review panel open (hidden by default)
+  --storage <key=value>   set a localStorage item before the page loads, e.g. a
+                          Review choice: pa_dev_guest_boat=sloop (repeatable)
 
 Output and comparison:
   --out <dir>             default .shots/<branch>-<timestamp>/ in this checkout
@@ -90,7 +92,7 @@ export function parseShotArgs(argv) {
       options: {
         url: { type: 'string' }, serve: { type: 'boolean' }, port: { type: 'string' }, path: { type: 'string' },
         only: { type: 'string' }, at: { type: 'string' }, viewports: { type: 'string' }, dpr: { type: 'string' },
-        live: { type: 'boolean' }, review: { type: 'boolean' },
+        live: { type: 'boolean' }, review: { type: 'boolean' }, storage: { type: 'string', multiple: true },
         out: { type: 'string' }, compare: { type: 'string' }, 'compare-url': { type: 'string' },
         threshold: { type: 'string' }, 'min-changed': { type: 'string' },
         timeout: { type: 'string' }, settle: { type: 'string' }, chrome: { type: 'string' },
@@ -114,6 +116,11 @@ export function parseShotArgs(argv) {
   if (!viewports.length) throw new UsageError('--viewports is empty.');
   if (new Set(viewports.map(v => v.name)).size !== viewports.length) throw new UsageError('A viewport is listed twice.');
   const live = !!values.live;
+  const storage = (values.storage ?? []).map(item => {
+    const at = item.indexOf('=');
+    if (at < 1) throw new UsageError(`--storage wants key=value, not "${item}"`);
+    return [item.slice(0, at), item.slice(at + 1)];
+  });
   return {
     help: false,
     url: values.url ? trimSlash(values.url) : null,
@@ -126,6 +133,7 @@ export function parseShotArgs(argv) {
     dpr: values.dpr ? number(values.dpr, 'dpr', .5, 4) : 1,
     live,
     review: !!values.review,
+    storage,
     out: values.out ?? null,
     compare: values.compare ?? null,
     compareUrl: values['compare-url'] ? trimSlash(values['compare-url']) : null,
