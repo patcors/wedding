@@ -219,6 +219,21 @@ const photos = {
     link.addEventListener('click', () => { try { sessionStorage.setItem('pa_voyage_back', '1'); } catch { /* private mode: the opening as usual */ } });
   }
 
+  // Arriving at #rsvp (or a section) from another page, the browser scrolls
+  // there smoothly while the fonts and photos are still settling, and the
+  // RSVP's lookup then swaps "Looking for your reply" for the form: it stopped
+  // about 1,150px above the RSVP when tapped from the story (Chrome, October
+  // 2026). Keep it there, instantly, whenever the page's height changes, until
+  // the guest scrolls or the lookup has had time to answer (5s, RsvpForm).
+  const arrivedAt = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+  if (arrivedAt) {
+    const pin = new ResizeObserver(() => arrivedAt.scrollIntoView({ behavior: 'instant', block: 'start' }));
+    const stop = () => pin.disconnect();
+    pin.observe(document.body);
+    for (const type of ['wheel', 'touchstart', 'keydown', 'pointerdown']) addEventListener(type, stop, { once: true, passive: true });
+    setTimeout(stop, 8000);
+  }
+
   // The nav underlines the section being read: the last one whose top has
   // passed a line a third of the way down the screen. None in the opening,
   // nor once the RSVP is reached, as it has no link of its own. On a phone,
