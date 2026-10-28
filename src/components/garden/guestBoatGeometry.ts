@@ -1,5 +1,5 @@
-// A guest's boat (guestBoat.ts): the guests' folded paper boat with a
-// toothpick mast, or a little sloop (a Review choice, GUEST_LOOKS), and a
+// A guest's boat (guestBoat.ts): a little sloop, as guests see it, or the
+// folded paper boat with a toothpick mast (a Review choice, GUEST_LOOKS), and a
 // card sail with their first name on it, at full size (GuestBoat scales it
 // for the layout, guestScale). Every boat shares the hull, creases and card;
 // only the name's texture is each boat's own.

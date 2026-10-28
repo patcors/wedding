@@ -1,4 +1,4 @@
-// The guests' own paper boats (or sloops, a Review choice: `look`), one for
+// The guests' own sloops (or paper boats, a Review choice: `look`), one for
 // each guest with their first name on its card sail (guestBoat.ts), coming in
 // to the dock with the catamaran.
 // Only on a Personal link, or once one has been opened on this device

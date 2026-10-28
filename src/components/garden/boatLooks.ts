@@ -1,7 +1,7 @@
 // How the story boats look, the two dinghies before they join and the
 // catamaran they become, and the guests' own boats. Guests see BOAT_LOOK: the
-// toy sloops, joining into the original catamaran in their paint, and paper
-// boats for themselves. The others are dev-only Review
+// toy sloops, joining into the original catamaran in their paint, and little
+// sloops for themselves. The others are dev-only Review
 // choices. Each look is paint (hull colours and sail cloth) here, and shape
 // (rig, cabin) in storyBoatGeometry.ts.
 import * as THREE from 'three';

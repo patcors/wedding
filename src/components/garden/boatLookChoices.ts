@@ -22,16 +22,16 @@ export const CATAMARAN_LOOKS = {
 } as const;
 // The guests' own boats at the end of the story (guestBoatGeometry.ts).
 export const GUEST_LOOKS = {
-  // A folded paper boat on a toothpick mast.
+  // A folded paper boat on a toothpick mast, the first look.
   paper: 'Paper boat',
-  // A little ivory sloop with a brown stripe, a wooden mast and a jib.
+  // A little ivory sloop with a brown stripe and a banded main, the name flying from its masthead.
   sloop: 'Sloop',
 } as const;
 export type DinghyLook = keyof typeof DINGHY_LOOKS;
 export type CatamaranLook = keyof typeof CATAMARAN_LOOKS;
 export type GuestLook = keyof typeof GUEST_LOOKS;
 export type BoatLook = { dinghy: DinghyLook; catamaran: CatamaranLook; guest: GuestLook };
-export const BOAT_LOOK: BoatLook = { dinghy: 'toy', catamaran: 'original', guest: 'paper' };
+export const BOAT_LOOK: BoatLook = { dinghy: 'toy', catamaran: 'original', guest: 'sloop' };
 export const boatLook = (dinghy: string | null, catamaran: string | null, guest: string | null = null): BoatLook => ({
   dinghy: dinghy && dinghy in DINGHY_LOOKS ? dinghy as DinghyLook : BOAT_LOOK.dinghy,
   catamaran: catamaran && catamaran in CATAMARAN_LOOKS ? catamaran as CatamaranLook : BOAT_LOOK.catamaran,
