@@ -7,6 +7,7 @@ import GardenButterfly from './GardenButterfly';
 import ButterflyArtwork from './ButterflyArtwork';
 import { BUTTERFLY_COLOR_ORDER, BUTTERFLY_COLOR_LABELS } from './butterflyColors';
 import { useGardenButterflies, type ButterflyVisit } from './useGardenButterflies';
+import { isTap, riverTaps } from './gardenTaps';
 import type { GroundStyle, RockStyle } from './GardenGround';
 import type { PlantStyle } from './gardenPlantGeometry';
 import { SKY_STYLE, type SkyStyle } from './skyStyle';
@@ -40,7 +41,7 @@ function ReleasedButterfly({ visit, paused, available, openingReleased, onLand, 
   visit: ButterflyVisit; paused: boolean; available: boolean; openingReleased: boolean; onLand: () => void; onRetire: (id: number) => void;
 }) {
   const onComplete = useCallback(() => onRetire(visit.id), [visit.id, onRetire]);
-  return <GardenButterfly paused={paused} perch={visit.perch} landingAngle={visit.landingAngle} color={visit.color}
+  return <GardenButterfly paused={paused} perch={visit.perch} from={visit.from} landingAngle={visit.landingAngle} color={visit.color}
     opening={visit.opening} openingReleased={openingReleased} available={available} onLand={onLand} onComplete={onComplete} />;
 }
 
@@ -470,6 +471,25 @@ export default function Garden({ details = `${BASE}details/` }: { details?: stri
   const flight = ready && !failed && !reduced;
   const arrival = useRef<HTMLElement>(null);
   const butterflies = useGardenButterflies({ chapter, paused, disabled: reduced, sceneOnly, ready, away: flight && voyage.away, opening: !returning });
+  // A tap on the scene anywhere but the river's open water (which floats a
+  // boat, GardenWater.tsx) releases a butterfly from there (gardenTaps.ts):
+  // the sky, the banks, the island, or through the copy, which lets taps by.
+  // Links and buttons aren't the scene, and Inspect (dev) takes its taps first.
+  const { launch } = butterflies;
+  useEffect(() => {
+    const main = scroller.current;
+    if (!main) return;
+    let down: PointerEvent | null = null;
+    const onDown = (event: PointerEvent) => { down = event; };
+    const onClick = (event: MouseEvent) => {
+      if (event.button !== 0 || riverTaps.has(event) || !(event.target as Element).closest('.garden-canvas')) return;
+      if (down && !isTap(down, event, down.pointerType)) return;
+      launch(event.clientX, event.clientY);
+    };
+    main.addEventListener('pointerdown', onDown);
+    main.addEventListener('click', onClick);
+    return () => { main.removeEventListener('pointerdown', onDown); main.removeEventListener('click', onClick); };
+  }, [launch]);
   // Prepared early, the scene still waits for the opening flock to land on
   // the names before it starts behind the cover and fades in (loadChoices.ts),
   // so their flight isn't hitched by the scene's first frames.
@@ -554,7 +574,7 @@ export default function Garden({ details = `${BASE}details/` }: { details?: stri
     </div>
     <p className="garden-visually-hidden" role="status">{chapter === 1 && voyage.announced ? `${dateLabel(progressAt(voyage.announced.month))}. ${voyage.announced.description}` : ''}</p>
     {butterflies.visits.map(visit => <ReleasedButterfly key={visit.id} visit={visit} paused={paused}
-      openingReleased={openingReleased && !failed} available={butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
+      openingReleased={openingReleased && !failed} available={!visit.perch || butterflies.validPerches.has(visit.perch.key)} onLand={butterflies.land} onRetire={butterflies.retire} />)}
     {/* The scroll helper over the scene (scrollGuide.ts): decorative, letting every touch through. */}
     <div className="garden-chrome-layer garden-guide-layer" aria-hidden="true">
       {/* Inverted (dev only), the finger sweeps down over chevrons below it and the wheel turns up; each pair's chevrons still go in turn the way to move. */}
@@ -656,7 +676,7 @@ export default function Garden({ details = `${BASE}details/` }: { details?: stri
 
     <div className="garden-chrome-layer">
       <div className="garden-bottom garden-copy garden-chrome" inert={state !== 'ready'}>
-        {/* Dev only: test buttons. Guests tap the water for a boat. */}
+        {/* Dev only: test buttons. Guests tap the water for a boat, anywhere else for a butterfly. */}
         {REVIEW && <div className="garden-creature-actions">
         <button className="garden-boat-launch" disabled={!ready} onClick={() => setBoatLaunchRequest(value => value + 1)} aria-label="Float a boat">
           <svg width="23" height="20" viewBox="0 0 28 24" fill="none" aria-hidden="true">

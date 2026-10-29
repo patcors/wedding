@@ -7,8 +7,11 @@ const MAX_BUTTERFLIES = 15;
 const SETTLE_LIMIT = 5000;
 
 export type ButterflyPerch = PerchPoint & { key: string; node: Text; offset: number };
-export type ButterflyVisit = { id: number; perch: ButterflyPerch; landingAngle: number; color: ButterflyColor; opening: boolean };
+// A visit lands on the title's `perch`, or, released by a tap on the scene,
+// takes off `from` where the guest tapped and flies away.
+export type ButterflyVisit = { id: number; perch?: ButterflyPerch; from?: PerchPoint; landingAngle: number; color: ButterflyColor; opening: boolean };
 type MeasuredPerch = ButterflyPerch & PerchPoint;
+const perchedOn = (visits: Iterable<ButterflyVisit>) => new Set([...visits].flatMap(visit => visit.perch ? [visit.perch.key] : []));
 
 function measurePerch(perch: { node: Text; offset: number }, height: number, context: CanvasRenderingContext2D | null): PerchPoint {
   const range = document.createRange();
@@ -80,7 +83,8 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
       const next = spacedPerches(candidates, innerWidth <= 700 ? 25 : 32);
       // Flight frames read cached positions; only layout changes measure text.
       for (const visit of reservations.current.values()) {
-        const updated = next.find(spot => spot.key === visit.perch.key);
+        if (!visit.perch) continue;
+        const updated = next.find(spot => spot.key === visit.perch!.key);
         if (updated) { visit.perch.x = updated.x; visit.perch.y = updated.y; }
       }
       currentSpots.current = next;
@@ -106,8 +110,9 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
     if (!enabled || (!opening && (paused || !ready))) return;
     const live = reservations.current;
     // Departing butterflies count too, preventing a stream of excess spawns.
-    if (live.size >= Math.min(MAX_BUTTERFLIES, currentSpots.current.length)) return;
-    const perch = availablePerch(currentSpots.current, new Set([...live.values()].map(visit => visit.perch.key)));
+    const occupied = perchedOn(live.values());
+    if (occupied.size >= Math.min(MAX_BUTTERFLIES, currentSpots.current.length)) return;
+    const perch = availablePerch(currentSpots.current, occupied);
     if (!perch) return;
     const id = ++nextId.current;
     const color = BUTTERFLY_COLOR_ORDER[(id - 1) % BUTTERFLY_COLOR_ORDER.length];
@@ -116,6 +121,18 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
     const visit = { id, perch, color, opening, landingAngle: ((id * .61803398875) % 1) * 160 - 80 };
     // Claim synchronously, before React renders or another click/timer can run.
     live.set(visit.id, visit);
+    setVisits([...live.values()]);
+  }, [enabled, paused, ready]);
+
+  // A tap on the scene away from the river (Garden.tsx): one takes off from
+  // there, needing no perch, so it works anywhere in the story.
+  const launch = useCallback((x: number, y: number) => {
+    if (!enabled || paused || !ready) return;
+    const live = reservations.current;
+    if ([...live.values()].filter(visit => visit.from).length >= MAX_BUTTERFLIES) return;
+    const id = ++nextId.current;
+    const visit = { id, from: { x, y }, color: BUTTERFLY_COLOR_ORDER[(id - 1) % BUTTERFLY_COLOR_ORDER.length], opening: false, landingAngle: 0 };
+    live.set(id, visit);
     setVisits([...live.values()]);
   }, [enabled, paused, ready]);
 
@@ -147,7 +164,7 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
     if (!enabled || paused || !ready) return;
     let timer: ReturnType<typeof setTimeout>;
     const visit = () => {
-      if (!document.hidden && reservations.current.size === 0) release();
+      if (!document.hidden && !perchedOn(reservations.current.values()).size) release();
       timer = setTimeout(visit, (22 + Math.random() * 24) * 1000);
     };
     timer = setTimeout(visit, (5 + Math.random() * 4) * 1000);
@@ -159,8 +176,9 @@ export function useGardenButterflies({ chapter, paused, disabled, sceneOnly, rea
     reservations.current.clear(); setVisits([]);
   }, [disabled]);
 
-  return { visits, release, retire, land, settled,
+  const occupied = perchedOn(visits);
+  return { visits, release, launch, retire, land, settled,
     validPerches: new Set(spots.map(spot => spot.key)),
-    canRelease: enabled && ready && !paused && visits.length < Math.min(MAX_BUTTERFLIES, spots.length)
-      && !!availablePerch(spots, new Set(visits.map(visit => visit.perch.key))) };
+    canRelease: enabled && ready && !paused && occupied.size < Math.min(MAX_BUTTERFLIES, spots.length)
+      && !!availablePerch(spots, occupied) };
 }

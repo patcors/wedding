@@ -14,6 +14,7 @@ import { guestBoatStems } from './guestBoat';
 import { rememberedNames } from './GuestBoat';
 import { bridgeStems, onPoint, pointStems } from './eggs/harbour';
 import { DOCKED } from './journey';
+import { riverTaps, tapSlack } from './gardenTaps';
 import { useJourney } from './JourneyProvider';
 
 const BASE = import.meta.env.BASE_URL;
@@ -89,12 +90,13 @@ export default function GardenWater({ paused, width, mobile, reeds, launchReques
   const tapWater = (event: ThreeEvent<MouseEvent>) => {
     const { x, z } = event.point;
     // The reflecting plane extends underneath the terrain. Only exposed
-    // stream water is interactive; drags and native touch scrolling are not taps.
-    // A thumb wanders further than a mouse during a tap, so touch gets more slack.
-    const slack = (event.nativeEvent as PointerEvent).pointerType === 'mouse' ? 6 : 16;
+    // stream water is interactive.
     const out = Math.abs(x - riverCenter(z, width));
     // A tap on the island, the rock, Bennelong Point or a jetty reaches the water plane beneath it, which isn't open water.
-    if (event.delta > slack || event.button !== 0 || out >= bankEdge(z, width) - .08 || out < midRiver(z, width) || underJetty(x, z, width) || underLaunchJetty(x, z, width) || onPoint(x, z, width)
+    if (out >= bankEdge(z, width) - .08 || out < midRiver(z, width) || underJetty(x, z, width) || underLaunchJetty(x, z, width) || onPoint(x, z, width)) return;
+    // Open water never releases a butterfly, even where it's too far off for a boat.
+    riverTaps.add(event.nativeEvent);
+    if (event.delta > tapSlack((event.nativeEvent as PointerEvent).pointerType) || event.button !== 0
       || z < camera.position.z - 65 || z > camera.position.z - 1) return;
     event.stopPropagation();
     launch(x, z);

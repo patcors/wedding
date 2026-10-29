@@ -13,8 +13,10 @@ const curve = (a: Point, b: Point, c: Point, d: Point, t: number): Point => {
     y: u ** 3 * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t ** 3 * d.y };
 };
 
-export default function GardenButterfly({ paused, perch, landingAngle, color, opening, openingReleased, available, onLand, onComplete }: {
-  paused: boolean; perch: ButterflyPerch; landingAngle: number; color: ButterflyColor; opening: boolean; openingReleased: boolean; available: boolean; onLand: () => void; onComplete: () => void;
+// Lands on the title's `perch` and rests there, or, given `from` (a tap on the
+// scene), opens its wings there and takes off at once.
+export default function GardenButterfly({ paused, perch, from, landingAngle, color, opening, openingReleased, available, onLand, onComplete }: {
+  paused: boolean; perch?: ButterflyPerch; from?: Point; landingAngle: number; color: ButterflyColor; opening: boolean; openingReleased: boolean; available: boolean; onLand: () => void; onComplete: () => void;
 }) {
   const sprite = useRef<HTMLDivElement>(null);
   const settings = useRef({ paused, available, openingReleased });
@@ -36,12 +38,13 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, op
       phase = 'leaving'; elapsed = 0; start = position;
       destination = { x: side > 0 ? innerWidth + 90 : -90, y: innerHeight * (.1 + Math.random() * .18) };
     };
+    if (from) { position = from; depart(); }
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
       const dt = previous ? Math.min((now - previous) / 1000, .05) : 0;
       previous = now;
       if (settings.current.paused || document.hidden) {
-        if (phase === 'perched') {
+        if (phase === 'perched' && perch) {
           position = { x: perch.x, y: perch.y };
           element.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
         }
@@ -50,7 +53,7 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, op
       elapsed += dt;
       time += dt;
       const motion = butterflyMotion(time, seed, wingTime);
-      if (phase === 'waiting') {
+      if (phase === 'waiting' && perch) {
         if (elapsed < delay) return;
         side = Math.random() > .5 ? 1 : -1;
         start = { x: side > 0 ? -90 : innerWidth + 90, y: innerHeight * (.12 + Math.random() * .2) };
@@ -59,8 +62,8 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, op
         element.style.opacity = '1';
       }
       // Take off when the billboard disappears during a chapter change.
-      if (phase !== 'leaving' && (!settings.current.available || !perch.node.parentElement?.closest('.is-active'))) depart();
-      if (phase !== 'leaving') destination = { x: perch.x, y: perch.y };
+      if (phase !== 'leaving' && (!settings.current.available || !perch?.node.parentElement?.closest('.is-active'))) depart();
+      if (phase !== 'leaving' && perch) destination = { x: perch.x, y: perch.y };
       const old = position;
       if (phase === 'arriving') {
         const t = Math.min(1, elapsed / arrivalDuration);
@@ -81,8 +84,10 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, op
         if (opening ? settings.current.openingReleased : elapsed >= rest) depart();
       } else if (phase === 'leaving') {
         const t = Math.min(1, elapsed / 5);
+        // From a tap it shows at once and lifts off gently, as its wings open.
+        if (from) element.style.opacity = '1';
         position = curve(start, { x: start.x + side * 100, y: start.y - 150 },
-          { x: destination.x - side * 180, y: destination.y + 90 }, destination, t);
+          { x: destination.x - side * 180, y: destination.y + 90 }, destination, from ? t ** 1.5 : t);
         position.x += motion.x * Math.sin(Math.PI * t);
         position.y += motion.y * Math.sin(Math.PI * t);
         if (t === 1) {
@@ -114,10 +119,10 @@ export default function GardenButterfly({ paused, perch, landingAngle, color, op
     };
     frame = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(frame); element.style.opacity = '0'; };
-  }, [perch, landingAngle, opening, onLand, onComplete]);
+  }, [perch, from, landingAngle, opening, onLand, onComplete]);
 
   return <div className="garden-butterfly-layer" aria-hidden="true">
-    <div ref={sprite} className="garden-butterfly" data-perch={perch.key} data-color={color}>
+    <div ref={sprite} className="garden-butterfly" data-perch={perch?.key} data-color={color}>
       <ButterflyArtwork color={color} />
     </div>
   </div>;
