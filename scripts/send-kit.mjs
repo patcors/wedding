@@ -48,6 +48,8 @@ await writeFile(`${out}index.html`, `<!doctype html>
   h1 { margin: 0 0 8px; font-size: 20px; }
   input { width: 100%; max-width: 420px; box-sizing: border-box; padding: 10px 12px; font: inherit; border: 1px solid #c9b9a6; border-radius: 8px; }
   .party { display: grid; grid-template-columns: 200px 1fr; gap: 16px; padding: 16px 0; border-top: 1px solid #e3d8c6; }
+  /* display: grid beats the browser's own [hidden] rule, so the search needs this to hide anything. */
+  .party[hidden] { display: none; }
   .image img { width: 100%; display: block; border-radius: 6px; box-shadow: 0 1px 4px #0002; }
   h2 { margin: 0 0 8px; font-size: 18px; }
   h2 span { font-weight: normal; font-size: 14px; color: #8a7765; }
